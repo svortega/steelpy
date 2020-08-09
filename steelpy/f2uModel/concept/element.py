@@ -437,13 +437,14 @@ class Elements(Mapping):
         farg = [name, connectivity, material, section, type, group]
         """
         try:
-            self._labels.index(element_name)
+            index = self._labels.index(element_name)
             raise Exception('{:} {:} already exist'.format(self._element_type, element_name))
         except ValueError:
             # default
             self._labels.append(element_name)
             self._roll_angle.append(0.0)
-            self._number.append(self._labels.index(element_name))
+            index = self._labels.index(element_name)
+            self._number.append(index)
             self._type.append(self._element_type)
             # set connectivity 
             node_1 = f2u_points.get_point_name(parameters[0])
@@ -452,6 +453,13 @@ class Elements(Mapping):
             # set blank data
             self._sections.append(-1)
             self._materials.append(-1)
+            #
+            # set deafult material, section
+            if f2u_materials._default:
+                self._materials[index] = f2u_materials._default
+            #
+            if f2u_sections._default:
+                self._sections[index] = f2u_sections._default
             #
             self._segment.append(0)
             self._step_label.append(-1)

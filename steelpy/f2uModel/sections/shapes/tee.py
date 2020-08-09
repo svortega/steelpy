@@ -67,10 +67,10 @@ class Tee:
 
     """
     #
-    def __init__(self):
-                # name:str='tee', number:int = None):
+    def __init__(self, cls):
         """
         """
+        self.cls = cls
         self._units = Units()
         #_material = Materials()
         #_material[1] = 'plastic'
@@ -83,25 +83,8 @@ class Tee:
         self.shear_stress = 'average'
         self.compactness = 'N/A'        
         #self.units_in = ["", "", "second", "", "", ""]
-        #
-        #self.name = name
-        #if number:
-        #    self.number = number        
+        #    
     #
-    @property
-    def units(self):
-        """
-        Input:
-        ======
-        length : [mandatory]  
-        force  :   
-        temperature : 
-        gravity     : [default : 9.81ms^2]
-
-        ------
-        units [length, mass, time, temperature, force, pressure/stress]
-        """
-        return self._units
     #
     @property
     def material(self):
@@ -360,7 +343,11 @@ class Tee:
         add_out = open(file_checkout,'w')
         add_out.write("".join(check_out))
         add_out.close()
-        print('ok')      
-#
+        print('ok')
+    #
+    def set_default(self):
+        """ """
+        self.cls._default = self.name    
+    #
 #
 #

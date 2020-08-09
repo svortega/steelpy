@@ -4,7 +4,7 @@
 
 # Python stdlib imports
 from collections.abc import Mapping
-from typing import NamedTuple, Dict, List, Tuple
+from typing import NamedTuple, Dict, List, Tuple, Union
 
 
 # package imports
@@ -16,7 +16,7 @@ from steelpy.f2uModel.sections.shapes.solid import Trapeziod, Circle, Rectangle
 #
 class Sections(Mapping):
     
-    __slots__ = ['_sections']
+    __slots__ = ['_sections', '_default']
     
     def __init__(self):
         """
@@ -24,6 +24,7 @@ class Sections(Mapping):
         """
         #  ----- Section -----
         self._sections : Dict = {}
+        self._default :Union[str,None] = None
     #
     #
     def __setitem__(self, shape_name, shape_type):
@@ -34,13 +35,13 @@ class Sections(Mapping):
         if item in ['ibeam', 'isection', 'i', 
                     'w', 'm', 's', 'hp',
                     'ub', 'uc', 'he', 'ipe']:
-            self._sections[shape_name] = Ibeam()
+            self._sections[shape_name] = Ibeam(cls=self)
         elif item in ['tee', 't']:
-            self._sections[shape_name] = Tee()
+            self._sections[shape_name] = Tee(cls=self)
         elif item in ['tubular', 'pipe']:
-            self._sections[shape_name] = Tubular()
+            self._sections[shape_name] = Tubular(cls=self)
         elif item in ['rectangle']:
-            self._sections[shape_name] = Rectangle()        
+            self._sections[shape_name] = Rectangle(cls=self)        
         else:
             raise Exception(" section item {:} not recognized".format(shape_type))
             #print('fix here')        

@@ -46,7 +46,7 @@ class Materials(Mapping):
     def __init__(self):
         """
         """
-        self._default = None
+        self._default:Union[str,None] = None
         self._labels:List[Union[str,int]] = []
         self._type:List[Union[str,int]] = []
         self._number:List[int] = []

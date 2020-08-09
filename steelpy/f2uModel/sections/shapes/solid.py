@@ -5,6 +5,7 @@
 # Python stdlib imports
 import math
 from collections import namedtuple
+from dataclasses import dataclass
 from typing import NamedTuple, List
 
 # package imports
@@ -37,7 +38,30 @@ class PropertyOut(NamedTuple):
 #
 points = namedtuple('Points', ['y', 'z'])
 #
-class Rectangle:
+#
+@dataclass
+class SolidSection:
+    """ """
+    __slots__ = ['shear_stress', 'compactness', 'build',
+                 'FAvy', 'FAvz', 'name', 'number' ,'cls']
+    
+    def __init__(self, cls):
+        """ """
+        self.cls = cls
+        self.build:str = 'welded'
+        self.shear_stress:str = 'average'
+        self.compactness:Union[str,None] = None
+        # Shear factor
+        self.FAvy:float = 1.0
+        self.FAvz:float = 1.0
+    #
+    #
+    def set_default(self):
+        """ """
+        self.cls._default = self.name    
+#
+#
+class Rectangle(SolidSection):
     """
     Calculate the section properties of a rectangular solid section\n
 
@@ -83,40 +107,12 @@ d   |     |   Z
 
     """
     #
-    def __init__(self):
-        #name:str = None):
+    def __init__(self, cls):
         """
         """
-        #self._units = Units()
-        #_material = Materials()
-        #_material[1] = 'plastic'
-        #self._material = _material[1]
-        self.name = 'rectangular bar'
-        #if name:
-        #    self.name = name
-        # Build [WELDED / ROLLED]
-        self.build = 'rolled'
-        # Shear Stress [MAXIMUM / AVERAGE]
-        self.shear_stress_type = 'maximum'
-        self.compactness = 'N/A'
-        #self.units_in = ["", "", "second", "", "", ""]
+        SolidSection.__init__(self, cls)
+        #self.name = 'rectangular bar'
         self.type = 'rectangular bar'
-        self._properties = None
-    
-    #@property
-    #def units(self):
-    #    """
-    #    Input:
-    #    ======
-    #    length : [mandatory]  
-    #    force  :   
-    #    temperature : 
-    #    gravity     : [default : 9.81ms^2]
-    #
-    #    ------
-    #    units [length, mass, time, temperature, force, pressure/stress]
-    #    """
-    #    return self._units
     #
     #@property
     #def material(self):
@@ -573,7 +569,7 @@ d   |     |   Z
     #
  
 #
-class Circle:
+class Circle(SolidSection):
     """
     Calculate the section properties of a circular solid section\n
     
@@ -600,67 +596,17 @@ class Circle:
     Cw  : Warping constant
     """
     #
-    def __init__(self):
+    def __init__(self, cls):
         """
         """
-        # Build [WELDED / ROLLED]
-        self.build = 'rolled'
-        # Shear Stress [MAXIMUM / AVERAGE]
-        self.shear_stress = 'average'
-        self.compactness = 'N/A'
-        self.units_in = ["", "", "second", "", "", ""]
+        SolidSection.__init__(self, cls)
         self.type = 'circular bar'
-    
-    def units_input(self, **kwargs):
-        """
-        Input:
-        ======
-        length : [mandatory]  
-        force  :   
-        temperature : 
-        gravity     : [default : 9.81ms^2]
-
-        ------
-        units [length, mass, time, temperature, force, pressure/stress]
-        """
-
-        for key, value in kwargs.items():
-            _unit = units.find_unit_case(key)
-            self.units_in = units.units_module(_unit, value, 
-                                               self.units_in)
-        
-        if self.units_in[0]:
-            pass
-        
-        else:
-            print('error length unit must be provided')
-            print('      program aborted')
-            sys.exit()
-    # 
+    #
     def geometry(self, D):
         """
         """
         self.depth = float(D)
         #self.type = 'circular bar'
-    #
-    def units_output(self, **kwargs):
-        """
-        Input:\n
-        length : [mandatory]\n
-        force  : [mandatory]\n
-        temperature : \n
-        gravity     : [default : 9.81ms^2]\n
-
-        ------
-        units [length, mass, time, temperature, force, pressure/stress]/n
-        """
-        _units_in = ["", "", "second", "", "", ""]
-        for key, value in kwargs.items():
-            _unit = units.find_unit_case(key)
-            self.units_out = units.units_module(_unit, value, 
-                                                _units_in)
-        #
-        #    
     #
     def get_property(self):
         
@@ -844,7 +790,7 @@ class Circle:
         add_out.close()        
         print('ok')
 #
-class SemiCircle:
+class SemiCircle(SolidSection):
     """
     Calculate the section properties of a semi-circular solid section\n
     
@@ -870,63 +816,14 @@ class SemiCircle:
     SC  : Shear centre
     Cw  : Warping constant
     """
-    def __init__(self, D):
-        # Build [WELDED / ROLLED]
-        self.build = 'rolled'
-        # Shear Stress [MAXIMUM / AVERAGE]
-        self.shear_stress = 'average'
-        self.compactness = 'N/A'
-        self.units_in = ["", "", "second", "", "", ""]
-    
-    def units_input(self, **kwargs):
-        """
-        Input:
-        ======
-        length : [mandatory]  
-        force  :   
-        temperature : 
-        gravity     : [default : 9.81ms^2]
-
-        ------
-        units [length, mass, time, temperature, force, pressure/stress]
-        """
-
-        for key, value in kwargs.items():
-            _unit = units.find_unit_case(key)
-            self.units_in = units.units_module(_unit, value, 
-                                               self.units_in)
-        
-        if self.units_in[0]:
-            pass
-        
-        else:
-            print('error length unit must be provided')
-            print('      program aborted')
-            sys.exit()
+    def __init__(self, cls):
+        """ """
+        SolidSection.__init__(self, cls)
+        self.type = 'semicircular bar'
     #
     def geometry(self, D):
-        
+        """ """
         self.depth = float(D)
-        self.type = 'semi-circular bar'
-    
-    def units_output(self, **kwargs):
-        """
-        Input:\n
-        length : [mandatory]\n
-        force  : [mandatory]\n
-        temperature : \n
-        gravity     : [default : 9.81ms^2]\n
-
-        ------
-        units [length, mass, time, temperature, force, pressure/stress]/n
-        """
-        _units_in = ["", "", "second", "", "", ""]
-        for key, value in kwargs.items():
-            _unit = units.find_unit_case(key)
-            self.units_out = units.units_module(_unit, value, 
-                                                _units_in)
-        #
-        #    
     #
     def get_property(self):
         
@@ -1068,13 +965,10 @@ class Trapeziod:
     Cw  : Warping constant
     """
     
-    def __init__(self):
-        # Build [WELDED / ROLLED]
-        self.build = 'rolled'
-        # Shear Stress [MAXIMUM / AVERAGE]
-        self.shear_stress = 'average'
-        self.compactness = 'N/A'
-        self.units_in = ["", "", "second", "", "", ""]
+    def __init__(self, csl):
+        """ """
+        SolidSection.__init__(self, cls)
+        self.type = 'trapeziodal bar'
     
     def units_input(self, **kwargs):
         """
@@ -1115,25 +1009,6 @@ class Trapeziod:
             self.c = (self.a - self.width) / 2.0
         
         self.type = 'trapezoidal bar'
-    
-    def units_output(self, **kwargs):
-        """
-        Input:\n
-        length : [mandatory]\n
-        force  : [mandatory]\n
-        temperature : \n
-        gravity     : [default : 9.81ms^2]\n
-
-        ------
-        units [length, mass, time, temperature, force, pressure/stress]/n
-        """
-        _units_in = ["", "", "second", "", "", ""]
-        for key, value in kwargs.items():
-            _unit = units.find_unit_case(key)
-            self.units_out = units.units_module(_unit, value, 
-                                                _units_in)
-        #
-        #    
     #
     def get_property(self):
         

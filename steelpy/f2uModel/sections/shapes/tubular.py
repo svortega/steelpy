@@ -3,6 +3,7 @@
 #
 
 # Python stdlib imports
+from dataclasses import dataclass
 import math
 from typing import Union
 #
@@ -53,7 +54,79 @@ def get_compactness(self) -> str:
 #      Standard Sections Profiles
 # ----------------------------------------
 #
-class Tubular:
+#
+class TubularSection:
+    """ """
+    __slots__ = ['diameter', 'thickness', 'build',
+                 'shear_stress', 'compactness', 
+                 'FAvy', 'FAvz', 'name', 'number' ,'cls']
+    
+    def __init__(self, cls):
+        """
+        Shear Stress: MAXIMUM / AVERAGE
+        """
+        self.cls = cls
+        self.build:str = 'welded'
+        self.shear_stress:str = 'average'
+        self.compactness:Union[str,None] = None
+        # Shear factor
+        self.FAvy:float = 1.0
+        self.FAvz:float = 1.0
+    #
+    def geometry(self, **kwargs):
+        """
+        Parameters  
+        ----------
+        diameter : Diameter    
+        thickness : Wall Thickness
+        """
+        # Geometry
+        for key, value in kwargs.items():
+            _dimensions = find_tubular_dimensions(key)
+            get_dimension(self, _dimensions, value)
+
+        # Geometry
+        self.compactness = get_compactness(self)
+    #
+    @property
+    def D(self):
+        """
+        D: diametre
+        """
+        return self.diameter
+    
+    @D.setter
+    def D(self, value):
+        """
+        """
+        self.diameter = value
+    #
+    @property
+    def t(self):
+        """
+        d: diametre
+        """
+        return self.thickness
+    
+    @t.setter
+    def t(self, value):
+        """
+        """
+        self.thickness = value    
+    #
+    def rolled(self):
+        """
+        """
+        self.build='rolled'
+    #
+    #
+    def set_default(self):
+        """ """
+        self.cls._default = self.name
+#
+#
+@dataclass
+class Tubular(TubularSection):
     """
     =====================================================   
     Calculate the section properties of a Tubular section   
@@ -97,77 +170,11 @@ class Tubular:
 
     """
     #
-    def __init__(self):
+    def __init__(self, cls):
         """  
         """
-        self.name = "tubular"
-        self._units = Units()
-        self.build = 'welded'
-        # Shear Stress [MAXIMUM / AVERAGE]
-        self.shear_stress = 'average'
-        self.compactness = None
+        TubularSection.__init__(self, cls)
         self.type = 'Tubular Section'
-        #       
-        # Shear factor
-        self.FAvy = 1.0
-        self.FAvz = 1.0
-    #
-    @property
-    def units(self):
-        """
-        Input:
-        ======
-        length : [mandatory]  
-        force  :   
-        temperature : 
-        gravity     : [default : 9.81ms^2]
-
-        ------
-        units [length, mass, time, temperature, force, pressure/stress]
-        """
-        return self._units
-    #
-    #
-    def geometry(self, **kwargs):
-        """
-        Parameters  
-        ----------
-        diameter : Diameter    
-        thickness : Wall Thickness
-        """
-        # Geometry
-        for key, value in kwargs.items():
-            _dimensions = find_tubular_dimensions(key)
-            get_dimension(self, _dimensions, value)
-
-        # Geometry
-        self.compactness = get_compactness(self)
-    #
-    #
-    @property
-    def D(self):
-        """
-        D: diametre
-        """
-        return self.diameter
-    @D.setter
-    def D(self, value):
-        """
-        """
-        self.diameter = value
-    #
-    @property
-    def t(self):
-        """
-        d: diametre
-        """
-        return self.thickness
-    @t.setter
-    def t(self, value):
-        """
-        """
-        self.thickness = value    
-    #
     #
     @property
     def properties(self):
@@ -281,10 +288,6 @@ class Tubular:
             self.tau_z = self.tau_z * _alpha
             self.tau_y = self.tau_y * _alpha
     #
-    def rolled(self):
-        """
-        """
-        self.build='rolled'
     #
     def curved(self, R):
         """
@@ -351,7 +354,8 @@ class Tubular:
             return check_out
         #print('ok')     
 #
-class HollowSemicircle:
+@dataclass
+class HollowSemicircle(TubularSection):
     """
     Calculate the section properties of a Hollow Semicircle
 
@@ -389,57 +393,10 @@ class HollowSemicircle:
 
     """
     #
-    def __init__(self):
-        
-        # Build [WELDED / ROLLED]
-        self.build = 'welded'
-        # Shear Stress [MAXIMUM / AVERAGE]
-        self.shear_stress = 'average'
-        self.compactness = None        
-        self.units_in = ["", "", "second", "", "", ""] 
+    def __init__(self, cls):
+        """ """
+        TubularSection.__init__(self, cls) 
         self.type = 'Symmetrical Hollow Semicircle Section'
-    
-    def units_input(self, **kwargs):
-        """
-        Input:
-        ======
-        length : [mandatory]  
-        force  :   
-        temperature : 
-        gravity     : [default : 9.81ms^2]
-
-        ------
-        units [length, mass, time, temperature, force, pressure/stress]
-        """
-
-        for key, value in kwargs.items():
-            _unit = units.find_unit_case(key)
-            self.units_in = units.units_module(_unit, value, 
-                                               self.units_in)
-        
-        if self.units_in[0]:
-            pass
-        
-        else:
-            print('error length unit must be provided')
-            print('      program aborted')
-            sys.exit()
-    #
-    def geometry(self, **kwargs):
-        """
-        Parameters  
-        ----------
-        diameter : Diameter    
-        thickness : Wall Thickness
-        """
-        # Geometry
-        for key, value in kwargs.items():
-            _dimensions = find_tubular_dimensions(key)
-            get_dimension(self, _dimensions, value)
-
-        # Geometry
-        self.compactness = get_compactness(self)
-    #
     #
     def get_property(self):
         """
@@ -515,11 +472,6 @@ class HollowSemicircle:
         #
         #return self.area, _Zc, _Yc, self.Iy, _Zey, _Zpy, _ry, _Iz, _Zez, _Zpz, _rz, _Zp
     #
-    def rolled(self):
-        """
-        """
-        self.build='rolled'
-    #
     def print_file(self, file_name):
 
         check_out = print_header()       
@@ -537,10 +489,3 @@ class HollowSemicircle:
         add_out.close()
         print('ok') 
 #
-#
-#
-#if __name__ == "__main__":
-    #
-    #tubo = Tubular()
-    #tubo.geometry(d=1, tw=0.025)
-    #print('hello')

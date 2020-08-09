@@ -17,8 +17,6 @@ material["MAT45"] = 'elastic'
 material["MAT45"].Fy = 345.0 * units.MPa
 material["MAT45"].E = 205000.0 * units.MPa # optional
 material["MAT45"].G = 77200.0 * units.MPa  # optional
-# set material default --> for members with no assigned material
-material["MAT45"].set_default()
 #
 # -----------------------------------
 # Define sections
@@ -41,17 +39,15 @@ point[4] = {"x":4*units.m, "y":0*units.m}
 # -----------------------------------
 # Start beam modelling
 beam = concept.beam
+# set material & section default
+material["MAT45"].set_default()
+section["TUB500"].set_default()
 #
 # define beam via coordinades with list = [x, y, z=0]start, [x, y, z=0]end
 beam["bm1"] = [0*units.m, 0*units.m], [0*units.m, 6*units.m]
-beam["bm1"].material = material["MAT45"]
-beam["bm1"].section = section["TUB500"]
-#print(sys.getsizeof(beam))
 #
 # define beam via coordinades with dict and concept Point = {x, y, z=0}start, point_end
 beam["bm2"] = {"x":0*units.m, "y":6*units.m}, point[3]
-beam["bm2"].material = material["MAT45"]
-beam["bm2"].section = section["TUB500"]
 # segmented beam
 #beam["bm2"].step[1] = [1*units.m, 6*units.m]
 beam["bm2"].step[1].length = 1.0 * units.m
@@ -59,15 +55,9 @@ beam["bm2"].step[1].section = section["TUB400"]
 #
 beam["bm2"].step[2] = [3*units.m, 6*units.m]
 #beam["bm2"].step[2].length = 3.0 * units.m
-beam["bm2"].step[2].section = "TUB500"
-beam["bm2"].step[2].material = "MAT45"
-#print(sys.getsizeof(beam))
 #
 # define beam via concept Points = point_start, point_end
 beam["bm3"] = point[3], point[4]
-beam["bm3"].material = "MAT45"
-beam["bm3"].section = "TUB500"
-#print(sys.getsizeof(beam))
 #
 # -----------------------------------
 # Define boundary conditions

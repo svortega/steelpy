@@ -142,10 +142,10 @@ class Ibeam:
 
     """
     #
-    def __init__(self):
-                # name:str = 'I_beam', number:int = None):
+    def __init__(self, cls):
         """
         """
+        self.cls = cls
         self._units = Units()
         _material = Materials()
         _material[1] = 'plastic'
@@ -155,11 +155,6 @@ class Ibeam:
         # Shear Stress [MAXIMUM / AVERAGE]
         self.shear_stress_type = 'average'
         self.compactness = None
-        self.units_in = ["", "", "second", "", "", ""]
-        #
-        #self.name = name
-        #if number:
-        #    self.number = number
         #
         self._properties = None
         # Shear factor
@@ -169,22 +164,7 @@ class Ibeam:
         #
         self.root_radius = 0 * self._units.m
         self.type = 'I section'
-    #
-    @property
-    def units(self):
-        """
-        Input:
-        ======
-        length : [mandatory]  
-        force  :   
-        temperature : 
-        gravity     : [default : 9.81ms^2]
-
-        ------
-        units [length, mass, time, temperature, force, pressure/stress]
-        """
-        return self._units
-    
+    #    
     @property
     def material(self):
         """
@@ -942,7 +922,6 @@ class Ibeam:
         self.root_radius = value
     #
     #
-    #
     def _shape(self):
         """
         """
@@ -1103,6 +1082,11 @@ class Ibeam:
         
         self.section_coordinates = points(coord_y, coord_z)
         #print('ok')
+    #
+    #
+    def set_default(self):
+        """ """
+        self.cls._default = self.name    
 #
 #
 #
