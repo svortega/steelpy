@@ -38,11 +38,11 @@ class Concepts:
     
     Contact
     """
-    __slots__ = ['joints', 'beam', 'pile', 'points', 
+    __slots__ = ['joints', 'beam', 'pile', 'points', #'_load',
                  'shells', 'membranes', 'solids', 'springs', 'load',
                  '_hinges', 'boundary', '_properties', '_name', '_mesh']
     
-    def __init__(self, mesh, load, properties):
+    def __init__(self, mesh, properties): # load, 
         """
         """
         self._mesh = mesh
@@ -70,7 +70,8 @@ class Concepts:
         #self.springs = Springs(spring_type='spring', 
         #                       points=self.points, materials=mesh.materials)
         #
-        self.load = ConcepLoad(load, self.points, self.beam)
+        #self._load = load
+        self.load = ConcepLoad(self.points, self.beam) # self._load, 
     #
     #
     #
@@ -190,37 +191,3 @@ class Concepts:
     #        except KeyError:
     #            print('-->', _number)
     #
-    #
-    def _set_mesh(self):
-        """ """
-        mesh = self._mesh
-        number = mesh.elements.get_number()
-        for key, memb in self.beam.items():
-            #print(key)
-            total_length = memb.length
-            _nodes = memb.connectivity
-            node_res = _nodes[0].name # start
-            node_end = _nodes[1].name
-            for step in memb.step:
-                _mnumber = next(number)
-                #print(_mnumber, key)
-                try:
-                    1/step.length.value
-                    total_length -= step.length
-                    coord = memb.find_coordinate(step.length)
-                    new_node = self.points.get_point_name( coord )
-                    # elements [node1, node2, material, section]
-                    mesh.elements[_mnumber] = ['beam', node_res, new_node,
-                                               step.material.name, step.section.name ]
-                    node_res = new_node
-                except ZeroDivisionError:
-                    # elements [node1, node2, material, section]
-                    mesh.elements[_mnumber] = ['beam', node_res, node_end,
-                                               step.material.name, step.section.name]
-            #print('-->')
-        #
-        print('end')
-    #
-    def _set_load(self):
-        """ """
-        load = self.load

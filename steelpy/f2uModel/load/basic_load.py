@@ -20,7 +20,7 @@ class LoadTypes:
     """
     """
     __slots__ = ['_nodal_load', '_nodal_mass', '_nodal_displacement',
-                 '_beam_line', '_beam_point','name', 'number']
+                 '_beam_line', '_beam_point', 'name', 'number', 'title']
     
     def __init__(self):
         """
@@ -162,7 +162,8 @@ class LoadCase(Mapping):
         """
         """
         self._load[load_name] = LoadTypes()
-        self._load[load_name].name = load_title
+        self._load[load_name].name = load_name
+        self._load[load_name].title = load_title
         self._load[load_name].number = len(self._load)
     
     def __getitem__(self, load_name:Union[str,int]):

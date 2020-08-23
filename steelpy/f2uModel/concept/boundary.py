@@ -84,7 +84,9 @@ class Boundaries(Mapping):
         """
         node
         """
-        return BoundaryType(cls=self, boundary_name=support_name)
+        index = self._labels.index(support_name)
+        node_name = self._points[index]
+        return BoundaryType(cls=self, boundary_name=node_name)
     
     #
     #

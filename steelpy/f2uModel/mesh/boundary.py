@@ -56,15 +56,15 @@ class BoundaryNodes(Mapping):
     def __init__(self) -> None:
         """
         """
-        self._number : List[int] = array('I', [])
-        self._x : List[float] = array('f', [])
-        self._y : List[float] = array('f', [])
-        self._z : List[float] = array('f', [])
-        self._rx : List[float] = array('f', [])
-        self._ry : List[float] = array('f', [])
-        self._rz : List[float] = array('f', [])
+        self._number : array = array('I', [])
+        self._x : array = array('f', [])
+        self._y : array = array('f', [])
+        self._z : array = array('f', [])
+        self._rx : array = array('f', [])
+        self._ry : array = array('f', [])
+        self._rz : array = array('f', [])
         #
-        self._labels = [] # : List[int] = array('I', [])
+        self._labels: List[Union[int,str]] = [] #  = array('I', [])
         #self._type : List[Union[str, int]] = [] # array('I', [])
         #
         # fix_type = ['release', 'gap', 'prescribed', 'dependence',
@@ -120,7 +120,7 @@ class BoundaryNodes(Mapping):
                 # _type = _bound_type[_type]
 
     #
-    def __getitem__(self, node_number: None) -> Tuple:
+    def __getitem__(self, node_number: Union[None,str,int]) -> Union[Tuple,bool]:
         """
         """
         try:

@@ -12,6 +12,23 @@ from steelpy.process.io_module.text import search_line
 
 #
 #
+class PropertyOut(NamedTuple):
+    """ """
+    area:float
+    Zc:float
+    Yc:float
+    Iy:float
+    Zey:float
+    Zpy:float
+    ry:float
+    Iz:float
+    Zez:float
+    Zpz:float
+    rz:float
+    J:float
+    Cw:float
+#
+#
 class SectionProperty(NamedTuple):
     """
     area: Section area

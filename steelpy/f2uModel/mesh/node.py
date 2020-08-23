@@ -22,7 +22,7 @@ class CoordCartesian(NamedTuple):
     y: Units
     z: Units
     number: int
-    name:Union[str,int]
+    name:int
     system:str ="cartesian"
     #boundaries: Iterable
     #sets: List[Tuple]
@@ -72,7 +72,7 @@ class CoordCylindrical(NamedTuple):
     theta: float
     z: float
     number: int
-    name:Union[str,int]
+    name:int
     system:str ="cylindrical"
 
 class CoordSpherical(NamedTuple):
@@ -82,7 +82,7 @@ class CoordSpherical(NamedTuple):
     theta: float
     phi: float
     number: int
-    name:Union[str,int]
+    name:int
     system:str ="spherical"
 #
 def get_coordinate_system(system):
@@ -131,16 +131,17 @@ class Nodes(Mapping):
         #self._boundaries = boundaries
         self.system: str = 'cartesian'
         # set variables
-        self._labels: List[Union[str,int]] = []
-        self._number : List[int] = array('I', [])
-        self._x: List[float] = array('f', [])
-        self._y: List[float] = array('f', [])
-        self._z: List[float] = array('f', [])
+        #self._labels: List[Union[str,int]] = []
+        self._labels : array = array('I', [])
+        self._number : array = array('I', [])
+        self._x: array = array('f', [])
+        self._y: array = array('f', [])
+        self._z: array = array('f', [])
     #
     #
     # ---------------------------------
     #
-    def __setitem__(self, node_name: Union[int, str],
+    def __setitem__(self, node_name: int,
                     coordinates: Union[List[float], Dict[str, float]]) -> None:
         """
         """
@@ -271,7 +272,8 @@ class Nodes(Mapping):
                         return self._labels[index]
         #create a new point
         while True:
-            node_name = "pnt_{:}".format(str(next(self.get_number())))
+            #node_name = "pnt_{:}".format(str(next(self.get_number())))
+            node_name = next(self.get_number())
             try:
                 self._labels.index(node_name)
             except ValueError:
@@ -283,7 +285,7 @@ class Nodes(Mapping):
         """
         """
         try:
-            n = max(self._number) + 1
+            n = max(self._labels) + 1
         except ValueError:
             n = start
         #

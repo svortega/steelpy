@@ -25,10 +25,10 @@ def populate_section_table(conn, _section):
     """
     if 'tubular' in _section.type.lower():
         project = (_section.name, _section.type,
-                   _section.diameter.value, 
+                   _section.diameter.value,
                    _section.thickness.value,
                    'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL',)
-    if 'rectangular' in _section.type.lower():
+    elif 'rectangular' in _section.type.lower():
         project = ( _section.name, _section.type,
                    'NULL', 'NULL',
                    _section.height.value, 'NULL', 

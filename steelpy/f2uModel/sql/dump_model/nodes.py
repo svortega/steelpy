@@ -19,21 +19,20 @@ def populate_node_table(conn, node):
     :return: project id
     """
     if node.system == 'cylindrical':
-        project = (node.name, node.number, node.system,  
+        project = (node.name, node.number, node.system,
                    'NULL', 'NULL', node.z,  
                    node.r, node.theta, 'NULL')
     elif node.system == 'spherical':
-        project = (node.name, node.number, node.system,  
+        project = (node.name, node.number, node.system,
                    'NULL', 'NULL', 'NULL',  
                    node.r, node.theta, node.phi)
     else:
-        project = (node.name, node.number, node.system,  
+        project = (node.name, node.number, node.system,
                    node.x.value, node.y.value, node.z.value,  
                   'NULL', 'NULL', 'NULL')
     #
     sql = 'INSERT INTO tb_Nodes (name, number, type,\
-                                x, y, z, r,\
-                                theta, phi)\
+                                x, y, z, r, theta, phi)\
                                 VALUES(?,?,?,?,?,?,?,?,?)'
     #
     cur = conn.cursor()
@@ -79,7 +78,6 @@ def get_tb_nodes(_table_name):
                 number NOT NULL,\
                 x, y, z\
                 r, theta, phi);".format(_table_name)
-    
     return _table
 #
 #

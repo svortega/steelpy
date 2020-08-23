@@ -1,6 +1,6 @@
 from steelpy import f2uModel
 from steelpy import Units
-
+from steelpy import Trave
 #
 # -----------------------------------
 # Start conceptual modelling
@@ -89,11 +89,13 @@ basic[1].point.load["wind_1"] = {'fz': -4 * units.MN} # nodal load out plane
 # create new basic load
 basic[2] = 'snow basic'
 basic[2].beam = beam["bm2"]
+basic[2].beam.coordinate_system = 'local' # set load coord system local
 basic[2].beam.line_load["snow_1"] = {'qy': -1 * units.kN / units.m} # in plane udl from node to node
 
 basic[2].beam.line_load["snow_2"] = {'qy1': 0 * units.kN / units.m, # in plane triangular load
                                      'qy2':-2 * units.kN / units.m} # from node to node
 # trapezoidal out plane load
+basic[2].beam.coordinate_system = 'global' # reset load coord system global
 basic[2].beam.line_load["snow_3"] = {'qz1': 2 * units.kN / units.m, # start load value
                                      'qz2': 4 * units.kN / units.m, # end load value
                                      'd1': 0.5 * units.m, # load start 0.5m from node 1
@@ -107,5 +109,10 @@ basic[3].beam.point_load["crane_1"] = {'fx':-100 * units.MN,  # beam point torsi
 #
 #
 f2u_model.get_mesh()
+f2u_model.sql.dump_model()
 #
+frame = Trave()
+frame.f2u_model = f2u_model
+frame.solve_static()
+frame.print_results()
 print('-->')

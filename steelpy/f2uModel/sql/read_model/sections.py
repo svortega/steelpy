@@ -7,7 +7,7 @@
 #
 
 # package imports
-from steelpy.f2uModel.sections.shapes.solid import PropertyOut
+from steelpy.f2uModel.sections.process.io_sections import PropertyOut
 
 def get_sections(conn, component_name):
     """

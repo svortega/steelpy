@@ -261,8 +261,8 @@ class Element:
         """
         #
         # try:
-        _node1 = self._elements._nodes[self._elements._connectivity[self.index][0]]
-        _node2 = self._elements._nodes[self._elements._connectivity[self.index][-1]]
+        _node1 = self._elements._f2u_nodes[self._elements._connectivity[self.index][0]]
+        _node2 = self._elements._f2u_nodes[self._elements._connectivity[self.index][-1]]
         # except Exception as error:
         #    print(error)
         #    return None
@@ -311,17 +311,18 @@ class Element:
             return self.length_node2node
         #
 
-    @property
-    def length_node2node(self) -> float:
+    #@property
+    def length_node2node(self, nodes) -> float:
         """
         """
-        _node1 = self._elements._f2u_nodes[self._elements._connectivity[self.index][0]]
-        _node2 = self._elements._f2u_nodes[self._elements._connectivity[self.index][-1]]
-        #_dx = _node1.x - _node2.x
-        #_dy = _node1.y - _node2.y
-        #_dz = _node1.z - _node2.z
-        #dist2 = (_dx * _dx + _dy * _dy + _dz * _dz)**0.50
-        return math.dist(_node1[:3], _node2[:3])
+        _node1 = nodes[self._elements._connectivity[self.index][0]]
+        _node2 = nodes[self._elements._connectivity[self.index][-1]]
+        _dx = _node1.x.value - _node2.x.value
+        _dy = _node1.y.value - _node2.y.value
+        _dz = _node1.z.value - _node2.z.value
+        d = (_dx * _dx + _dy * _dy + _dz * _dz)**0.50
+        # d = math.dist(_node1[:3], _node2[:3])
+        return round(d, 3)
 
     #
     @property

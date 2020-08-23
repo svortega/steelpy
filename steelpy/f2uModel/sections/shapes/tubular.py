@@ -11,7 +11,7 @@ from typing import Union
 # package imports
 from steelpy.process.units.main import Units
 from steelpy.process.io_module.text import search_line
-from steelpy.f2uModel.sections.process.io_sections import SectionProperty
+from steelpy.f2uModel.sections.process.io_sections import SectionProperty, PropertyOut
 import steelpy.f2uModel.sections.process.print_report as print_report
 #
 #
@@ -58,7 +58,7 @@ def get_compactness(self) -> str:
 class TubularSection:
     """ """
     __slots__ = ['diameter', 'thickness', 'build',
-                 'shear_stress', 'compactness', 
+                 'shear_stress', 'compactness', '_properties',
                  'FAvy', 'FAvz', 'name', 'number' ,'cls']
     
     def __init__(self, cls):
@@ -72,6 +72,8 @@ class TubularSection:
         # Shear factor
         self.FAvy:float = 1.0
         self.FAvz:float = 1.0
+        #
+        self._properties = None
     #
     def geometry(self, **kwargs):
         """
@@ -97,6 +99,20 @@ class TubularSection:
     
     @D.setter
     def D(self, value):
+        """
+        """
+        self.diameter = value
+    #
+    #
+    @property
+    def d(self):
+        """
+        D: diametre
+        """
+        return self.diameter
+
+    @d.setter
+    def d(self, value):
         """
         """
         self.diameter = value
@@ -176,8 +192,7 @@ class Tubular(TubularSection):
         TubularSection.__init__(self, cls)
         self.type = 'Tubular Section'
     #
-    @property
-    def properties(self):
+    def _get_properties(self):
         """
         """
         #
@@ -218,7 +233,7 @@ class Tubular(TubularSection):
         self.SFz = self.SFy
         #-------------------------------------------------
         #   Warping Constant Cw
-        _Cw = 0
+        self.Cw = 0 * self.Iy
         #-------------------------------------------------
         #   Torsional Constant
         self.J = (2 * self.Iy)
@@ -233,7 +248,19 @@ class Tubular(TubularSection):
         self.rp = (self.Jx / self.area)**0.50
         #
         #return _Area, _Zc, _Yc, _Iy, _Zey, _Zpy, _ry, _Iz, _Zez, _Zpz, _rz
-    
+        return PropertyOut(area=self.area.value, Zc=self.Zc.value, Yc=self.Yc.value,
+                           Iy=self.Iy.value, Zey=self.Zey.value, Zpy=self.Zpy.value, ry=self.ry.value,
+                           Iz=self.Iz.value, Zez=self.Zez.value, Zpz=self.Zpz.value, rz=self.rz.value,
+                           J=self.J.value, Cw=self.Cw.value)
+    #
+    @property
+    def properties(self):
+        """
+        """
+        if not self._properties:
+            self._properties = self._get_properties()
+        return self._properties
+
     @properties.setter
     def properties(self, values):
         """

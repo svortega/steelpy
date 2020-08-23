@@ -6,35 +6,18 @@
 import math
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import NamedTuple, List
+from typing import NamedTuple, List, Union
 
 # package imports
 from steelpy.process.units.main import Units
 from steelpy.f2uModel.material.main import Materials
-#import iLift.beam.section.process.io_module as shape_io
+import steelpy.f2uModel.sections.process.io_sections as shape_io
 #from steelpy.sections.process.stress import BeamStress
 #from iLift.load.process.actions import Actions
 
 # ----------------------------------------
 #      Basic Solid Shapes
 # ----------------------------------------
-#
-class PropertyOut(NamedTuple):
-    """ """
-    area:float 
-    Zc:float
-    Yc:float
-    Iy:float
-    Zey:float
-    Zpy:float 
-    ry:float
-    Iz:float
-    Zez:float 
-    Zpz:float 
-    rz:float
-    J:float
-    Cw:float
-#
 #
 points = namedtuple('Points', ['y', 'z'])
 #
@@ -43,7 +26,8 @@ points = namedtuple('Points', ['y', 'z'])
 class SolidSection:
     """ """
     __slots__ = ['shear_stress', 'compactness', 'build',
-                 'FAvy', 'FAvz', 'name', 'number' ,'cls']
+                 'FAvy', 'FAvz', 'name', 'number', 'cls',
+                 '_properties']
     
     def __init__(self, cls):
         """ """
@@ -54,6 +38,8 @@ class SolidSection:
         # Shear factor
         self.FAvy:float = 1.0
         self.FAvz:float = 1.0
+        #
+        self._properties = None
     #
     #
     def set_default(self):
@@ -245,10 +231,10 @@ d   |     |   Z
         #    print(row.rstrip())
         #
         #return _Area, _Zc, _Yc, _Iy, _Zey, _Zpy, _ry, _Iz, _Zez, _Zpz, _rz
-        return PropertyOut(area=self.area.value, Zc=self.Zc.value, Yc=self.Yc.value, 
-                           Iy=self.Iy.value, Zey=self.Zey.value, Zpy=self.Zpy.value, ry=self.ry.value,
-                           Iz=self.Iz.value, Zez=self.Zez.value, Zpz=self.Zpz.value, rz=self.rz.value,
-                           J=self.J.value, Cw=self.Cw.value)
+        return shape_io.PropertyOut(area=self.area.value, Zc=self.Zc.value, Yc=self.Yc.value,
+                                   Iy=self.Iy.value, Zey=self.Zey.value, Zpy=self.Zpy.value, ry=self.ry.value,
+                                   Iz=self.Iz.value, Zez=self.Zez.value, Zpz=self.Zpz.value, rz=self.rz.value,
+                                   J=self.J.value, Cw=self.Cw.value)
     #
     @property
     def properties(self):

@@ -90,7 +90,7 @@ class BeamDistributed(Mapping):
         """
         self._labels.append(element_name)
         self._title.append(element_name)
-        self._index = self._labels.index(element_name)
+        self._index = len(self._labels)-1
         self._system.append(self._system_flag)
         self._complex.append(0)
         #
@@ -188,7 +188,8 @@ class BeamDistributed(Mapping):
     def __iter__(self) -> Iterable:
         """
         """
-        return iter(self._labels)
+        items = list(set(self._labels))
+        return iter(items)
     #
     #
     def get_nodal_load(self, elements, nodes, materials, sections) -> List:
@@ -452,7 +453,7 @@ class BeamPoint(NodeLoadMaster):
         """
         """
         items = [ ]
-        set_items = set ( self._labels )
+        set_items = set(self._labels)
         if not set_items:
             return []
         for item in set_items:

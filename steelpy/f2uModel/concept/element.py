@@ -16,7 +16,7 @@ from typing import Dict, List, ClassVar, Tuple, Iterable, Union
 
 # package imports
 from steelpy.process.units.main import Units
-from steelpy.f2uModel.mesh.node import get_coordinate_system
+#from steelpy.f2uModel.mesh.node import get_coordinate_system
 import steelpy.process.io_module.text as common
 #
 #
@@ -41,7 +41,7 @@ class Element:
     @number.setter
     def number(self, value:int) -> None:
         """"""
-        self._cls._number[ self.index ] = value
+        self._cls._number[self.index] = value
     #
     @property
     def type(self)-> str:
@@ -173,6 +173,21 @@ class SegmentedBeam:
             self._cls._sections[index] = value
     #
     #
+    @property
+    def _mesh(self):
+        """
+        """
+        index = self._get_index()
+        return self._cls._mesh[index[0]]
+    
+    @_mesh.setter
+    def _mesh(self, element:Union[str,int]):
+        """
+        """
+        index = self._get_index()
+        self._cls._mesh[index[0]] = element
+    #     
+    #
     def _get_index(self):
         """ """
         index = [_index for _index in self.indices
@@ -185,7 +200,7 @@ class SegmentedBeam:
     #    """ """
     #    for index in self.indices[1:]:
     #        yield Element(self._cls, index)
-    #
+    #   
 #
 #
 class Steps:
@@ -197,8 +212,6 @@ class Steps:
         self._cls = cls._cls
         self.indices = [index for index, name in enumerate(self._cls._labels) 
                         if cls.name == name]
-        #self._steps = SegmentedBeam(self._cls, self.indices)
-        #print('--')
     
     def __setitem__(self, step_name, coord):
         """ """
@@ -208,32 +221,20 @@ class Steps:
         node1 = f2u_points._get_coordinates(node1)
         node2 = f2u_points._get_coordinates(coord)
         length = math.dist(node1, node2)
-        self._cls._segment[ index ] = length
-        #self._cls._step_label[index] = 0
+        self._cls._segment[index] = length
         new_index = self._cls._duplicate_element(index)
         self._cls._step_label[new_index] = step_name
-        #print('---')
-    #    index = [_index for _index in self.indices
-    #             if step_name == self._cls._step_label[_index]]
     #    
-    #    index
-    
+    # 
     def __getitem__(self, step_name: Union[int,str]) -> Tuple:
         """
         step_name : node number
         """
         return SegmentedBeam(self._cls, step_name, self.indices)
-        #try:
-        #    1/step._flag
-        #    return step
-        #except ZeroDivisionError:
-        #    return Element(self._cls, self.indices[0])
-        #print('---')
     #
     def __iter__(self):
         """ """
         for index in self.indices:
-            #yield Element(self._cls, index)
             step_name = self._cls._step_label[index]
             yield SegmentedBeam(self._cls, step_name, self.indices)
 #
@@ -388,6 +389,7 @@ class Beam(Element):
         #Coordinates = get_coordinate_system(_node[0].system)
         #return Coordinates(*_nodeNo3)
         return _nodeNo3
+    #
 #
 #
 class Elements(Mapping):
@@ -425,6 +427,7 @@ class Elements(Mapping):
         self._connectivity: List = []
         self._segment:List[float] = []
         self._step_label:List[Union[str,int]] = []
+        self._mesh:List[Union[str,int]] = []
         #
         #self._direction_cosines = array('i', [])
         #self._offset_index = array('i', [])        
@@ -462,7 +465,8 @@ class Elements(Mapping):
                 self._sections[index] = f2u_sections._default
             #
             self._segment.append(0)
-            self._step_label.append(-1)
+            self._step_label.append(element_name)
+            self._mesh.append(-1)
             # to be defined
             #self._properties.append(-1)
             #self._offset_index.append(-1)
@@ -476,6 +480,9 @@ class Elements(Mapping):
         """
         try:
             _index = self._labels.index(element_name)
+            _indices = [index for index, name in enumerate(self._labels) 
+                        if element_name == name]
+            _index = _indices[0]
             if self._type[_index] in ["beam", "truss"]:
                 return Beam(self, _index)
             else:
@@ -515,6 +522,10 @@ class Elements(Mapping):
             #self._direction_cosines.pop(i)
             self._connectivity.pop(i)
             #
+            self._segment.pop(i)
+            self._step_label.pop(i)
+            self._mesh.pop(i)            
+            #
             #offset_index = self._offset_index[i]
             #self._offset_index.pop(i)
             ## FIXME
@@ -526,7 +537,7 @@ class Elements(Mapping):
                 del f2u_points[_node_number]
             #
             # FIXME: number should be updated according new index
-            self._number.pop( i )
+            self._number.pop(i)
         except ValueError:
             raise KeyError('    *** warning element {:} does not exist'
                            .format(element_name))
@@ -586,6 +597,7 @@ class Elements(Mapping):
         #
         self._segment.insert(step, 0)
         self._step_label.insert(step, -1)
+        self._mesh.insert(step, -1)
         # renumber
         self._number.insert(step, self._labels.index(element_name))
         self._number= [index for index, _ in enumerate(self._labels)]
