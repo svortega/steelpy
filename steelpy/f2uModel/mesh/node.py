@@ -7,7 +7,7 @@
 from array import array
 from collections.abc import Mapping
 import logging
-from math import isclose
+from math import isclose, dist
 from typing import NamedTuple, Tuple, List, Iterator, Iterable, Union, Dict
 import re
 
@@ -59,11 +59,16 @@ class CoordCartesian(NamedTuple):
         """
         """
         if (isclose(self.x.value, other.x.value, abs_tol=1e-03)
-                and isclose(self.y.value, other.y.value, abs_tol=1e-03)
-                and isclose(self.z.value, other.z.value, abs_tol=1e-03)):
+            and isclose(self.y.value, other.y.value, abs_tol=1e-03)
+            and isclose(self.z.value, other.z.value, abs_tol=1e-03)):
             return True
         return False
-
+    #
+    def distance(self, other):
+        """ distance between two nodes"""
+        #print("here")
+        node1 = [self.x, self.y, self.z]
+        return dist(node1[:3], other[:3])      
 
 class CoordCylindrical(NamedTuple):
     """
@@ -229,6 +234,21 @@ class Nodes(Mapping):
     #    #return array('f',result)
     #
     #
+    def _renumber(self):
+        """
+        """
+        lst_size = len(self._labels)
+        _index = [self._number.index(i)
+                  for i in range(lst_size)]
+        #
+        self._number = [self._number[indx] for indx in _index]
+        self._labels = [self._labels[indx] for indx in _index]
+        self._x = [self._x[indx] for indx in _index]
+        self._y = [self._y[indx] for indx in _index]
+        self._z = [self._z[indx] for indx in _index]
+        #print('-->')
+    #
+    #
     @property
     def _get_maxmin(self):
         """
@@ -270,6 +290,10 @@ class Nodes(Mapping):
                 if isclose(coord[1], self._y[index], abs_tol=tol):
                     if isclose(coord[2], self._z[index], abs_tol=tol):
                         return self._labels[index]
+        raise IOError('   error coordinate not found')
+    #
+    def get_new_point(self, coordinates):
+        """ """
         #create a new point
         while True:
             #node_name = "pnt_{:}".format(str(next(self.get_number())))

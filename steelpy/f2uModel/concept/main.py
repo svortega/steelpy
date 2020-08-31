@@ -9,9 +9,9 @@ from typing import Tuple, Dict, List
 # package imports
 #
 from steelpy.f2uModel.concept.joint import Connection
-from steelpy.f2uModel.concept.element import Elements
-from steelpy.f2uModel.concept.boundary import Boundaries
-from steelpy.f2uModel.concept.load import ConcepLoad
+from steelpy.f2uModel.concept.element import ConceptElements
+from steelpy.f2uModel.concept.boundary import ConceptBoundaries
+from steelpy.f2uModel.concept.load import ConceptLoad
 #from steelpy.f2uModel.concept.beam import Beams
 #from steelpy.f2uModel.concept.shell import Shells
 #from steelpy.f2uModel.concept.spring import Springs
@@ -47,14 +47,13 @@ class Concepts:
         """
         self._mesh = mesh
         self.points = mesh.nodes
-        self.joints = Connection(points = self.points)
+        self.joints = Connection(points=self.points)
         self._hinges = Releases()
         #
-        self.boundary = Boundaries(points = self.points,
-                                   boundary_points=self._mesh.boundaries)
+        self.boundary = ConceptBoundaries()
         #
-        self.beam = Elements(element_type="beam", points = self.points,
-                             materials=mesh.materials, sections=mesh.sections)
+        self.beam = ConceptElements(element_type="beam", points = self.points,
+                                    materials=mesh.materials, sections=mesh.sections)
 
         #self.truss = Elements(element_type='truss', points = self.points,
         #                      materials=mesh.materials, sections=mesh.sections)
@@ -71,87 +70,18 @@ class Concepts:
         #                       points=self.points, materials=mesh.materials)
         #
         #self._load = load
-        self.load = ConcepLoad(self.points, self.beam) # self._load, 
+        self.load = ConceptLoad(self.points, self.beam) # self._load,
     #
     #
     #
     #
-    def __getitem__(self, concept_name: str) -> Dict:
-        """
-        """
-        try: # beam
-            return self.beam[concept_name]
-        except KeyError:
-            pass
-        
-        #try : # truss
-        #    return self.trusses[concept_name]
-        #except KeyError:
-        #    pass
-        
-        #try : # pile
-        #    return self.piles[concept_name]
-        #except KeyError:
-        #    pass
-        
-        #try : # cable
-        #    return self.cable[concept_name]
-        #except KeyError:
-        #    pass        
-        
-        #try : # shell
-        #    return self.shells[concept_name]
-        #except KeyError:
-        #    pass
-        
-        #try : # membrane
-        #    return self.membranes[concept_name]
-        #except KeyError:
-        #    pass      
-        
-        #try : # solid
-        #    return self.solids[concept_name]
-        #except KeyError:
-        #    pass
-        
-        #try : # spring
-        #    return self.springs[concept_name]
-        #except KeyError:
-        #    pass          
-        #
-        raise KeyError('concept {:} not found'.format(concept_name))
-        #return False    
     #
-    def __setitem__(self, concept_name: str, concept_type:str) -> None:
-        """
-        """
-        concept_type = concept_type.lower()
-        self._name = concept_name
-        
-        if 'beam' in concept_type:
-            self.beams[concept_name] = None
+    #def __iter__(self):
+        #"""
+        #"""
+        #for _name in self.beams.keys():
+        #    yield self.beams[_name]
         #
-        #elif 'truss' in concept_type:
-        #    self.trusses[concept_name] = None
-        #
-        #elif 'pile' in concept_type:
-        #    self.piles[concept_name] = None
-        #
-        #elif 'shell' in concept_type:
-        #    self.shells[concept_name] = None
-        #
-        #elif 'spring' in concept_type:
-        #    self.springs[concept_name] = concept_type
-        #
-        else:
-            1/0
-    #
-    def __iter__(self):
-        """
-        """
-        for _name in self.beams.keys():
-            yield self.beams[_name]
-        
         #for _name in self.trusses.keys():
         #    yield self.trusses[_name]
         #

@@ -23,7 +23,7 @@ def create_connection(db_file):
         raise RuntimeError(e)
     #finally:
     #    conn.close()
-    return None
+    #return None
 #
 def create_table(conn, create_table_sql):
     """ create a table from the create_table_sql statement

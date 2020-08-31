@@ -5,7 +5,7 @@
 # Python stdlib imports
 
 # package imports
-from steelpy.f2uModel.load.basic_load import LoadCase
+from steelpy.f2uModel.load.basic_load import BasicLoad
 from steelpy.f2uModel.load.combination import LoadCombination
 
 #
@@ -17,7 +17,7 @@ class Loading:
     def __init__(self):
         """
         """
-        self._basic = LoadCase()
+        self._basic = BasicLoad()
         self._combination = LoadCombination()
     
     @property

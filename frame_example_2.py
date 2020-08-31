@@ -119,6 +119,12 @@ basic[3].point_beam[2] = [2.5, 0, 0, 0,  0, 0, -100_000_000]
 basic[2].udl_beam[2] = [0, -100_000_000, 0, 0, -200_000_000, 0, 1.0, 1.0]
 ##basic[2].udl_beam[2] = [0, -480_000_000*0.5, 0, 0, -480_000_000*0.5, 0]
 ##basic[2].udl_beam[2] = [0, -480_000_000*0.5, 0, 0, -480_000_000*0.5, 0]
+#
+#
+# create new basic load
+basic[4] = 'dead load'
+basic[4].selfweight.y = -1
+#
 ##
 comb = load.combination
 comb[1] = 'factored comb'
@@ -127,7 +133,7 @@ comb[1].basic_load[2] = 1.35
 comb[1].basic_load[3] = 1.50
 #
 #
-f2umodel.sql.dump_model()
+f2umodel.get_mesh()
 #
 #
 frame = Trave()

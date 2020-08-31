@@ -92,7 +92,7 @@ class Materials(Mapping):
             return self._elastic[material_name]
         else:
             raise IOError(' material type {:} not recognised'
-                          .format(material_type))        
+                          .format(_material_type))
     
     def __delitem__(self, material_name: str) -> None:
         """

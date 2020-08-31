@@ -8,7 +8,7 @@ from itertools import chain
 from collections import Counter
 from collections import defaultdict
 import functools
-import pickle
+#import pickle
 from typing import NamedTuple, Dict, Union, Tuple, List
 import time
 #
@@ -21,10 +21,10 @@ import time
 
 #
 #
-def get_nodes_connected(elements):
+def get_nodes_connected(elements, nodes):
     """
     """
-    nodes = elements._f2u_nodes
+    #nodes = elements._f2u_nodes
     #print('-->')
     #
     degree = get_node_degree(elements)
@@ -178,55 +178,55 @@ def get_args(args, items, item_class, item_type):
 #
 #
 #
-class f2uElements(NamedTuple):
-    """ Cartesian coordinate system"""
-    name:Union[str, int]
-    index:int
-    type:str
-    connectivity: List[int]
-    length:float
-    DoF:List[int]
-    beta:float
-    unit_vector: List[float]
-    material: Tuple
-    section:Tuple
-    #nodes: Dict[Union[str, int], Tuple]
-#
-def dump_f2u_mesh(mesh):
-    """
-    """
-    start_time = time.time()
-    nodes = {key:item for key, item in mesh.nodes.items()}
-    material = mesh.materials.get_material()
-    sections = mesh.sections.get_properties()
-    boundaries = {key:item for key, item in mesh.boundaries.node.items()}
-    free_nodes = mesh.elements.get_free_nodes()
-    #
-    elements = {}
-    for key, memb in mesh._elements.items():
-        elements[key] = f2uElements(name=memb.name, index=memb.index, 
-                                    type= memb.type,
-                                    connectivity=memb.connectivity,
-                                    length=memb.length_node2node, 
-                                    DoF=memb.DoF, beta=memb.beta,
-                                    unit_vector=memb.unit_vector,
-                                    #K=memb.Kmatrix,
-                                    material=memb.material,
-                                    section=memb.section)
-    #
-    #  
-    file = open( "mesh.f2u", "wb" )
-    pickle.dump( nodes, file )
-    pickle.dump( boundaries, file )
-    pickle.dump( elements, file )
-    pickle.dump( material, file )
-    pickle.dump( sections, file )
-    pickle.dump( free_nodes, file )
-    file.close()
-    #
-    end_time = time.time()
-    uptime = end_time - start_time
-    print("** Writting File Process Time: {:1.4e} sec".format(uptime))
+#class f2uElements(NamedTuple):
+#    """ Cartesian coordinate system"""
+#    name:Union[str, int]
+#    index:int
+#    type:str
+#    connectivity: List[int]
+#    length:float
+#    DoF:List[int]
+#    beta:float
+#    unit_vector: List[float]
+#    material: Tuple
+#    section:Tuple
+#    #nodes: Dict[Union[str, int], Tuple]
+##
+#def dump_f2u_mesh(mesh):
+#    """
+#    """
+#    start_time = time.time()
+#    nodes = {key:item for key, item in mesh.nodes.items()}
+#    material = mesh.materials.get_material()
+#    sections = mesh.sections.get_properties()
+#    boundaries = {key:item for key, item in mesh.boundaries.node.items()}
+#    free_nodes = mesh.elements.get_free_nodes()
+#    #
+#    elements = {}
+#    for key, memb in mesh._elements.items():
+#        elements[key] = f2uElements(name=memb.name, index=memb.index, 
+#                                    type= memb.type,
+#                                    connectivity=memb.connectivity,
+#                                    length=memb.length_node2node, 
+#                                    DoF=memb.DoF, beta=memb.beta,
+#                                    unit_vector=memb.unit_vector,
+#                                    #K=memb.Kmatrix,
+#                                    material=memb.material,
+#                                    section=memb.section)
+#    #
+#    #  
+#    file = open( "mesh.f2u", "wb" )
+#    pickle.dump( nodes, file )
+#    pickle.dump( boundaries, file )
+#    pickle.dump( elements, file )
+#    pickle.dump( material, file )
+#    pickle.dump( sections, file )
+#    pickle.dump( free_nodes, file )
+#    file.close()
+#    #
+#    end_time = time.time()
+#    uptime = end_time - start_time
+#    print("** Writting File Process Time: {:1.4e} sec".format(uptime))
 #
 #
     

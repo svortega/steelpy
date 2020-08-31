@@ -83,7 +83,12 @@ class Element:
         """
         """
         return self._elements._connectivity[self.index]
-    #
+
+    @connectivity.setter
+    def connectivity(self, nodes:List[int]) -> List:
+        """
+        """
+        self._elements._connectivity[self.index] = nodes
     #
     @property
     def nodes(self) -> List:
@@ -465,7 +470,7 @@ class Elements(Mapping):
         self._releases: List = []
 
     #
-    def __setitem__(self, element_name: Union[int, int], 
+    def __setitem__(self, element_name: int,
                     parameters: Union[List[float], Dict[str, float]]) -> None:
         """
         farg = [name, connectivity, material, section, type, group]
@@ -504,11 +509,10 @@ class Elements(Mapping):
             # should be in demand
             #self._eccentricities.append([])
     
-    def __getitem__(self, element_name: Union[str,int]) -> ClassVar:
+    def __getitem__(self, element_name: int) -> ClassVar:
         """
         """
         try:
-            #_index = self._labels.index(element_name)
             return Element(self, element_name)
         except ValueError:
             raise IndexError(' ** element {:} does not exist'.format(element_name))
@@ -598,17 +602,17 @@ class Elements(Mapping):
     #    return self._f2u_releases
     #
     #
-    def get_number(self, start:int=1)-> Iterable[int]:
+    def get_number(self, start:int=0)-> Iterable[int]:
         """
         """
         try:
-            n = max(self._number)
+            n = max(self._labels)
         except ValueError:
             n = start
         #
         while True:
-            yield n
             n += 1
+            yield n
     #
     #
     def spcl_bc(self, element_type:str):

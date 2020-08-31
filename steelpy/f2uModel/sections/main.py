@@ -30,24 +30,27 @@ class Sections(Mapping):
     def __setitem__(self, shape_name, shape_type):
         """
         """
-        item = shape_type.lower()
-        
-        if item in ['ibeam', 'isection', 'i', 
-                    'w', 'm', 's', 'hp',
-                    'ub', 'uc', 'he', 'ipe']:
-            self._sections[shape_name] = Ibeam(cls=self)
-        elif item in ['tee', 't']:
-            self._sections[shape_name] = Tee(cls=self)
-        elif item in ['tubular', 'pipe']:
-            self._sections[shape_name] = Tubular(cls=self)
-        elif item in ['rectangle']:
-            self._sections[shape_name] = Rectangle(cls=self)        
-        else:
-            raise Exception(" section item {:} not recognized".format(shape_type))
-            #print('fix here')        
-        #print('-->')
-        self._sections[shape_name].name = shape_name
-        self._sections[shape_name].number = len(self._sections)
+        try:
+            self._sections[shape_name]
+            raise IOError ( '   error section {:} already exist'.format(shape_name))
+        except KeyError:
+            item = shape_type.lower()
+            if item in ['ibeam', 'isection', 'i',
+                        'w', 'm', 's', 'hp',
+                        'ub', 'uc', 'he', 'ipe']:
+                self._sections[shape_name] = Ibeam(cls=self)
+            elif item in ['tee', 't']:
+                self._sections[shape_name] = Tee(cls=self)
+            elif item in ['tubular', 'pipe']:
+                self._sections[shape_name] = Tubular(cls=self)
+            elif item in ['rectangle']:
+                self._sections[shape_name] = Rectangle(cls=self)
+            else:
+                raise Exception(" section item {:} not recognized".format(shape_type))
+                #print('fix here')
+            #print('-->')
+            self._sections[shape_name].name = shape_name
+            self._sections[shape_name].number = len(self._sections)
     
     def __getitem__(self, shape_name):
         """

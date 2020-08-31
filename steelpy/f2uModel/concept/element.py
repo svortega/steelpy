@@ -3,21 +3,15 @@
 #
 
 # Python stdlib imports
-import math 
-#from itertools import chain
-#from collections import OrderedDict
-#from collections import Counter
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass
-#import functools
-#import logging
 from typing import Dict, List, ClassVar, Tuple, Iterable, Union
 
 
 # package imports
 from steelpy.process.units.main import Units
-#from steelpy.f2uModel.mesh.node import get_coordinate_system
-import steelpy.process.io_module.text as common
+#import steelpy.process.io_module.text as common
 #
 #
 #
@@ -100,9 +94,6 @@ class Element:
     #    segment length from start node
     #    """
     #    return self._cls._segment[self.index] * f2u_units.m
-#
-#
-#
 #
 #
 @dataclass
@@ -237,6 +228,9 @@ class Steps:
         for index in self.indices:
             step_name = self._cls._step_label[index]
             yield SegmentedBeam(self._cls, step_name, self.indices)
+    #
+    def __len__(self):
+        return len(self.indices)
 #
 #
 @dataclass
@@ -377,11 +371,10 @@ class Beam(Element):
                 _v2 = (_node[1].y - _node[0].y)
                 _v3 = (_node[1].z - _node[0].z)
             #
-            _norm = (_v1 ** 2 + _v2 ** 2 + _v3 ** 2)**0.50
+            _norm = (_v1**2 + _v2**2 + _v3**2)**0.50
             _v1 /= _norm
             _v2 /= _norm
             _v3 /= _norm
-
             _nodeNo3[0] = (_node[node_end].x + _v1 * node_distance)
             _nodeNo3[1] = (_node[node_end].y + _v2 * node_distance)
             _nodeNo3[2] = (_node[node_end].z + _v3 * node_distance)
@@ -392,7 +385,7 @@ class Beam(Element):
     #
 #
 #
-class Elements(Mapping):
+class ConceptElements(Mapping):
     """
     element[name] = [name, connectivity, material, section, type, group]
     connectivity[number] = [name, node1, node2,..., nodei]
@@ -449,9 +442,17 @@ class Elements(Mapping):
             index = self._labels.index(element_name)
             self._number.append(index)
             self._type.append(self._element_type)
-            # set connectivity 
-            node_1 = f2u_points.get_point_name(parameters[0])
-            node_2 = f2u_points.get_point_name(parameters[1])
+            # set connectivity
+            try:
+                node_1 = f2u_points.get_point_name(parameters[0])
+            except IOError:
+                node_1 = f2u_points.get_new_point(parameters[0])
+
+            try:
+                node_2 = f2u_points.get_point_name(parameters[1])
+            except IOError:
+                node_2 = f2u_points.get_new_point(parameters[1])
+            #
             self._connectivity.append([node_1, node_2])
             # set blank data
             self._sections.append(-1)

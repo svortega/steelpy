@@ -35,7 +35,7 @@ class LineBeam(NamedTuple):
     L2: float
     #
     number: int
-    name: str
+    load_name: str
     system:str
     load_complex:int
 #
@@ -50,7 +50,7 @@ class PointBeam(NamedTuple):
     mz: float
     distance:float
     number: int
-    name: str
+    load_name: str
     system:str
     load_complex:int
 #
@@ -403,10 +403,9 @@ class BeamPoint(NodeLoadMaster):
         """
         self._labels.append(element_name)
         self._title.append(element_name)
-        self._index = self._labels.index(element_name)
         self._system.append(self._system_flag)
         self._complex.append(0)
-        
+        #
         point_load = self._get_beam_load(point_load)
         self._fx.append(point_load[0])
         self._fy.append(point_load[1])
@@ -415,7 +414,9 @@ class BeamPoint(NodeLoadMaster):
         self._my.append(point_load[4])
         self._mz.append(point_load[5])
         self._distance.append(point_load[6])
-    
+        #
+        self._index = len(self._labels) - 1
+        #print('--')
     
     def __getitem__(self, element_name:Union[int, str])-> List[Tuple]:
         """

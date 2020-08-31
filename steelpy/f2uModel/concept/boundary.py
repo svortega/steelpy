@@ -8,8 +8,7 @@ from typing import NamedTuple, Tuple, Union, List, Dict, Iterator
 
 
 # package imports
-from steelpy.f2uModel.mesh.boundary import BoundaryNodes
-
+from steelpy.f2uModel.mesh.boundary import Boundaries
 #
 #
 class BoundaryItem(NamedTuple):
@@ -41,7 +40,7 @@ class BoundaryType:
     @property
     def support(self):
         """ """
-        self._cls._supports.node[self._boundary_name]
+        return self._cls._supports.node[self._boundary_name]
     
     @support.setter
     def support(self, conditions):
@@ -49,24 +48,25 @@ class BoundaryType:
         self._cls._supports.node[self._boundary_name] = conditions
         #print('--')
     #
+    @property
+    def point(self):
+        """ """
+        index = self._cls._labels.index (self._boundary_name)
+        return self._cls._points[index]
     #
 #
 #
-class Boundaries(Mapping):
+class ConceptBoundaries(Mapping):
     
     __slots__ = ["_labels", "_supports",
                  "f2u_points", "_points"]
     
-    def __init__(self, points, boundary_points):
+    def __init__(self):
         """
         """
-        global f2u_points
-        f2u_points = points
-        #
-        self._supports = boundary_points  # BoundaryNodes()
-        #
+        self._supports = Boundaries()
         self._labels: List[Union[str,int]] = []
-        self._points: List[Union[str,int]] = []
+        self._points: List[Tuple[float]] = []
     
     def __setitem__(self, support_name: Union[int, str],
                     coordinates: Union[List[float], Dict[str, float]]) -> None:
@@ -77,16 +77,19 @@ class Boundaries(Mapping):
             raise Exception('boundary name {:} already exist'.format( support_name))
         except ValueError:
             self._labels.append(support_name)
-            node = f2u_points.get_point_name(coordinates)
-            self._points.append(node)
+            try:
+                self._points.append((coordinates[0].value,
+                                     coordinates[1].value,
+                                     coordinates[2].value))
+            except IndexError:
+                self._points.append((coordinates[0].value,
+                                     coordinates[1].value, 0))
     
     def __getitem__(self, support_name: int) -> Tuple:
         """
         node
         """
-        index = self._labels.index(support_name)
-        node_name = self._points[index]
-        return BoundaryType(cls=self, boundary_name=node_name)
+        return BoundaryType(cls=self, boundary_name=support_name)
     
     #
     #

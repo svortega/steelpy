@@ -23,8 +23,8 @@ class PointNode(NamedTuple):
     mx: float
     my: float
     mz: float
-    name: str
     number: int
+    load_name: str
     system:str
     load_complex:int
     #
@@ -78,7 +78,6 @@ class NodeLoad(NodeLoadMaster):
         #
         self._labels.append(node_number)
         self._title.append(node_number)
-        self._index = self._labels.index(node_number)
         self._system.append(self._system_flag)
         self._distance.append(-1)
         self._complex.append(0)
@@ -90,7 +89,9 @@ class NodeLoad(NodeLoadMaster):
         self._mx.append(point_load[3])
         self._my.append(point_load[4])
         self._mz.append(point_load[5])
-
+        #
+        self._index = len(self._labels) - 1
+        #print('--')
     #
     def __getitem__(self, node_number: int)-> List[Tuple]:
         """
@@ -102,7 +103,7 @@ class NodeLoad(NodeLoadMaster):
         for _index in _index_list:
             _points.append(PointNode(self._fx[_index], self._fy[_index], self._fz[_index],
                                      self._mx[_index], self._my[_index], self._mz[_index],
-                                     self._title[_index], self._labels[_index], 
+                                     self._labels[_index], self._title[_index],
                                      self._system[_index], self._complex[_index]))
         return _points
     #
@@ -124,11 +125,35 @@ class NodeLoad(NodeLoadMaster):
                 sum_load[ 4 ] += _load.my
                 sum_load[ 5 ] += _load.mz
             items.append(PointNode(*sum_load, 
-                                   self._title[_index], 
                                    self._labels[_index],
+                                   self._title[_index], 
                                    self._system[_index],
                                    self._complex[_index]))
         return items
-   
+    #
+    def update(self, other) -> None:
+        """
+        :param other:
+        :return:
+        """
+        pl = other._point
+        try:
+            _name = pl.name
+            # update
+            self._labels.extend(pl._labels)
+            self._title.extend(pl._title)
+            self._system.extend(pl._system)
+            self._distance.extend(pl._distance)
+            self._complex.extend(pl._complex)
+            #
+            self._fx.extend(pl._fx)
+            self._fy.extend(pl._fy)
+            self._fz.extend(pl._fz)
+            self._mx.extend(pl._mx)
+            self._my.extend(pl._my)
+            self._mz.extend(pl._mz)
+            # print('?????')
+        except AttributeError:
+            pass
 #
 #

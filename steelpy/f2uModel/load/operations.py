@@ -74,7 +74,8 @@ class NodeLoadMaster(Mapping):
     def __iter__(self)-> Iterable:
         """
         """
-        return iter(self._labels)
+        items = list(set( self._labels))
+        return iter(items)
     
     def __contains__(self, value) -> bool:
         return value in self._labels
@@ -237,17 +238,17 @@ def check_point_dic(data)->List[float]:
     new_data = [0,0,0, 0,0,0, 0]
     for key, item in data.items():
         if re.match(r"\b(fx|fa(xial)?)\b", str(key), re.IGNORECASE):
-            new_data[0] = item.value
+            new_data[0] = item.convert("newton").value
         elif re.match(r"\b(py|fy|in(_)?plane)\b", str(key), re.IGNORECASE):
-            new_data[1] = item.value
+            new_data[1] = item.convert("newton").value
         elif re.match(r"\b(pz|fz|out(_)?plane)\b", str(key), re.IGNORECASE):
-            new_data[2] = item.value
+            new_data[2] = item.convert("newton").value
         elif re.match(r"\b(mx|t(orsion)?)\b", str(key), re.IGNORECASE):
-            new_data[3] = item.value
+            new_data[3] = item.convert("newton*metre").value
         elif re.match(r"\b(my|in(_)?plane)\b", str(key), re.IGNORECASE):
-            new_data[4] = item.value
+            new_data[4] = item.convert("newton*metre").value
         elif re.match(r"\b(mz|out(_)?plane)\b", str(key), re.IGNORECASE):
-            new_data[5] = item.value
+            new_data[5] = item.convert("newton*metre").value
         elif re.match(r"\b((l|d(istance)?)(_)?(1|start))\b", str(key), re.IGNORECASE):
             new_data[6] = item.value
     return new_data
@@ -260,17 +261,17 @@ def check_beam_dic(data)->List[float]:
     new_data = [0,0,0, None,None,None, 0,0]
     for key, item in data.items():
         if re.match(r"\b((qx|t(orsion)?)(_)?(1|start)?)\b", str(key), re.IGNORECASE):
-            new_data[0] = item.value
+            new_data[0] = item.convert("newton/metre").value
         elif re.match(r"\b((qy|in(_)?plane)(_)?(1|start)?)\b", str(key), re.IGNORECASE):
-            new_data[1] = item.value
+            new_data[1] = item.convert("newton/metre").value
         elif re.match(r"\b((qz|out(_)?plane)(_)?(1|start)?)\b", str(key), re.IGNORECASE):
-            new_data[2] = item.value
+            new_data[2] = item.convert("newton/metre").value
         elif re.match(r"\b((qx|t(orsion)?)(_)?(2|end))\b", str(key), re.IGNORECASE):
-            new_data[3] = item.value
+            new_data[3] = item.convert("newton/metre").value
         elif re.match(r"\b((qy|in(_)?plane)(_)?(2|end))\b", str(key), re.IGNORECASE):
-            new_data[4] = item.value
+            new_data[4] = item.convert("newton/metre").value
         elif re.match(r"\b((qz|out(_)?plane)(_)?(2|end))\b", str(key), re.IGNORECASE):
-            new_data[5] = item.value
+            new_data[5] = item.convert("newton/metre").value
         elif re.match(r"\b((l|d(istance)?)(_)?(1|start))\b", str(key), re.IGNORECASE):
             new_data[6] = item.value
         elif re.match(r"\b((l|d(istance)?)(_)?(2|end))\b", str(key), re.IGNORECASE):

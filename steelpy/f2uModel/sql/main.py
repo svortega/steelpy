@@ -10,14 +10,16 @@ from collections import Counter
 #
 # package imports
 from steelpy.f2uModel.sql.operation.process_sql import create_connection
-from steelpy.f2uModel.sql.dump_model.materials import populate_materials
-from steelpy.f2uModel.sql.dump_model.sections import populate_sections
-from steelpy.f2uModel.sql.dump_model.nodes import populate_nodes, populate_boundaries
-from steelpy.f2uModel.sql.dump_model.elements import populate_elements
-from steelpy.f2uModel.sql.dump_model.basic_load import populate_basic_loading
-from steelpy.f2uModel.sql.dump_model.load_comb import populate_load_combination
-from steelpy.f2uModel.sql.dump_model.results import populate_displacements, populate_reacctions, populate_force
-from steelpy.f2uModel.sql.dump_model.postprocess import populate_stress
+from steelpy.f2uModel.sql.write_model.f2u_model import populate_component
+from steelpy.f2uModel.sql.write_model.concept import populate_concepts
+from steelpy.f2uModel.sql.write_model.materials import populate_materials
+from steelpy.f2uModel.sql.write_model.sections import populate_sections
+from steelpy.f2uModel.sql.write_model.nodes import populate_nodes, populate_boundaries
+from steelpy.f2uModel.sql.write_model.elements import populate_elements
+from steelpy.f2uModel.sql.write_model.basic_load import populate_basic_loading
+from steelpy.f2uModel.sql.write_model.load_comb import populate_load_combination
+from steelpy.f2uModel.sql.write_model.results import populate_displacements, populate_reacctions, populate_force
+from steelpy.f2uModel.sql.write_model.postprocess import populate_stress
 #
 from steelpy.f2uModel.sql.read_model.nodes import get_nodes, get_boundaries
 from steelpy.f2uModel.sql.read_model.materials import get_materials
@@ -28,175 +30,78 @@ from steelpy.f2uModel.sql.read_model.results import get_node_displacements, get_
 #from steelpy.f2uModel.sql.read_model.results import 
 #
 #
-#
-def populate_sql(component_name, component):
-    """
-    """
-    #
-    #model = component[component_name]
-    model = component
-    #
-    try:
-        #os.remove(r'C:\Users\svort\Dropbox\Python\fem2ufo\f2u\V055\examples\jacket\f2uDB.db')
-        #os.remove(r'/home/chava/Dropbox/Python/steelpy/steelpy_03/f2uDB.db')
-        os.remove('f2uDB.db')
-    except FileNotFoundError:
-        pass    
-    #
-    #conn = create_connection(r'C:\Users\svort\Dropbox\Python\fem2ufo\f2u\V055\examples\jacket\f2uDB.db')
-    #conn = create_connection(r'/home/chava/Dropbox/Python/steelpy/steelpy_03/f2uDB.db')
-    conn = create_connection('f2uDB.db')
-    #
-    #for _rel in model.mesh.releases:
-    #    print(_rel)
-    #
-    #if conn is not None:
-    #    create_table(conn, _table_nodes)
-    #else:
-    #    raise IOError("Error! cannot create the database connection.")
-    #
-    # loading
-    #populate_loading(conn, model.load)    
-    #
-    #
-    # materials
-    populate_materials(conn, model.materials)
-    # sections
-    populate_sections(conn, model.sections)    
-    # nodes
-    populate_nodes(conn, model.nodes, model.boundaries)
-    # elements
-    populate_elements(conn, model.elements)
-    #
-    #
-    #
-    conn.commit()
-    conn.close()
-#
-def populate_loading_sql(component_name, component):
-    """
-    """
-    #
-    #conn = create_connection(r'D:\svort\Dropbox\Python\fem2ufo\f2u\V055\examples\jacket\f2uDB.db')
-    #conn = create_connection(r'/home/chava/Dropbox/Python/steelpy/steelpy_03/f2uDB.db')
-    conn = create_connection('f2uDB.db')
-    #
-    # loading
-    #for component_name, _component in model.load.items():
-    populate_basic_loading(conn, component)
-    #
-    conn.commit()
-    conn.close()    
-#
-def populate_component_sql(model):
-    """
-    """
-    #
-    try:
-        #os.remove(r'D:\svort\Dropbox\Python\fem2ufo\f2u\V055\examples\jacket\f2uDB.db')
-        os.remove(r'/home/chava/Dropbox/Python/steelpy/steelpy_03/f2uDB.db')
-    except FileNotFoundError:
-        pass
-    #
-    #conn = create_connection(r'D:\svort\Dropbox\Python\fem2ufo\f2u\V055\examples\jacket\f2uDB.db')
-    conn = create_connection(r'/home/chava/Dropbox/Python/steelpy/steelpy_03/f2uDB.db')
-    #
-    
-    #for _rel in model.mesh.releases:
-    #    print(_rel)
-    #
-    for component_name, _component in model.components.items():
-        # materials
-        populate_materials(conn, _component.materials, component_name)
-        # sections
-        populate_sections(conn, _component.sections, component_name)   
-        # nodes
-        populate_nodes(conn, _component.mesh, component_name)
-        # elements
-        populate_members(conn, _component.mesh, component_name)
-    #
-    #
-    #
-    conn.commit()
-    conn.close()    
-#
-def populate_soil_sql(model):
-    """
-    """
-    #conn = create_connection(r'C:\Users\svort\Dropbox\Python\fem2ufo\f2u\V040\examples\jacket\f2uDB.db')
-    conn = create_connection(r'/home/chava/Dropbox/Python/steelpy/steelpy_03/f2uDB.db')
-    #
-    for component_name, _component in model.foundation.items():
-        # materials
-        populate_materials(conn, _component.materials, component_name)
-    #
-    conn.commit()
-    conn.close()    
-#
 # --------------------------
 #
 #
 #
 class f2uDB:
     
-    __slots__ = ["component_name", "bd_file", 
-                 "_model", "_elements", "_load"]
+    __slots__ = ["component_name", "bd_file"]
     
-    def __init__(self, model, component_name:str="f2uDB"):
+    def __init__(self, component_name:str):
         """
         """
         self.component_name:str = str(component_name)
-        self.bd_file = self.component_name + ".db"
-        self._model = model.mesh
-        self._load = model._load
-        #self._conn = create_connection(self.bd_file)
-    #
-    def read_model(self):
-        """
-        """
-        #conn = create_connection(self.bd_file)
-        nodes = self.nodes
-        boundaries = self.boundaries
-        #
-        materials = self.materials
-        sections = self.sections
-        elements = self.elements
-        #
-        basic_load = self.basic_load
-        #
-        #conn.close()
-        print("--->")
-    #
-    def dump_model(self):
-        """
-        """
+        self.bd_file = self.component_name + "_f2uDB.db"
         # remove file if exist
         try:
             os.remove(self.bd_file)
-        #except PermissionError:
-        #    
         except FileNotFoundError:
             pass
+        #
+        conn = create_connection(self.bd_file)
+        with conn:
+            populate_component(conn, component_name)
+    #
+    #
+    def write_concept(self, concept):
+        """write out concept data"""
+        self.concepts = concept.beam
+        #print('-->')
+
+    #
+    def write_geometry(self, geometry):
+        """
+        """
         # make connection with database
         #conn = create_connection(self.bd_file)
         # nodes
-        self.nodes = self._model.nodes
-        self.boundaries = self._model.boundaries        
-        # materials
-        self.materials = self._model.materials
-        # sections
-        self.sections = self._model.sections 
+        self.nodes = geometry.nodes
+        self.boundaries = geometry.boundaries
         # elements
-        self.elements = self._model.elements
+        self.elements = geometry.elements
+    #   
+    def write_load(self, load):
+        """ """
+        #self._load = load
         # loading
-        self.basic_load = self._load._basic
-        self.load_combination = self._load._combination
+        self.basic_load = load._basic
+        self.load_combination = load._combination
+    #
+    def write_results(self, results):
+        """ """
         #
-        #self.element_stress = None
+        # self.displacements
+        # self.reactions
+        # self.element_forces
+        # self.element_stress
         #
-        # close
-        #conn.commit()
-        #conn.close()        
+        print('-->')
+    #
+    #
+    @property
+    def concepts(self):
+        """ """
+        self._concepts = ConceptsSQL(self.bd_file)
+        return self._concepts
+    
+    @concepts.setter
+    def concepts(self, value):
+        """ """
+        conn = create_connection(self.bd_file)
+        with conn:
+            populate_concepts(conn, value)
+    #
     #
     @property
     def nodes(self):
@@ -276,8 +181,8 @@ class f2uDB:
     def elements(self):
         """
         """
-        self._elements = ElementSQL(self.bd_file)
-        return self._elements
+        #_elements = ElementSQL(self.bd_file)
+        return ElementSQL(self.bd_file)
     
     @elements.setter
     def elements(self, value):

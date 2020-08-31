@@ -124,7 +124,7 @@ def get_basic_load(elements:dict, nodes:dict, materials:dict,
         nodal_load = zeros_vector(nnp, 6)
         items = lcase._nodal_load.get_items_sum
         for lnode in items:
-            index = nodes[lnode.name].number
+            index = nodes[lnode.number].number
             nodal_load[index] += Vector(lnode[:6])
         #
         eq_lnloads = lcase._beam_line.get_nodal_load(elements, nodes, materials, sections)

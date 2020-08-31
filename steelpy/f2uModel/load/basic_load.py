@@ -5,7 +5,7 @@
 # Python stdlib imports
 from array import array
 from collections.abc import Mapping
-#from dataclasses import dataclass
+from dataclasses import dataclass
 from typing import NamedTuple, Tuple, List, Iterator, Dict, Iterable, ClassVar, Union
 
 
@@ -16,11 +16,24 @@ from steelpy.f2uModel.load.node import NodeLoad
 #
 # ---------------------------------
 #
+@dataclass
+class SelfWeight:
+    """ """
+    __slots__ = ['x', 'y', 'z']
+    
+    def __init__(self):
+        """ """
+        self.x:float = 0
+        self.y:float = 0
+        self.z:float = 0
+#
+#
 class LoadTypes:
     """
     """
     __slots__ = ['_nodal_load', '_nodal_mass', '_nodal_displacement',
-                 '_beam_line', '_beam_point', 'name', 'number', 'title']
+                 '_beam_line', '_beam_point', '_selfweight',
+                 'name', 'number', 'title']
     
     def __init__(self):
         """
@@ -30,6 +43,16 @@ class LoadTypes:
         self._nodal_mass = BeamDistributed()
         self._beam_line = BeamDistributed()
         self._beam_point = BeamPoint()
+        self._selfweight = SelfWeight()
+    #
+    @property
+    def selfweight(self):
+        """
+        The self weight form allows you to specify multipliers to 
+        acceleration due to gravity (g) in the X, Y, and Z axes. 
+        If switched on, the default self weight acts in the Y axis 
+        with a magnitude and sign of -1."""
+        return self._selfweight
     #
     @property
     def point_node(self):
@@ -70,7 +93,6 @@ class LoadTypes:
         """
         for value in values:
             self._nodal_displacement[value[0]] = value[1:]
-    #
     #
     #
     @property
@@ -132,7 +154,7 @@ class LoadTypes:
             self._beam_point[value[0]] = value[1:]    
     
 #
-class LoadCase(Mapping):
+class BasicLoad(Mapping):
     """
     FE Load Cases
     
@@ -150,12 +172,13 @@ class LoadCase(Mapping):
       :name:  string node external name
     """
     #
-    __slots__ = ['_load']
+    __slots__ = ['_load', 'gravity']
     #
     def __init__(self):
         """
         """
-        self._load: Dict = {} 
+        self._load: Dict = {}
+        self.gravity = 9.80665 # m/s^2
     #
     def __setitem__(self, load_name:Union[str,int],
                     load_title:str) -> None:
@@ -169,13 +192,6 @@ class LoadCase(Mapping):
     def __getitem__(self, load_name:Union[str,int]):
         """
         """
-        #self._name = load_name
-        #try:
-        #    self._load[load_name]
-        #except KeyError:
-        #    _number = len(self._load) + 1
-        #    self.__setitem__(load_name, _number)
-        #
         try:
             return self._load[load_name]
         except KeyError:
@@ -195,10 +211,10 @@ class LoadCase(Mapping):
         return iter(self._load)
     #
     #
-    #@property
-    #def name(self, load_name):
-    #    """"""
-    #    return self._load[load_name].name
+    @property
+    def g(self, load_name):
+        """"""
+        return self.gravity
 #
   
     

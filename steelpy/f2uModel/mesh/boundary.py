@@ -79,9 +79,6 @@ class BoundaryNodes(Mapping):
             self._labels.index(node_number)
             raise Warning('    *** warning node {:} already exist'.format(node_number))
         except ValueError:
-            self._labels.append(node_number)
-            self._number.append(self._labels.index(node_number))
-            #
             if isinstance(value, str):
                 if re.match(r"\b(fix(ed)?)\b", value, re.IGNORECASE):
                     #self._type.append('fixed')
@@ -89,8 +86,13 @@ class BoundaryNodes(Mapping):
                 elif re.match(r"\b(pinn(ed)?|roll)\b", value, re.IGNORECASE):
                     #self._type.append('pinned')
                     value = [1,1,1,1,0,0]
+                elif re.match(r"\b(free)\b", value, re.IGNORECASE):
+                    return
                 else:
                     raise IOError("boundary type {:} not implemented".format(value))
+                #
+                #self._labels.append(node_number)
+                #self._number.append(self._labels.index(node_number))
                 # update
                 self._x.append(value[0])
                 self._y.append(value[1])
@@ -100,24 +102,26 @@ class BoundaryNodes(Mapping):
                 self._rz.append(value[5])
             else:
                 if isinstance( value, (list, tuple) ):
-                    self._x.append( value[ 0 ] )
-                    self._y.append( value[ 1 ] )
-                    self._z.append( value[ 2 ] )
-                    self._rx.append( value[ 3 ] )
-                    self._ry.append( value[ 4 ] )
-                    self._rz.append( value[ 5 ] )
+                    self._x.append(value[0])
+                    self._y.append(value[1])
+                    self._z.append(value[2])
+                    self._rx.append(value[3])
+                    self._ry.append(value[4])
+                    self._rz.append(value[5])
                 elif isinstance( value, dict ):
-                    self._x.append( value[ 'x' ] )
-                    self._y.append( value[ 'y' ] )
-                    self._z.append( value[ 'z' ] )
-                    self._rx.append( value[ 'rx' ] )
-                    self._ry.append( value[ 'ry' ] )
-                    self._rz.append( value[ 'rz' ] )
+                    self._x.append(value['x'])
+                    self._y.append(value['y'])
+                    self._z.append(value['z'])
+                    self._rx.append(value['rx'])
+                    self._ry.append(value['ry'])
+                    self._rz.append(value['rz'])
                 else:
-                    print( '   *** error node input format not recognized' )
-                #
-                #self._type.append('user')
-                # _type = _bound_type[_type]
+                    raise IOError('*** error input format not recognized')
+            #
+            self._labels.append(node_number)
+            self._number.append(self._labels.index(node_number))
+            #self._type.append('user')
+            # _type = _bound_type[_type]
 
     #
     def __getitem__(self, node_number: Union[None,str,int]) -> Union[Tuple,bool]:

@@ -29,6 +29,7 @@ class PointLoad:
         """
         node_name = self._cls._nodes[-1]
         self._point[node_name] = load
+        self._point.name = load_name
         #
         self._cls._labels.append(load_name)
         index = len(self._cls._labels) - 1
@@ -37,10 +38,10 @@ class PointLoad:
         except IndexError:
             node = self._cls._nodes[-1]
             self._cls._nodes.append(node)
-        print('---')
+        #
         self._cls._beams.append(-1)
         #self._cls._load_case.append(self._load_name)
-    
+        # print('---')
     def __getitem__(self, load_name:Union[str,int]):
         """
         """
@@ -68,7 +69,7 @@ class PointLoadConcept:
     def load(self):
         """
         """
-        point = f2u_load.basic[self._load_name]._nodal_load
+        point = self._cls._bload.basic[self._load_name]._nodal_load
         return PointLoad(self._cls, self._load_name, point)
     #
     @property
@@ -141,7 +142,7 @@ class BeamLoadConcept:
     def point_load(self):
         """
         """
-        beam_load_type = f2u_load.basic[self._load_name]._beam_point
+        beam_load_type = self._cls._bload.basic[self._load_name]._beam_point
         return BeamLoadSet(self._cls, self._load_name, beam_load_type)
     
     #
@@ -150,7 +151,7 @@ class BeamLoadConcept:
     def line_load(self):
         """
         """
-        beam_load_type = f2u_load.basic[self._load_name]._beam_line
+        beam_load_type = self._cls._bload.basic[self._load_name]._beam_line
         return BeamLoadSet(self._cls, self._load_name, beam_load_type)
     #
     #
@@ -168,22 +169,43 @@ class BeamLoadConcept:
         self._cls._system_flag = 0
         if system in ['local', 'member', 1]:
             self._cls._system_flag = 1
-    #    
+    #
+    @property
+    def local_system(self):
+        """set load beam local system"""
+        self._cls._system_flag = 1
+        return "local"
+
+    @property
+    def global_system(self):
+        """set load beam global system"""
+        self._cls._system_flag = 0
+        return "global"
 #
 #
 class LoadTypes:
     """
     """
-    __slots__ = ["_cls", "name", "title", "number"]
+    __slots__ = ["_cls", "name", "title", "number", "_bload"]
     
-    def __init__(self, cls, load_name):
+    def __init__(self, cls, basic_load):
         """
         """
         self._cls = cls
-        self.name = load_name
-        basic = f2u_load.basic[load_name]
-        self.title = basic.title
-        self.number = basic.number
+        self._bload = basic_load
+        self.title = basic_load.title
+        self.number = basic_load.number
+        self.name = basic_load.name
+    #
+    #
+    @property
+    def selfweight(self):
+        """
+        The self weight form allows you to specify multipliers to 
+        acceleration due to gravity (g) in the X, Y, and Z axes. 
+        If switched on, the default self weight acts in the Y axis 
+        with a magnitude and sign of -1."""
+        return self._bload._selfweight
     #
     @property
     def point(self):
@@ -222,6 +244,8 @@ class ConceptBasicLoad(Mapping):
     def __init__(self) -> None:
         """
         """
+        self._bload = Loading()
+        #
         self._load_case:List = []
         self._labels:List = []
         self._nodes:List = []
@@ -234,11 +258,11 @@ class ConceptBasicLoad(Mapping):
         """
         """
         self._load_case.append(load_name)
-        f2u_load.basic[load_name] = load_title
+        self._bload.basic[load_name] = load_title
     
     def __getitem__(self, load_name:Union[str,int]):
         """ """
-        return LoadTypes(self, load_name)
+        return LoadTypes(self, self._bload.basic[load_name])
     #
     def __len__(self) -> float:
         return len(self._labels)
@@ -246,7 +270,7 @@ class ConceptBasicLoad(Mapping):
     def __iter__(self) : #-> Iterator
         """
         """
-        return f2u_load.basic.__iter__()
+        return self._bload.basic.__iter__()
         #for basic in f2u_load.basic:
         #    basic
         #return iter(self._labels)
@@ -254,19 +278,17 @@ class ConceptBasicLoad(Mapping):
     def __contains__(self, value) -> bool:
         return value in self._load_case    
 #
-class ConcepLoad:
+class ConceptLoad:
     
-    __slots__ = ["_basic", "f2u_load", "f2u_points", "f2u_concepts"]
+    __slots__ = ["_basic", "f2u_points", "f2u_concepts"]
     
-    def __init__(self, points, concepts) -> None: # load, 
+    def __init__(self, points, concepts) -> None:
         """
         """
-        global f2u_points, f2u_concepts, f2u_load
-        f2u_load = Loading() # TODO: change name
+        global f2u_points, f2u_concepts
         f2u_points = points
         f2u_concepts = concepts
         #
-        #self._bload = Loading()
         self._basic = ConceptBasicLoad()
     #
     @property

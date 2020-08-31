@@ -29,31 +29,16 @@ class Mesh:
     """
     __slots__ = ['_nodes', '_elements', '_materials', '_sections',
                  '_eccentricities', '_boundaries', '_groups']
-                 #'_load_case', '_load_combination',  '_sql']
 
     def __init__(self):
         """
         """
-        #self._units = Units()
-        #self._materials: ClassVar = Materials()
-        #self._sections: ClassVar = Sections()
-        #self._properties: ClassVar = properties
         self._boundaries: ClassVar = Boundaries()
         self._nodes = Nodes()
         self._elements: ClassVar = Elements()
         # groups
         self._groups = Groups()
-        # loads
-        #self._load_case = LoadCase()
-        #self._load_combination = LoadCombination()
-        #self._sql = f2uDB(model=self)
-    
-    #@property
-    #def units(self):
-    #    """
-    #    """
-    #    return self._units
-    
+    #
     @property
     def nodes(self) -> ClassVar:
         """
@@ -128,33 +113,10 @@ class Mesh:
         """
         """
         print("** Renumbering Nodes")
-        get_nodes_connected(self._elements)
+        get_nodes_connected(self._elements, self._nodes)
         self._nodes._renumber()
         print("** End Renumbering Nodes")
     #
-    #def dump_sql_model(self):
-    #    """
-    #    """
-    #    print("** Writing SQL to Disk")
-    #    populate_sql(component_name="f2u_model", 
-    #                 component=self)
-    #    populate_loading_sql(component_name="f2u_model", 
-    #                         component=self)
-    #    print("** End Writing SQL to Disk")
-    ##
-    #def load_sql_model(self):
-    #    """
-    #    """
-    #    component_name = "f2u_model.db"
-    #    load_sql_model(component_name)
-    #    print("-->")  
-    ##
-    #def dump_mesh(self):
-    #    """
-    #    """
-    #    print("** Writing Mesh to Disk")
-    #    dump_f2u_mesh(self)
-    #    print("** End Writing Mesh to Disk")
     #
     #
   

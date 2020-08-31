@@ -80,7 +80,7 @@ def Rmatrix(l:float, m:float, n:float, beta: float = 0):
     d = math.sqrt( 1 - n**2 )
     r = zeros( 3, 3 )
     # member orientated along global vertical z axis
-    if abs( n ) > 0.995:
+    if abs(n) > 0.995:
         r[ 0 ][ 0 ] = 0.0
         r[ 0 ][ 1 ] = 0.0
         r[ 0 ][ 2 ] = n
@@ -94,7 +94,7 @@ def Rmatrix(l:float, m:float, n:float, beta: float = 0):
         r[ 0 ][ 0 ] = l
         r[ 0 ][ 1 ] = m
         r[ 0 ][ 2 ] = n
-        if abs ( beta ) <= 0.01:
+        if abs(beta) <= 0.01:
             r[ 1 ][ 0 ] = -m / d
             r[ 1 ][ 1 ] = l / d
             r[ 1 ][ 2 ] = 0.0
@@ -292,12 +292,12 @@ def bd_condition(nodes, boundaries):
     set boundary conditions
     bcs: set default = 0 free (1 fix)
     """
-    nnp = len( nodes )
+    nnp = len(nodes)
     jbc = zeros(nnp, 6, code='I')
     for node_name, bd in boundaries.items():
         #ind = nodes._labels.index(_node)
         ind = nodes[node_name].number
-        jbc[ ind ] = list(bd[ :6 ])
+        jbc[ind] = list(bd[:6])
     return jbc
 #
 def spclbc(elements, nodes, free_nodes, jbc):
@@ -310,7 +310,7 @@ def spclbc(elements, nodes, free_nodes, jbc):
     #for _element in elements.values():
     for element in elements.iter_elements:
         conn = element.connectivity
-        pos_node = set( conn ) - set( free_nodes )
+        pos_node = set(conn) - set(free_nodes)
         for node_name in pos_node:
             ind = nodes[node_name].number
             # jbc[ind][3:] = [1, 1, 1]
