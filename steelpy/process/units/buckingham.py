@@ -375,6 +375,7 @@ class Number:
             raise SyntaxError('Invalid Dims {:}'.format(dims))
         
         # check temperature units
+        self.input_dims = dims
         value, dims = temperature_in(value, dims)
         
         n = eval(dims.replace('^','**'),self.c_n) or 1        
@@ -618,40 +619,44 @@ class Number:
         return a
     #
     def __str__(self):
+        #if self.units() != 'none':
+        #    value = self.convert(self.input_dims)
+        #    return "{:} {:}".format(value, self.input_dims)
         return self.as_string()
     #
     def is_pure(self):
         return sum(x*x for x in self.dims) == 0
     #
-    def purify(self,force = False):
+    def purify(self, force:bool = False):
         if not force and not self.is_pure():
             raise RuntimeError("Try purify(force = True)")
-        return Number(self.value,self.error,(0,0,0,0,0))
+        return Number(self.value, self.error, (0,0,0,0,0))
     #
     def units(self):
-        if self.is_pure(): return 'none'
+        if self.is_pure(): 
+            return 'none'
         
-        def f(a,n):
+        def fmt(a,n):
             if float(n) == 0: 
                 return ''
-            if float(n) == 1: 
+            elif float(n) == 1: 
                 return '*{:}'.format(a)
             else: 
                 return '*{:}^{:1.0f}'.format(a,float(n))
         
         r = ''
-        r += f('metre',self.dims[0])
-        r += f('second',self.dims[1])
-        r += f('gram',self.dims[2])
-        r += f('ampere',self.dims[3])
-        r += f('kelvin',self.dims[4])
-        r += f('radian',self.dims[5])
-        
+        r += fmt('metre',self.dims[0])
+        r += fmt('second',self.dims[1])
+        r += fmt('gram',self.dims[2])
+        r += fmt('ampere',self.dims[3])
+        r += fmt('kelvin',self.dims[4])
+        r += fmt('radian',self.dims[5])
         return r[1:]
     #
     def guess(self):
+        """ """
         #raise RuntimeError("this function is a work in progress...")
-        raise RuntimeError("this function is a work in progress...")
+        #raise RuntimeError("this function is a work in progress...")
     
         if self.is_pure(): 
             return 'pure'
@@ -692,10 +697,12 @@ class Number:
             matches = [(d1(x,y),key,+1) for key,x in options.items()]
             matches += [(d2(x,y),key,-1) for key,x in options.items()]
             matches.sort()
-            key,sign=matches[0][1],matches[0][2]
+            key,sign = matches[0][1],matches[0][2]
             r += '*%s' % key
-            if n*sign!=1: r+='^%s' % (n*sign)
-            if matches[0]==0: break
+            if n*sign != 1:
+                r+='^%s' % (n*sign)
+            if matches[0]==0: 
+                break
             dims = [(y[i]-j*sign) for i,j in enumerate(options[key])]
         return r[1:]
     #
@@ -752,6 +759,7 @@ if __name__ == '__main__':
     #
     x=Number(6.,dims='inch')
     print ('inch ',x.value, x.units())
+    print(x)
     #
     _test = Number(1, dims='newton')
     print('newton',_test.convert("newton").value, _test.value, _test.units())
@@ -778,7 +786,7 @@ if __name__ == '__main__':
     print(oC.convert('rankine'))
     #
     test = oC/sec
-    print(test.units())
+    print(test)
     print(test.convert('celsius/hour'))
     #
     doctest.testmod()

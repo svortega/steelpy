@@ -148,7 +148,7 @@ def assemble(idof, jdof, jbc, a, aa):
     ipv = [int(idof + i) for i in range(6)]
     ipv.extend([int(jdof + i) for i in range(6)])
     # store the values for individual array in global array
-    for i in range( 12 ):
+    for i in range(12):
         try:
             1.0 / jbc[ipv[i]]
             ieqn1 = jbc[ipv[i]]
@@ -226,11 +226,11 @@ def beam_Ks(length: float,
     return ek    
 #
 #
-def get_element_K(element:Tuple, nodes, section:Tuple, material:Tuple):
+def get_element_K(element:Tuple, section:Tuple, material:Tuple):
     """ """
     # solve K matrix
     R = Rmatrix(*element.direction_cosines, element.beta)
-    K = beam_Ks(element.length(nodes),
+    K = beam_Ks(element.length,
                 section.area, section.J, 
                 section.Iy, section.Iz,
                 material.E, material.G,
@@ -242,11 +242,12 @@ def form_Kmatrix(elements, nodes, materials,
     """
     """
     start_time = time.time()
-    aa = zeros( neq, iband )
+    aa = zeros(neq, iband)
     #for element in elements.values():
-    for element in elements.iter_elements:
-        idof, jdof = element.DoF(nodes)
-        a = element.Kmatrix(nodes, materials, sections)
+    #for element in elements.iter_elements:
+    for key, element in elements.items():
+        idof, jdof = element.DoF #(nodes)
+        a = element.Kmatrix # (nodes, materials, sections)
         assemble(idof, jdof, jbc, a, aa)
     end_time = time.time()
     uptime = end_time - start_time
@@ -268,14 +269,13 @@ def max_bandwidth(elements, nodes, jbc):
     npi ,npj, jbc, nel
     """
     ibndm3 = []
-    #for memb in elements.values():
-    for memb in elements.iter_elements:
-        conn = memb.connectivity
+    for key, element in elements.items():
+        conn = element.connectivity
         # end 1
-        end_1 = nodes[conn[0]].number
+        end_1 = nodes[conn[0]].index
         bc1 = jbc[end_1]
         # end 2
-        end_2 = nodes[conn[1]].number
+        end_2 = nodes[conn[1]].index
         bc2 = jbc[end_2]
         #
         try:
@@ -284,7 +284,6 @@ def max_bandwidth(elements, nodes, jbc):
                               for ieqn2 in bc2 if ieqn2 > 0 ]))
         except ValueError:
             continue
-    #
     return max(ibndm3) + 1
 #
 def bd_condition(nodes, boundaries):
@@ -294,9 +293,8 @@ def bd_condition(nodes, boundaries):
     """
     nnp = len(nodes)
     jbc = zeros(nnp, 6, code='I')
-    for node_name, bd in boundaries.items():
-        #ind = nodes._labels.index(_node)
-        ind = nodes[node_name].number
+    for node_name, bd in boundaries.node.items():
+        ind = nodes[bd.node].index
         jbc[ind] = list(bd[:6])
     return jbc
 #
@@ -308,11 +306,12 @@ def spclbc(elements, nodes, free_nodes, jbc):
     # free_nodes = elements.get_free_nodes()
     #
     #for _element in elements.values():
-    for element in elements.iter_elements:
+    #for element in elements.iter_elements:
+    for key, element in elements.items():
         conn = element.connectivity
         pos_node = set(conn) - set(free_nodes)
         for node_name in pos_node:
-            ind = nodes[node_name].number
+            ind = nodes[node_name].index
             # jbc[ind][3:] = [1, 1, 1]
             # jbc[ind][3] = 1
             # jbc[ind][4] = 1
@@ -330,8 +329,8 @@ def shape_cond(elements, nodes, boundaries, free_nodes):
     """
     jcs: modify default = 0 free (1 fix)
     """
-    jbc = bd_condition( nodes, boundaries)
-    jbc = spclbc( elements, nodes, free_nodes, jbc )
+    jbc = bd_condition(nodes, boundaries)
+    jbc = spclbc(elements, nodes, free_nodes, jbc)
     #
     # Number the equations  in jbc from 1 up to the order.
     # Start assigning equation numbers for zero dof's
@@ -345,15 +344,25 @@ def shape_cond(elements, nodes, boundaries, free_nodes):
     #jbc2 = to_matrix(jbc2, 6)
     #
     neq = 0
-    for i, _item in enumerate(jbc):
+    for i, item in enumerate(jbc):
         try:
-            1 / _item
-            jbc[ i ] = 0
+            1 / item
+            jbc[i] = 0
         except ZeroDivisionError:
             neq += 1
-            jbc[ i ] = neq
-    #
+            jbc[i] = neq
     jbc = to_matrix(jbc, 6)
     return jbc, neq
 #
+def get_bandwidth(elements, nodes, boundaries, free_nodes):
+    """ """
+    jbcc, neq = shape_cond(elements=elements, 
+                           nodes=nodes, 
+                           boundaries=boundaries, 
+                           free_nodes=free_nodes)
+    #
+    iband = max_bandwidth(elements=elements, 
+                          nodes=nodes, jbc=jbcc)
+    return jbcc, neq, iband
+#    
 #

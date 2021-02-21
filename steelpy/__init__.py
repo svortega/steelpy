@@ -1,4 +1,4 @@
-# Copyright (c) 2020 steelpy
+# Copyright (c) 2021 steelpy
 #
 # TODO: host until sure no longer needed
 #
@@ -6,7 +6,7 @@ from steelpy.codes.main import CodeCheck
 from steelpy.roarks.main import CircularRing
 from steelpy.design.main import Design
 #from steelpy.metocean.main import Metocean
-from steelpy.trave3D.main import Trave
+from steelpy.trave3D.main import Trave3D
 from steelpy.beam.main import Beam
 from steelpy.f2uModel.main import f2uModel
 from steelpy.process.units.main import Units

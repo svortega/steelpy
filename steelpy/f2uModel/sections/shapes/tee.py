@@ -282,47 +282,47 @@ class Tee:
         ---------
         R = Radio
         """
-        _b = self.b
-        _b1 = self.tw
-        _t = self.tb
-        _d = self.d
+        b = self.b
+        b1 = self.tw
+        t = self.tb
+        d = self.d
     
         # shear area
-        _warea = self.area
+        warea = self.area
     
         # extreme fibre distances c
-        _c = (_d * (((_b1 / _b) + (1.0 - (_b1 / _b))*(_t / _d)**2) /
-                    (2.0*((_b1 / _b) + (1.0 - (_b1 / _b))*(_t / _d)))))
+        c = (d * (((b1 / b) + (1.0 - (b1 / b))*(t / d)**2) /
+                    (2.0*((b1 / b) + (1.0 - (b1 / b))*(t / d)))))
     
-        _c1 = _c * ((_d / _c) - 1.0)
+        c1 = c * ((d / c) - 1.0)
     
         # centroidal radius
-        _R = R
-        #_R = orad - _c
+        #_R = R
+        #_R = orad - c
     
         # Shift of neutral axis from neutral axis
-        _e = (_c * ((_R/_c) - (((_d/_c)*(_b1/_b + (1.0 - _b1/_b)*(_t/_d))) / 
-                               (((_b1/_b) * math.log((_d/_c + _R/_c -1.0) / 
-                                                     ((_d/_c)*(_t/_d) + _R/_c - 1.0))) +
-                                math.log(((_d/_c)*(_t/_d) + _R/_c - 1.0) /
-                                         (_R/_c - 1.0))))))
+        e = (c * ((R/c) - (((d/c)*(b1/b + (1.0 - b1/b)*(t/d))) / 
+                               (((b1/b) * math.log((d/c + R/c -1.0) / 
+                                                     ((d/c)*(t/d) + R/c - 1.0))) +
+                                math.log(((d/c)*(t/d) + R/c - 1.0) /
+                                         (R/c - 1.0))))))
     
         # where
-        _Ic = ((_warea * _c**2) * (((((_d/_c)**2 *((_b1/_b + (1.0 - _b1/_b)*(_t/_d)**3)
-                                                  / (_b1/_b + (1.0 - _b1/_b)*(_t/_d))))) 
+        Ic = ((warea * c**2) * (((((d/c)**2 *((b1/b + (1.0 - b1/b)*(t/d)**3)
+                                                  / (b1/b + (1.0 - b1/b)*(t/d))))) 
                                     / 3.0) - 1.0))
     
         # stress factors Ki
-        self.ki = ((_Ic / (_warea * _c**2 * (_R/_c - 1.0))) 
-                   * ((1.0 - _e / _c) / (_e / _c)))
+        self.ki = ((Ic / (warea * c**2 * (R/c - 1.0))) 
+                   * ((1.0 - e / c) / (e / c)))
     
         # stress factors Ko
-        self.ko = ((_Ic / (_warea * _c**2 * (_e/_c))) 
-                   * ((_d/_c + _e/_c -1.0) / (_R/_c + _d/_c - 1.0)) 
-                   * (1.0 / (_d/_c - 1.0)))
+        self.ko = ((Ic / (warea * c**2 * (e/c))) 
+                   * ((d/c + e/c -1.0) / (R/c + d/c - 1.0)) 
+                   * (1.0 / (d/c - 1.0)))
         
         # Modulus of rigidity factor (section 8.10)
-        _F = 1.0
+        F = 1.0
         
         # Shear factor (section 8.1 equ 8.1-13)
         #    

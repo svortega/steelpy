@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import NamedTuple, Tuple, Union, List, Dict, Iterator
 
 # package imports
-from steelpy.f2uModel.mesh.node import CoordCartesian as Point
+from steelpy.f2uModel.mesh.operations.nodes import CoordCartesian as Point
 #from point import Point
 #from euclid import Point3 as Point
 
@@ -251,12 +251,12 @@ class DistancePointLine3D:
         Calculate the scalar distance and direction (beam member 'X' distance) Pa occurs
         from each line segment end point.
         """
-        self.p1 = Point(*p1, name="p1", number=1)
-        self.p2 = Point(*p2, name="p2", number=2)
+        self.p1 = Point(*p1, name="p1", number=1, index=0)
+        self.p2 = Point(*p2, name="p2", number=2, index=1)
     #
     def point(self, Pb:List[float])-> None:
         """ """
-        self.Pb = Point(*Pb, name="Pb", number=3)
+        self.Pb = Point(*Pb, name="Pb", number=3, index=2)
         #return self.dist
     #
     def _process(self, tol:float=0.05)-> None:
@@ -271,7 +271,7 @@ class DistancePointLine3D:
         self.Pa = Point(self.p1.x + u*(self.p2.x-self.p1.x), 
                         self.p1.y + u*(self.p2.y-self.p1.y), 
                         self.p1.z + u*(self.p2.z-self.p1.z),
-                        name="Pa", number=4)        
+                        name="Pa", number=4, index=3)
         #
         #self.Pmem1 = self.Pa
         self.dist = round(self.Pa.distance(self.Pb), 8)
@@ -320,7 +320,7 @@ class DistancePointLine3D:
                             (self.Pa.z-self.Pb.z)/self.dist,
                             name="uv", number=5)
         else:
-            self.uv = Point(0.0, 0.0, 0.0, name="uv", number=5)
+            self.uv = Point(0.0, 0.0, 0.0, name="uv", number=5, index=4)
     #
     def is_on_segment(self, Pb:List[float], tol:float=0.05)-> bool:
         """ """

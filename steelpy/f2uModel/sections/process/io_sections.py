@@ -122,3 +122,15 @@ def get_dimension(self, _dim: str, value: float):
     
     #return self
 #
+# ---------------------------------
+#
+def get_sect_properties(properties):
+    """ """
+    sect_prop = []
+    for item in properties:
+        try:
+            sect_prop.append(item.value)
+        except AttributeError:
+            sect_prop.append(item)
+    return sect_prop
+#

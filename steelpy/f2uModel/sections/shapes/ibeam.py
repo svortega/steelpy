@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019 iLift
+# Copyright (c) 2020 steelpy
 #
 
 # Python stdlib imports
@@ -21,9 +21,9 @@ from steelpy.f2uModel.sections.process.stress import BeamStress
 #
 points = namedtuple('Points', ['y', 'z'])
 #
-def radial_shear_factor(_D: float, _Tw: float, _Tft: float, 
-                        _Tfb: float, _c: float, _c1: float, 
-                        _R: float, _e: float) -> float:
+def radial_shear_factor(D: float, Tw: float, Tft: float, 
+                        Tfb: float, c: float, c1: float, 
+                        R: float, e: float) -> float:
     '''
     Radial/horizontal web shear stress factor calculation
     Ref Roark 7 ed chapter 9 : Shear stress due to the radial 
@@ -32,57 +32,49 @@ def radial_shear_factor(_D: float, _Tw: float, _Tft: float,
     tr : thickness of the section normal to the plane of curvature
          at the radial position r
     
-    '''
-    
-    #global _D, _Tw, _Bft, _Tft, _Bfb, _Tfb
-    
-    #  
+    '''  
     # total area of the web 
-    _Aw = (_D - _Tft - _Tfb) * _Tw  
+    Aw = (D - Tft - Tfb) * Tw  
     #
     # Average Shear
-    _tau_average = 1.0/_Aw
+    tau_average = 1.0/Aw
     print(' ')
-    print('shear average : {: 1.4E}'.format(_tau_average))
-    
+    print('shear average : {: 1.4E}'.format(tau_average))
     #
     # --------------------------------------------
     # Shear stress due to the radial shear force V
-    _rn = _R -_e             # radial position to neautral axis
-    _b = _R - _c - _Tft      # radial position to inner extreme fiber
-    _tr = _Tw   # width of cross section where stresses are calculated
-    
+    rn = R -e             # radial position to neautral axis
+    b = R - c - Tft      # radial position to inner extreme fiber
+    tr = Tw   # width of cross section where stresses are calculated
     # fraction of the web dep
-    _dwo = (_c1 - _Tft - _e) / 3.0 
-    _dwi = (-_c + _Tfb + _e) / 3.0
-    _CoorZ = [(_c1 - _Tft), 2 * _dwo + _e, _dwo + _e, _e, 0,
-              -_e, _dwi -_e, 2*_dwi -_e, (-_c + _Tfb)]
-    
-    _tau_radial = []
-    for i in range(len(_CoorZ)):
-        _r = _R + _CoorZ[i]      # radial position to point of interest
-        _cr =  (_r - _b) / 2.0  # distance from centroide to extreme fibre
-        _r1 = _cr + _b           # point of cross section from radial centre 
-        _Ar = (_tr * math.log(_r /_b) )* _r  # area of part portion below r
-        #_Ar = (_tr * math.log((_r1 / _cr + 1) / (_r1 / _cr - 1))) * _r
+    dwo = (c1 - Tft - e) / 3.0 
+    dwi = (-c + Tfb + e) / 3.0
+    CoorZ = [(c1 - Tft), 2 * dwo + e, dwo + e, e, 0,
+              -e, dwi -e, 2*dwi -e, (-c + Tfb)]
+    #
+    tau_radial = []
+    for i in range(len(CoorZ)):
+        r = R + CoorZ[i]      # radial position to point of interest
+        _cr =  (r - b) / 2.0  # distance from centroide to extreme fibre
+        _r1 = _cr + b           # point of cross section from radial centre 
+        _Ar = (tr * math.log(r /b) )* r  # area of part portion below r
+        #_Ar = (tr * math.log((_r1 / _cr + 1) / (_r1 / _cr - 1))) * r
         _Qr = _Ar * _r1
         # roark Ed 7 equ (9.1-4)
-        _tau_radial.append( (_rn / (_tr*_Aw*_e*_r**2)) * (_R*_Ar - _Qr))
-        #
-    
+        tau_radial.append( (rn / (tr*Aw*e*r**2)) * (R*_Ar - _Qr))
+    #
     #print(' ')
-    #for i in range(len(_tau_radial)):
+    #for i in range(len(tau_radial)):
     #    print('tau : {: 1.4E} {: 1.4E}'
-    #          .format(_tau_radial[i], _CoorZ[i]))
+    #          .format(tau_radial[i], CoorZ[i]))
     #print(' ')
-    print('shear radial  : {: 1.4E} '.format(max(_tau_radial)))
+    print('shear radial  : {: 1.4E} '.format(max(tau_radial)))
     
-    _tau_y = max(_tau_average, max(_tau_radial))
+    tau_y = max(tau_average, max(tau_radial))
     #print(' ')
     print('-----------------------------')
-    print('Max Shear (tau) : {: 1.4E}'. format(_tau_y))
-    
-    return _tau_y
+    print('Max Shear (tau) : {: 1.4E}'. format(tau_y))
+    return tau_y
     #
     #-------------------------------------------------
 #
@@ -297,18 +289,18 @@ class Ibeam:
             Vtop = Vy * (_Zcb / self.d)
             Vbot = Vy * (self.Zc / self.d)
             # get area flange
-            _bft = (2 * self.bft * self.tft)
-            _bfb = (2 * self.bfb * self.tfb)
+            bft = (2 * self.bft * self.tft)
+            bfb = (2 * self.bfb * self.tfb)
             # horizontal
-            tau_y = [0 * Vtop / _bft,
-                     3.0 * Vtop / _bft, 
-                     0 * Vtop / _bft, 
-                     3.0 * Vtop / _bft, 
-                     0 * Vtop / _bfb, 
-                     3.0 * Vbot / _bfb,
-                     0 * Vtop / _bfb, 
-                     3.0 * Vbot / _bfb, 
-                     0 * Vtop / _bfb]
+            tau_y = [0 * Vtop / bft,
+                     3.0 * Vtop / bft, 
+                     0 * Vtop / bft, 
+                     3.0 * Vtop / bft, 
+                     0 * Vtop / bfb, 
+                     3.0 * Vbot / bfb,
+                     0 * Vtop / bfb, 
+                     3.0 * Vbot / bfb, 
+                     0 * Vtop / bfb]
         # 
         return tau_y, tau_z
     #
@@ -382,135 +374,135 @@ class Ibeam:
         R = Radio
         """
         if 'symmetrical' in self.type.lower():
-            _b = self.bottom_flange_width
-            _b1 = self.web_thickness
-            _t = self.bottom_flange_thickness
-            _d = self.height
-            _ry = self.ry
+            b = self.bottom_flange_width
+            b1 = self.web_thickness
+            t = self.bottom_flange_thickness
+            d = self.height
+            ry = self.ry
         
             # shear area
-            _warea = self.area
+            warea = self.area
         
             # extreme fibre distances c
-            _c = _d/2.0
-            self.c = _c
+            c = d/2.0
+            self.c = c
         
-            _c1 = _d - _c
-            self.c1 = _c1
+            c1 = d - c
+            self.c1 = c1
         
             # centroidal radius
-            _R = R
-            # _R = orad - _c1
-            self.R = _R
+            #R = R
+            # R = orad - c1
+            self.R = R
         
             # Shift of neutral axis from neutral axis
-            _e = (_c *((_R/_c)- ((2.0*(_t/_c + (1 - _t/_c)*(_b1/_b))) 
-                                 / ((math.log(((_R/_c)**2 + (_R/_c + 1)*(_t/_c) - 1.0) 
-                                              / ((_R/_c)**2 - (_R/_c - 1.0)*(_t/_c) - 1.0))) 
-                                    + ((_b1/_b)*math.log((_R/_c - _t/_c + 1.0) 
-                                                         /(_R/_c + _t/_c - 1.0)))))))
-            self.e = _e
+            e = (c *((R/c)- ((2.0*(t/c + (1 - t/c)*(b1/b))) 
+                                 / ((math.log(((R/c)**2 + (R/c + 1)*(t/c) - 1.0) 
+                                              / ((R/c)**2 - (R/c - 1.0)*(t/c) - 1.0))) 
+                                    + ((b1/b)*math.log((R/c - t/c + 1.0) 
+                                                         /(R/c + t/c - 1.0)))))))
+            self.e = e
             # where
-            _Ic = self.Iy
+            Ic = self.Iy
         
             # stress factors Ki
-            self.ki = ((_Ic / (_warea * _c**2 * (_R/_c - 1.0))) 
-                       * ((1.0 - _e / _c) / (_e / _c)))
+            self.ki = ((Ic / (warea * c**2 * (R/c - 1.0))) 
+                       * ((1.0 - e / c) / (e / c)))
         
             # stress factors Ko
-            self.ko = ((_Ic / (_warea * _c**2 * (_R/_c + 1.0))) 
-                       * ((1.0 + _e / _c) / (_e / _c)))
+            self.ko = ((Ic / (warea * c**2 * (R/c + 1.0))) 
+                       * ((1.0 + e / c) / (e / c)))
         
             # Modulus of rigidity factor (section 8.10)
-            _nai = _c - _e    # neautral axis inner fiber
-            _nao = _c1 + _e   # neautral axis outer fiber
+            nai = c - e    # neautral axis inner fiber
+            nao = c1 + e   # neautral axis outer fiber
         
-            _D1 = _nai - _t
-            _D2 = _nai 
-            _t1 = _b1
-            _t2 = _b
-            _r = _ry
+            D1 = nai - t
+            D2 = nai 
+            t1 = b1
+            t2 = b
+            r = ry
         
-            self.F = ((1 + (((3*(_D2**2 - _D1**2)*_D1)/(2.0*_D2**3)) * (_t2/_t1 - 1.0)))
-                      * (4*_D2**2 / (10*_r**2)))
+            self.F = ((1 + (((3*(D2**2 - D1**2)*D1)/(2.0*D2**3)) * (t2/t1 - 1.0)))
+                      * (4*D2**2 / (10*r**2)))
             #
             # Shear factor (section 8.1 equ 8.1-13)
-            self.tau_y = radial_shear_factor(_d, _b1, _t, _t, _c, _c1, _R, _e)
+            self.tau_y = radial_shear_factor(d, b1, t, t, c, c1, R, e)
         
         else:
-            _b = self.bottom_flange_width
-            _t = self.bottom_flange_thickness
-            _b1 = self.top_flange_width
-            _t1 = self.top_flange_thickness
-            _d = self.height
-            _b2 = self.web_thickness
+            b = self.bottom_flange_width
+            t = self.bottom_flange_thickness
+            b1 = self.top_flange_width
+            t1 = self.top_flange_thickness
+            d = self.height
+            b2 = self.web_thickness
         
             # shear area
-            _warea = _d * _b2
+            warea = d * b2
         
             # extreme inner fibre distance c
-            _c = (_d * (((_b1/_b - _b2/_b)*(2.0 - _t1/_d)*(_t1/_d) 
-                         + (1.0 - _b2/_b)*(_t/_d)**2 + (_b2/_b))
-                        / (2*self.area / (_b*_d))))
-            self.c = _c
+            c = (d * (((b1/b - b2/b)*(2.0 - t1/d)*(t1/d) 
+                         + (1.0 - b2/b)*(t/d)**2 + (b2/b))
+                        / (2*self.area / (b*d))))
+            self.c = c
             # extreme outer fibre distance c
-            _c1 = _d - _c
-            self.c1 = _c1
+            c1 = d - c
+            self.c1 = c1
             # centroidal radius
-            _R = R
-            #_R = R - _c1
-            self.R = _R
+            #_R = R
+            #R = R - c1
+            self.R = R
         
             # Shift of neutral axis from neutral axis
-            _e = (_c * ((_R/_c)-(((self.area/(_b*_d))*(_d/_c)) 
-                                 / (math.log((_R/_c + _t/_c - 1)/(_R/_c - 1)) 
-                                    + ((_b2/_b)*math.log((_R/_c + _c1/_c - _t1/_c )
-                                                         / (_R/_c + _t/_c - 1)))
-                                    + ((_b1/_b)*math.log((_R/_c + _c1/_c)
-                                                         / (_R/_c + _c1/_c - _t1/_c)))))))
-            self.e = _e
+            e = (c * ((R/c)-(((self.area/(b*d))*(d/c)) 
+                                 / (math.log((R/c + t/c - 1)/(R/c - 1)) 
+                                    + ((b2/b)*math.log((R/c + c1/c - t1/c )
+                                                         / (R/c + t/c - 1)))
+                                    + ((b1/b)*math.log((R/c + c1/c)
+                                                         / (R/c + c1/c - t1/c)))))))
+            self.e = e
             # where
-            _Ic = self.Iy
+            Ic = self.Iy
         
             # stress factors Ki
-            self.ki = ((_Ic / (self.area * _c**2 * (_R/_c - 1.0))) 
-                       * ((1.0 - _e / _c) / (_e / _c)))
+            self.ki = ((Ic / (self.area * c**2 * (R/c - 1.0))) 
+                       * ((1.0 - e / c) / (e / c)))
         
             # stress factors Ko
-            self.ko = ((_Ic / (self.area * _c**2 * (_e/_c ))) 
-                       * ((_d/_c + _e/_c - 1.0) / (_R/_c  + _d/_c - 1.0))
-                       * (1.0  / (_d / _c - 1.0)))
+            self.ko = ((Ic / (self.area * c**2 * (e/c ))) 
+                       * ((d/c + e/c - 1.0) / (R/c  + d/c - 1.0))
+                       * (1.0  / (d / c - 1.0)))
         
             # Modulus of rigidity factor (section 8.10)
-            _nai = _c - _e    # neautral axis inner fiber
-            _nao = _c1 + _e   # neautral axis outer fiber
+            nai = c - e    # neautral axis inner fiber
+            nao = c1 + e   # neautral axis outer fiber
         
-            if _nai <= _nao:
-                _D1 = _nai - _t1
-                _D2 = _nai 
-                _t1 = _b2
-                _t2 = _b1
-                _r = self.ry
-                print ('inner fiber ', _nai)
+            if nai <= nao:
+                D1 = nai - t1
+                D2 = nai 
+                t1 = b2
+                t2 = b1
+                r = self.ry
+                print ('inner fiber ', nai)
             else:
-                _D1 = _nao - _t
-                _D2 = _nao 
-                _t1 = _b2
-                _t2 = _b
-                _r = self.ry
-                print ('outer fiber ', _nao)
+                D1 = nao - t
+                D2 = nao 
+                t1 = b2
+                t2 = b
+                r = self.ry
+                print ('outer fiber ', nao)
             
             
-            self.F = ((1 + (((3*(_D2**2 - _D1**2)*_D1)/(2.0*_D2**3)) * (_t2/_t1 - 1.0)))
-                      * (4*_D2**2 / (10*_r**2)))
+            self.F = ((1 + (((3*(D2**2 - D1**2)*D1)/(2.0*D2**3)) * (t2/t1 - 1.0)))
+                      * (4*D2**2 / (10*r**2)))
             
             #
             # Shear factor (section 8.1 equ 8.1-13)
-            #_shearFactor = shear_factor(_c, _c1, _R, _e)
+            #_shearFactor = shear_factor(c, c1, R, e)
             #
             #
-            #_R, _F, _e, _c, _c1, _ki, _ko, _shearFactor
-            self.tau_y = radial_shear_factor(_d, _b1, _t, _t1, _c, _c1, _R, _e)
+            #R, _F, e, c, c1, _ki, _ko, _shearFactor
+            self.tau_y = radial_shear_factor(d, b1, t, t1, c, c1, R, e)
         #
         #
     #
@@ -617,12 +609,12 @@ class Ibeam:
        
         # Warping Constant Cw
         # Picard and Beaulieu 1991
-        _d = self.height - (self.top_flange_thickness + self.bottom_flange_thickness) / 2.0
+        d = self.height - (self.top_flange_thickness + self.bottom_flange_thickness) / 2.0
         
         _alpha = (1.0 / (1 + (self.top_flange_width / self.bottom_flange_width)**3 
                          * (self.top_flange_thickness / self.bottom_flange_thickness)))
         
-        self.Cw = (_d**2 * self.top_flange_width**3 * self.top_flange_thickness * _alpha) / 12.0
+        self.Cw = (d**2 * self.top_flange_width**3 * self.top_flange_thickness * _alpha) / 12.0
         
         #-------------------------------------------------
         #   Torsional Constant
@@ -635,7 +627,7 @@ class Ibeam:
         else:
             self.J = ((self.top_flange_width * self.top_flange_thickness**3 
                        + self.bottom_flange_width * self.bottom_flange_thickness**3 
-                       + _d * self.web_thickness**3) / 3.0)
+                       + d * self.web_thickness**3) / 3.0)
             #
             self.K = (self.tft**3 * self.bft + self.tfb**3 * self.bfb 
                       + self.tw**3 * self.ho)            
@@ -746,7 +738,7 @@ class Ibeam:
         #_control = open(file_control, 'w+')
         #_control.write("".join(file))
         #_control.close()
-        #return _Area, _Zc, _Yc, _Iy, _Zey, _Zpy, _ry, _Iz, _Zez, _Zpz, _rz
+        #return _Area, _Zc, _Yc, _Iy, _Zey, _Zpy, ry, _Iz, _Zez, _Zpz, _rz
     #
     @property
     def properties(self):
@@ -974,53 +966,53 @@ class Ibeam:
         coord_y = self.section_coordinates.y # lateral
         coord_z = self.section_coordinates.z # vertical
         # get shear stress
-        _tau_y, _tau_z = self.shear_stress(actions.Fy, actions.Fz, 
+        tau_y, tau_z = self.shear_stress(actions.Fy, actions.Fz, 
                                            stress_type=self.shear_stress_type)
         # FIXME: don't know what to do here
-        _tau_x = [_tau_y[x] * 0 for x in range(len(_tau_y))]
+        tau_x = [tau_y[x] * 0 for x in range(len(tau_y))]
         # get bending stress
-        _sigma_x = [(actions.Fx / self.area) for _ in coord_y]
-        _sigma_y = [(actions.My * _coord / self.Iy) for _coord in coord_z]
-        _sigma_z = [(actions.Mz * _coord / self.Iz) for _coord in coord_y]
+        sigma_x = [(actions.Fx / self.area) for _ in coord_y]
+        sigma_y = [(actions.My * _coord / self.Iy) for _coord in coord_z]
+        sigma_z = [(actions.Mz * _coord / self.Iz) for _coord in coord_y]
         #
         if stress:
             if isinstance(stress.tau_x, list):
                 # assuming section stress already calculated
                 #print('---> list')
-                stress.tau_x = self._combine_stress(_tau_x, stress.tau_x)
-                stress.tau_y = self._combine_stress(_tau_y, stress.tau_y)
-                stress.tau_z = self._combine_stress(_tau_z, stress.tau_z)
+                stress.tau_x = self._combine_stress(tau_x, stress.tau_x)
+                stress.tau_y = self._combine_stress(tau_y, stress.tau_y)
+                stress.tau_z = self._combine_stress(tau_z, stress.tau_z)
                 #
-                stress.sigma_x = self._combine_stress(_sigma_x, stress.sigma_x)
-                stress.sigma_y = self._combine_stress(_sigma_y, stress.sigma_y)
-                stress.sigma_z = self._combine_stress(_sigma_z, stress.sigma_z)
+                stress.sigma_x = self._combine_stress(sigma_x, stress.sigma_x)
+                stress.sigma_y = self._combine_stress(sigma_y, stress.sigma_y)
+                stress.sigma_z = self._combine_stress(sigma_z, stress.sigma_z)
             else:
                 # Assuming global stress
                 stress_tau_x = [stress.tau_x for x in range(9)]
-                stress.tau_x = self._combine_stress(_tau_x, stress_tau_x)
+                stress.tau_x = self._combine_stress(tau_x, stress_tau_x)
                 #
                 stress_tau_y = [stress.tau_y for x in range(9)]
                 _index = [4] # 3, 4, 5
                 for x in _index:
                     stress_tau_y[x] *= 0
-                stress.tau_y = self._combine_stress(_tau_y, stress_tau_y)
+                stress.tau_y = self._combine_stress(tau_y, stress_tau_y)
                 #
                 stress_tau_z = [stress.tau_z for x in range(9)]
                 _index = [0, 2, 6, 8]
                 for x in _index:
                     stress_tau_z[x] *= 0
-                stress.tau_z = self._combine_stress(_tau_z, stress_tau_z)
+                stress.tau_z = self._combine_stress(tau_z, stress_tau_z)
                 #
                 stress_sigma_x = [stress.sigma_x for _ in coord_y]
-                stress.sigma_x = self._combine_stress(_sigma_x, stress_sigma_x)
+                stress.sigma_x = self._combine_stress(sigma_x, stress_sigma_x)
                 #
                 _factor_z = [1, 1, 1, 1, 0, -1, -1, -1, -1]
                 stress_sigma_y = [stress.sigma_y * _coord for _coord in _factor_z]
-                stress.sigma_y = self._combine_stress(_sigma_y, stress_sigma_y)
+                stress.sigma_y = self._combine_stress(sigma_y, stress_sigma_y)
                 #
                 _factor_y = [1, 0, -1, 0, 0, 0, 1, 0, -1]
                 stress_sigma_z = [stress.sigma_z * _coord  for _coord in _factor_y]
-                stress.sigma_z = self._combine_stress(_sigma_z, stress_sigma_z)
+                stress.sigma_z = self._combine_stress(sigma_z, stress_sigma_z)
                 
                 # print(stress.sigma_x[x].convert('megapascal').value) #aldh6850
                 # print(stress.sigma_y[x].convert('megapascal').value) #aldh6850
@@ -1029,8 +1021,8 @@ class Ibeam:
                 # print(stress.tau_y[x].convert('megapascal').value) #aldh6850
                 # print(stress.tau_z[x].convert('megapascal').value) #aldh6850
         else:
-            stress = BeamStress(_sigma_x, _sigma_y, _sigma_z, 
-                                _tau_x, _tau_y, _tau_z)
+            stress = BeamStress(sigma_x, sigma_y, sigma_z, 
+                                tau_x, tau_y, tau_z)
         #
         return stress
     #
