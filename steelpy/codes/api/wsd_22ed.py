@@ -1,15 +1,43 @@
 # 
-# Copyright (c) 2019-2020 steelpy
+# Copyright (c) 2019-2021 steelpy
 #
 # Python stdlib imports
+import datetime
 import math
-#import datetime
-#from typing import NamedTuple, Tuple
+from typing import NamedTuple, Tuple
 
 # package imports
-from steelpy.codes.process.process import ChapterResults, SummaryResults
+#from steelpy.codes.process.process import ChapterResults, SummaryResults
 
 #
+#
+class ChapterResults(NamedTuple):
+    """
+    """
+    URy : float
+    URz : float
+    UR_flag : str
+    allowable_y:float
+    allowable_z:float
+    #
+    @property
+    def status(self):
+        if max(self.URy, self.URz) > 1.0:
+            return "fail"
+        return "pass"
+#
+#
+class SummaryResults(NamedTuple):
+    """
+    """
+    UR : float
+    UR_flag : str
+    
+    @property
+    def status(self):
+        if self.UR > 1.0:
+            return "fail"
+        return "pass"
 #
 #
 class APIwsd22ed:
@@ -26,25 +54,26 @@ class APIwsd22ed:
     #                   Main Section
     #-------------------------------------------------
     #
-    def axial_tension(self, section, material):
+    def axial_tension(self, section, material, stress):
         """
         6.2.1 Axial Tension
         """
         # The allowable tensile stress, Ft, for cylindrical members
         # subjected to axial tensile loads should be determined from:
+        self.fa = max(abs(item) for item in stress.sigma_x)
         #
         #  (3.2.1-1)
         self.Ft = 0.60 * material.Fy
-        print ('Ft Allowable : {:1.2f} MPa'.format(self.Ft.convert('megapascal').value))
+        #print ('Ft Allowable : {:1.2f} MPa'.format(self.Ft.convert('megapascal').value))
         #        
         # The utilization of a member Um
-        URtension = abs(self.fa.value / self.Ft.value)
+        URtension = abs(self.fa / self.Ft.value)
         tension_flag = '(3.2.1-1)'
         #print ('IR Tension = ',self.UmTension)
         #print (' ')
         self.axial_results = ChapterResults(URtension, URtension, tension_flag, self.Ft, self.Ft)
     #
-    def axial_compression(self, Klr, section, material):
+    def axial_compression(self, Klr, section, material, stress):
         """
         6.2.2 Axial Compression
         Klr : 
@@ -52,6 +81,8 @@ class APIwsd22ed:
         material : 
         """
         #  6.2.2.2 Local Buckling
+        #fa = stress.sigma_x
+        self.fa = max(abs(item) for item in stress.sigma_x)
         #
         # Unstiffened cylindrical members fabricated from structural
         # steels should be investigated for local
@@ -79,7 +110,7 @@ class APIwsd22ed:
         # Spec 2B tolerance limits.
         #
         self.C = 0.30
-        self.Fxe = 2 * self.C * material.E * section.t.value / section.D.value
+        self.Fxe = 2 * self.C * material.E * section.t / section.D
         #print('D/t : {:1.2f}'.format(section.D.value / section.t.value))
         #print('Fxe : {:1.2f} MPa'.format(self.Fxe.convert('megapascal').value))
         #
@@ -87,13 +118,13 @@ class APIwsd22ed:
         # The inelastic local buckling stress, Fxc, should be determined
         # from 6.5
         self.Fxc = self.Fxe
-        _Fxc2 = (material.Fy * (1.64 - 0.23 * (section.D.value / section.t.value)**1/4))
+        _Fxc2 = (material.Fy * (1.64 - 0.23 * (section.D / section.t)**1/4))
         if self.Fxc.value > _Fxc2.value:
             self.Fxc = _Fxc2
         #self.Fxc = min(material.Fy * (1.64 - 0.23 * (section.D.value / section.t.value)**1/4),
         #               self.Fxe)
         
-        if section.D.value / section.t.value <= 60:
+        if section.D / section.t <= 60:
             self.Fxc = material.Fy
             _Fymod = material.Fy
         else:
@@ -135,16 +166,20 @@ class APIwsd22ed:
         #print('Fa =', self.Fa, Fa_flag)
         #print ('Fa Allowable : {:1.2f} MPa'.format(self.Fa.convert('megapascal').value))
         #        
-        URcomp = abs(self.fa.value / self.Fa.value)
+        URcomp = abs(self.fa / self.Fa.value)
         #print ('IR Compression =', self.UmComp, self.UmComp_flag)
         #print (' ')
         self.axial_results = ChapterResults(URcomp, URcomp, Fa_flag, self.Fa, self.Fa)
     # 
-    def bending(self, section, material):
+    def bending(self, section, material, stress):
         """
         6.2.3 Bending
         """
-        _Dt = section.D.value / section.t.value
+        #fbx = stress.sigma_y
+        self.fbx = max(abs(item) for item in stress.sigma_y)
+        #fby = stress.sigma_z
+        self.fby = max(abs(item) for item in stress.sigma_z)
+        _Dt = section.D / section.t
         # The allowable bending stress, Fb, should be determined
         # from:
         if  _Dt > 300:
@@ -162,8 +197,8 @@ class APIwsd22ed:
         #
         #print ('Fb Allowable : {:1.2f} MPa'.format(self.Fb.convert('megapascal').value))
         # 
-        URbIP = abs(self.fbx.value / self.Fb.value)
-        URbOP = abs(self.fby.value / self.Fb.value)
+        URbIP = abs(self.fbx / self.Fb.value)
+        URbOP = abs(self.fby / self.Fb.value)
         #self.UmBending_Flag = self.Fb_flag
         #
         #print ('IR Bending In Plane =', self.UmBendingIP)
@@ -172,7 +207,7 @@ class APIwsd22ed:
         self.bending_results = ChapterResults(URbIP, URbOP, 
                                               Fb_flag, self.Fb, self.Fb)
     #
-    def shear(self, section, material):
+    def shear(self, section, material, stress):
         """
         6.2.4 Shear
         where :
@@ -181,6 +216,10 @@ class APIwsd22ed:
         A = the cross sectional area, m2.
         """
         #
+        #fvx = stress.tau_y
+        self.fvx = max(abs(item) for item in stress.tau_y)
+        #fvy = stress.tau_z
+        self.fvy = max(abs(item) for item in stress.tau_z)
         # In Plane
         #self.fvy = self.Vip / (0.50 * section.area)
         # Out Plane
@@ -199,7 +238,7 @@ class APIwsd22ed:
         # For cylindrical members when local shear deformations may be substantial due to cylinder geometry,
         # a reduced yield stress may need to be substituted for Fy in Equation (6.12).        
         #
-        URshear = (self.fvy.value**2 + self.fvx.value**2)**0.50 / self.Fv.value
+        URshear = (self.fvy**2 + self.fvx**2)**0.50 / self.Fv.value
         URshear_flag = "(3.2.4-2)"
         #
         #print ('IR Shear In Plane =', self.UmShear_IP)
@@ -207,12 +246,15 @@ class APIwsd22ed:
         #print ('IR Shear =', self.UmShear)
         #print (' ')
         self.shear_results = ChapterResults(URshear, URshear, URshear_flag, self.Fv, self.Fv)
+        #return self._shear(stress)
     #
-    def torsional_shear(self, section, material):
+    def torsional_shear(self, section, material, stress):
         """
         6.2.4.2 Torsional Shear
         """
         #
+        #fvt = stress.tau_x
+        self.fvt = max(abs(item) for item in stress.tau_x)
         # The maximum torsional shear stress, Fv, for cylindrical
         # members caused by torsion is 6.11 where :
         # fvt = maximum torsional shear stress, ksi (MPa),
@@ -228,7 +270,7 @@ class APIwsd22ed:
         self.Fvt = 0.40 * material.Fy
         #print ('Fvt Allowable: {:1.2f} MPa'.format(self.Fvt.convert('megapascal').value))
         #
-        URtorsion = abs(self.fvt.value / self.Fvt.value)
+        URtorsion = abs(self.fvt / self.Fvt.value)
         URtorsion_flag = "(3.2.4-4)"
         #
         #print ('IR Torsion =', self.UmTorsion)
@@ -377,31 +419,23 @@ class APIwsd22ed:
         #
         self.hoop_buckling_results = ChapterResults(URhs, URhs, URhp_flag, self.Fhc, self.Fhc)
     #
-    def get_load_stress(self, section, actions):
-        """
-        """
-        self.flag_axial = 'TENSION'
-        if actions.Fx.value < 0:
-            self.flag_axial = 'COMPRESSION'
-        #
-        self.fa = actions.Fx / section.area
-        # In Plane
-        self.fvy = 2*actions.Fz / section.area
-        # Out Plane
-        self.fvx = 2*actions.Fy / section.area
-        #
-        self.fvt = actions.Mx * section.D / (2 * section.Ip)
-        self.fbx = actions.My/ section.Zey
-        self.fby = actions.Mz / section.Zez
     #
     def combination(self, KLrx, KLry, Cmx, Cmy,
-                    material):
+                    material, stress):
         """
         6.3 COMBINED STRESSES FOR CYLINDRICAL MEMBERS
         """        
         #
         # Sections 6.3.1 and 6.3.2 apply to overall member behavior
-        # while Sections 6.3.3 and 6.3.4 apply to local buckling      
+        # while Sections 6.3.3 and 6.3.4 apply to local buckling
+        #fa = stress.sigma_x
+        #fa = max(abs(item) for item in stress.sigma_x)
+        #fbx = stress.sigma_y
+        #fby = stress.sigma_z
+        #fbx = max(abs(item) for item in stress.sigma_y)
+        #fby = max(abs(item) for item in stress.sigma_z)
+        # FIXME : 
+        self.flag_axial = 'COMPRESSION'        
         #
         # 6.3.3 Combined Axial Tension and Bending
         #if flag_axial == 'TENSION':
@@ -410,8 +444,8 @@ class APIwsd22ed:
         # points along their length, where fbx and fby are the computed
         # bending tensile stresses
         # (6.21)
-        IRt = abs(self.fa.value / (0.60 * material.Fy.value) 
-                  + (self.fbx.value**2 + self.fby.value**2)**0.50 / self.Fb.value)
+        IRt = abs(self.fa / (0.60 * material.Fy.value) 
+                  + (self.fbx**2 + self.fby**2)**0.50 / self.Fb.value)
         IR_flag = '(6.21)'
         #print("UR combined : {:1.3f} {:}".format(self.IRt, self.IR_flag))
         #
@@ -421,10 +455,9 @@ class APIwsd22ed:
             #
             # When fa/Fa <= 0.15 the following formula may be used 
             # in lieu of the foregoing two formulas
-            if abs(self.fa.value / self.Fa.value) <= 0.15:
-                IRt = (abs(self.fa.value / self.Fa.value) 
-                       + (self.fbx.value**2 + self.fby.value**2)**0.50 
-                       / self.Fb.value)
+            if abs(self.fa / self.Fa.value) <= 0.15:
+                IRt = (abs(self.fa / self.Fa.value) 
+                       + (self.fbx**2 + self.fby**2)**0.50/ self.Fb.value)
                 IR_flag = '(6.22)'
             else:
                 # Cylindrical members subjected to combined compression
@@ -441,7 +474,7 @@ class APIwsd22ed:
                 # appropriate for fbx and fby. If different values are applicable,
                 # the following formula or other rational analysis should be
                 # used instead of Eq. 3.3.1-1:
-                _IR1 = (abs(self.fa.value / self.Fa.value) 
+                _IR1 = (abs(self.fa / self.Fa.value) 
                         + (((Cmx * self.fbx / (1 - (self.fa / self.Fex)))**2 
                             + (Cmy * self.fby / (1 - (self.fa / self.Fey)))**2)**0.50 / self.Fb))
                 #
@@ -606,78 +639,21 @@ class APIwsd22ed:
     #                   Print Section
     #-------------------------------------------------
     #
-    def PrintSectionProperties(self):
+    def _header(self):
         """ """
-        output = []
-        # 
-        output.append(" "+"\n")
-        output.append("_______________________________________________________________________________________"+"\n")
-        output.append(" "+"\n")
-        output.append(("Hydrostatic Pressure: "+ "%-3s" +45*" "+" CALCULATION: " +"% 3.0f" +"\n")
-                         % (self.HydroCheck, self.Header))
-        #
-        output.append("_______________________________________________________________________________________"+"\n")
-        output.append(" "+"\n")
-        output.append("                                     GEOMETRY DATA                                 [mm]"+"\n")
-        output.append(" "+"\n")
-        output.append("Member ID     Component    Diameter    Thickness   D/t         Ly          Lz     "+"\n")
-        output.append(" "+"\n")
-        output.append("......................................................................................."+"\n")
-        output.append(" "+"\n")        
-        #
-        if self.t < 6.0: _t_flag = 't<6mm FAIL'
-        else: _t_flag = 't > 6mm OK'
-        #
-        if self.Dt > 120.0 : _Dt_flag = 'D/t>120 FAIL'
-        else: _Dt_flag = 'D/t<120 OK'
-        #
-        output.append(("%-14s" +" "+"%-10s" +"  "+"%-1.4E"+"  "+"%-1.4E" +"  "+"%-1.4E"+"  "+"%-1.4E" +
-                          "  "+"%-1.4E" +"\n") % 
-                         (self.MemberName, self.Component, self.D, self.t, self.Dt, self.Lx, self.Ly))
-        output.append((39*" " + "%-10s" + "  " + "%-10s" + "\n")%
-                         ( _t_flag, _Dt_flag ))
-        #
-        #
-        output.append("_______________________________________________________________________________________"+"\n")
-        output.append(" "+"\n")
-        output.append("                                  MATERIAL PROPERTIES                            "+"\n")
-        output.append(" "+"\n")
-        output.append("Member ID      Fy [N/mm2]  Fu [N/mm2]  E  [N/mm2]  G  [N/mm2]  Poisson     Rho[kg/m3] "+"\n")
-        output.append(" "+"\n")
-        output.append("......................................................................................."+"\n")
-        output.append(" "+"\n")        
-        #
-        if self.Fy > 500.0 : _Fy_flag = '> 500 FAIL'
-        else: _Fy_flag = '< 500   OK'
-        #
-        if self.Fu > self.Fy/0.90 : _Fu_flag = '>Fy/0.9 FAIL'
-        else: _Fu_flag = '<Fy/0.9 OK'
-        #
-        output.append(("%-14s" +" "+ "%-1.4E" +"  "+"%-1.4E"+"  "+"%-1.4E" +"  "+"%-1.4E" +"  "+
-                          "%-1.4E" +"  "+"%-1.4E" +"\n") % 
-                         (self.MemberName, self.Fy, self.Fu, self.E, self.G, self.Poisson, self.Rhos))
-        output.append((15*" "+"%-10s" +"  "+"%-10s" +"\n")%( _Fy_flag, _Fu_flag ))
-        #
-        output.append(" "+"\n")
-        output.append("_______________________________________________________________________________________"+"\n")
-        output.append(" "+"\n")
-        output.append("                              SECTION DERIVED PROPERTIES"+"\n")
-        output.append(" "+"\n")
-        output.append("Member ID      Area[mm^2]  I   [mm^4]  S   [mm^3]  Z   [mm^3]  ShapeFctor  r    [mm]"+"\n")
-        #output.append("Number        Awx  [mm^2]  Iyy [mm^4]  Syy [mm^3]  Zyy [mm^3]  SCeny [mm]  ry   [mm]"+"\n")
-        output.append("               Mass[kg/m]  Ip  [mm^4]  J   [mm^4]"+"\n")
-        output.append("......................................................................................."+"\n")
-        output.append(" "+"\n")
-        output.append(("%-14s" +" "+"%-1.4E"+"  "+"%-1.4E"+"  "+"%-1.4E"+"  "+"%-1.4E"+"  "+"%-1.4E"+"  "+"%-1.4E"+"\n")%
-                    (self.MemberName, self.A, self.I, self.S, self.Z , (self.Z/self.S), self.r))
-        #output.append(("               "+"%-1.4E"+"  "+"%-1.4E"+"  "+"%-1.4E"+"  "+"%-1.4E"+"  "+"%-1.4E"+"  "+"%-1.4E"+"\n")%
-        #            (self.Awy, self.I, self.S, self.Z, self.r,self.r))
-        output.append((15*" "+"%-1.4E"+ "  " +"%-1.4E"+"  "+"%-1.4E"+"\n")%
-                    ( self.mass, self.Ip, self.J))
-        
-        return output
+        today = datetime.date.today()
+        #output = []
+        output = "\n"
+        output += "***************************************************************************************\n"
+        output += "*                                  CODE CHECK TOOL                                    *\n"
+        output += "*                            Strength Of Tubular Members                              *\n"
+        output += "*                                API RP2A-WSD-ED22                                    *\n"
+        output += "*                                  ALPHA Version                             12/12/20 *\n"           
+        output += "***************************************************************************************\n"
+        output += "DATE: {:}{:} UNITS [N-mm]\n".format(56*" ", today)
+        return output    
     #
-    def print_hydro_pressure(self, cls):
+    def _hydro_pressure(self, cls):
         """ """
         output = []
         #
@@ -747,264 +723,259 @@ class APIwsd22ed:
         #
         return output
     #
-    def print_shear(self):
+    def _shear(self, stress):
         """ """
-        output = []
-        output.append("\n")
-        output.append("_______________________________________________________________________________________"+"\n")
-        output.append("\n")
-        output.append("                                 SHEAR CHECK RESULTS"+"\n")
-        output.append("\n")
-        output.append("Member ID     IR max   Vy    [kN]   Vx    [kN]   Mt   [MPa]\n")
-        output.append("                       fvy  [MPa]   fvx  [MPa]   fvt  [MPa]\n")
-        output.append("             Equ  Fv   Fv   [MPa]   Fv   [MPa]   Fvt  [MPa]\n")
-        output.append("Result       Equ Fvt   fvy/Fv       fvx/Fv       fvt/Fvt\n")
-        output.append("......................................................................................."+"\n")
-        output.append("\n")
+        #output = []
+        output = "\n"
+        output += "_______________________________________________________________________________________\n"
+        output += "\n"
+        output += "                                 SHEAR CHECK RESULTS\n"
+        output += "\n"
+        output += "Member ID     IR max   Vy    [kN]   Vx    [kN]   Mt   [MPa]\n"
+        output += "                       fvy  [MPa]   fvx  [MPa]   fvt  [MPa]\n"
+        output += "             Equ  Fv   Fv   [MPa]   Fv   [MPa]   Fvt  [MPa]\n"
+        output += "Result       Equ Fvt   fvy/Fv       fvx/Fv       fvt/Fvt\n"
+        output += ".......................................................................................\n"
+        output += "\n"
         #
         URresult = max(self.shear_results.URy, self.torsion_results.URy)
         URresult_flag = 'PASS'
         if URresult > 1.0:
             URresult_flag = 'FAIL' 
         #
-        output.append("{:12s} {:3.4f}    {:1.4E}   {:1.4E}   {:1.4E}\n"
-                      .format(self.name, URresult, self.shear_results.URy, 
-                              self.shear_results.URz, self.torsion_results.URy))
+        output += "{:12s} {:3.4f}    {:1.4E}   {:1.4E}   {:1.4E}\n"\
+            .format(self.name, URresult, self.shear_results.URy, 
+                    self.shear_results.URz, self.torsion_results.URy)
         #
-        output.append("{:}{:1.4E}   {:1.4E}   {:1.4E}\n"
-                      .format( 23*" ", self.fvy.convert("megapascal").value, 
-                               self.fvx.convert("megapascal").value, 
-                               self.fvt.convert("megapascal").value))
+        output += "{:}{:1.4E}   {:1.4E}   {:1.4E}\n"\
+            .format( 23*" ", self.fvy, self.fvx, self.fvt)
         #
-        output.append("{:}{:6s}  {:1.4E}   {:1.4E}   {:1.4E}\n"
-                      .format(12*" ", self.shear_results.UR_flag, 
-                              self.Fv.convert("megapascal").value, 
-                              self.Fv.convert("megapascal").value, 
-                              self.Fvt.convert("megapascal").value))
+        output += "{:}{:6s}  {:1.4E}   {:1.4E}   {:1.4E}\n"\
+            .format(12*" ", self.shear_results.UR_flag, 
+                    self.Fv.convert("megapascal").value, 
+                    self.Fv.convert("megapascal").value, 
+                    self.Fvt.convert("megapascal").value)
         #
-        output.append("{:11s} {:6s}  {:-1.4E}   {:-1.4E}   {:-1.4E}\n"
-                      .format( URresult_flag, self.torsion_results.UR_flag, 
-                               self.shear_results.URy, self.shear_results.URz, 
-                               self.torsion_results.URy))
+        output += "{:11s} {:6s}  {:-1.4E}   {:-1.4E}   {:-1.4E}\n"\
+            .format( URresult_flag, self.torsion_results.UR_flag, 
+                     self.shear_results.URy, self.shear_results.URz, 
+                     self.torsion_results.URy)
         return output
     #
-    def print_axial_bending_noHP(self, cls):
+    def _axial_bending_noHP(self, stress):
         """ """
-        output = []
+        #output = []
         if self.flag_axial == 'COMPRESSION': 
-            output.append("\n")
-            output.append("_______________________________________________________________________________________\n")
-            output.append("\n")
-            output.append("                      AXIAL COMPRESSION AND BENDING CHECK RESULTS"+"\n")
-            output.append("\n")
-            output.append("Member ID     IR Comb  Faxial[kN]  Mx   [kNm]  My   [kNm]  C           Lx     [m]  Kx\n")
-            output.append("              Equ IR   fa   [MPa]  fbx  [MPa]  fby  [MPa]  Cc          Ly     [m]  Ky\n")
-            output.append("              Equ Fa   Fa   [MPa]  Fb   [MPa]  Fb   [MPa]  Fxe  [MPa]  Fex  [MPa]  Cmx\n")
-            #output.append("              Equ Umc  GammaRc     GammaRb     GammaRb     fe [N/mm2]  fez[N/mm2]  Cmz\n")
-            output.append("Result        Equ Fb   fa/Fa       fbx/Fb      fby/Fb      Fxc  [MPa]  Fey  [MPa]  Cmy\n")                
-            output.append(".......................................................................................\n")
-            output.append("\n")
-            output.append("{:12s}   {:3.4f}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"
-                          .format(self.name, self.axial_results.URy, 
-                                  abs(cls.actions.Fx.convert("kilonewton").value), 
-                                  abs(cls.actions.My.convert("kilonewton*metre").value), 
-                                  abs(cls.actions.Mz.convert("kilonewton*metre").value),
-                                  self.C, cls.Ly.convert("metre").value, cls.Ky))
+            output = "\n"
+            output += "{:}\n".format(80*"_")
+            output += "\n"
+            output += "                      AXIAL COMPRESSION AND BENDING CHECK RESULTS\n"
+            output += "\n"
+            output += "Member ID     IR Comb  Faxial[kN]  Mx   [kNm]  My   [kNm]  C           Lx     [m]  Kx\n"
+            output += "              Equ IR   fa   [MPa]  fbx  [MPa]  fby  [MPa]  Cc          Ly     [m]  Ky\n"
+            output += "              Equ Fa   Fa   [MPa]  Fb   [MPa]  Fb   [MPa]  Fxe  [MPa]  Fex  [MPa]  Cmx\n"
+            #outpu += ("              Equ Umc  GammaRc     GammaRb     GammaRb     fe [N/mm2]  fez[N/mm2]  Cmz\n"
+            output += "Result        Equ Fb   fa/Fa       fbx/Fb      fby/Fb      Fxc  [MPa]  Fey  [MPa]  Cmy\n"
+            output += "{:}\n".format(80*".")
+            output += "\n"
+            #output += "{:12s}   {:3.4f}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"\
+            #    .format(self.name, self.axial_results.URy, 
+            #            abs(cls.actions.Fx.convert("kilonewton").value), 
+            #            abs(cls.actions.My.convert("kilonewton*metre").value), 
+            #            abs(cls.actions.Mz.convert("kilonewton*metre").value),
+            #            self.C, cls.Ly.convert("metre").value, cls.Ky)
             #                
-            output.append("{:}{:8s}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"
-                          .format(13*" ", self.combined_results.UR_flag, 
-                                  abs(self.fa.convert("megapascal").value), 
-                                  abs(self.fbx.convert("megapascal").value), 
-                                  abs(self.fby.convert("megapascal").value),
-                                  self.Cc, cls.Lz.convert("metre").value, cls.Kz))
+            output += "{:}{:8s}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"\
+                .format(13*" ", self.combined_results.UR_flag, 
+                        abs(self.fa), abs(self.fbx), abs(self.fby), self.Cc)
             #
-            output.append("{:}{:8s}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"
-                          .format(13*" ", self.axial_results.UR_flag, 
-                                  self.Fa.convert("megapascal").value, 
-                                  self.Fb.convert("megapascal").value, 
-                                  self.Fb.convert("megapascal").value, 
-                                  self.Fxe.convert("megapascal").value, 
-                                  self.Fex.convert("megapascal").value, 
-                                  cls.Cmy))
+            output += "{:}{:8s}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"\
+                .format(13*" ", self.axial_results.UR_flag, 
+                        self.Fa.convert("megapascal").value, 
+                        self.Fb.convert("megapascal").value, 
+                        self.Fb.convert("megapascal").value, 
+                        self.Fxe.convert("megapascal").value)
             #
             #output.append((13*" "+ "%6s" +"  "+"%1.4E" +"  "+ "%1.4E" +"  "+
             #             "%1.4E" +"  "+"%1.4E" +"  "+"%1.4E"+"  "+"%1.2f" +"\n")%
             #            (self.UmComp_flag, self.GammaRc, self.GammaRb, self.GammaRb,
             #             self.fe, self.fez, self.Cmy))
             #
-            output.append("{:12s} {:6s}    {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"
-                          .format(self.combined_results.status,
-                                  self.bending_results.UR_flag, 
-                                  self.axial_results.URy, 
-                                  self.bending_results.URy, 
-                                  self.bending_results.URz,
-                                  self.Fxc.convert("megapascal").value, 
-                                  self.Fey.convert("megapascal").value, cls.Cmz))
-            output.append("\n")
-            #output.append("_______________________________________________________________________________________"+"\n")
-            output.append("\n")
+            output += "{:12s} {:6s}    {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"\
+                .format(self.combined_results.status,
+                        self.bending_results.UR_flag, 
+                        self.axial_results.URy, 
+                        self.bending_results.URy, 
+                        self.bending_results.URz,
+                        self.Fxc.convert("megapascal").value)
+            output += "\n"
+            #output += "_______________________________________________________________________________________\n"
+            output += "\n"
         else:
-            output.append("\n")
-            output.append("_______________________________________________________________________________________\n")
-            output.append("\n")
-            output.append("                        AXIAL TENSION AND BENDING CHECK RESULTS\n")
-            output.append("\n")
-            output.append("Member ID    IR Comb   Faxial [N]   Mx   [Nmm]   My   [Nmm]   D/t\n")
-            output.append("             Equ IR    fa [N/mm2]   fbx[N/mm2]   fby[N/mm2]   Lx    [mm]\n")
-            output.append("             Equ Ft    Ft [N/mm2]   Fb [N/mm2]   Fb [N/mm2]   Ly    [mm]\n")
-            #output.append("              Equ Umt  GammaRt     GammaRb     GammaRb                             "+"\n")
-            output.append("Result       Equ Fb    fa/Ft        fbx/Fb       fby/Fb\n")                
-            output.append(".......................................................................................\n")
-            output.append("\n")
-            output.append("{:12s}    {:3.4f}   {:1.4E}   {:1.4E}   {:1.4E}  {:1.4E}\n"
-                          .format(self.name, self.axial_results.URy, 
-                                  abs(cls.actions.Fx.convert("kilonewton").value), 
-                                  abs(cls.actions.My.convert("kilonewton*metre").value), 
-                                  abs(cls.actions.Mz.convert("kilonewton*metre").value),
-                                  (cls.section.D.value/cls.section.t.value)))
+            output = "\n"
+            output += "_______________________________________________________________________________________\n"
+            output += "\n"
+            output += "                        AXIAL TENSION AND BENDING CHECK RESULTS\n"
+            output += "\n"
+            output += "Member ID    IR Comb   Faxial [N]   Mx   [Nmm]   My   [Nmm]   D/t\n"
+            output += "             Equ IR    fa [N/mm2]   fbx[N/mm2]   fby[N/mm2]   Lx    [mm]\n"
+            output += "             Equ Ft    Ft [N/mm2]   Fb [N/mm2]   Fb [N/mm2]   Ly    [mm]\n"
+            #output += ("              Equ Umt  GammaRt     GammaRb     GammaRb                             "+"\n"
+            output += "Result       Equ Fb    fa/Ft        fbx/Fb       fby/Fb\n"
+            output += ".......................................................................................\n"
+            output += "\n"
+            output += "{:12s}    {:3.4f}   {:1.4E}   {:1.4E}   {:1.4E}  {:1.4E}\n"\
+                .format(self.name, self.axial_results.URy, 
+                        abs(cls.actions.Fx.convert("kilonewton").value), 
+                        abs(cls.actions.My.convert("kilonewton*metre").value), 
+                        abs(cls.actions.Mz.convert("kilonewton*metre").value),
+                        (cls.section.D.value/cls.section.t.value))
             #                
-            output.append("{:}{:8s}  {:1.4E}   {:1.4E}  {:1.4E}  {:1.4E}\n"
-                          .format(13*" ", self.combined_results.UR_flag, 
-                                  abs(self.fa.convert("megapascal").value),
-                                  self.fbx.convert("megapascal").value, 
-                                  self.fby.convert("megapascal").value,
-                                  cls.Lz.convert("metre").value))
+            output += "{:}{:8s}  {:1.4E}   {:1.4E}  {:1.4E}  {:1.4E}\n"\
+                .format(13*" ", self.combined_results.UR_flag, 
+                        abs(self.fa.convert("megapascal").value),
+                        self.fbx.convert("megapascal").value, 
+                        self.fby.convert("megapascal").value,
+                        cls.Lz.convert("metre").value)
             #
-            output.append("{:}{:8s}  {:1.4E}   {:1.4E}   {:1.4E}  {:1.4E}\n"
-                          .format(13*" ", self.axial_results.UR_flag , 
-                                  self.Fa.convert("megapascal").value, 
-                                  self.Fb.convert("megapascal").value, 
-                                  self.Fb.convert("megapascal").value, 
-                                  cls.Ly.convert("metre").value))
+            output += "{:}{:8s}  {:1.4E}   {:1.4E}   {:1.4E}  {:1.4E}\n"\
+                .format(13*" ", self.axial_results.UR_flag , 
+                        self.Fa.convert("megapascal").value, 
+                        self.Fb.convert("megapascal").value, 
+                        self.Fb.convert("megapascal").value, 
+                        cls.Ly.convert("metre").value)
             #
-            #output.append((13*" "+ "%6s" +"  "+"%1.4E" +"  "+ "%1.4E" +"  "+
+            #output += (13*" "+ "%6s" +"  "+"%1.4E" +"  "+ "%1.4E" +"  "+
             #             "%1.4E"  +"\n")%
-            #            (self.UmTension_Flag, self.GammaRt, self.GammaRb, self.GammaRb))
+            #            (self.UmTension_Flag, self.GammaRt, self.GammaRb, self.GammaRb)
             #                
-            output.append("{:12s} {:6s}    {:1.4E}   {:1.4E}   {:1.4E}\n"
-                          .format(self.combined_results.status , 
-                                  self.bending_results.UR_flag, 
-                                  self.axial_results.URy, 
-                                  self.bending_results.URy, 
-                                  self.bending_results.URz))
+            output += "{:12s} {:6s}    {:1.4E}   {:1.4E}   {:1.4E}\n"\
+                .format(self.combined_results.status , 
+                        self.bending_results.UR_flag, 
+                        self.axial_results.URy, 
+                        self.bending_results.URy, 
+                        self.bending_results.URz)
             #                
-            output.append(" "+"\n")
-            #output.append("_______________________________________________________________________________________"+"\n")
-            output.append(" "+"\n")
+            output += "\n"
+            #output += "_______________________________________________________________________________________\n"
+            output += "\n"
         #
         return output
     #
-    def print_axial_bending_andHP(self, cls):
+    def _axial_bending_andHP(self):
         """ """
-        output = []
+        #output = []
         if self.flag_axial == 'COMPRESSION': 
-            output.append("\n")
-            output.append("_______________________________________________________________________________________\n")
-            output.append("\n")
-            output.append("         AXIAL COMPRESSION AND BENDING WITH HYDROSTATIC PRESSURE CHECK RESULTS\n")
-            output.append("\n")
-            output.append("Member ID     IR Comb  Faxial[kN]  Mx   [kNm]  My   [kNm]  C           Lx     [m]  Kx\n")
-            output.append("              Equ IR   fa   [MPa]  fbx  [MPa]  fby  [MPa]  Cc          Ly     [m]  Ky\n")
-            output.append("              Equ Fa   Fa   [MPa]  Fb   [MPa]  Fb   [MPa]  Fxe  [MPa]  SFx         Cmx\n")
-            #output.append("              Equ Umc  GammaRc     GammaRb     GammaRb     fe [N/mm2]  fch[N/mm2]  Cmy\n")
-            output.append("Result        Equ Fb   fa/Fa       fbx/Fb      fby/Fb      Fxc  [MPa]  SFb         Cmy\n") 
-            output.append(".......................................................................................\n")
-            output.append("\n")
+            output = "\n"
+            output += "_______________________________________________________________________________________\n"
+            output += "\n"
+            output += "         AXIAL COMPRESSION AND BENDING WITH HYDROSTATIC PRESSURE CHECK RESULTS\n"
+            output += "\n"
+            output += "Member ID     IR Comb  Faxial[kN]  Mx   [kNm]  My   [kNm]  C           Lx     [m]  Kx\n"
+            output += "              Equ IR   fa   [MPa]  fbx  [MPa]  fby  [MPa]  Cc          Ly     [m]  Ky\n"
+            output += "              Equ Fa   Fa   [MPa]  Fb   [MPa]  Fb   [MPa]  Fxe  [MPa]  SFx         Cmx\n"
+            #output += ("              Equ Umc  GammaRc     GammaRb     GammaRb     fe [N/mm2]  fch[N/mm2]  Cmy\n"
+            output += "Result        Equ Fb   fa/Fa       fbx/Fb      fby/Fb      Fxc  [MPa]  SFb         Cmy\n"
+            output += ".......................................................................................\n"
+            output += "\n"
             #                
-            output.append("{:12s}  {:3.4f}   {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"
-                          .format(self.name, self.combined_results.UR, 
-                                  abs(cls.actions.Fx.convert("kilonewton").value), 
-                                  abs(cls.actions.My.convert("kilonewton*metre").value), 
-                                  abs(cls.actions.Mz.convert("kilonewton*metre").value),
-                                  self.C, cls.Ly.convert("metre").value, cls.Ky))
+            output += "{:12s}  {:3.4f}   {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"\
+                .format(self.name, self.combined_results.UR, 
+                        abs(cls.actions.Fx.convert("kilonewton").value), 
+                        abs(cls.actions.My.convert("kilonewton*metre").value), 
+                        abs(cls.actions.Mz.convert("kilonewton*metre").value),
+                        self.C, cls.Ly.convert("metre").value, cls.Ky)
             #                
-            output.append("{:}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"
-                          .format(14*" ", self.combined_results.UR_flag, 
-                                  abs(self.fa.convert("megapascal").value), 
-                                  abs(self.fbx.convert("megapascal").value), 
-                                  abs(self.fby.convert("megapascal").value),
-                                  self.Cc, cls.Lz.convert("metre").value, cls.Kz))
+            output += "{:}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"\
+                .format(14*" ", self.combined_results.UR_flag, 
+                        abs(self.fa.convert("megapascal").value), 
+                        abs(self.fbx.convert("megapascal").value), 
+                        abs(self.fby.convert("megapascal").value),
+                        self.Cc, cls.Lz.convert("metre").value, cls.Kz)
             #
-            output.append("{:}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"
-                          .format(14*" ", self.axial_results.UR_flag, 
-                                  self.Fa.convert("megapascal").value, 
-                                  self.Fb.convert("megapascal").value, 
-                                  self.Fb.convert("megapascal").value, 
-                                  self.Fxe.convert("megapascal").value, 
-                                  self.SFxc, cls.Cmy))
+            output += "{:}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"\
+                .format(14*" ", self.axial_results.UR_flag, 
+                        self.Fa.convert("megapascal").value, 
+                        self.Fb.convert("megapascal").value, 
+                        self.Fb.convert("megapascal").value, 
+                        self.Fxe.convert("megapascal").value, 
+                        self.SFxc, cls.Cmy)
             #                
             #output.append((13*" "+ "%6s" +"  "+"%1.4E" +"  "+ "%1.4E" +"  "+
             #             "%1.4E" +"  "+"%1.4E" +"  "+"%1.4E"+"  "+ "%1.2f" +"\n")%
             #            (self.UmComp_flag, self.GammaRc, self.GammaRb, self.GammaRb,
             #             self.fe, self.fch, self.Cmx))
             #                
-            output.append("{:14s}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"
-                          .format(self.combined_results.status, 
-                                  self.bending_results.UR_flag, 
-                                  self.axial_results.URy,  
-                                  self.bending_results.URy, 
-                                  self.bending_results.URz,
-                                  self.Fxc.convert("megapascal").value, 
-                                  self.SFb, cls.Cmz))
+            output += "{:14s}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.2f}\n"\
+                .format(self.combined_results.status, 
+                        self.bending_results.UR_flag, 
+                        self.axial_results.URy,  
+                        self.bending_results.URy, 
+                        self.bending_results.URz,
+                        self.Fxc.convert("megapascal").value, 
+                        self.SFb, cls.Cmz)
             #                
-            output.append("\n")
-            #output.append("_______________________________________________________________________________________\n")
-            output.append("\n")
+            output += "\n"
+            #output += ("_______________________________________________________________________________________\n"
+            output += "\n"
             #
         else:
-            output.append("\n")
-            output.append("_______________________________________________________________________________________\n")
-            output.append("\n")
-            output.append("          AXIAL TENSION AND BENDING WITH HYDROSTATIC PRESSURE CHECK RESULTS"+"\n")
-            output.append("\n")
-            output.append("Member ID     IR Comb  Faxial[kN]  My   [kNm]  Mz   [kNm]  A           Lx     [m]\n")
-            output.append("              Equ IR   fa   [MPa]  fbx  [MPa]  fby  [MPa]  B           Ly     [m]\n")
-            output.append("              Equ Ft   Ft   [MPa]  Fb   [MPa]  Fb   [MPa]  SFx\n")
-            #output.append("              Equ IRt  GammaRt     GammaRb     GammaRb                 fbh[N/mm2]\n")
-            output.append("Result        Equ Fb   fa/Ft       fbx/Fb      fby/Fb      Fhc  [MPa]\n")                
-            output.append(".......................................................................................\n")
-            output.append("\n")
+            output += "\n"
+            output += "_______________________________________________________________________________________\n"
+            output += "\n"
+            output += "          AXIAL TENSION AND BENDING WITH HYDROSTATIC PRESSURE CHECK RESULTS\n"
+            output += "\n"
+            output += "Member ID     IR Comb  Faxial[kN]  My   [kNm]  Mz   [kNm]  A           Lx     [m]\n"
+            output += "              Equ IR   fa   [MPa]  fbx  [MPa]  fby  [MPa]  B           Ly     [m]\n"
+            output += "              Equ Ft   Ft   [MPa]  Fb   [MPa]  Fb   [MPa]  SFx\n"
+            #outpu += "              Equ IRt  GammaRt     GammaRb     GammaRb                 fbh[N/mm2]\n"
+            output += "Result        Equ Fb   fa/Ft       fbx/Fb      fby/Fb      Fhc  [MPa]\n"
+            output += ".......................................................................................\n"
+            output += "\n"
             #
-            output.append("{:12s}  {:3.4f}   {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"
-                          .format(self.name, self.combined_results.UR, 
-                                  abs(cls.actions.Fx.convert("kilonewton").value), 
-                                  abs(cls.actions.My.convert("kilonewton*metre").value), 
-                                  abs(cls.actions.Mz.convert("kilonewton*metre").value),
-                                  self.A, cls.Ly.convert("metre").value))
+            output += "{:12s}  {:3.4f}   {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"\
+                .format(self.name, self.combined_results.UR, 
+                        abs(cls.actions.Fx.convert("kilonewton").value), 
+                        abs(cls.actions.My.convert("kilonewton*metre").value), 
+                        abs(cls.actions.Mz.convert("kilonewton*metre").value),
+                        self.A, cls.Ly.convert("metre").value)
             #                
-            output.append("{:}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"
-                          .format(14*" ", self.combined_results.UR_flag, 
-                                  abs(self.fa.convert("megapascal").value), 
-                                  abs(self.fbx.convert("megapascal").value), 
-                                  abs(self.fby.convert("megapascal").value),
-                                  self.B, cls.Lz.convert("metre").value))
+            output += "{:}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"\
+                .format(14*" ", self.combined_results.UR_flag, 
+                        abs(self.fa.convert("megapascal").value), 
+                        abs(self.fbx.convert("megapascal").value), 
+                        abs(self.fby.convert("megapascal").value),
+                        self.B, cls.Lz.convert("metre").value)
             #
-            output.append("{:}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"
-                          .format(14*" ", self.axial_results.UR_flag,
-                                  self.Fa.convert("megapascal").value, 
-                                  self.Fb.convert("megapascal").value, 
-                                  self.Fb.convert("megapascal").value, 
-                                  self.SFxt))
+            output += "{:}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"\
+                .format(14*" ", self.axial_results.UR_flag,
+                        self.Fa.convert("megapascal").value, 
+                        self.Fb.convert("megapascal").value, 
+                        self.Fb.convert("megapascal").value, 
+                        self.SFxt)
             #
-            #output.append((13*" "+ "%6s" +"  "+"%1.4E" +"  "+ "%1.4E" +"  "+
+            #output += (13*" "+ "%6s" +"  "+"%1.4E" +"  "+ "%1.4E" +"  "+
             #             "%1.4E" +14*" "+"%1.4E" +"\n")%
             #            (self.UmTension_Flag, self.GammaRt, self.GammaRb, self.GammaRb,
             #             self.fbh))
             #
-            output.append("{:14s}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"
-                          .format(self.combined_results.status.upper(), 
-                                  self.bending_results.UR_flag,
-                                  self.axial_results.URy,  
-                                  self.bending_results.URy, 
-                                  self.bending_results.URz,
-                                  self.Fhc.convert("megapascal").value))
+            output += "{:14s}{:8s} {:1.4E}  {:1.4E}  {:1.4E}  {:1.4E}\n"\
+                .format(self.combined_results.status.upper(), 
+                        self.bending_results.UR_flag,
+                        self.axial_results.URy,  
+                        self.bending_results.URy, 
+                        self.bending_results.URz,
+                        self.Fhc.convert("megapascal").value)
             #                
-            output.append(" "+"\n")
-            #output.append("_______________________________________________________________________________________"+"\n")
-            output.append(" "+"\n")
-            #
+            output += "\n"
+            #output += "_______________________________________________________________________________________\n"
+            output += "\n"
         return output
     #
+    def __str__(self) -> str:
+        """ """
+        print('----')
+        return self._header()
     #
 #
 #

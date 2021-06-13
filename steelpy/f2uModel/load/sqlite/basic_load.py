@@ -14,13 +14,13 @@ from steelpy.f2uModel.load.operations.actions import SelfWeight
 from steelpy.f2uModel.load.sqlite.element import BeamDistributedSQL, BeamPointSQL
 from steelpy.f2uModel.load.sqlite.node import  NodeLoadSQL
 from steelpy.f2uModel.results.sqlite.operation.process_sql import create_connection
-from steelpy.f2uModel.load.operations.basic_load import get_basic_load
+from steelpy.f2uModel.load.operations.basic_load import BasicLoadBasic
 #
 #
 # ---------------------------------
 #
 #
-class BasicLoadSQL(Mapping):
+class BasicLoadSQL(BasicLoadBasic):
     """
     FE Load Cases
 
@@ -38,7 +38,7 @@ class BasicLoadSQL(Mapping):
       :name:  string node external name
     """
     __slots__ = ['bd_file', '_labels', '_number', 
-                 '_index', '_title', 'gravity',
+                  '_title', 'gravity', # '_index',
                  '_nodal_load', '_beam_line',
                  '_beam_point', '_selfweight']
 
@@ -46,15 +46,12 @@ class BasicLoadSQL(Mapping):
     def __init__(self, bd_file:str):
         """
         """
+        super().__init__()
         self.bd_file = bd_file
-        self._labels: array = array("I", [])
-        self._title: List[str] = []
-        self._number: array = array("I", [])
-        self.gravity = 9.80665  # m/s^2
         # create node table
         #self._create_table()
         #
-        #self._load = BasicLoadTypeSQL(self)
+        #self._load = LoadTypeSQL(self)
         self._nodal_load = NodeLoadSQL(self)
         self._beam_line = BeamDistributedSQL(self)
         self._beam_point = BeamPointSQL(self)
@@ -75,30 +72,17 @@ class BasicLoadSQL(Mapping):
             with conn:
                 load_number = self._push_basic_load(conn, load_name, load_title)
                 self._number.append(load_number)
-                conn.commit()
+                #conn.commit()
     #
     def __getitem__(self, load_name:Union[str,int]):
         """
         """
         try:
             self._index = self._labels.index(load_name)
-            return BasicLoadTypeSQL(self)
+            #print(load_name, self._index)
+            return LoadTypeSQL(self)
         except ValueError:
             raise IOError("load case {:} no defined".format(load_name))
-    #
-    def __len__(self) -> int:
-        return len(self._labels)
-    #
-    def __iter__(self):
-        """
-        """
-        return iter(self._labels)
-    #
-    #
-    @property
-    def g(self):
-        """"""
-        return self.gravity
     #
     def _push_basic_load(self, conn, load_name:int, load_title:str):
         """ """
@@ -107,18 +91,9 @@ class BasicLoadSQL(Mapping):
         cur = conn.cursor()
         cur.execute(sql, project)
         return cur.lastrowid
-    #
-    #
-    #
-    def get_basic_load(self, elements, nodes, 
-                       materials, sections):
-        """
-        """
-        return get_basic_load(self, elements, nodes, 
-                              materials, sections)
-#    
 #
-class BasicLoadTypeSQL:
+#
+class LoadTypeSQL:
     """
     """
     __slots__ = ['_cls']
@@ -244,7 +219,26 @@ class BasicLoadTypeSQL:
         Concentrated force
         """
         for value in values:
-            self._cls._beam_point[value[ 0 ]] = value[1:]
+            self._cls._beam_point[value[0]] = value[1:]
+    #
+    @property
+    def node(self):
+        """
+        """
+        return self._cls._nodal_load
+    #
+    #@node.setter
+    #def node(self, values:List):
+    #    """
+    #    Node Load = [node_number, 'point', x,y,z,mx,my,mz],
+    #                [node_number, 'mass' , x,y,z]
+    #    """
+    #    if isinstance(values[1], str):
+    #        self._nodal_load[values[0]] = values[2:]
+    #    else:
+    #        for value in values:
+    #            self._nodal_load[value[0]] = value[2:]    
+    #    
 #
 #
 #

@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2021 fem2ufo
 #
 
 # Python stdlib imports
@@ -51,7 +51,7 @@ class Element:
         #conn = self._cls._connectivity[self.index]
         jnt = []
         for conn in self._cls._connectivity[self.index]:
-            jnt.append(f2u_points[conn])
+            jnt.append(self._cls.f2u_points[conn])
         return jnt
     #
     @property
@@ -59,7 +59,7 @@ class Element:
         """
         """
         material_name = self._cls._materials[self.index]
-        return f2u_materials[material_name]
+        return self._cls.f2u_materials[material_name]
 
     @material.setter
     def material(self, material) -> None:
@@ -68,7 +68,7 @@ class Element:
         try:
             self._cls._materials[self.index] = material.name
         except AttributeError:
-            f2u_materials[material]
+            self._cls.f2u_materials[material]
             self._cls._materials[self.index] = material
     #
     @property
@@ -76,7 +76,7 @@ class Element:
         """
         """
         section_name = self._cls._sections[self.index]
-        return f2u_sections[section_name]
+        return self._cls.f2u_sections[section_name]
 
     @section.setter
     def section(self, section) -> None:
@@ -85,7 +85,7 @@ class Element:
         try:
             self._cls._sections[self.index] = section.name
         except AttributeError:
-            f2u_sections[section]
+            self._cls.f2u_sections[section]
             self._cls._sections[self.index] = section
     #
     #@property
@@ -119,7 +119,7 @@ class SegmentedBeam:
     def length(self):
         """ """
         index = self._get_index()
-        return self._cls._segment[index[0]] * f2u_units.m
+        return self._cls._segment[index[0]] * self._cls.f2u_units.m
 
     @length.setter
     def length(self, item):
@@ -135,7 +135,8 @@ class SegmentedBeam:
     def material(self):
         """ """
         index  = self._get_index()
-        return f2u_materials[self._cls._materials[index[0]]]
+        name = self._cls._materials[index[0]]
+        return self._cls.f2u_materials[name]
 
     @material.setter
     def material(self, value):
@@ -144,14 +145,14 @@ class SegmentedBeam:
         try:
             self._cls._materials[index] = value.name
         except AttributeError:
-            f2u_materials[value]
+            self._cls.f2u_materials[value]
             self._cls._materials[index] = value
     #
     @property
     def section(self):
         """ """
         index = self._get_index()
-        return f2u_sections[self._cls._sections[index[0]]]
+        return self._cls.f2u_sections[self._cls._sections[index[0]]]
 
     @section.setter
     def section(self, value):
@@ -160,7 +161,7 @@ class SegmentedBeam:
         try:
             self._cls._sections[index] = value.name
         except AttributeError:
-            f2u_sections[value]
+            self._cls.f2u_sections[value]
             self._cls._sections[index] = value
     #
     #
@@ -208,9 +209,9 @@ class Steps:
         """ """
         index = self.indices[-1]
         nodes = self._cls._connectivity[index]
-        node1 = f2u_points[nodes[0]]
-        node1 = f2u_points._get_coordinates(node1)
-        node2 = f2u_points._get_coordinates(coord)
+        node1 = self._cls.f2u_points[nodes[0]]
+        node1 = self._cls.f2u_points._get_coordinates(node1)
+        node2 = self._cls.f2u_points._get_coordinates(coord)
         length = math.dist(node1, node2)
         self._cls._segment[index] = length
         new_index = self._cls._duplicate_element(index)
@@ -346,9 +347,9 @@ class Beam(Element):
         """
         """
         _nodes = self.connectivity
-        length = math.dist([_nodes[0].x.value, _nodes[0].y.value, _nodes[0].z.value], 
-                           [_nodes[1].x.value, _nodes[1].y.value, _nodes[1].z.value])
-        return length * f2u_units.m
+        length = math.dist([_nodes[0].x, _nodes[0].y, _nodes[0].z], 
+                           [_nodes[1].x, _nodes[1].y, _nodes[1].z])
+        return length * self._cls.f2u_units.m
     #
     def find_coordinate(self, node_distance:float, node_end:int=0) -> Tuple:
         """
@@ -383,6 +384,22 @@ class Beam(Element):
         #return Coordinates(*_nodeNo3)
         return _nodeNo3
     #
+    #
+    @property
+    def unit_vector(self) -> List[float]:
+        """
+        """
+        _node1, _node2 = self.connectivity
+        dx = _node2.x.value - _node1.x.value
+        dy = _node2.y.value - _node1.y.value
+        dz = _node2.z.value - _node1.z.value
+        # direction cosines
+        L = math.dist([_node1.x.value, _node1.y.value, _node1.z.value], 
+                      [_node2.x.value, _node2.y.value, _node2.z.value])
+        l = dx / L
+        m = dy / L
+        n = dz / L
+        return [l, m, n]  
 #
 #
 class ConceptElements(Mapping):
@@ -402,11 +419,11 @@ class ConceptElements(Mapping):
         """
         Manages f2u elements
         """
-        global f2u_materials, f2u_sections, f2u_units, f2u_points
-        f2u_materials = materials
-        f2u_sections =  sections
-        f2u_units = Units()
-        f2u_points = points
+        #global f2u_materials, f2u_sections, f2u_units, f2u_points
+        self.f2u_materials = materials
+        self.f2u_sections =  sections
+        self.f2u_units = Units()
+        self.f2u_points = points
         #
         self._element_type = element_type
         #
@@ -444,14 +461,14 @@ class ConceptElements(Mapping):
             self._type.append(self._element_type)
             # set connectivity
             try:
-                node_1 = f2u_points.get_point_name(parameters[0])
+                node_1 = self.f2u_points.get_point_name(parameters[0])
             except IOError:
-                node_1 = f2u_points.get_new_point(parameters[0])
+                node_1 = self.f2u_points.get_new_point(parameters[0])
 
             try:
-                node_2 = f2u_points.get_point_name(parameters[1])
+                node_2 = self.f2u_points.get_point_name(parameters[1])
             except IOError:
-                node_2 = f2u_points.get_new_point(parameters[1])
+                node_2 = self.f2u_points.get_new_point(parameters[1])
             #
             self._connectivity.append([node_1, node_2])
             # set blank data
@@ -459,11 +476,11 @@ class ConceptElements(Mapping):
             self._materials.append(-1)
             #
             # set deafult material, section
-            if f2u_materials._default:
-                self._materials[index] = f2u_materials._default
+            if self.f2u_materials.default:
+                self._materials[index] = self.f2u_materials.default
             #
-            if f2u_sections._default:
-                self._sections[index] = f2u_sections._default
+            if self.f2u_sections.default:
+                self._sections[index] = self.f2u_sections.default
             #
             self._segment.append(0)
             self._step_label.append(element_name)

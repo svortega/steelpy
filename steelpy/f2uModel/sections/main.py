@@ -9,10 +9,12 @@ from typing import NamedTuple, Dict, List, Tuple, Union
 
 
 # package imports
-from steelpy.f2uModel.sections.shapes.tubular import TubularInmemory, TubularSQLite
-from steelpy.f2uModel.sections.shapes.tee import Tee
-from steelpy.f2uModel.sections.shapes.ibeam import Ibeam
-from steelpy.f2uModel.sections.shapes.solid import Trapeziod, Circle, Rectangle
+from steelpy.f2uModel.sections.shapes.tubular import TubularInMemory, TubularSQLite
+from steelpy.f2uModel.sections.shapes.tee import TeeSQLite, TeeInMemory
+from steelpy.f2uModel.sections.shapes.channel import ChannelSQLite, ChannelInMemory
+from steelpy.f2uModel.sections.shapes.box import BoxSQLite, BoxInMemory
+from steelpy.f2uModel.sections.shapes.ibeam import IbeamInMemory, IbeamSQLite
+from steelpy.f2uModel.sections.shapes.solid import CircleInMemory, CircleSQLite, RectangleSQLite, RectangleInMemory
 from steelpy.f2uModel.results.sqlite.operation.process_sql import create_connection, create_table
 from steelpy.f2uModel.sections.process.io_sections import PropertyOut, get_sect_properties
 
@@ -55,17 +57,40 @@ class SectionSQL(Mapping):
             #
             if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b"
                         ,shape_type, re.IGNORECASE):
-                self._sections[shape_name] = Ibeam(cls=self)
+                self._sections[shape_name] = IbeamSQLite(name=shape_name, db_file=self.db_file,
+                                                         d=properties[0], tw=properties[1],
+                                                         bf=properties[2], tf=properties[3],
+                                                         bfb=properties[4], tfb=properties[5])
+            
             elif re.match (r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-                self._sections[shape_name] = Tee(cls=self)
-            elif re.match (r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
+                self._sections[ shape_name ] = TeeSQLite(name=shape_name, db_file=self.db_file,
+                                                         d=properties[0], tw=properties[1],
+                                                         b=properties[2], tb=properties[3])
+                
+            elif re.match (r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
                 self._sections[shape_name] = TubularSQLite(name=shape_name, db_file=self.db_file,
                                                            d=properties[0], t=properties[1])
-            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod)\b", shape_type, re.IGNORECASE):
-                #self._sections[shape_name] = Rectangle(cls=self)
-                self._sections[shape_name] = Trapeziod(cls=self)
-            elif re.match(r"\b((solid|bar(\_)?)?circular)\b", shape_type, re.IGNORECASE):
-                self._sections[shape_name] = Circle(cls=self)
+            
+            #elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod)\b", shape_type, re.IGNORECASE):
+            elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
+                self._sections[shape_name] = RectangleSQLite(name=shape_name, db_file=self.db_file,
+                                                             d=properties[0], w=properties[1])
+                #self._sections[shape_name] = Trapeziod(cls=self)
+            
+            elif re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
+                self._sections[shape_name] = CircleSQLite(name=shape_name, db_file=self.db_file,
+                                                           d=properties[0])
+
+            elif re.match ( r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE ):
+                self._sections[ shape_name ] = BoxSQLite(name=shape_name, db_file=self.db_file,
+                                                         d=properties[0], tw=properties[1],
+                                                         b=properties[2], tb=properties[3])
+
+            elif re.match ( r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE ):
+                self._sections[ shape_name ] = ChannelSQLite(name=shape_name, db_file=self.db_file,
+                                                           d=properties[0], tw=properties[1],
+                                                           b=properties[2], tb=properties[3])
+
             else:
                 raise Exception(" section item {:} not recognized".format(shape_type))
             #
@@ -80,6 +105,12 @@ class SectionSQL(Mapping):
             #        self._push_property_table(conn, self._sections[shape_name])
             #        conn.commit()
             #        #self._number.append(sect_number)
+            #
+            self._sections[shape_name].push_property()
+            #
+            #conn = create_connection(self.db_file)
+            #with conn:
+            #    self._push_property_table(conn, self._sections[shape_name])
             #print('-->')
     #
     def __getitem__(self, shape_name):
@@ -90,16 +121,16 @@ class SectionSQL(Mapping):
         else:
             raise Exception(" section name {:} not found".format(shape_name))
     #
-    def push_sections(self):
-        """
-        """
-        conn = create_connection(self.bd_file)
-        with conn:
-            for key, section in self._sections.items():
-                sect_number = self._push_section_table(conn, section)
-                section.number = sect_number
-                self._push_property_table(conn, section)
-            conn.commit()
+    #def push_sections(self):
+    #    """
+    #    """
+    #    conn = create_connection(self.bd_file)
+    #    with conn:
+    #        for key, section in self._sections.items():
+    #            sect_number = self._push_section_table(conn, section)
+    #            section.number = sect_number
+    #            self._push_property_table(conn, section)
+    #        conn.commit()
     #
     #def _push_property_table(self, conn, section):
     #    """ """
@@ -175,7 +206,15 @@ class SectionSQL(Mapping):
         return iter(self._sections)    
     
     def __contains__(self, value):
-        return value in self._sections    
+        return value in self._sections
+    #
+   #def get_properties(self):
+   #    """
+   #    """
+   #    summary = {}
+   #    for key, item in self._sections.items():
+   #        summary[key] = item._get_properties()
+   #    return summary
 #
 #
 def get_sections(conn, component_name):
@@ -248,24 +287,46 @@ class SectionInMemory(Mapping):
             #
             if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b"
                         ,shape_type, re.IGNORECASE):
-                self._sections[shape_name] = Ibeam(cls=self)
+                self._sections[shape_name] = IbeamInMemory(name=shape_name,
+                                                           d=properties[0], tw=properties[1],
+                                                           bf=properties[2], tf=properties[3],
+                                                           bfb=properties[4], tfb=properties[5])
+            
             elif re.match (r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-                self._sections[shape_name] = Tee(cls=self)
+                self._sections[ shape_name ] = TeeInMemory(name=shape_name,
+                                                           d=properties[0], tw=properties[1],
+                                                           b=properties[2], tb=properties[3])
+                
             elif re.match (r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
-                self._sections[shape_name] = TubularInmemory(name=shape_name,
+                self._sections[shape_name] = TubularInMemory(name=shape_name,
                                                              d=properties[0], t=properties[1])
-            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod)\b", shape_type, re.IGNORECASE):
-                #self._sections[shape_name] = Rectangle(cls=self)
-                self._sections[shape_name] = Trapeziod(cls=self)
-            elif re.match(r"\b((solid|bar(\_)?)?circular)\b", shape_type, re.IGNORECASE):
-                self._sections[shape_name] = Circle(cls=self)
+            
+            #elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod)\b", shape_type, re.IGNORECASE):
+            elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
+                self._sections[shape_name] = RectangleInMemory(name=shape_name,
+                                                               d=properties[0], w=properties[1])
+                #self._sections[shape_name] = Trapeziod(cls=self)
+            
+            elif re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
+                self._sections[shape_name] = CircleInMemory(name=shape_name, d=properties[0])
+
+            elif re.match ( r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE ):
+                self._sections[ shape_name ] = BoxInMemory(name=shape_name,
+                                                           d=properties[0], tw=properties[1],
+                                                           b=properties[2], tb=properties[3])
+
+            elif re.match ( r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE ):
+                self._sections[ shape_name ] = ChannelInMemory(name=shape_name,
+                                                               d=properties[0], tw=properties[1],
+                                                               b=properties[2], tb=properties[3])
+
             else:
                 raise Exception(" section item {:} not recognized".format(shape_type))
             #print('-->')
-            self._sections[shape_name].name = shape_name
-            self._sections[shape_name].number = len(self._sections)
-            if properties[0]:
-                self._sections[shape_name].geometry(*properties)
+            #self._sections[shape_name].name = shape_name
+            #self._sections[shape_name].number = len(self._sections)
+            #if properties[0]:
+            #    self._sections[shape_name].geometry(*properties)
     
     def __getitem__(self, shape_name: Union[str, int]):
         """
@@ -303,13 +364,13 @@ class SectionInMemory(Mapping):
     def __contains__(self, value):
         return value in self._sections
     #
-    def get_properties(self):
-        """
-        """
-        summary = {}
-        for key, item in self._sections.items():
-            summary[key] = item._get_properties()
-        return summary
+    #def get_properties(self):
+    #    """
+    #    """
+    #    summary = {}
+    #    for key, item in self._sections.items():
+    #        summary[key] = item._get_properties()
+    #    return summary
 #
 # ---------------------------------
 #
@@ -354,7 +415,63 @@ class Sections(Mapping):
     
     def __contains__(self, value):
         return value in self._sections
-    #    
+    #
+    #def __str__(self) -> str:
+    #    """ """
+    #    output = []
+    #    output.append("\n")
+    #    output.append("_______________________________________________________________________________________\n")
+    #    output.append("\n")
+    #    output.append("                              SECTION DERIVED PROPERTIES"+"\n")
+    #    output.append("\n")
+    #    output.append("Member ID      Area[mm^2]  I   [mm^4]  S   [mm^3]  Z   [mm^3]  ShapeFctor  r    [mm]\n")
+    #    #output.append("Number        Awx  [mm^2]  Iyy [mm^4]  Syy [mm^3]  Zyy [mm^3]  SCeny [mm]  ry   [mm]"+"\n")
+    #    output.append("               Mass[kg/m]  Ip  [mm^4]  J   [mm^4]"+"\n")
+    #    output.append(".......................................................................................\n")
+    #    output.append("\n")
+    #    return output
+    #
+    def __str__(self, units:str="si") -> str:
+        """ """
+        unit_sec = " m"
+        unit_mas = "kg/m"
+        space = " "
+        #
+        output = "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += f"{30*space}SECTION PROPERTIES REPORT{15*space}UNITS [{unit_sec}]\n"
+        output += "\n"
+        output += f"{48*space}Web{14*space}Flanges\n"
+        output += (f"Member Name{5*space}Type{6*space}Diametre{3*space}Thickness"
+                   f"{2*space}Height{5*space}Top Width{2*space}Bot Width\n")
+        output += f"{48*space}Thickness{2*space}Top Thick{2*space}Bot Thick\n"
+        output += f"{70*space}Fillet\n"
+        output += "{:}\n".format(80*".")
+        output += "\n"
+        for name, section in self._sections.items():
+            output += "{:<15s} ".format(str(name))
+            output += section._dimension()
+        #
+        output += "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += "                               SECTION DERIVED PROPERTIES\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += (f"{15*space}Area[{unit_sec}^2] Ixx [{unit_sec}^4] Iyy [{unit_sec}^4]"
+                   f" Yp    [{unit_sec}] rx    [{unit_sec}] J   [{unit_sec}^4]\n")
+        output += (f"{26*space}Sxx [{unit_sec}^3] Syy [{unit_sec}^3] SCeny [{unit_sec}]"
+                   f" ry    [{unit_sec}] Cw  [{unit_sec}^6]\n")
+        output += f"{26*space}Zxx [{unit_sec}^3] Zyy [{unit_sec}^3] SCenx [{unit_sec}] Mass[{unit_mas}]\n"
+        output += "{:}\n".format(80*".")
+        output += "\n"
+        for name, section in self._sections.items():
+            output += "{:<14s} ".format(str(name))
+            output += section.properties.__str__()
+        #print("-->")
+        return output
+    #
     #
     @property
     def default(self):
@@ -362,9 +479,23 @@ class Sections(Mapping):
         return self._sections._default
     
     @default.setter
-    def default(self, value):
+    def default(self, shape_name):
         """ """
-        self._sections._default = value
+        try:
+            self._sections[shape_name]
+        except KeyError:
+            raise IOError(f'section {shape_name} missing')
+        self._sections._default = shape_name
+    #
+    def get_properties(self):
+        """
+        """
+        summary = {}
+        for key, item in self._sections.items():
+            item.push_property()
+            #item.properties
+            #summary[key] = item._get_properties()
+        #return summary
 #    
 # ---------------------------------
 #

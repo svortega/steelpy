@@ -9,8 +9,8 @@ import steelpy.roarks.formulas.circular_ring as ring
 from steelpy.process.units.main import Units
 from steelpy.f2uModel.sections.main import Sections
 #from steelpy.sections.tee import Tee
-from steelpy.f2uModel.sections.shapes.solid import Rectangle
-from steelpy.codes.api.design import API_design
+#from steelpy.f2uModel.sections.shapes.solid import Rectangle
+from steelpy.codes.api.main import API_design
 
 
 #-------------------------------------------------

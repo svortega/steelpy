@@ -1,24 +1,22 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2021 fem2ufo
 #
 
 # Python stdlib imports
-#from collections import Counter
-from typing import List, ClassVar, Dict
-#from itertools import chain
-
-
+from typing import List, ClassVar, Dict, Union
+#
 
 # package imports
-from steelpy.f2uModel.mesh.element import Elements
+#from steelpy.f2uModel.mesh.inmemory.element import Elements
 #from steelpy.f2uModel.mesh.geometry import Releases
-from steelpy.f2uModel.mesh.sets import Groups
-from steelpy.f2uModel.mesh.boundary import Boundaries
-from steelpy.f2uModel.mesh.node import Nodes
-#from steelpy.f2uModel.mesh.operations import dump_f2u_mesh
+from steelpy.f2uModel.mesh.inmemory.sets import Groups
+#from steelpy.f2uModel.mesh.boundary import Boundaries
 #
+from steelpy.f2uModel.mesh.nodes import Nodes
+from steelpy.f2uModel.mesh.boundaries import Boundaries
+from steelpy.f2uModel.mesh.elements import Elements
 #
-from steelpy.f2uModel.mesh.operations import get_nodes_connected
+#from steelpy.f2uModel.mesh.operations.nodes import node_renumbering
 #from steelpy.f2uModel.sql.sqlmodule import f2uDB
 #
 
@@ -27,15 +25,26 @@ class Mesh:
     """
     mesh[beam_name] = [number, element1, element2, elementn]
     """
-    __slots__ = ['_nodes', '_elements', '_materials', '_sections',
-                 '_eccentricities', '_boundaries', '_groups']
+    __slots__ = ['_nodes', '_elements', # '_materials', '_sections',
+                 '_eccentricities', '_boundaries', '_groups', 'db_file']
 
-    def __init__(self):
+    def __init__(self, materials, sections,
+                 mesh_type:str="inmemory",
+                 db_file:Union[str,None]=None):
         """
         """
-        self._boundaries: ClassVar = Boundaries()
-        self._nodes = Nodes()
-        self._elements: ClassVar = Elements()
+        self.db_file = db_file
+        self._nodes = Nodes(mesh_type=mesh_type,
+                            db_file = self.db_file)
+        self._boundaries = Boundaries(mesh_type=mesh_type,
+                                      db_file = self.db_file)
+        #
+        #self._elements: ClassVar = Elements()
+        self._elements: ClassVar = Elements(nodes= self._nodes,
+                                            materials=materials,
+                                            sections=sections,
+                                            mesh_type=mesh_type,
+                                            db_file = self.db_file)
         # groups
         self._groups = Groups()
     #
@@ -78,29 +87,6 @@ class Mesh:
         """
         return self._boundaries
     #
-    @property
-    def sections(self) -> ClassVar:
-        """
-        """
-        return self._sections
-    
-    @sections.setter
-    def sections(self, value) -> None:
-        """
-        """
-        self._sections = value
-    #
-    @property
-    def materials(self) -> ClassVar:
-        """
-        """
-        return self._materials
-    
-    @materials.setter
-    def materials(self, value) -> None:
-        """
-        """
-        self._materials = value
     #
     @property
     def groups(self) -> ClassVar:
@@ -113,8 +99,8 @@ class Mesh:
         """
         """
         print("** Renumbering Nodes")
-        get_nodes_connected(self._elements, self._nodes)
-        self._nodes._renumber()
+        self._nodes.renumbering(self._elements)
+        #1/0
         print("** End Renumbering Nodes")
     #
     #

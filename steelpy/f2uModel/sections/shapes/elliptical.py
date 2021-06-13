@@ -1,6 +1,6 @@
 # 
-# Copyright (c) 2015 steelpy
-
+# Copyright (c) 2019-2021 steelpy
+#
 
 # Python stdlib imports
 import math

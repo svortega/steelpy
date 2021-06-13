@@ -4,6 +4,7 @@
 
 # Python stdlib imports
 #from dataclasses import dataclass
+from collections import namedtuple
 import math
 from typing import Union
 #
@@ -12,8 +13,9 @@ from typing import Union
 from steelpy.process.units.main import Units
 from steelpy.process.io_module.text import search_line
 from steelpy.f2uModel.sections.process.io_sections import SectionProperty, PropertyOut, get_sect_properties
-import steelpy.f2uModel.sections.process.print_report as print_report
+#import steelpy.f2uModel.sections.process.print_report as print_report
 from steelpy.f2uModel.sections.shapes.sqlite.main import SectionSQLite
+from steelpy.f2uModel.sections.process.stress import BeamStress
 #
 #
 #
@@ -49,6 +51,7 @@ def get_compactness(self) -> str:
         _compactness = 'compact'
     return _compactness 
 #
+points = namedtuple('Points', ['y', 'z'])
 #
 # ----------------------------------------
 #      Standard Sections Profiles
@@ -59,11 +62,11 @@ class TubularBasic:
     #__slots__ =  ['type', 'diameter', 'thickness',
     #              'compactness']    
     #
-    #def __init__(self):
-    #    """  
-    #    """
+    def __init__(self):
+        """
+        """
     #    TubularSection.__init__(self)
-    #    self.type = 'Tubular'
+        self.type = 'Tubular'
     #
     #
     def _get_properties(self):
@@ -121,6 +124,9 @@ class TubularBasic:
         _Iyz = 0
         Jx = 2 * Iy
         rp = (Jx / area)**0.50
+        #
+        # -------------------------------------------------
+        self._get_section_coordinates()
         #
         #return _Area, _Zc, _Yc, _Iy, _Zey, _Zpy, _ry, _Iz, _Zez, _Zpz, _rz
         return PropertyOut(area=area, Zc=Zc, Yc=Yc,
@@ -191,34 +197,57 @@ class TubularBasic:
         # Shear factor (section 8.1 equ 8.1-13)
         return ki, k0
     #
-    def print_properties(self, file_name:Union[str,bool]=False):
-        """
-        """
-        self.properties
-        check_out = print_report.print_header()       
-        check_out.append("{:23s} {:1.4E} {:1.4E}"
-                         .format(self.type, 
-                                 self.diameter.convert("millimetre").value, 
-                                 self.thickness.convert("millimetre").value))
-        check_out.extend(print_report.print_properties(self))
-        if file_name:
-            #file_checkout = split_file_name(file_name)
-            #file_checkout = str(file_checkout[0]) +'_check_me.txt'
-            file_checkout = str(file_name) + '.txt'
-            add_out = open(file_checkout,'w')
-            add_out.write("".join(check_out))
-            add_out.close()
-        else:
-            #for line in check_out:
-            #    print(line.rstrip())
-            return check_out
-        #print('ok')
+    #def print_properties(self, file_name:Union[str,bool]=False):
+    #    """
+    #    """
+    #    self.properties
+    #    check_out = print_report.print_header()       
+    #    check_out.append("{:23s} {:1.4E} {:1.4E}"
+    #                     .format(self.type, 
+    #                             self.diameter.convert("millimetre").value, 
+    #                             self.thickness.convert("millimetre").value))
+    #    check_out.extend(print_report.print_properties(self))
+    #    if file_name:
+    #        #file_checkout = split_file_name(file_name)
+    #        #file_checkout = str(file_checkout[0]) +'_check_me.txt'
+    #        file_checkout = str(file_name) + '.txt'
+    #        add_out = open(file_checkout,'w')
+    #        add_out.write("".join(check_out))
+    #        add_out.close()
+    #    else:
+    #        #for line in check_out:
+    #        #    print(line.rstrip())
+    #        return check_out
+    #    #print('ok')
     #
-    def __str__(self) -> str:
-        return  ("{:23s} {:1.4E} {:1.4E}"
-                 .format("Tubular", 
-                         self.d.convert("millimetre").value, 
-                         self.t.convert("millimetre").value))
+    def __str__(self, units:str="si") -> str:
+        """ """
+        unit_sec = " m"
+        unit_mas = "kg/m"
+        space = " "
+        output = "\n"
+        #output += "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += f"{30*space}SECTION PROPERTIES [{unit_sec}]\n"
+        output += "\n"
+        output += "Member ID      Type      Diametre   Thickness\n"
+        output += "{:}\n".format("."*80)
+        output += "{:<14s} ".format(str(self.name))
+        output += self._dimension()        
+        output += "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += (f"{15*space}Area[{unit_sec}^2] Ixx [{unit_sec}^4] Iyy [{unit_sec}^4]"
+                   f" Yp    [{unit_sec}] rx    [{unit_sec}] J   [{unit_sec}^4]\n")
+        output += (f"{26*space}Sxx [{unit_sec}^3] Syy [{unit_sec}^3] SCeny [{unit_sec}]"
+                   f" ry    [{unit_sec}] Cw  [{unit_sec}^6]\n")
+        output += f"{26*space}Zxx [{unit_sec}^3] Zyy [{unit_sec}^3] SCenx [{unit_sec}] Mass[{unit_mas}]\n"
+        output += "{:}\n".format(80*".")
+        #output += "\n"
+        output += "{:<14s} ".format("")
+        output += self.properties.__str__()        
+        return output
     #
     @property
     def properties(self):
@@ -259,16 +288,119 @@ class TubularBasic:
         Cw  : Warping constant
         """
         self._properties = SectionProperty(*values)
-    #     
     #
-    def set_default(self):
-        """ """
-        self.cls._default = self.name    
-    #    
+    def stress(self, actions, stress=None):
+        """
+        """
+        #
+        coord_y = self.section_coordinates.y # lateral
+        coord_z = self.section_coordinates.z # vertical
+        #
+        D, t = self.get_geometry()
+        prop = self.properties
+        #
+        #sigma_x = actions.Fx / prop.area
+        # In Plane
+        #tau_y = 2*actions.Fy / prop.area
+        tau_y = [2 * actions.Fy / prop.area for _ in coord_y]
+        # Out Plane
+        #tau_z = 2*actions.Fy / prop.area
+        tau_z = [2 * actions.Fz / prop.area for _ in coord_z]
+        #
+        # FIXME: what is Ip?
+        #tau_x = 0 # actions.Mx * D / (2 * prop.Ip)
+        tau_x = [0 for _ in coord_y]
+        #sigma_z = actions.My/ prop.Zey
+        #sigma_y = actions.Mz / prop.Zez
+        #
+        # get bending stress
+        sigma_x = [(actions.Fx / prop.area) for _ in coord_y]
+        sigma_y = [(actions.My * _coord / prop.Zey) for _coord in coord_z]
+        sigma_z = [(actions.Mz * _coord / prop.Zez) for _coord in coord_y]
+        #
+        return BeamStress(sigma_x, sigma_y, sigma_z, 
+                          tau_x, tau_y, tau_z, actions.x)
+    #
+    def _get_section_coordinates(self, theta:float=90, steps:int=6):
+        """
+        theta : Arch internal angle
+        steps : arch division
+        :return:
+        arch coordinates: list[y, z]
+        """
+        diameter, thickness = self.get_geometry()
+        radius = diameter * 0.50
+        arc_length = radius * math.tau * theta / 360
+        sinc = arc_length / steps
+        r_theta = 360 * sinc/(radius * math.tau)
+        coord_1 = [ ]
+        coord_2 = [ ]
+        for i in range(steps+1):
+            rad = math.radians(i * r_theta)
+            _x, _z = self._circunference_line(x=rad, r=radius)
+            coord_1.append(_x)
+            coord_2.append(_x)
+        #
+        coord_1.reverse()
+        coord = coord_1 + [-item for item in coord_2[1:]]
+        #return [coord, coord]
+        self.section_coordinates = points (coord, coord)
+    #
+    def _circunference_line(self, x:float, r:float, xp1:float=0, yp1:float=0):
+        """
+        Calculating the coordinates of a point on a circles
+        circumference from the radius, an origin and the
+        arc between the points
+        """
+        xp2 = xp1 + r * math.sin(x)
+        yp2 = yp1 - r * (1 - math.cos(x))
+        # try:
+        #    xp2 = xp1 + r * math.cos(math.tau/x)
+        #    yp2 = yp1 + r * math.sin(math.tau/x)
+        # except ZeroDivisionError:
+        #    xp2 = x
+        #    yp2 = yp1
+        return xp2, yp2
+    #
+    @property
+    def D(self):
+        """
+        D: diametre
+        """
+        return self.d
+
+    @D.setter
+    def D(self, value:Union[Units, float]):
+        """
+        """
+        self.d = value
+    #
+    #
+    @property
+    def tw(self):
+        """
+        d: diametre
+        """
+        return self.t
+
+    @tw.setter
+    def tw(self, value: Union[ Units, float ]):
+        """
+        """
+        self.t = value
+    #
+    #def set_default(self):
+    #    """ """
+    #    self._default = self.name    
+    #
+    def _dimension(self) -> str:
+        """ Print section dimensions"""
+        return "{:<9s} {:1.4e} {:1.4e}\n"\
+               .format(self.type, self.d, self.t)
 #
 #
 #@dataclass
-class TubularInmemory(TubularBasic):
+class TubularInMemory(TubularBasic):
     """ """
     __slots__ = ['diameter', 'thickness', 'build', 
                  'shear_stress', 'compactness', '_properties',
@@ -282,6 +414,7 @@ class TubularInmemory(TubularBasic):
         """
         Shear Stress: MAXIMUM / AVERAGE
         """
+        TubularBasic.__init__(self)
         self.name = name
         self.build = build
         self.shear_stress = shear_stress
@@ -297,22 +430,22 @@ class TubularInmemory(TubularBasic):
         if t:
             self.thickness = t            
     #
-    def geometry(self, d: Union[Units, float], 
-                 t: Union[Units, float]):
-        """
-        Parameters  
-        ----------
-        diameter : Diameter    
-        thickness : Wall Thickness
-        """
-        # Geometry
-        self.diameter = d
-        self.thickness = t
-        #for key, value in kwargs.items():
-        #    _dimensions = find_tubular_dimensions(key)
-        #    get_dimension(self, _dimensions, value)
-        # Geometry
-        self.compactness = get_compactness(self)
+    #def geometry(self, d: Union[Units, float],
+    #             t: Union[Units, float]):
+    #    """
+    #    Parameters
+    #    ----------
+    #    diameter : Diameter
+    #    thickness : Wall Thickness
+    #    """
+    #    # Geometry
+    #    self.diameter = d
+    #    self.thickness = t
+    #    #for key, value in kwargs.items():
+    #    #    _dimensions = find_tubular_dimensions(key)
+    #    #    get_dimension(self, _dimensions, value)
+    #    # Geometry
+    #    self.compactness = get_compactness(self)
     #
     def get_geometry(self):
         """ """
@@ -324,18 +457,6 @@ class TubularInmemory(TubularBasic):
             thickness = self.thickness
         return diameter, thickness
     #
-    @property
-    def D(self):
-        """
-        D: diametre
-        """
-        return self.diameter
-    
-    @D.setter
-    def D(self, value):
-        """
-        """
-        self.diameter = value
     #
     #
     @property
@@ -346,10 +467,11 @@ class TubularInmemory(TubularBasic):
         return self.diameter
 
     @d.setter
-    def d(self, diameter: Union[Units, float]):
+    def d(self, value: Union[Units, float]):
         """
         """
-        self.diameter = diameter
+        value = get_sect_properties ( [ value ] )
+        self.diameter = value[0]
     #
     @property
     def t(self):
@@ -359,16 +481,20 @@ class TubularInmemory(TubularBasic):
         return self.thickness
     
     @t.setter
-    def t(self, thickness: Union[Units, float]):
+    def t(self, value: Union[Units, float]):
         """
         """
-        self.thickness = thickness  
+        value = get_sect_properties ( [ value ] )
+        self.thickness = value[0]
     #
     def rolled(self):
         """
         """
         self.build='rolled'
     #
+    def push_property(self):
+        """ """
+        self.properties
 #
 #
 class TubularSQLite(TubularBasic, SectionSQLite):
@@ -383,45 +509,48 @@ class TubularSQLite(TubularBasic, SectionSQLite):
                  shear_stress:str = 'maximum',
                  FAvy:float = 1.0, FAvz:float = 1.0):
         """
+        Parameters
+        ----------
+        d : diametre
+        t : wall Thickness
         Shear Stress: MAXIMUM / AVERAGE
         """
+        TubularBasic.__init__(self)
         self.name = name
-        #self.compactness:Union[str,None] = None
         self._properties = None
-        #
         self.db_file = db_file
         compactness = None
         section = (self.name, 
-                   None,      # title
-                   "Tubular", # type
-                   d, t,
-                   None, None,
-                   None, None,
-                   None, None,
+                   None,       # title
+                   "Tubular",  # shape type
+                   d, t,       # diameter, wall_thickess
+                   None, None, # height, web_thickness
+                   None, None, # top_flange_width, top_flange_thickness
+                   None, None, # bottom_flange_width, bottom_flange_thickness
                    FAvy, FAvz,
                    shear_stress, build,
                    compactness,)        
-        #
+        # push data to sqlite table
         SectionSQLite.__init__(self, db_file=self.db_file,
                                section=section)
     #
     #
-    def geometry(self, d: Union[Units, float], 
-                 t: Union[Units, float]):
-        """
-        Parameters  
-        ----------
-        diameter : Diameter    
-        thickness : Wall Thickness
-        """
-        # Geometry
-        self.diameter = d
-        self.thickness = t
-        #for key, value in kwargs.items():
-        #    _dimensions = find_tubular_dimensions(key)
-        #    get_dimension(self, _dimensions, value)
-        # Geometry
-        self.compactness = get_compactness(self)
+    #def geometry(self, d: Union[Units, float],
+    #             t: Union[Units, float]):
+    #    """
+    #    Parameters
+    #    ----------
+    #    diameter : Diameter
+    #    thickness : Wall Thickness
+    #    """
+    #    # Geometry
+    #    self.diameter = d
+    #    self.thickness = t
+    #    #for key, value in kwargs.items():
+    #    #    _dimensions = find_tubular_dimensions(key)
+    #    #    get_dimension(self, _dimensions, value)
+    #    # Geometry
+    #    self.compactness = get_compactness(self)
     #
     def get_geometry(self):
         """ """
@@ -458,160 +587,14 @@ class TubularSQLite(TubularBasic, SectionSQLite):
         self.push_property()
     #
     #
-    def _get_section_table(self) -> tuple:
-        """
-        """
-        project = (self.name, None, "Tubular",
-                   self.diameter, self.thickness,
-                   None, None,
-                   None, None,
-                   None, None,)
-        return project
-#
-#
-#
-#@dataclass
-class HollowSemicircle:
-    """
-    Calculate the section properties of a Hollow Semicircle
-
-    Parameters
-    ----------
-    diameter  : Diameter
-    thickness : Thickness wall
-
-    Returns
-    ----------
-    area: Section area
-    Zc  : Elastic neutral centre
-    Yc  : Elastic neutral centre
-    Iy  : Second moment of area about mayor axis
-    Wey : Elastic modulus about mayor axis
-    Wpy : Plastic modulus about mayor axis
-    SFy : Shape factor mayor axis
-    ry  : Radius of gyration about mayor Axis
-    Iz  : Second moment of area about minor axis
-    Wez : Elastic modulus about minor axis
-    Wpz : Plastic modulus about minor axis
-    SFz : Shape factor minor axis
-    rz  : Radius of gyration about minor Axis
-    SC  : Shear centre
-    Cw  : Warping constant
-
-    Notes
-    ----------
-    Uses formulas from:
-    1.- Roark's formulas for stress and strain [7th Edition]
-    2.- Wikipedia
-
-    Examples
-    ----------
-
-    """
-    #
-    def __init__(self, cls):
-        """ """
-        #TubularSection.__init__(self, cls) 
-        self.type = 'Symmetrical Hollow Semicircle Section'
-    #
-    def _get_property(self):
-        """
-        """
-        #
-        try:
-            diameter = self.diameter.value
-            thickness = self.thickness.value
-        except AttributeError:
-            diameter = self.diameter
-            thickness = self.thickness
-        #
-        R = diameter / 2.0
-        _Ri = R  - thickness
-        _b = (R + _Ri) / 2.0
-        
-        #-------------------------------------------------
-        #   Cross-Sectional Area
-        area = (math.pi * (R**2 - _Ri**2)) / 2.0
-        
-        # Centroid
-        Zc = (2 * _b / math.pi) * (1 + (thickness / _b)**2 / 12.0)
-        
-        Zc1 = R - Zc
-        
-        Yc = 0
-        _Yc2 = R
-        
-        # Shear Centre
-        _SCz = 2 * R
-        _SCy = 0
-        
-        #-------------------------------------------------
-        #               Section Properties
-        #-------------------------------------------------
-        
-        #   Second Moment of Area about Mayor Axis
-        #   --------------------------------------
-        Iy = (((math.pi / 8.0) * (R**4 - _Ri**4)) 
-              - ((8.0 / (9 * math.pi)) 
-                 * ((R**3 - _Ri**3)**2) / (R**2 - _Ri**2)))
-        
-        Iz = ((math.pi / 8.0) * (R**4 - _Ri**4))
-        
-        #   Elastic Modulus about Mayor Axis
-        #   --------------------------------------
-        Zey = min(Iy / Zc, Iy / Zc)
-        
-        Zez = Iz / _Yc2
-        
-        #-------------------------------------------------
-        #   Plastic Modulus about Mayor Axis
-        _C = thickness / float(R)
-        
-        # Plastic neutral axis
-        Zp = (R * (0.7071 - 0.2716 * _C 
-                   - 0.4299 * _C**2 + 0.3983 * _C**3))
-        
-        Yp = 0
-        
-        # Plastic section moduli mayor axis
-        Zpy = (R**2 * thickness * (0.8284 - 0.9140 * _C +
-                                   0.7245 * _C**2 - 0.2850 * _C**3))
-        
-        # Plastic section moduli minor axis
-        Zpz = 0.6667 * (R**3 - _Ri**3)
-        
-        #-------------------------------------------------
-        #   Radius of gyration
-        ry = math.sqrt(Iy / area)
-        rz = math.sqrt(Iz / area)
-        
-        #-------------------------------------------------
-        #   Torsional Constant
-        J = ((thickness * R**5 / 3.0) 
-             * (2 * math.pi**3 
-                - (12 * math.pi**2 / math.pi)))
-        #
-        #
-        return PropertyOut(area=area, Zc=Zc, Yc=Yc,
-                           Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
-                           Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
-                           J=J, Cw=Cw)
-    #
-    #def print_file(self, file_name):
-    #
-    #    check_out = print_header()
-    #
-    #    check_out.append("{:23s} {:1.4E} {:1.4E}"
-    #                     .format(self.type, self.diameter, self.thickness))
-    #
-    #    check_out.extend(print_properties(self))
-    #
-    #    #file_checkout = split_file_name(file_name)
-    #    #file_checkout = str(file_checkout[0]) +'_check_me.txt'
-    #    file_checkout = str(file_name) + '.txt'
-    #    add_out = open(file_checkout,'w')
-    #    add_out.write("".join(check_out))
-    #    add_out.close()
-    #    print('ok')
+    #def _get_section_table(self) -> tuple:
+    #    """
+    #    """
+    #    project = (self.name, None, "Tubular",
+    #               self.diameter, self.thickness,
+    #               None, None,
+    #               None, None,
+    #               None, None,)
+    #    return project
 #
 #

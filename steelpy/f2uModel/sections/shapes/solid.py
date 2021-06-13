@@ -1,19 +1,22 @@
 # 
-# Copyright (c) 2019 iLift
+# Copyright (c) 2019-2021 steelpy
 #
 
 # Python stdlib imports
 import math
 from collections import namedtuple
 from dataclasses import dataclass
+import re
 from typing import NamedTuple, List, Union
 
 # package imports
 from steelpy.process.units.main import Units
-from steelpy.f2uModel.material.main import Materials
-import steelpy.f2uModel.sections.process.io_sections as shape_io
+#from steelpy.f2uModel.material.main import Materials
+#import steelpy.f2uModel.sections.process.io_sections as shape_io
+from steelpy.f2uModel.sections.process.io_sections import SectionProperty, PropertyOut, get_sect_properties
 #from steelpy.sections.process.stress import BeamStress
 #from iLift.load.process.actions import Actions
+from steelpy.f2uModel.sections.shapes.sqlite.main import SectionSQLite
 
 # ----------------------------------------
 #      Basic Solid Shapes
@@ -43,9 +46,9 @@ class SolidSection:
         #self.name = None
     #
     #
-    def set_default(self):
-        """ """
-        self.cls._default = self.name
+    #def set_default(self):
+    #    """ """
+    #    self.cls._default = self.name
     #
     @property
     def properties(self):
@@ -87,7 +90,7 @@ class SolidSection:
 
         Cw  : Warping constant
         """
-        self._properties = shape_io.SectionProperty(*values)
+        self._properties = SectionProperty(*values)
 
     #
     @property
@@ -153,7 +156,7 @@ class SolidSection:
     #
 #
 #
-class Rectangle(SolidSection):
+class RectangleBasic:
     """
     Calculate the section properties of a rectangular solid section\n
 
@@ -166,7 +169,7 @@ d   |     |   Z
 
     Parameters
     ----------
-    d : Depth
+    d : Height
     w : Width
 
     Returns
@@ -199,130 +202,162 @@ d   |     |   Z
 
     """
     #
-    def __init__(self, cls):
+    def __init__(self):
         """
         """
-        SolidSection.__init__(self, cls)
-        #self.name = 'rectangular bar'
-        self.type = 'rectangular bar'
+        self.type = 'SquareBar'
+    #    SolidSection.__init__(self, cls)
+    #    #self.name = 'rectangular bar'
+    #    self.type = 'rectangular'
     #
     #
-    def geometry(self, d:Union[float,Units], w:Union[float,Units]):
-        """
-        """
-        self.depth = float(d) * self.units.m
-        self.width = float(w) * self.units.m
-        #self.type = 'rectangular bar'
-       
+    @property
+    def depth(self):
+        return self.d
+
+    @ depth.setter
+    def depth(self, value:Union[Units,float]):
+        """ """
+        self.d = value
+    #
+    #
+    @property
+    def width(self):
+        return self.w
+
+    @width.setter
+    def width(self, value:Union[Units,float]):
+        """ """
+        self.w = value
+    #
+    #def geometry(self, d:Union[float,Units], w:Union[float,Units]):
+    #    """
+    #    """
+    #    self.depth = float(d) * self.units.m
+    #    self.width = float(w) * self.units.m
+    #    #self.type = 'rectangular bar'
+    #
     #
     def _get_properties(self):
         """
         """
         #-------------------------------------------------
         #   Cross-Sectional Area
-        self.area = self.width * self.depth
-        
+        area = self.width * self.depth
         #-------------------------------------------------
         #   Elastic Neutral Centre 
-        self.Zc = self.depth / 2.0
-        
-        self.Yc = 0 * self.depth
-        
+        Zc = self.depth / 2.0
+        Yc = 0 * self.depth
         #-------------------------------------------------
         #   Plastic Neutral Centre 
         _Zp = 0
-        
         _Yp = 0
-        
         #-------------------------------------------------
         #   Shear Centre 
-        self.SCz = 0 * self.depth
-        
-        self.SCy = 0 * self.width
-        
+        SCz = 0 * self.depth
+        SCy = 0 * self.width
         #-------------------------------------------------
         #   Warping Constant Cw
-        self.Cw = 0 * self.width
-        
+        Cw = 0 * self.width
         #-------------------------------------------------
         #               Section Properties
         #-------------------------------------------------
-        
         #   Second Moment of Area about Mayor Axis
-        self.Iy = self.width*self.depth**3 / 12.0
-        
+        Iy = self.width*self.depth**3 / 12.0
         #   Elastic Modulus about Mayor Axis
-        self.Zey = self.width*self.depth**2 / 6.0
-        
+        Zey = self.width*self.depth**2 / 6.0
         #   Plastic Modulus about Mayor Axis
-        self.Zpy = self.width*self.depth**2 / 4.0
-        
+        Zpy = self.width*self.depth**2 / 4.0
         #   Shape Factor
-        self.SFy = 1.50
-        
+        SFy = 1.50
         #   Radius of gyration about Mayor Axis
-        self.ry = self.depth / 12**0.50
-        
+        ry = self.depth / 12**0.50
         #-------------------------------------------------
         #   Second Moment of Area about Minor Axis
-        self.Iz = self.width**3 *self.depth / 12.0
-        
+        Iz = self.width**3 *self.depth / 12.0
         #   Elastic Modulus about Minor Axis
-        self.Zez = self.width**2 *self.depth / 6.0
-        
+        Zez = self.width**2 *self.depth / 6.0
         #   Plastic Modulus about Minor Axis
-        self.Zpz = self.width**2 *self.depth / 4.0
-        
+        Zpz = self.width**2 *self.depth / 4.0
         #   Shape Factor
-        self.SFz = 1.50
-    
+        SFz = 1.50
         #   Radius of gyration about Minor Axis 
-        self.rz = self.width / 12**0.50
-        
+        rz = self.width / 12**0.50
         #-------------------------------------------------
         #   Torsional Constant
         if self.depth == self.width:
-            self.J = 0.1406 * self.depth**4
+            J = 0.1406 * self.depth**4
             # Polar area section module
-            self.Zej = 0.208 * self.depth**3
+            Zej = 0.208 * self.depth**3
         else:
-            self.J = ((self.depth**3 * self.width / 3.0) * 
-                      (1 - (0.630 *  self.depth.value / self.width.value) +
-                       (0.052 * self.depth.value**5 / self.width.value**5)))
+            J = ((self.depth**3 * self.width / 3.0) 
+                 * (1 - (0.630 *  self.depth / self.width) 
+                    + (0.052 * self.depth**5 / self.width**5)))
             # Polar area section module
-            self.Zej = (self.depth**2 * self.width 
-                        / (3 + 1.8 * self.depth.value / self.width.value))
+            Zej = (self.depth**2 * self.width
+                   / (3 + 1.8 * self.depth / self.width))
             if self.depth > self.width:
-                self.J = ((self.depth * self.width**3 / 3.0) * 
-                          (1 - (0.630 * self.width.value / self.depth.value) +
-                           (0.052 * self.width.value**5 / self.depth.value**5)))
+                J = ((self.depth * self.width**3 / 3.0) 
+                     * (1 - (0.630 * self.width / self.depth) 
+                        + (0.052 * self.width**5 / self.depth**5)))
                 # Polar area section module
-                self.Zej = (self.depth * self.width**2 
-                            / (3 + 1.8 * self.width.value / self.depth.value))
+                Zej = (self.depth * self.width**2
+                       / (3 + 1.8 * self.width / self.depth))
         #
         #   Product of inertia
         _Iyz = 0.0
-        
-        self.Jx = self.width*self.depth*(self.width**2 + self.depth**2) / 12.0
-        
-        self.rp = ((self.width**2 + self.depth**2) / 12.0)**0.50
+        Jx = self.width*self.depth*(self.width**2 + self.depth**2) / 12.0
+        rp = ((self.width**2 + self.depth**2) / 12.0)**0.50
         #
         #-------------------------------------------------
         self._get_section_coordinates()        
         #
         #-------------------------------------------------
-        #file = shape_io.print_header()
-        #file.extend(self._shape())
-        #file.extend(shape_io.print_properties(self))
-        #for row in file:
-        #    print(row.rstrip())
         #
-        #return _Area, _Zc, _Yc, _Iy, _Zey, _Zpy, _ry, _Iz, _Zez, _Zpz, _rz
-        return shape_io.PropertyOut(area=self.area.value, Zc=self.Zc.value, Yc=self.Yc.value,
-                                   Iy=self.Iy.value, Zey=self.Zey.value, Zpy=self.Zpy.value, ry=self.ry.value,
-                                   Iz=self.Iz.value, Zez=self.Zez.value, Zpz=self.Zpz.value, rz=self.rz.value,
-                                   J=self.J.value, Cw=self.Cw.value)
+        return PropertyOut(area=area, Zc=Zc, Yc=Yc,
+                           Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
+                           Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
+                           J=J, Cw=Cw)
     #
+    @property
+    def properties(self):
+        """
+        """
+        if not self._properties:
+            self._properties = self._get_properties()
+        return self._properties
+
+    @properties.setter
+    def properties(self, values):
+        """
+        --------------------------
+        General Beam Element Data
+        --------------------------
+
+        Parameters
+        ----------
+        area: Section area
+        Zc  : Elastic neutral centre
+        Yc  : Elastic neutral centre
+
+        Iy  : Second moment of area about mayor axis
+        Zy : Elastic modulus about mayor axis
+        Sy : Plastic modulus about mayor axis
+        Avy : Shear area mayor axis
+        ry  : Radius of gyration about mayor Axis
+
+        Iz  : Second moment of area about minor axis
+        Zz : Elastic modulus about minor axis
+        Sz : Plastic modulus about minor axis
+        Avz : Shear area minor axis
+        rz  : Radius of gyration about minor Axis
+
+        SCz  : Shear centre about z axis
+        SCy  : Shear centre about y axis
+
+        Cw  : Warping constant
+        """
+        self._properties = SectionProperty(*values)
     #
     def shear_stress(self, Vz=1.0, Vy=1.0, stress_type='average'):
         """
@@ -368,8 +403,9 @@ d   |     |   Z
         """
         Roark Torsion chapter
         """
-        a = self.w / 2.0
-        b = self.d / 2.0
+        d, w = self.get_geometry()
+        a = w / 2.0
+        b = d / 2.0
         if a == b:
             K = 2.25 * a**4
             tau_max = 0.601 * T / a**3
@@ -549,20 +585,172 @@ d   |     |   Z
                    -1 * _h, -1 * _h, -1 * _h]
         
         self.section_coordinates = points(coord_y, coord_z)
-        #print('ok')    
+        #print('ok')
     #
-    #
-    def _push_section(self) -> tuple:
-        """
-        """
-        project = (self.name, None, self.type,
-                   None, None,
-                   self.height.value, None,
-                   self.width.value, None,
-                   self.width.value, None,)
-        return project
+    def _dimension(self) -> str:
+        """ """
+        return  ("{:32s}{:1.4E} {:1.4E} {:1.4E}\n"
+                 .format(self.type, self.d, self.w, self.w))
 #
-class Circle(SolidSection):
+#
+class RectangleSQLite(RectangleBasic, SectionSQLite):
+    __slots__ = ['_properties', 'name', 'number', 'db_file']
+
+    def __init__(self, name:Union[str, int],
+                 d: Union[float, Units], w: Union[float, Units],
+                 db_file:str,
+                 build:str = 'welded',
+                 shear_stress:str = 'maximum',
+                 FAvy:float = 1.0, FAvz:float = 1.0):
+        """
+        Parameters
+        ----------
+        d : Height
+        w : Width
+        """
+        RectangleBasic.__init__(self)
+        self.name = name
+        self._properties = None
+        self.db_file = db_file
+        compactness = None
+        section = (self.name,
+                   None,  # title
+                   "Rectangle",   # shape type
+                   None, None,    # diameter, wall_thickess
+                   d, None,       # height, web_thickness
+                   w, None,       # top_flange_width, top_flange_thickness
+                   w, None,       # bottom_flange_width, bottom_flange_thickness
+                   FAvy, FAvz,
+                   shear_stress, build,
+                   compactness,)
+        # push data to sqlite table
+        SectionSQLite.__init__(self, db_file=self.db_file, section=section)
+    #
+    #
+    @property
+    def d(self):
+        return self.get_item(item="height")
+
+    @d.setter
+    def d(self, value:Union[Units,float]):
+        """ """
+        value = get_sect_properties([value])
+        self.update_item(item='height', value=value[0])
+        self.push_property()
+    #
+    #
+    @property
+    def w(self):
+        return self.get_item(item="top_flange_width")
+
+    @w.setter
+    def w(self, value:Union[Units,float]):
+        """ """
+        value = get_sect_properties([value])
+        self.update_item(item='top_flange_width', value=value[0])
+        self.push_property()
+    #
+    #def __setattr__(self, shape_type:str, value:Union[Units,float]):
+    #    """ """
+    #    value = get_sect_properties([value])
+    #    if re.match (r"\b(d(epth)?|h(eight)?)\b", shape_type, re.IGNORECASE):
+    #        self.update_item(item='height', value=value[0])
+    #        self.push_property()
+    #    elif re.match (r"\b(w(idth)?)\b", shape_type, re.IGNORECASE):
+    #        self.update_item(item='top_flange_width', value=value[0])
+    #        self.push_property()
+    #    else:
+    #        # in python3+ you can omit the arguments to super:
+    #        super().__setattr__(shape_type, value[0])
+    #
+    #def __getattr__(self, shape_type:str):
+    #    """ """
+    #    if re.match (r"\b(d(epth)?|h(eight)?)\b", shape_type, re.IGNORECASE):
+    #        return self.get_item(item="height")
+    #    elif re.match (r"\b(w(idth)?)\b", shape_type, re.IGNORECASE):
+    #        return self.get_item(item="top_flange_width")
+    #    else:
+    #        raise AttributeError(shape_type)
+#
+class RectangleInMemory(RectangleBasic):
+
+    def __init__(self, name:Union[str, int],
+                 d:Union[float,None], w:Union[float,None],
+                 build:str = 'welded',
+                 shear_stress:str = 'average',
+                 FAvy:float = 1.0, FAvz:float = 1.0):
+        """
+        Parameters
+        ----------
+        name : section name/id
+        d    : Height
+        w    : Width
+        Shear Stress: MAXIMUM / AVERAGE
+        """
+        RectangleBasic.__init__(self)
+        self.name = name
+        self.build = build
+        self.shear_stress = shear_stress
+        # Shear factor
+        self.FAvy = FAvy
+        self.FAvz = FAvz
+        #
+        self.compactness:Union[str, None] = None
+        self._properties = None
+        self.type = 'rectangular'
+        #
+        if d:
+            self.d = d
+        if w:
+            self.w = w
+    #
+    #
+    @property
+    def d(self):
+        return self._d
+
+    @d.setter
+    def d(self, value:Union[Units,float]):
+        """ """
+        value = get_sect_properties([value])
+        self._d = value[0]
+    #
+    @property
+    def w(self):
+        return self._w
+
+    @w.setter
+    def w(self, value:Union[Units,float]):
+        """ """
+        value = get_sect_properties([value])
+        self._w = value[0]
+    #
+    #def __setattr__(self, shape_type:str, value:Union[Units,float]):
+    #    """ """
+    #    value = get_sect_properties([value])
+    #    if re.match (r"\b(d(epth)?|h(eight)?)\b", shape_type, re.IGNORECASE):
+    #        self.depth = value[0]
+    #    elif re.match (r"\b(w(idth)?)\b", shape_type, re.IGNORECASE):
+    #        self.width = value[0]
+    #    else:
+    #        # in python3+ you can omit the arguments to super:
+    #        super().__setattr__(shape_type, value[0])
+    ##
+    #def __getattr__(self, shape_type:str):
+    #    """ """
+    #    if re.match (r"\b(d(epth)?|h(eight)?)\b", shape_type, re.IGNORECASE):
+    #        return self.depth
+    #    elif re.match (r"\b(w(idth)?)\b", shape_type, re.IGNORECASE):
+    #        return self.width
+    #    else:
+    #        raise AttributeError(shape_type)
+    #
+    def push_property(self):
+        """ """
+        self.properties
+#
+#
+class CircleBasic:
     """
     Calculate the section properties of a circular solid section\n
     
@@ -589,94 +777,108 @@ class Circle(SolidSection):
     Cw  : Warping constant
     """
     #
-    def __init__(self, cls):
+    def __init__(self):
         """
         """
-        SolidSection.__init__(self, cls)
-        self.type = 'circular bar'
+        self.type = 'RoundBar'
     #
-    def geometry(self, D):
+    def _get_properties(self):
         """
         """
-        self.depth = float(D)
-        #self.type = 'circular bar'
-    #
-    def get_property(self):
-        """ """
         #
         #self.depth *= factors[0]
-        R = 0.50 * self.depth
-        
+        R = 0.50 * self.d
         #-------------------------------------------------
         #   Cross-Sectional Area
-        self.area = math.pi * R**2
-        
+        area = math.pi * R**2
         #-------------------------------------------------
         #   Elastic Neutral Centre 
-        self.Zc = self.depth / 2.0
-        
-        self.Yc = 0
-        
+        Zc = self.d / 2.0
+        Yc = 0
         #-------------------------------------------------
         #   Shear Centre 
         _SCz = 0
-        
         _SCy = 0
-        
         #-------------------------------------------------
         #   Warping Constant Cw
-        _Cw = 0
-        
+        Cw = 0
         #-------------------------------------------------
         #               Section Properties
         #-------------------------------------------------
-        
         #   Second Moment of Area about Mayor Axis
-        self.Iy = math.pi * R**4 / 4.0
-        
+        Iy = math.pi * R**4 / 4.0
         #   Elastic Modulus about Mayor Axis
-        self.Zey = math.pi * R**3 / 4.0
-        
+        Zey = math.pi * R**3 / 4.0
         #   Plastic Modulus about Mayor Axis
-        self.Zpy = 4 * math.pi * R**3 / 3.0
-        
+        Zpy = 4 * math.pi * R**3 / 3.0
         #   Shape Factor
-        self.SFy = 1.698
-        
+        SFy = 1.698
         #   Radius of gyration about Mayor Axis
-        self.ry = R / 2.0
-        
+        ry = R / 2.0
         #-------------------------------------------------
         #   Second Moment of Area about Minor Axis
-        
-        self.Iz = math.pi * R**4 / 4.0
-        
+        Iz = math.pi * R**4 / 4.0
         #   Elastic Modulus about Minor Axis
-        self.Zez = math.pi * R**3 / 4.0
-        
+        Zez = math.pi * R**3 / 4.0
         #   Plastic Modulus about Minor Axis
-        self.Zpz = 4 * math.pi * R**3 / 3.0
-        
+        Zpz = 4 * math.pi * R**3 / 3.0
         #   Shape Factor
-        self.SFz = 1.698
-    
+        SFz = 1.698
         #   Radius of gyration about Minor Axis 
-        self.rz = R / 2.0
-        
+        rz = R / 2.0
         #-------------------------------------------------
         #   Torsional Constant
-        self.J = math.pi * self.depth**4 / 32.0
-        
+        J = math.pi * self.d**4 / 32.0
         #   Product of inertia
         _Iyz = 0.0
-        
-        self.Jx = self.Iy + self.Iz
-        
-        self.rp = self.depth / math.sqrt(8.0)
+        Jx = Iy + Iz
+        rp = self.d / math.sqrt(8.0)
         #
-        #
-        #return _Area, _Zc, _Yc, _Iy, _Zey, _Zpy, _ry, _Iz, _Zez, _Zpz, _rz
+        return PropertyOut(area=area, Zc=Zc, Yc=Yc,
+                           Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
+                           Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
+                           J=J, Cw=Cw)
     #
+    @property
+    def properties(self):
+        """
+        """
+        if not self._properties:
+            self._properties = self._get_properties()
+        return self._properties
+
+    @properties.setter
+    def properties(self, values):
+        """
+        --------------------------
+        General Beam Element Data
+        --------------------------
+
+        Parameters
+        ----------
+        area: Section area
+        Zc  : Elastic neutral centre
+        Yc  : Elastic neutral centre
+
+        Iy  : Second moment of area about mayor axis
+        Zy : Elastic modulus about mayor axis
+        Sy : Plastic modulus about mayor axis
+        Avy : Shear area mayor axis
+        ry  : Radius of gyration about mayor Axis
+
+        Iz  : Second moment of area about minor axis
+        Zz : Elastic modulus about minor axis
+        Sz : Plastic modulus about minor axis
+        Avz : Shear area minor axis
+        rz  : Radius of gyration about minor Axis
+
+        SCz  : Shear centre about z axis
+        SCy  : Shear centre about y axis
+
+        Cw  : Warping constant
+        """
+        self._properties = SectionProperty(*values)
+    #    
     def shear_stress(self, stress='average', Vz=1.0, Vy=1.0):
         """
         """
@@ -743,167 +945,110 @@ class Circle(SolidSection):
         # Modulus of rigidity factor (section 8.10)
         self.F = 10.0/9.0
     #    
-    def print_file(self, file_name):
-
-        check_out = print_header()
-
-        check_out.append("{:23s} {:1.4E}\n"
-                         .format(self.type, self.depth))
-
-        check_out.extend(print_properties(self))
-
-        #file_checkout = split_file_name(file_name)
-        #file_checkout = str(file_checkout[0]) +'_check_me.txt'
-        file_checkout = str(file_name) + '.txt'
-        add_out = open(file_checkout,'w')
-        add_out.write("".join(check_out))
-        add_out.close()        
-        print('ok')
+    def _dimension(self) -> str:
+        """ """
+        return  ("{:9s} {:1.4E}\n"
+                 .format(self.type, self.d))
 #
-class SemiCircle(SolidSection):
-    """
-    Calculate the section properties of a semi-circular solid section\n
+#
+class CircleSQLite(CircleBasic, SectionSQLite):
+    __slots__ = ['_properties', 'name', 'number', 'db_file']
     
-    Parameters
-    ----------
-    d : Diameter
+    def __init__(self, name:Union[str, int],
+                 d:Union[float,None], 
+                 db_file:str,
+                 build:str = 'welded', 
+                 shear_stress:str = 'maximum',
+                 FAvy:float = 1.0, FAvz:float = 1.0):
+        """
+        Parameters
+        ----------
+        d : diametre
+        Shear Stress: MAXIMUM / AVERAGE
+        """
+        CircleBasic.__init__(self)
+        self.name = name
+        self._properties = None
+        self.db_file = db_file
+        compactness = None
+        section = (self.name, 
+                   None,            # title
+                   "Circular Bar",  # shape type
+                   d, None,         # diameter, wall_thickess
+                   None, None, # height, web_thickness
+                   None, None, # top_flange_width, top_flange_thickness
+                   None, None, # bottom_flange_width, bottom_flange_thickness
+                   FAvy, FAvz,
+                   shear_stress, build,
+                   compactness,)        
+        # push data to sqlite table
+        SectionSQLite.__init__(self, db_file=self.db_file,
+                               section=section)
+    #
+    #
+    @property
+    def d(self):
+        """
+        D: diameter
+        """
+        return self.get_item(item="diameter")
 
-    Returns
-    ----------
-    area: Section area
-    Zc  : Elastic neutral centre
-    Yc  : Elastic neutral centre
-    Iy  : Second moment of area about mayor axis
-    Zey : Elastic modulus about mayor axis
-    Zpy : Plastic modulus about mayor axis
-    SFy : Shape factor mayor axis
-    ry  : Radius of gyration about mayor Axis
-    Iz  : Second moment of area about minor axis
-    Zez : Elastic modulus about minor axis
-    Zpz : Plastic modulus about minor axis
-    SFz : Shape factor minor axis
-    rz  : Radius of gyration about minor Axis
-    SC  : Shear centre
-    Cw  : Warping constant
-    """
-    def __init__(self, cls):
-        """ """
-        SolidSection.__init__(self, cls)
-        self.type = 'semicircular bar'
-    #
-    def geometry(self, D):
-        """ """
-        self.depth = float(D)
-    #
-    def get_property(self):
-        
+    @d.setter
+    def d(self, diameter: Union[Units, float]):
+        """
+        """
+        diameter = get_sect_properties([diameter])
+        self.update_item(item='diameter', value=diameter[0])
+        self.push_property()
+    #    
+#
+#
+class CircleInMemory(CircleBasic):
+    __slots__ = ['diameter', 'build', 
+                 'shear_stress', 'compactness', '_properties',
+                 'FAvy', 'FAvz', 'name', 'number']
+    
+    def __init__(self, name:Union[str, int],
+                 d:Union[float,None], 
+                 build:str = 'welded', 
+                 shear_stress:str = 'average',
+                 FAvy:float = 1.0, FAvz:float = 1.0):
+        """
+        Shear Stress: MAXIMUM / AVERAGE
+        """
+        CircleBasic.__init__(self)
+        self.name = name
+        self.build = build
+        self.shear_stress = shear_stress
+        # Shear factor
+        self.FAvy = FAvy
+        self.FAvz = FAvz
         #
-        if self.units_in[0]:
-            _units_input = self.units_in
-            
-        else:
-            print('  **  error input units not provided')
-            print('      process terminated')
-            sys.exit()            
-        
-        
-        # units          
-        try:
-            _units_output = self.units_out
-        
-        except AttributeError:
-            _units_output = self.units_in
-            self.units_out = self.units_in
-        
-        factors = units.get_length_mass(_units_input, 
-                                        _units_output)
-        
-        self.units_in = _units_output
-        
-        self.depth *= factors[0]
-        
-        R = 0.50 * self.depth
-        
-        #-------------------------------------------------
-        #   Cross-Sectional Area
-        self.area = math.pi * R**2 / 2.0
-        
-        #-------------------------------------------------
-        #   Elastic Neutral Centre 
-        self.Zc = 4 * R / (3 * math.pi)
-        self.Yc = 0
-        
-        #-------------------------------------------------
-        #   Plastic Neutral Centre 
-        self.Zp = 0.4040 * R
-        self.Yp = 0
-        
-        #-------------------------------------------------
-        #   Shear Centre 
-        _SCz = 0 # (8.0 / (15.0 * math.pi)) * R * (3 + 4 * v) / (1 + v)
-        _SCy = 0
-        
-        #-------------------------------------------------
-        #   Warping Constant Cw
-        _Cw = 'N/A'
-        
-        #-------------------------------------------------
-        #               Section Properties
-        #-------------------------------------------------
-        
-        #-------------------------------------------------
-        #   Second Moment of Area about Mayor Axis
-        self.Iy = math.pi / 8.0 * R**4
-        #   Elastic Modulus about Mayor Axis
-        self.Zey = math.pi / 8.0 * R**3
-        #   Plastic Modulus about Mayor Axis
-        self.Zpy = 2 / 3.0 * R**3
-        #   Shape Factor
-        self.SFy = 1.698
-        #   Radius of gyration about Mayor Axis
-        self.ry = R / 2.0
-        
-        #-------------------------------------------------
-        #   Second Moment of Area about Minor Axis
-        self.Iz = 0.1098 * R**4 
-        #   Elastic Modulus about Minor Axis
-        self.Zez = 0.1908 * R**3 
-        #   Plastic Modulus about Minor Axis
-        self.Zpz = 0.354 * R**3 
-        #   Shape Factor
-        self.SFz = 1.856 
-        #   Radius of gyration about Minor Axis 
-        self.rz = 0.2643 * R 
-        
-        #-------------------------------------------------
-        #   Torsional Constant
-        _J = 'N/A'
-        
-        #-------------------------------------------------
-        #   Product of inertia
-        _Iyz = 0.0
-        self.Jx = self.Iy + self.Iz
-        self.rp = math.sqrt(self.Jx / self.area)
+        self.compactness:Union[str,None] = None
+        self._properties = None
         #
-        
-        # return _Area, _Zc, _Yc, _Iy, _Zey, _Zpy, _ry, _Iz, _Zez, _Zpz, _rz
+        if d: self.diameter = d          
     #
-    def print_file(self, file_name):
-    
-        check_out = print_header()
-    
-        check_out.append("{:23s} {:1.4E}\n"
-                         .format(self.type, self.depth))
-    
-        check_out.extend(print_properties(self))
-    
-        #file_checkout = split_file_name(file_name)
-        #file_checkout = str(file_checkout[0]) +'_check_me.txt'
-        file_checkout = str(file_name) + '.txt'
-        add_out = open(file_checkout,'w')
-        add_out.write("".join(check_out))
-        add_out.close()
-        print('ok')
+    #
+    @property
+    def d(self):
+        """
+        D: diametre
+        """
+        return self.diameter
+
+    @d.setter
+    def d(self, value: Union[Units, float]):
+        """
+        """
+        value = get_sect_properties ( [ value ] )
+        self.diameter = value[0]
+    #
+    #
+    def push_property(self):
+        """ """
+        self.properties
+#
 #
 class Trapeziod(SolidSection):
     """
@@ -946,7 +1091,7 @@ class Trapeziod(SolidSection):
     def __init__(self, cls):
         """ """
         SolidSection.__init__(self, cls)
-        self.type = 'trapeziodal bar'
+        self.type = 'trapeziodal'
 
     #
     def geometry(self, d:Union[float,Units], wb:Union[float,Units],
@@ -1248,4 +1393,31 @@ class Trapeziod(SolidSection):
                    self.width.value, None,
                    self.a.value, None,)
         return project
+    #
+    #def __str__(self) -> str:
+    #    """ """
+    #    output = "{:<12s} {:>19} {:1.4E}\n".format("Bar", "", self.depth)
+    #    output += "{:12s}{:<12s}{:40s} {:1.4E}\n".format("", self.type.capitalize(), "", self.a)
+    #    output += "{:>64} {:1.4E}\n".format("", self.width)       
+    #    #return  ("{:23s} {:1.4E} {:1.4E}"
+    #    #         .format(self.type, self.d, self.t))
+    #    return output
+    #
+    def _dimension(self) -> str:
+        """ Print section dimensions"""
+        output = "{:<8s}{:>24}{:1.4e} {:1.4e} {:1.4e}\n"\
+            .format("BarTrapz", " ", self.depth, self.a, self.width)
+        #output += "{:15s}{:<8s}\n".format("", "Trapzd")
+        #output += "{:67} {:1.4e}\n".format("", self.width)
+        return output
+    #
+    #def _properties(self) -> str:
+    #    """ Print section properties"""
+    #    output = "{:<12s} {:>19} {:1.4E}\n".format("Bar", "", self.depth)
+    #    output += "{:12s}{:<12s}{:40s} {:1.4E}\n".format("", self.type.capitalize(), "", self.a)
+    #    output += "{:>64} {:1.4E}\n".format("", self.width)
+    #    return output    
+#
+#
+#
 #

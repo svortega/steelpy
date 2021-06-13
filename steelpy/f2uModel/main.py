@@ -166,7 +166,7 @@ class f2uModel:
         """
         #_sql = f2uDB(component_name= self.component)
         #_sql.materials = self._materials
-        #self.sections.push_sections()
+        self.sections.get_properties()
         if self._concept_flag:
             self._meshing.get_mesh()
             self.mesh.renumbering()

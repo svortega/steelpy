@@ -4,21 +4,23 @@
 
 # Python stdlib imports
 from array import array
-from collections.abc import Mapping
+#from collections.abc import Mapping
 #from collections import defaultdict
 #from dataclasses import dataclass
 from typing import NamedTuple, Tuple, List, Union, Iterable, Dict  
 
 
 # package imports
-from steelpy.f2uModel.load.operations.operations import NodeLoadMaster, get_beam_load
-from steelpy.f2uModel.load.operations.element import (LineBeam, PointBeam,  point2node, #line2node,
-                                                      get_beam_point_load)
+from steelpy.f2uModel.load.operations.nodes import NodeLoadMaster
+from steelpy.f2uModel.load.operations.operations import get_beam_load
+from steelpy.f2uModel.load.operations.element import (LineBeam, PointBeam,  #point2node, #line2node,
+                                                      get_beam_point_load,
+                                                      BeamDistMaster)
 
 #
 # ---------------------------------
 #
-class BeamDistributed(Mapping):
+class BeamDistributedIM(BeamDistMaster):
     """
     """
     __slots__ = ['_type', '_labels', '_index', '_complex',
@@ -29,6 +31,7 @@ class BeamDistributed(Mapping):
     def __init__(self) -> None:
         """
         """
+        super().__init__()
         # ens 1
         self._L1: array = array("f", [])
         self._qx1: array = array("f", [])
@@ -40,23 +43,22 @@ class BeamDistributed(Mapping):
         self._qy2: array = array("f", [])
         self._qz2: array = array("f", [])
         #
-        self._labels: List[Union[str, int]] = []
-        self._title: List[str] = []
-        self._index: int
-        self._complex: array = array("I", [])
-        # 0-global/ 1-local
-        self._system_flag:int = 0
-        self._system: array = array("I", [])
     #
     def __setitem__(self, element_name: Union[int, str], 
                     udl: Union[List[float], Dict[str,float]]) -> None:
         """
         """
         self._labels.append(element_name)
-        self._title.append(element_name)
         self._index = len(self._labels)-1
         self._system.append(self._system_flag)
         self._complex.append(0)
+        #
+        #self._load_number.append(load_name)
+        if isinstance(udl[-1], str):
+            self._title.append(udl[-1])
+            udl.pop()
+        else:
+            self._title.append('NULL')      
         #
         # update inputs
         udl = get_beam_load(udl)
@@ -120,9 +122,6 @@ class BeamDistributed(Mapping):
             self._system_flag = 1
         
     #
-    #
-    def __len__(self) -> float:
-        return len(self._labels)
 
     def __delitem__(self, element_name: int) -> None:
         """
@@ -145,15 +144,6 @@ class BeamDistributed(Mapping):
             self._labels.pop(_index)
             self._title.pop(_index)
             self._complex.pop(_index)
-
-    def __contains__(self, value) -> bool:
-        return value in self._labels
-
-    def __iter__(self) -> Iterable:
-        """
-        """
-        items = list(set(self._labels))
-        return iter(items)
     #
     #
     #def get_nodal_load(self, elements, materials, sections) -> List:
@@ -180,7 +170,7 @@ class BeamDistributed(Mapping):
     #    return items
 #
 #
-class BeamPoint(NodeLoadMaster):
+class BeamPointIM(NodeLoadMaster):
     __slots__ =  ['_title', '_labels', '_index', '_complex',
                   '_fx', '_fy', '_fz', '_mx', '_my', '_mz']
     
@@ -195,9 +185,16 @@ class BeamPoint(NodeLoadMaster):
         """
         """
         self._labels.append(element_name)
-        self._title.append(element_name)
+        #self._title.append(element_name)
         self._system.append(self._system_flag)
         self._complex.append(0)
+        #
+        #self._load_number.append(load_name)
+        if isinstance(point_load[-1], str):
+            self._title.append(point_load[-1])
+            point_load.pop()
+        else:
+            self._title.append('NULL')         
         #
         point_load = get_beam_point_load(point_load)
         self._fx.append(point_load[0])

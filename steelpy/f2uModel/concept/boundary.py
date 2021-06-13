@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2021 fem2ufo
 #
 
 # Python stdlib imports
@@ -8,7 +8,7 @@ from typing import NamedTuple, Tuple, Union, List, Dict, Iterator
 
 
 # package imports
-from steelpy.f2uModel.mesh.boundary import Boundaries
+from steelpy.f2uModel.mesh.inmemory.boundary import Boundary
 #
 #
 class BoundaryItem(NamedTuple):
@@ -64,7 +64,7 @@ class ConceptBoundaries(Mapping):
     def __init__(self):
         """
         """
-        self._supports = Boundaries()
+        self._supports = Boundary()
         self._labels: List[Union[str,int]] = []
         self._points: List[Tuple[float]] = []
     
@@ -78,12 +78,12 @@ class ConceptBoundaries(Mapping):
         except ValueError:
             self._labels.append(support_name)
             try:
-                self._points.append((coordinates[0].value,
-                                     coordinates[1].value,
-                                     coordinates[2].value))
+                self._points.append((coordinates[0],
+                                     coordinates[1],
+                                     coordinates[2]))
             except IndexError:
-                self._points.append((coordinates[0].value,
-                                     coordinates[1].value, 0))
+                self._points.append((coordinates[0],
+                                     coordinates[1], 0))
     
     def __getitem__(self, support_name: int) -> Tuple:
         """

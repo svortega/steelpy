@@ -11,14 +11,14 @@ from typing import NamedTuple, Tuple, List, Iterator, Dict, Iterable, ClassVar, 
 
 # package imports
 from steelpy.f2uModel.load.operations.actions import SelfWeight
-from steelpy.f2uModel.load.inmemory.element import BeamDistributed, BeamPoint
-from steelpy.f2uModel.load.inmemory.node import NodeLoad
-from steelpy.f2uModel.load.operations.basic_load import get_basic_load
+from steelpy.f2uModel.load.inmemory.element import BeamDistributedIM, BeamPointIM
+from steelpy.f2uModel.load.inmemory.node import NodeLoadInMemory
+from steelpy.f2uModel.load.operations.basic_load import BasicLoadBasic
 #
 #
 # ---------------------------------
 #
-class LoadTypes:
+class LoadTypesInMemory:
     """
     """
     __slots__ = ['_nodal_load', '_nodal_mass', '_nodal_displacement',
@@ -30,11 +30,11 @@ class LoadTypes:
         """
         self.name = name
         self.title = title
-        self._nodal_load = NodeLoad()
-        self._nodal_displacement = NodeLoad()
-        self._nodal_mass = NodeLoad()
-        self._beam_line = BeamDistributed()
-        self._beam_point = BeamPoint()
+        self._nodal_load = NodeLoadInMemory()
+        self._nodal_displacement = NodeLoadInMemory()
+        self._nodal_mass = NodeLoadInMemory()
+        self._beam_line = BeamDistributedIM()
+        self._beam_point = BeamPointIM()
         self._selfweight = SelfWeight()
     #
     @property
@@ -164,7 +164,7 @@ class LoadTypes:
             self._beam_point[value[0]] = value[1:]    
 #
 #
-class BasicLoad(Mapping):
+class BasicLoad(BasicLoadBasic):
     """
     FE Load Cases
     
@@ -187,11 +187,8 @@ class BasicLoad(Mapping):
     def __init__(self):
         """
         """
+        super().__init__()
         self._load: Dict = {}
-        self._labels: array = array("I", [])
-        self._title: List[str] = []
-        self._number: array = array("I", [])        
-        self.gravity = 9.80665 # m/s^2
     #
     def __setitem__(self, load_name:int, load_title:str) -> None:
         """
@@ -200,18 +197,16 @@ class BasicLoad(Mapping):
         """
         try:
             self._labels.index(load_name)
-            #raise Warning("Basic Load {:} already defined".format(load_name))
-        #except:
             self._title.index(load_title)
             raise Warning("Basic Load title {:} already defined".format(load_title))
         except ValueError:
             self._labels.append(load_name)
             self._title.append(load_title)            
-            self._load[load_name] = LoadTypes(name=load_name, title=load_title)
-            #self._load[load_name].name = load_name
-            #self._load[load_name].title = load_title
+            self._load[load_name] = LoadTypesInMemory(name=load_name, title=load_title)
             #TODO: fix numbering
-            self._load[load_name].number = len(self._load)
+            load_number = len(self._load)
+            self._load[load_name].number = load_number
+            self._number.append(load_number)
     
     def __getitem__(self, load_name:Union[str,int]):
         """
@@ -226,27 +221,15 @@ class BasicLoad(Mapping):
         """
         del self._load[load_name]
     #
-    def __len__(self) -> int:
-        return len(self._load)
     #
-    def __iter__(self):
-        """
-        """
-        return iter(self._load)
+    #def get_basic_load(self, elements, nodes, materials,
+    #                   sections):
+    #    """
+    #    """
+    #    1/0
+    #    #return get_basic_load(self, elements, nodes, 
+    #    #                      materials, sections)
     #
-    #
-    @property
-    def g(self):
-        """"""
-        return self.gravity
-    #
-    #
-    def get_basic_load(self, elements, nodes, materials,
-                       sections):
-        """
-        """
-        return get_basic_load(self, elements, nodes, 
-                              materials, sections)
 #
 #
 #

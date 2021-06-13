@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2021 fem2ufo
 #
 
 # Python stdlib imports
@@ -39,12 +39,13 @@ class Meshing:
         elements = mesh.elements
         elem_number = mesh.elements.get_number()
         cbeams = self.concept.beam
-        cpoints = self.concept.points
+        #cpoints = self.concept.points
+        #cpoints = mesh.nodes
         for key, beam in cbeams.items():
             total_length = beam.length
-            _nodes = beam.connectivity
-            node_res = _nodes[0].name # start
-            node_end = _nodes[1].name
+            p1,p2 = beam.connectivity
+            node_res = self._get_node_name(p1[:3])
+            node_end = self._get_node_name(p2[:3])
             for step in beam.step:
                 _mnumber = next(elem_number)
                 step._mesh = _mnumber
@@ -53,21 +54,31 @@ class Meshing:
                     1/step.length.value
                     total_length -= step.length
                     coord = beam.find_coordinate(step.length)
-                    try:
-                        new_node = cpoints.get_point_name(coord)
-                    except IOError:
-                        new_node = cpoints.get_new_point(coord)
+                    new_node = self._get_node_name(coord)
+                    #try:
+                    #    new_node = cpoints.get_node_name(coord)
+                    #except IOError:
+                    #    new_node = cpoints.get_new_node(coord)
                     # elements [node1, node2, material, section]
                     elements[_mnumber] = ['beam', node_res, new_node,
-                                          step.material.name, step.section.name]
+                                          step.material.name, 
+                                          step.section.name, beam.beta]
                     node_res = new_node
                 except ZeroDivisionError:
                     # elements [node1, node2, material, section]
                     elements[_mnumber] = ['beam', node_res, node_end,
-                                          step.material.name, step.section.name]
+                                          step.material.name, 
+                                          step.section.name, 
+                                          beam.beta]
             #print('-->')
-        #
-        #print('end')
+        #print('end meshing')
+    #
+    def _get_node_name(self, coord):
+        """ """
+        try:
+            return self.mesh.nodes.get_node_name(coord)
+        except IOError:
+            return self.mesh.nodes.get_new_node(coord)
     #
     def _set_boundary(self):
         """ """
@@ -81,15 +92,15 @@ class Meshing:
         # concepts
         cboundary = self.concept.boundary
         cbeams = self.concept.beam
-        cpoints = self.concept.points
+        #cpoints = self.concept.points
         missing = []
         # find existing nodes
         for key, value in cboundary.items():
             support = value.support
             point = value.point
             try:
-                node_id = nodes.get_point_name(point)
-                boundaries.node[node_id] = support
+                node_id = nodes.get_node_name(point)
+                boundaries.node[node_id] = support[:6]
                 print("Boundary: ", key, " @ Node: ", node_id)
             except IOError:
                 missing.append(key)
@@ -97,13 +108,13 @@ class Meshing:
         # if missing boundaries, find if coordinates along members
         if missing:
             for key, beam in cbeams.items():
-                mnodes = beam.connectivity
-                p1 = [mnodes[0].x.value, mnodes[0].y.value, mnodes[0].z.value]
-                p2 = [mnodes[1].x.value, mnodes[1].y.value, mnodes[1].z.value]
-                point_line = DistancePointLine3D(p1, p2)
+                p1,p2 = beam.connectivity
+                point_line = DistancePointLine3D(p1[:3], p2[:3])
                 missing_found = []
                 for boundary in missing:
                     Pb = cboundary[boundary].point
+                    # Fixme : what format?
+                    Pb = [Pb[0].value, Pb[1].value, Pb[2].value]
                     if point_line.is_on_segment(Pb):
                         left_dist = point_line.left_dist
                         #print(key, point_line.position, point_line.left_dist, point_line.right_dist)
@@ -112,20 +123,23 @@ class Meshing:
                         step_no = len(beam.step)
                         for step in beam.step:
                             memb = elements[step._mesh]
-                            total_length += memb.length_node2node(nodes)
+                            total_length += memb.length
                             # TODO: capture warning when point misaligned due to tolerances
+                            print("beam length :", total_length, left_dist)
                             if total_length < left_dist:
                                 continue
                             # get node coordinate
                             coord = beam.find_coordinate(left_dist*units.m)
-                            try:
-                                new_node = cpoints.get_point_name(coord)
-                            except IOError:
-                                new_node = cpoints.get_new_point(coord)
+                            new_node = self._get_node_name(coord)
+                            #try:
+                            #    new_node = cpoints.get_point_name(coord)
+                            #except IOError:
+                            #    new_node = cpoints.get_new_point(coord)
                             # set boundary
                             support = cboundary[boundary].support
-                            boundaries.node[new_node] = support
-                            print ( "Boundary: ", boundary," on Beam: ",key, " @ Node: ", new_node)
+                            if support:
+                                boundaries.node[new_node] = support
+                                print ( "Boundary: ", boundary," on Beam: ",key, " @ Node: ", new_node)
                             # existing element
                             mnodes = memb.connectivity
                             node_end = mnodes[-1]
@@ -134,7 +148,7 @@ class Meshing:
                             # new element
                             _mnumber = next(elem_number)
                             elements[_mnumber] = ['beam', new_node, node_end,
-                                                  step.material.name, step.section.name ]
+                                                  step.material.name, step.section.name]
                             # introduce new concept beam step to boundary coord
                             step_no += 1
                             cbeams[key].step[step_no].length = left_dist * units.m
@@ -157,7 +171,7 @@ class Meshing:
                 # TODO: capture if missing not empty
                 if not missing:
                     break
-        #print('-->')
+        #print(' end meshing boundary')
     #
     def _set_load(self):
         """ """
@@ -176,18 +190,19 @@ class Meshing:
                 #
                 for load in loads:
                     label = load.load_name
-                    waxial = linefit(load.qx1, load.qx2,
-                                     Lb, load.L1, load.L2)
-                    winplane = linefit(load.qy1, load.qy2,
-                                       Lb, load.L1, load.L2)
-                    woutplane = linefit(load.qz1, load.qz2,
-                                        Lb, load.L1, load.L2)
+                    waxial = linefit(load.qx0, load.qx1,
+                                     Lb, load.L0, load.L1)
+                    winplane = linefit(load.qy0, load.qy1,
+                                       Lb, load.L0, load.L1)
+                    woutplane = linefit(load.qz0, load.qz1,
+                                        Lb, load.L0, load.L1)
                     # start loop beam steps
                     xi = 0
                     for step in beam.step:
                         elem_name = step._mesh
                         element = mesh.elements[elem_name]
-                        Lbi = element.length_node2node(nodes)
+                        #Lbi = element.length_node2node(nodes)
+                        Lbi = element.length
                         xi += Lbi
                         qaxial = waxial.qi(xi)
                         qinp = winplane.qi(xi)
@@ -201,8 +216,8 @@ class Meshing:
                         print(elem_name, label, Lb, xi, qinp, qoutp, Li)
                         basic_load[load_name].line_beam[elem_name]  = [qaxial[0], qinp[0], qoutp[0],
                                                                        qaxial[1], qinp[1], qoutp[1],
-                                                                       Li[0], Li[1]]
-                        basic_load[load_name].line_beam.name = label
+                                                                       Li[0], Li[1], label]
+                        #basic_load[load_name].line_beam.name = label
             # Beam point load process
             for bname, loads in lcase.beam.point_load:
                 beam = self.concept.beam[bname]
@@ -217,7 +232,7 @@ class Meshing:
                     for step in beam.step:
                         elem_name = step._mesh
                         element = mesh.elements[elem_name]
-                        Lbi = element.length_node2node(nodes)
+                        Lbi = element.length
                         xi += Lbi
                         # check load on segment
                         try:
@@ -226,55 +241,55 @@ class Meshing:
                             continue # no load should be applied to this segment                        
                         # set load for mesh element
                         print(elem_name, label, Lb, xi)
-                        basic_load[load_name].point_beam[elem_name] = [Li, *load[:6]]
-                        basic_load[ load_name ].point_beam.name = label
+                        basic_load[load_name].point_beam[elem_name] = [Li, *load[:6], label]
+                        #basic_load[load_name].point_beam.name = label
             # Nodal load process
             #pl = concept_bload.point
             basic_load[load_name].point_node.update(lcase.point.load)
         #
-        #print('-->')
+        #print(' end meshing load')
     #
 #
 #
 @dataclass
 class linefit:
-    __slots__ = ['q1', 'q2', 'L', 'L1', 'L2',
-                 'L3', 'Lstart', 'Lstop', '_qi']
+    __slots__ = ['q0', 'q2', 'L', 'L0', 'L1',
+                 'L2', 'Lstart', 'Lstop', '_qi']
 
-    def __init__(self, q1:float, q2:float,
-                 L:float, L1:float, L2:float) -> None:
+    def __init__(self, q0:float, q2:float,
+                 L:float, L0:float, L1:float) -> None:
         """ """
-        self.q1:float = q1
+        self.q0:float = q0
         self.q2:float = q2
-        self._qi:float = q1
+        self._qi:float = q0
         #
         self.L:float = L
+        self.L0:float = L0
         self.L1:float = L1
-        self.L2:float = L2
-        self.L3 = self.L - self.L2
-        self.Lstop = self.L - self.L2
+        self.L2 = self.L - self.L1
+        self.Lstop = self.L - self.L1
     #
     @property
     def slope(self) -> float:
         """ """
-        return (self.q2-self.q1)/(self.L3-self.L1)
+        return (self.q2-self.q0)/(self.L2-self.L0)
     #
     def qi(self, x:float) -> List[float]:
         """ """
         q1 = self._qi
-        if x > self.L3:
+        if x > self.L2:
             self._qi = self.q2
             #q2 = round(self.q1 + self.slope * (self.L3-self.L1), 3)
         else:
-            self._qi = round(self.q1 + self.slope * (x-self.L1), 3)
+            self._qi = round(self.q0 + self.slope * (x-self.L0), 3)
         #self._qi = q2
         return [q1, self._qi]
     #
     def Li(self, x:float, Lb:float) -> Union[Exception,List[float]]:
         """ """
         try:
-            1/(self.L1 + self.L2)
-            if x < self.L1: # no load for this step
+            1/(self.L0 + self.L1)
+            if x < self.L0: # no load for this step
                 raise RuntimeWarning
             else:
                 try:
@@ -282,12 +297,12 @@ class linefit:
                     try:
                         Lstart = self.Lstart
                     except AttributeError:
-                        Lstart = Lb - (x - self.L1)
+                        Lstart = Lb - (x - self.L0)
                         self.Lstart = 0
                     #
-                    if x > self.L3:
+                    if x > self.L2:
                         self.Lstop = 0
-                        return [Lstart, x - self.L3]
+                        return [Lstart, x - self.L2]
                     else:
                         return [Lstart, 0]
                 except ZeroDivisionError: # no load after this step
@@ -297,23 +312,23 @@ class linefit:
 #
 @dataclass
 class pointfit:
-    __slots__ = ['L', 'L1', 'Lstop']
+    __slots__ = ['L', 'L0', 'Lstop']
     
-    def __init__(self, L:float, L1:float) -> None:
+    def __init__(self, L:float, L0:float) -> None:
         """ """
         self.L:float = L
-        self.L1:float = L1
-        self.Lstop:float = L1
+        self.L0:float = L0
+        self.Lstop:float = L0
     #
     def Li(self, x:float, Lb:float) -> Union[Exception,float]:
         """ """
-        if x < self.L1: # no load for this step
+        if x < self.L0: # no load for this step
             raise RuntimeWarning
         else:
             try:
                 1 / self.Lstop
                 self.Lstop = 0
-                return Lb - (x - self.L1)
+                return Lb - (x - self.L0)
             except ZeroDivisionError:  # no load after this step
                 raise RuntimeWarning
 

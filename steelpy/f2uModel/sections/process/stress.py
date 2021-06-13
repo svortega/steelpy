@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2020 iLift
+# Copyright (c) 2019-2021 steelpy
 #
 # Python stdlib imports
 #from dataclasses import dataclass
@@ -165,18 +165,19 @@ class BeamStress:
     beam element stress
     """
     __slots__ = ['sigma_x', 'sigma_y', 'sigma_z', 
-                 'tau_x', 'tau_y', 'tau_z','_units']    
+                 'tau_x', 'tau_y', 'tau_z','x']    
     
     def __init__(self, sigma_x, sigma_y, sigma_z,
-                 tau_x, tau_y, tau_z):
+                 tau_x, tau_y, tau_z, x=0):
         """
         """ 
-        self.sigma_x: ClassVar = sigma_x
-        self.sigma_y: ClassVar = sigma_y
-        self.sigma_z: ClassVar = sigma_z
-        self.tau_x:   ClassVar = tau_x
-        self.tau_y:   ClassVar = tau_y
-        self.tau_z:   ClassVar = tau_z
+        self.sigma_x = sigma_x
+        self.sigma_y = sigma_y
+        self.sigma_z = sigma_z
+        self.tau_x   = tau_x
+        self.tau_y   = tau_y
+        self.tau_z   = tau_z
+        self.x       = x
     
     def von_mises(self) -> List:
         """

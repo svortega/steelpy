@@ -74,7 +74,7 @@ class SectionSQLite:
         try:
             properties = self.properties
             self._push_property(properties)
-        except TypeError:
+        except:
             pass
     #
     def _push_property(self, properties:tuple):
@@ -98,7 +98,8 @@ class SectionSQLite:
         """
         """
         project = section
-        sql = 'INSERT INTO  tb_Sections(name, title, type, diameter, wall_thickess,\
+        sql = 'INSERT INTO  tb_Sections(name, title, type,\
+                                        diameter, wall_thickess,\
                                         height, web_thickness,\
                                         top_flange_width, top_flange_thickness,\
                                         bottom_flange_width, bottom_flange_thickness,\

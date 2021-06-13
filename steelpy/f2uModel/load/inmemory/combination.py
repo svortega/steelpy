@@ -12,7 +12,7 @@ from typing import Union, Dict, List, Union
 from math import prod
 
 # package imports
-
+from steelpy.f2uModel.load.operations.combination import LoadCombinationBasic
 
 #
 #
@@ -50,7 +50,7 @@ class CombTypes:
         """
         return self._combination
 #
-class LoadCombination(Mapping):
+class LoadCombination(LoadCombinationBasic):
     """
     FE Load Combination Class
     
@@ -72,19 +72,26 @@ class LoadCombination(Mapping):
     def __init__(self, basic_load):
         """
         """
+        super().__init__()
         self._combination = {}
         self._basic = basic_load
     
     def __setitem__(self, load_name:int, load_title:str) -> None:
         """
         """
-        #try:
-        #    self._combination[load_name].append(basic_load)
-        #except KeyError:
-        #    self._combination[load_name] = [basic_load]
-        self._combination[load_name] = CombTypes(name=load_name, title=load_title)
-        # TODO: fix numbering sequence
-        self._combination[load_name].number = len(self._combination)
+        try:
+            self._labels.index(load_name)
+            raise Exception('    *** warning load combination name {:} already exist'
+                            .format(load_name))
+        except ValueError:
+            self._labels.append(load_name)
+            self._title.append(load_title)
+            #
+            self._combination[load_name] = CombTypes(name=load_name, title=load_title)
+            # TODO: fix numbering sequence
+            load_number =  len(self._combination)
+            self._combination[load_name].number = load_number
+            self._number.append(load_number)
     
     def __getitem__(self, load_name:Union[str,int]):
         """
@@ -95,15 +102,6 @@ class LoadCombination(Mapping):
         """
         """
         del self._combination[load_name]
-    #
-    def __len__(self) -> int:
-        return len(self._combination)
-    #
-    def __iter__(self):
-        """
-        """
-        return iter(self._combination)
-    #
     #
     def to_basic(self):
         """ """
@@ -126,7 +124,6 @@ class LoadCombination(Mapping):
                     raise Warning("  warning basic load {:} not found".format(bname))
         #print('-->')
         return basic_loads
-    #
     #
     def solve_combinations(self, basic_res, memb_force):
         """

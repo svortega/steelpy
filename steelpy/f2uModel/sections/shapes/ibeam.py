@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2020 steelpy
+# Copyright (c) 2019-2021 steelpy
 #
 
 # Python stdlib imports
@@ -7,7 +7,7 @@
 import math
 #import sys
 from collections import namedtuple
-#from typing import NamedTuple, Tuple, List # Iterator, Dict, Iterable
+from typing import Union, NamedTuple, Tuple, List
 #
 
 # package imports
@@ -16,7 +16,9 @@ from steelpy.f2uModel.material.main import Materials
 #import iLift.beam.section.process.io_module as shape_io
 from steelpy.f2uModel.sections.process.stress import BeamStress
 #from steelpy.process.load.actions import Actions
-
+from steelpy.f2uModel.sections.shapes.sqlite.main import SectionSQLite
+from steelpy.f2uModel.sections.process.io_sections import SectionProperty, PropertyOut, get_sect_properties
+#
 #
 #
 points = namedtuple('Points', ['y', 'z'])
@@ -79,7 +81,7 @@ def radial_shear_factor(D: float, Tw: float, Tft: float,
     #-------------------------------------------------
 #
 #   
-class Ibeam:
+class IbeamBasic:
     """
     ============================================  
     Calculate the section properties of a I beam   
@@ -134,79 +136,79 @@ class Ibeam:
 
     """
     #
-    def __init__(self, cls):
+    def __init__(self):
         """
         """
-        self.cls = cls
+    #    self.cls = cls
         self._units = Units()
-        _material = Materials()
-        _material[1] = 'plastic'
-        self._material = _material[1]
-        # Build [WELDED / ROLLED]
-        self.build = 'welded'
-        # Shear Stress [MAXIMUM / AVERAGE]
-        self.shear_stress_type = 'average'
-        self.compactness = None
-        #
-        self._properties = None
-        # Shear factor
-        self.FAvy = 1.0
-        self.FAvz = 1.0
-        #self.r = 0
-        #
-        self.root_radius = 0 * self._units.m
+    #    _material = Materials()
+    #    _material[1] = 'plastic'
+    #    self._material = _material[1]
+    #    # Build [WELDED / ROLLED]
+    #    self.build = 'welded'
+    #    # Shear Stress [MAXIMUM / AVERAGE]
+    #    self.shear_stress_type = 'average'
+    #    self.compactness = None
+    #    #
+    #    self._properties = None
+    #    # Shear factor
+    #    self.FAvy = 1.0
+    #    self.FAvz = 1.0
+    #    #self.r = 0
+    #    #
+        self.root_radius = 0 #* self._units.m
         self.type = 'I section'
     #    
-    @property
-    def material(self):
-        """
-        """
-        return self._material
-    
-    @material.setter
-    def material(self, value):
-        """
-        """
-        self._material = value
-    
-    @property
-    def section_mass(self):
-        """
-        section mass in g/m
-        """
-        return self.area * self._material.rho    
+    #@property
+    #def material(self):
+    #    """
+    #    """
+    #    return self._material
+    #
+    #@material.setter
+    #def material(self, value):
+    #    """
+    #    """
+    #    self._material = value
+    #
+    #@property
+    #def section_mass(self):
+    #    """
+    #    section mass in g/m
+    #    """
+    #    return self.area * self._material.rho    
     #
     #
     #
-    def geometry(self, **kwargs):
-        """
-        """
-        for key, value in kwargs.items():
-            _dim = shape_io.find_section_dimensions(key)
-            shape_io.get_dimension(self, _dim, value)
-        
-        self.type = 'Symmetrical I section'
-        #
-        try:
-            if self.top_flange_width != self.bottom_flange_width:
-                self.type = 'Asymmetrical I section'
-        except AttributeError:
-            try:
-                self.bottom_flange_width = self.top_flange_width
-            except AttributeError:
-                self.top_flange_width = self.bottom_flange_width
-        #
-        try:
-            if self.top_flange_thickness != self.bottom_flange_thickness:
-                self.type = 'Asymmetrical I section'
-        except AttributeError:
-            try:
-                self.bottom_flange_thickness = self.top_flange_thickness
-            except AttributeError:
-                self.top_flange_thickness = self.bottom_flange_thickness
-        #
-        self._get_properties()
-        self._get_section_coordinates()
+    #def geometry(self, **kwargs):
+    #    """
+    #    """
+    #    for key, value in kwargs.items():
+    #        _dim = shape_io.find_section_dimensions(key)
+    #        shape_io.get_dimension(self, _dim, value)
+    #
+    #    self.type = 'Symmetrical I section'
+    #    #
+    #    try:
+    #        if self.bft != self.bfb:
+    #            self.type = 'Asymmetrical I section'
+    #    except AttributeError:
+    #        try:
+    #            self.bfb = self.bft
+    #        except AttributeError:
+    #            self.bft = self.bfb
+    #    #
+    #    try:
+    #        if self.tft != self.tfb:
+    #            self.type = 'Asymmetrical I section'
+    #    except AttributeError:
+    #        try:
+    #            self.tfb = self.tft
+    #        except AttributeError:
+    #            self.tft = self.tfb
+    #    #
+    #    self._get_properties()
+    #    self._get_section_coordinates()
     #   
     #
     def shear_stress(self, Vy, Vz,
@@ -228,10 +230,9 @@ class Ibeam:
         if 'average' in stress_type.lower():
             # Area of Web
             # The overall depth times the web thickness
-            self.Aw = self.height * self.web_thickness
+            self.Aw = self.d * self.tw
             # Area of Flange
-            self.Af = (self.bottom_flange_width * self.bottom_flange_thickness 
-                       + self.top_flange_width * self.top_flange_thickness)
+            self.Af = (self.bfb * self.tfb + self.bft * self.tft)
             #
             tau_z = [Vz / self.Aw for _ in coord_z] # vertical
             _index = [0, 2, 6, 8]
@@ -374,10 +375,10 @@ class Ibeam:
         R = Radio
         """
         if 'symmetrical' in self.type.lower():
-            b = self.bottom_flange_width
-            b1 = self.web_thickness
-            t = self.bottom_flange_thickness
-            d = self.height
+            b = self.bfb
+            b1 = self.tw
+            t = self.tfb
+            d = self.d
             ry = self.ry
         
             # shear area
@@ -430,12 +431,12 @@ class Ibeam:
             self.tau_y = radial_shear_factor(d, b1, t, t, c, c1, R, e)
         
         else:
-            b = self.bottom_flange_width
-            t = self.bottom_flange_thickness
-            b1 = self.top_flange_width
-            t1 = self.top_flange_thickness
-            d = self.height
-            b2 = self.web_thickness
+            b = self.bfb
+            t = self.tfb
+            b1 = self.bft
+            t1 = self.tft
+            d = self.d
+            b2 = self.tw
         
             # shear area
             warea = d * b2
@@ -512,10 +513,10 @@ class Ibeam:
         check_out = print_header()       
 
         check_out.append("{:23s} {:>19} {:1.4E} {:1.4E} {:1.4E} {:1.4E}\n"
-                         .format(self.type, "", self.height, self.web_thickness, self.top_flange_width, self.top_flange_thickness))
+                         .format(self.type, "", self.d, self.tw, self.bft, self.tft))
         
         check_out.append("{:>65} {:1.4E} {:1.4E}\n"
-                         .format("", self.bottom_flange_width, self.bottom_flange_thickness))        
+                         .format("", self.bfb, self.tfb))        
 
         check_out.extend(print_properties(self))
 
@@ -542,188 +543,166 @@ class Ibeam:
         self.type = 'Symmetrical I section'
         #
         try:
-            if self.top_flange_width != self.bottom_flange_width:
+            if self.bft != self.bfb:
                 self.type = 'Asymmetrical I section'
         except AttributeError:
             try:
-                self.bottom_flange_width = self.top_flange_width
+                self.bfb = self.bft
             except AttributeError:
-                self.top_flange_width = self.bottom_flange_width
+                self.bft = self.bfb
         #
         try:
-            if self.top_flange_thickness != self.bottom_flange_thickness:
+            if self.tft != self.tfb:
                 self.type = 'Asymmetrical I section'
         except AttributeError:
             try:
-                self.bottom_flange_thickness = self.top_flange_thickness
+                self.tfb = self.tft
             except AttributeError:
-                self.top_flange_thickness = self.bottom_flange_thickness        
+                self.tft = self.tfb        
         #
         #
         #-------------------------------------------------   
         #
-        _hw = (self.height - self.top_flange_thickness - self.bottom_flange_thickness) # - 2 * self.root_radius
-        _ho = (self.height - 0.5 * self.top_flange_thickness - 0.5 * self.bottom_flange_thickness)
+        _hw = (self.d - self.tft - self.tfb) # - 2 * self.root_radius
+        _ho = (self.d - 0.5 * self.tft - 0.5 * self.tfb)
         self.ho = _ho
         self.hw = _hw
         #-------------------------------------------------
         #   Cross-Sectional Area
-        self.area = (self.top_flange_width*self.top_flange_thickness 
-                     + self.bottom_flange_width*self.bottom_flange_thickness 
-                     + _hw*self.web_thickness)
-        
+        area = (self.bft*self.tft
+                     + self.bfb*self.tfb 
+                     + _hw*self.tw)
         #-------------------------------------------------
         #   Elastic Neutral Centre 
-        self.Zc = ((self.top_flange_width * self.top_flange_thickness**2 / 2.0 
-                    + self.bottom_flange_width * self.bottom_flange_thickness 
-                    * (_hw + self.top_flange_thickness + self.bottom_flange_thickness / 2.0) 
-                    + _hw * self.web_thickness * (_hw / 2.0 + self.top_flange_thickness)) 
-                   / (self.top_flange_width * self.top_flange_thickness 
-                    + _hw*self.web_thickness 
-                    + self.bottom_flange_width * self.bottom_flange_thickness))
-        
-        self.Yc = 0 * self.Zc
-        
+        Zc = ((self.bft * self.tft**2 / 2.0
+                    + self.bfb * self.tfb 
+                    * (_hw + self.tft + self.tfb / 2.0) 
+                    + _hw * self.tw * (_hw / 2.0 + self.tft)) 
+                   / (self.bft * self.tft 
+                    + _hw*self.tw 
+                    + self.bfb * self.tfb))
+        self.Zc = Zc
+        Yc = 0 * Zc
         #   Plastic Neutral Centre    # @hami2230 - added
-        
-        if (self.bottom_flange_width * self.bottom_flange_thickness >
-                (self.top_flange_width * self.top_flange_thickness
-                + self.hw * self.web_thickness)):
-            self.Zp = (self.height 
-                       - (0.5 * self.area / self.bottom_flange_width)
-                       - self.top_flange_thickness)
-        elif (self.top_flange_width * self.top_flange_thickness > 
-                 (self.bottom_flange_width * self.bottom_flange_thickness 
-                 + self.hw * self.web_thickness)):
-            self.Zp = (self.height - 
-                      (self.bottom_flange_thickness + self.hw 
-                      + ((0.5 * self.area - self.bottom_flange_width 
-                      * self.bottom_flange_thickness - self.hw * self.web_thickness)
-                      / self.top_flange_width)) - self.top_flange_thickness) 
+        if (self.bfb * self.tfb >
+                (self.bft * self.tft
+                + self.hw * self.tw)):
+            Zp = (self.d
+                       - (0.5 * area / self.bfb)
+                       - self.tft)
+        elif (self.bft * self.tft > 
+                 (self.bfb * self.tfb 
+                 + self.hw * self.tw)):
+            Zp = (self.d -
+                      (self.tfb + self.hw 
+                      + ((0.5 * area - self.bfb
+                      * self.tfb - self.hw * self.tw)
+                      / self.bft)) - self.tft) 
         else:
-            self.Zp = (self.height - 
-                      ((0.5 * self.area - self.bottom_flange_width 
-                      * self.bottom_flange_thickness)
-                      / self.web_thickness + self.bottom_flange_thickness) 
-                      - self.top_flange_thickness)                           
-       
+            Zp = (self.d -
+                      ((0.5 * area - self.bfb
+                      * self.tfb)
+                      / self.tw + self.tfb) 
+                      - self.tft)
         # Warping Constant Cw
         # Picard and Beaulieu 1991
-        d = self.height - (self.top_flange_thickness + self.bottom_flange_thickness) / 2.0
+        d = self.d - (self.tft + self.tfb) / 2.0
         
-        _alpha = (1.0 / (1 + (self.top_flange_width / self.bottom_flange_width)**3 
-                         * (self.top_flange_thickness / self.bottom_flange_thickness)))
+        _alpha = (1.0 / (1 + (self.bft / self.bfb)**3 
+                         * (self.tft / self.tfb)))
         
-        self.Cw = (d**2 * self.top_flange_width**3 * self.top_flange_thickness * _alpha) / 12.0
-        
+        Cw = (d**2 * self.bft**3 * self.tft * _alpha) / 12.0
         #-------------------------------------------------
         #   Torsional Constant
-        if self.top_flange_width == self.bottom_flange_width and self.top_flange_thickness == self.bottom_flange_thickness :
-            self.J = ((2 * self.top_flange_width * self.top_flange_thickness**3 / 3.0) 
-                      + (self.height * self.web_thickness**3 / 3.0))
+        if self.bft == self.bfb and self.tft == self.tfb :
+            J = ((2 * self.bft * self.tft**3 / 3.0)
+                      + (self.d * self.tw**3 / 3.0))
             #
-            self.K = ((2 * self.tf**3 * self.bf +
+            K = ((2 * self.tf**3 * self.bf +
                        self.tw**3 * self.ho) / 3.0)
         else:
-            self.J = ((self.top_flange_width * self.top_flange_thickness**3 
-                       + self.bottom_flange_width * self.bottom_flange_thickness**3 
-                       + d * self.web_thickness**3) / 3.0)
+            J = ((self.bft * self.tft**3
+                       + self.bfb * self.tfb**3 
+                       + d * self.tw**3) / 3.0)
             #
-            self.K = (self.tft**3 * self.bft + self.tfb**3 * self.bfb 
+            K = (self.tft**3 * self.bft + self.tfb**3 * self.bfb
                       + self.tw**3 * self.ho)            
         #
         #-------------------------------------------------
         #   Shear Centre
-        self.SCz = (((self.height - self.top_flange_thickness / 2.0 - self.bottom_flange_thickness / 2.0) 
-                     * self.top_flange_thickness * self.top_flange_width**3) 
-                    / (self.top_flange_thickness * self.top_flange_width**3 
-                       + self.bottom_flange_thickness * self.bottom_flange_width**3))
-        
-        self.SCy = 0 * self.SCz
-        
+        SCz = (((self.d - self.tft / 2.0 - self.tfb / 2.0)
+                     * self.tft * self.bft**3) 
+                    / (self.tft * self.bft**3 
+                       + self.tfb * self.bfb**3))
+        SCy = 0 * SCz
         #-------------------------------------------------
         #               Section Properties
         #-------------------------------------------------
-        
         #   Second Moment of Area about Mayor Axis
-        self.Iy = (self.top_flange_width * self.top_flange_thickness**3 / 12.0 
-                   + (self.top_flange_width * self.top_flange_thickness 
-                      * (self.Zc - self.top_flange_thickness / 2.0)**2 )
-                   + self.bottom_flange_width * self.bottom_flange_thickness**3 / 12.0 
-                   + (self.bottom_flange_width * self.bottom_flange_thickness 
-                      * (_hw + self.bottom_flange_thickness / 2.0 + self.top_flange_thickness - self.Zc)**2) 
-                   + self.web_thickness * _hw**3 / 12.0 
-                   + self.web_thickness * _hw * (_hw / 2.0 + self.top_flange_thickness - self.Zc)**2)
-                      
+        Iy = (self.bft * self.tft**3 / 12.0
+                   + (self.bft * self.tft 
+                      * (Zc - self.tft / 2.0)**2 )
+                   + self.bfb * self.tfb**3 / 12.0 
+                   + (self.bfb * self.tfb 
+                      * (_hw + self.tfb / 2.0 + self.tft - Zc)**2)
+                   + self.tw * _hw**3 / 12.0 
+                   + self.tw * _hw * (_hw / 2.0 + self.tft - Zc)**2)
         #   Second Moment of Area of Compression Flange about Mayor Axis
-        
-        self._Iy_ft = (self.top_flange_width * self.top_flange_thickness**3 / 12.0 + # @hami2230 - added
-                  (self.top_flange_width * self.top_flange_thickness
-                   * (self.Zc - self.top_flange_thickness / 2.0)**2 ))
-                  
+        _Iy_ft = (self.bft * self.tft**3 / 12.0 + # @hami2230 - added
+                  (self.bft * self.tft
+                   * (Zc - self.tft / 2.0)**2 ))
         #   Elastic Modulus about Mayor Axis
-        if self.Zc >= (self.height - self.Zc):
-            self.Zey = self.Iy / self.Zc
+        if Zc >= (self.d - Zc):
+            Zey = Iy / Zc
         else:
-            self.Zey = self.Iy / (self.height - self.Zc)
-        
+            Zey = Iy / (self.d - Zc)
         #   Plastic Modulus about Mayor Axis
-        self.Zpy = ((self.web_thickness * _hw**2 / 4.0) 
-                    + (self.top_flange_width * self.top_flange_thickness 
-                       * (self.Zc - self.top_flange_thickness / 2.0)) 
-                    + (self.bottom_flange_width * self.bottom_flange_thickness 
-                       * (self.height - self.Zc - self.bottom_flange_thickness / 2.0)))
-        
+        Zpy = ((self.tw * _hw**2 / 4.0)
+                    + (self.bft * self.tft 
+                       * (Zc - self.tft / 2.0))
+                    + (self.bfb * self.tfb 
+                       * (self.d - Zc - self.tfb / 2.0)))
         #   Radius of gyration about Mayor Axis
-        self.ry = (self.Iy / self.area)**0.5
-        
-        self.SFy = self.Zpy / self.Zey
-        
-        # Elastic modulus of compression flange about major axis               # @hami2230 - Sxc and Sxt added
-        
-        self.Sxc = (self.top_flange_width * self.top_flange_thickness**3 / 12.0 
-                   + (self.top_flange_width * self.top_flange_thickness 
-                      * (self.Zc - self.top_flange_thickness / 2.0)**2 )) / self.Zc
-
-        # Elastic modulus of tension flange about major axis                    
-
-        self.Sxt = (self.bottom_flange_width * self.bottom_flange_thickness**3 / 12.0 
-                   + (self.bottom_flange_width * self.bottom_flange_thickness 
-                      * ((self.height-self.Zc) - self.bottom_flange_thickness / 2.0)**2 )) / (self.height-self.Zc)
+        ry = (Iy / area)**0.5
+        SFy = Zpy / Zey
+        # Elastic modulus of compression flange about major axis    # @hami2230 - Sxc and Sxt added
+        Sxc = (self.bft * self.tft**3 / 12.0
+                   + (self.bft * self.tft 
+                      * (Zc - self.tft / 2.0)**2 )) / Zc
+        # Elastic modulus of tension flange about major axis
+        Sxt = (self.bfb * self.tfb**3 / 12.0
+                   + (self.bfb * self.tfb 
+                      * ((self.d-Zc) - self.tfb / 2.0)**2 )) / (self.d-Zc)
         #
         #-------------------------------------------------
         #   Second Moment of Area about Minor Axis
-        self.Iz = (self.top_flange_width**3 * self.top_flange_thickness / 12.0 +
-                   self.bottom_flange_width**3 * self.bottom_flange_thickness / 12.0 +
-                   self.web_thickness**3 * _hw / 12.0)
-        
+        Iz = (self.bft**3 * self.tft / 12.0 +
+                   self.bfb**3 * self.tfb / 12.0 +
+                   self.tw**3 * _hw / 12.0)
         #   Elastic Modulus about Minor Axis
-        if self.top_flange_width >= self.bottom_flange_width:
-            self.Zez = 2 * self.Iz / self.top_flange_width
+        if self.bft >= self.bfb:
+            Zez = 2 * Iz / self.bft
         else:
-            self.Zez = 2 * self.Iz / self.bottom_flange_width
-        
+            Zez = 2 * Iz / self.bfb
         #   Plastic Modulus about Minor Axis  
-        self.Zpz = ((self.top_flange_thickness * self.top_flange_width**2 
-                     + self.bottom_flange_thickness * self.bottom_flange_width**2 
-                     + _hw * self.web_thickness**2) / 4.0)
-        
+        Zpz = ((self.tft * self.bft**2
+                     + self.tfb * self.bfb**2 
+                     + _hw * self.tw**2) / 4.0)
         #   Radius of gyration about Minor Axis  
-        self.rz = (self.Iz / self.area)**0.5
+        rz = (Iz / area)**0.5
         
-        self.SFz = self.Zpz / self.Zez
-        
+        SFz = Zpz / Zez
         #-------------------------------------------------
         #   Product of inertia
         _Iyz = 0
-        self.Jx = self.Iy + self.Iz
-        self.rp = (self.Jx / self.area)**0.50
+        Jx = Iy + Iz
+        rp = (Jx / area)**0.50
         
         # warping statical moment at point s on cross-section
         #self.Sws = self.ho * self.bf**2 * self.tw / 16.0
-        self.Sws = self.ho * self.bf**2 * self.tf / 16.0 #aldh6850
+        Sws = self.ho * self.bf**2 * self.tf / 16.0 #aldh6850
         # normalized warping function at point s on cross-section
-        self.Wns = self.ho * self.bf / 4.0
+        Wns = self.ho * self.bf / 4.0
         #
         #-------------------------------------------------
         self._get_section_coordinates()
@@ -738,7 +717,10 @@ class Ibeam:
         #_control = open(file_control, 'w+')
         #_control.write("".join(file))
         #_control.close()
-        #return _Area, _Zc, _Yc, _Iy, _Zey, _Zpy, ry, _Iz, _Zez, _Zpz, _rz
+        return PropertyOut(area=area, Zc=Zc, Yc=Yc,
+                             Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
+                             Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
+                             J=J, Cw=Cw )
     #
     @property
     def properties(self):
@@ -783,68 +765,6 @@ class Ibeam:
     #
     # Double symetrical section
     #
-    @property
-    def d(self):
-        """
-        d : section height
-        """
-        return self.height
-    @d.setter
-    def d(self, value):
-        """
-        d : section height
-        """
-        self.height = value
-    #
-    @property
-    def tw(self):
-        """
-        tw : section web_thickness 
-        """
-        return self.web_thickness
-    @tw.setter
-    def tw(self, value):
-        """
-        tw : section web_thickness
-        """
-        self.web_thickness = value
-    #
-    @property
-    def bf(self):
-        """
-        bft : section top flange width
-        """
-        #if self.top_flange_width.value < self.bottom_flange_width.value:
-        #    return self.top_flange_width
-        #return self.bottom_flange_width
-        return min(self.top_flange_width, self.bottom_flange_width)
-    @bf.setter
-    def bf(self, value):
-        """
-        Assuming double symmetrical section
-        bft : section top flange width
-        """
-        self.top_flange_width = value
-        self.bottom_flange_width = value
-    #
-    @property
-    def tf(self):
-        """
-        tft : section top flange thickness
-        """
-        #if self.top_flange_thickness.value < self.bottom_flange_thickness.value:
-        #    return self.top_flange_thickness
-        #return self.bottom_flange_thickness
-        return min(self.top_flange_thickness, self.bottom_flange_thickness)
-    @tf.setter
-    def tf(self, value):
-        """
-        Assuming double symmetrical section
-        tf : section top flange thickness
-        """
-        self.top_flange_thickness = value
-        self.bottom_flange_thickness = value
-    #
     # Single symetrical section
     #
     @property
@@ -852,53 +772,27 @@ class Ibeam:
         """
         bft : section top flange width
         """
-        return self.top_flange_width
+        return self.bf
     @bft.setter
     def bft(self, value):
         """
         bft : section top flange width
         """
-        self.top_flange_width = value
+        self.bf = value
     #
     @property
     def tft(self):
         """
         tft : section top flange thickness
         """
-        return self.top_flange_thickness
+        return self.tf
     @tft.setter
     def tft(self, value):
         """
         tft : section top flange thickness
         """
-        self.top_flange_thickness = value
+        self.tf = value
     #
-    #
-    @property
-    def bfb(self):
-        """
-        bfb : section bottom flange width
-        """
-        return self.bottom_flange_width
-    @bfb.setter
-    def bfb(self, value):
-        """
-        bfb : section bottom flange width
-        """
-        self.bottom_flange_width = value
-    #
-    @property
-    def tfb(self):
-        """
-        tfb : section bottom flange thickness
-        """
-        return self.bottom_flange_thickness
-    @tfb.setter
-    def tfb(self, value):
-        """
-        tfb : section bottom flange thickness
-        """
-        self.bottom_flange_thickness = value
     #
     @property
     def r(self):
@@ -1075,10 +969,244 @@ class Ibeam:
         self.section_coordinates = points(coord_y, coord_z)
         #print('ok')
     #
-    #
-    def set_default(self):
+    def _dimension(self) -> str:
         """ """
-        self.cls._default = self.name    
+        out = "{:32s}{:1.4E} {:1.4E} {:1.4E}\n".format(self.type, self.d, self.bft, self.bfb)
+        out += "{:48s}{:1.4E} {:1.4E} {:1.4E}\n".format("", self.tw, self.tft, self.tfb)
+        out += "{:70s}{:1.4E}\n".format("", self.r)
+        return  out
+    #
+    #def set_default(self):
+    #    """ """
+    #    self.cls._default = self.name    
 #
 #
+class IbeamSQLite(IbeamBasic, SectionSQLite):
+    __slots__ = ['name', '_properties', 'db_file']
+
+    def __init__(self, name:Union[str, int],
+                 d: Union[float, Units], tw: Union[float, Units],
+                 bf: Union[float, Units], tf: Union[float, Units],
+                 db_file:str,
+                 bfb: Union[float, Units, None]=None, 
+                 tfb: Union[float, Units, None]=None,
+                 build:str = 'welded',
+                 shear_stress:str = 'maximum',
+                 FAvy:float = 1.0, FAvz:float = 1.0):
+        """ 
+        Parameters
+        ----------
+        d   : Section Height   
+        tw  : Web thickness   
+        bf  : flange base (top)
+        tf  : flange thickness (top)
+        bfb : Bottom flange base   
+        tfb : Bottom flange thickness
+        """
+        IbeamBasic.__init__(self)
+        self.name = name
+        self._properties = None
+        self.db_file = db_file
+        compactness = None
+        #
+        if not bfb: bfb = bf
+        if not tfb: tfb = tf
+        #
+        section = (self.name,
+                   None,  # title
+                   "I section",   # shape type
+                   None, None,    # diameter, wall_thickess
+                   d, tw,         # height, web_thickness
+                   bf, tf,        # top_flange_width, top_flange_thickness
+                   bfb, tfb,      # bottom_flange_width, bottom_flange_thickness
+                   FAvy, FAvz,
+                   shear_stress, build,
+                   compactness,)
+        # push data to sqlite table
+        SectionSQLite.__init__(self, db_file=self.db_file, section=section)
+    #
+    #
+    @property
+    def d(self):
+        return self.get_item(item="height")
+
+    @d.setter
+    def d(self, value:Union[Units,float]):
+        """ """
+        value = get_sect_properties([value])
+        self.update_item(item='height', value=value[0])
+        self.push_property()
+    #
+    @property
+    def tw(self):
+        return self.get_item(item="web_thickness")
+
+    @tw.setter
+    def tw(self, value:Union[Units,float]):
+        """ """
+        value = get_sect_properties([value])
+        self.update_item(item='web_thickness', value=value[0])
+        self.push_property()
+    #
+    #
+    @property
+    def bf(self):
+        return self.get_item(item="top_flange_width")
+
+    @bf.setter
+    def bf(self, value:Union[Units,float]):
+        """ """
+        value = get_sect_properties([value])
+        self.update_item(item='top_flange_width', value=value[0])
+        self.push_property()
+    #
+    @property
+    def tf(self):
+        return self.get_item(item="top_flange_thickness")
+
+    @tf.setter
+    def tf(self, value:Union[Units,float]):
+        """ """
+        value = get_sect_properties([value])
+        self.update_item(item='top_flange_thickness', value=value[0])
+        self.push_property()
+    #
+    #
+    @property
+    def bfb(self):
+        return self.get_item(item="bottom_flange_width")
+
+    @bfb.setter
+    def bfb(self, value:Union[Units,float]):
+        """ """
+        value = get_sect_properties([value])
+        self.update_item(item='bottom_flange_width', value=value[0])
+        self.push_property()
+    #
+    @property
+    def tfb(self):
+        return self.get_item(item="bottom_flange_thickness")
+
+    @tfb.setter
+    def tfb(self, value:Union[Units,float]):
+        """ """
+        value = get_sect_properties([value])
+        self.update_item(item='bottom_flange_thickness', value=value[0])
+        self.push_property()
+    #    
+#
+class IbeamInMemory(IbeamBasic):
+    __slots__ = ['name', 'build', 'shear_stress', 'FAvy', 'FAvz',
+                 'compactness', '_properties',
+                 '_d', '_tw', '_bf', '_tf', 'bfb', 'tfb']
+
+    def __init__(self, name:Union[str, int],
+                 d: Union[float, Units], tw: Union[float, Units],
+                 bf: Union[float, Units], tf: Union[float, Units],
+                 bfb: Union[float, Units, None]=None, 
+                 tfb: Union[float, Units, None]=None,
+                 build:str = 'welded',
+                 shear_stress:str = 'maximum',
+                 FAvy:float = 1.0, FAvz:float = 1.0):
+        """ 
+        Parameters
+        ----------
+        d   : Section Height   
+        tw  : Web thickness   
+        bf  : flange base (top)
+        tf  : flange thickness (top)
+        bfb : Bottom flange base   
+        tfb : Bottom flange thickness
+        """
+        IbeamBasic.__init__(self)
+        self.name = name
+        self.build = build
+        self.shear_stress = shear_stress
+        # Shear factor
+        self.FAvy = FAvy
+        self.FAvz = FAvz
+        #
+        self.compactness:Union[str, None] = None
+        self._properties = None
+        #
+        self.d = d
+        self.tw = tw
+        self.bf = bf
+        self.tf = tf
+        if bfb: self.bfb = bfb
+        if tfb: self.tfb = tfb
+    #
+    #
+    @property
+    def d(self):
+        """
+        d : section height
+        """
+        return self._d
+    @d.setter
+    def d(self, value):
+        """
+        d : section height
+        """
+        value = get_sect_properties([value])
+        self._d = value[0]
+    #
+    @property
+    def tw(self):
+        """
+        tw : section web_thickness 
+        """
+        return self._tw
+    @tw.setter
+    def tw(self, value):
+        """
+        tw : section web_thickness
+        """
+        value = get_sect_properties([value])
+        self._tw = value[0]
+    #
+    @property
+    def bf(self):
+        """
+        bft : section top flange width
+        """
+        return self._bf
+    
+    @bf.setter
+    def bf(self, value):
+        """
+        Assuming double symmetrical section
+        bft : section top flange width
+        """
+        value = get_sect_properties([value])
+        self._bf = value[0]
+        try:
+            self.bfb
+        except AttributeError:
+            self.bfb = value[0]
+    #
+    @property
+    def tf(self):
+        """
+        tft : section top flange thickness
+        """
+        return self._tf
+    
+    @tf.setter
+    def tf(self, value):
+        """
+        Assuming double symmetrical section
+        tf : section top flange thickness
+        """
+        value = get_sect_properties([value])
+        self._tf = value[0]
+        try:
+            self.tfb
+        except AttributeError:
+            self.tfb = value[0]
+    #
+    #
+    def push_property(self):
+        """ """
+        self.properties
 #

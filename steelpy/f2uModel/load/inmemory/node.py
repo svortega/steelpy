@@ -10,13 +10,13 @@ from typing import NamedTuple, Tuple, List, Iterator, Dict, Iterable, ClassVar, 
 #import re
 
 # package imports
-from steelpy.f2uModel.load.operations.actions import PointNode
-from steelpy.f2uModel.load.operations.operations import NodeLoadMaster, get_nodal_load
-#from steelpy.f2uModel.results.sqlite.operation.process_sql import create_connection, create_table
+from steelpy.f2uModel.load.operations.nodes import (NodeLoadMaster, 
+                                                    get_nodal_load, 
+                                                    PointNode)
 
 # ---------------------------------
 #
-class NodeLoad(NodeLoadMaster):
+class NodeLoadInMemory(NodeLoadMaster):
     """
     FE Node Load class
     
@@ -40,7 +40,7 @@ class NodeLoad(NodeLoadMaster):
     def __init__(self) -> None:
         """
         """
-        super().__init__()    
+        super().__init__()
     #
     def __setitem__(self, node_number:int, 
                     point_load:List) -> None:
@@ -48,12 +48,24 @@ class NodeLoad(NodeLoadMaster):
         """
         #
         self._labels.append(node_number)
-        self._title.append(node_number)
+        #
+        if isinstance(point_load, dict):
+            point_load = get_nodal_load(point_load)
+            self._title.append(point_load[-1])
+            point_load.pop()            
+        elif isinstance(point_load[-1], str):
+            title = point_load.pop()
+            self._title.append(title)
+            point_load = get_nodal_load ( point_load )
+        else:
+            self._title.append("NULL")
+            point_load = get_nodal_load(point_load)
+        #
         self._system.append(self._system_flag)
         self._distance.append(-1)
         self._complex.append(0)
         #
-        point_load = get_nodal_load(point_load)
+        #point_load = get_nodal_load(point_load)
         self._fx.append(point_load[0])
         self._fy.append(point_load[1])
         self._fz.append(point_load[2])

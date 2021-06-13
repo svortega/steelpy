@@ -15,8 +15,8 @@ from steelpy.f2uModel.concept.load import ConceptLoad
 #from steelpy.f2uModel.concept.beam import Beams
 #from steelpy.f2uModel.concept.shell import Shells
 #from steelpy.f2uModel.concept.spring import Springs
-from steelpy.f2uModel.mesh.geometry import Releases
-
+from steelpy.f2uModel.mesh.inmemory.geometry import Releases
+from steelpy.f2uModel.mesh.inmemory.nodes import NodesInMemory
 
 
 
@@ -42,18 +42,19 @@ class Concepts:
                  'shells', 'membranes', 'solids', 'springs', 'load',
                  '_hinges', 'boundary', '_properties', '_name', '_mesh']
     
-    def __init__(self, mesh, properties): # load, 
+    def __init__(self, mesh, materials, sections, properties): # load, 
         """
         """
         self._mesh = mesh
-        self.points = mesh.nodes
+        #self.points = mesh.nodes
+        self.points = NodesInMemory()
         self.joints = Connection(points=self.points)
         self._hinges = Releases()
         #
         self.boundary = ConceptBoundaries()
         #
         self.beam = ConceptElements(element_type="beam", points = self.points,
-                                    materials=mesh.materials, sections=mesh.sections)
+                                    materials=materials, sections=sections)
 
         #self.truss = Elements(element_type='truss', points = self.points,
         #                      materials=mesh.materials, sections=mesh.sections)

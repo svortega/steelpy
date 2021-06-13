@@ -13,11 +13,12 @@ from typing import Union, Dict, List, Union
 
 # package imports
 from steelpy.f2uModel.load.operations.operations import duplicates, indices
+from steelpy.f2uModel.load.operations.combination import LoadCombinationBasic
 from steelpy.f2uModel.results.sqlite.operation.process_sql import create_connection
 
 #
 #
-class LoadCombSQL(Mapping):
+class LoadCombSQL(LoadCombinationBasic):
     
     __slots__ = ['_labels', '_title', '_number', 'bd_file',
                  '_index', '_basic', '_combination', '_metocean']
@@ -25,10 +26,8 @@ class LoadCombSQL(Mapping):
     def __init__(self, bd_file:str):
         """
         """
+        super().__init__()
         self.bd_file = bd_file
-        self._labels: array = array("I", [])
-        self._title: List[str] = []
-        self._number: array = array("I", [])
         #
         self._basic = BasicLoadSQL(self)
         self._combination = LoadCombinationSQL(self)
@@ -66,20 +65,6 @@ class LoadCombSQL(Mapping):
         cur = conn.cursor()
         cur.execute(sql, project)
         return cur.lastrowid
-    #
-    #
-    def __len__(self) -> int:
-        return len(self._labels)
-    #
-    def __iter__(self):
-        """
-        """
-        #comb = self._get_combinations()
-        #for key, item in comb.items():
-        #    yield key, item
-        comb = set(self._labels)
-        return iter(comb)
-    #
     #
     def to_basic(self):
         """ """
@@ -128,7 +113,6 @@ class LoadCombSQL(Mapping):
                 #basic_loads[key] = item
                 basic_loads[lname] = [[lnumber[_bl[0]], _bl[1]] for _bl in item]
         return basic_loads
-    #
     #
     def solve_combinations(self, basic_res, memb_force):
         """
@@ -182,22 +166,37 @@ class BasicLoadSQL(Mapping):
     """
     FE Metocean Combination Class
     """
-    __slots__ = ['_cls', '_labels']
+    __slots__ = ['_cls', '_labels', '_number']
 
     def __init__(self, cls):
         """
         """
         self._cls = cls
-        self._labels: array = array("I", [])
-        #self._type = bl_type
+        self._labels: List[Union[str,int]] = []
+        self._number: List[Union[str,int]] = []
 
     #
-    def __getitem__(self, load_name:int):
+    def __getitem__(self, basic_load_name:int):
         """
         """
-        return self._basic[load_name]
+        #1/0
+        try:
+            index = self._cls._index
+            comb_name = self._cls._labels[index]
+            #load_title = self._title[index]
+            # load_number = self._load_number.index(load_name)
+            bd_file = self._cls.bd_file
+            conn = create_connection(bd_file)
+            comb_number = get_comb_number( conn, comb_name )
+            basic_number = self._get_basic_load_number(conn, basic_load_name)
+            # get beam load
+            with conn:
+                factor = self._get_basic_load_factor(conn, comb_number, basic_number)
+            return factor
+        except TypeError:
+            raise KeyError(f"{basic_load_name}")
 
-    def __setitem__(self, load_name:int, factor: float) -> None:
+    def __setitem__(self, basic_load_name:int, factor: float) -> None:
         """
         """
         index = self._cls._index
@@ -205,9 +204,10 @@ class BasicLoadSQL(Mapping):
         comb_name = self._cls._labels[index]
         conn = create_connection(self._cls.bd_file)
         load_number = get_comb_number(conn, comb_name)
-        self._labels.append(load_name)
+        self._labels.append(basic_load_name)
+        self._number.append(comb_name)
         with conn:
-            self._push_combination(conn, load_number, load_name, factor)
+            self._push_combination(conn, load_number, basic_load_name, factor)
             conn.commit()
     #
     def _push_combination(self, conn, load_number:int, bl_name:int,
@@ -234,6 +234,15 @@ class BasicLoadSQL(Mapping):
         loads = cur.fetchone()
         return loads[0]
     #
+    def _get_basic_load_factor(self, conn, load_number, basic_number):
+        """ """
+        cur = conn.cursor ()
+        cur.execute ( "SELECT * FROM tb_LoadCombIndex\
+                     WHERE load_number = {:} \
+                     AND bl_number = {:}".format(load_number, basic_number))
+        loads = cur.fetchone ()
+        return loads[4]
+    #
     @property
     def load_type(self):
         """
@@ -249,19 +258,25 @@ class BasicLoadSQL(Mapping):
     def __iter__(self):
         """
         """
-        basic = set(self._labels)
-        return iter(basic)
+        index = self._cls._index
+        comb_name = self._cls._labels[index]
+        basic_load = [self._labels[x] for x, item in enumerate(self._number)
+                      if item == comb_name]
+        #number = self._number
+        #basic = set(self._labels)
+        return iter(basic_load)
 #
 #
 class LoadCombinationSQL(Mapping):
     
-    __slots__ = ['_cls', '_labels']
+    __slots__ = ['_cls', '_labels', '_number']
 
     def __init__(self, cls):
         """
         """
         self._cls = cls
-        self._labels: array = array("I", [])
+        self._labels: List[Union[str, int]] = []
+        self._number: List[Union[str, int]] = []
     #
     def __setitem__(self, load_name:int, factor: float) -> None:
         """
@@ -271,22 +286,39 @@ class LoadCombinationSQL(Mapping):
         comb_name = self._cls._labels[index]
         conn = create_connection(self._cls.bd_file)
         load_number = get_comb_number(conn, comb_name)
-        self._labels.append(load_name)
         with conn:
             self._push_combination(conn, load_number,
                                    load_name, factor)
-            conn.commit()    
+            #conn.commit()
+        #
+        self._labels.append(load_name)
+        self._number.append(comb_name)
     #
     def __getitem__(self, load_name:int):
         """
         """
-        return self._basic[load_name]    
+        try:
+            index = self._cls._index
+            comb_name = self._cls._labels[index]
+            bd_file = self._cls.bd_file
+            conn = create_connection(bd_file)
+            comb_number = get_comb_number(conn, comb_name)
+            basic_number = get_comb_number(conn, load_name)
+            # get beam load
+            with conn:
+                factor = self._get_comb_load_factor(conn, comb_number, basic_number)
+            return factor
+        except TypeError:
+            raise KeyError(f"{load_name}")
     #
     def _push_combination(self, conn, load_number:int,
                             lc_number:int, factor:float):
         """
         """
-        comb_number = get_comb_number(conn, lc_number)
+        try:
+            comb_number = get_comb_number(conn, lc_number)
+        except TypeError:
+            raise IOError(f"combination {lc_number} not found")
         #
         project = (load_number,  None, comb_number, factor)
         sql = 'INSERT INTO tb_LoadCombIndex(\
@@ -294,6 +326,15 @@ class LoadCombinationSQL(Mapping):
                VALUES(?,?,?,?)'
         cur = conn.cursor()
         cur.execute(sql, project)    
+    #
+    def _get_comb_load_factor(self, conn, load_number, basic_number):
+        """ """
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM tb_LoadCombIndex\
+                     WHERE load_number = {:} \
+                     AND lc_number = {:}".format(load_number, basic_number))
+        loads = cur.fetchone()
+        return loads[4]
     #
     def __len__(self) -> int:
         return len(self._labels)
@@ -304,8 +345,12 @@ class LoadCombinationSQL(Mapping):
     def __iter__(self):
         """
         """
-        comb = set(self._labels)
-        return iter(comb)
+        index = self._cls._index
+        comb_name = self._cls._labels[index]
+        comb_load = [self._labels[x] for x, item in enumerate(self._number)
+                      if item == comb_name]
+        #comb = set(self._labels)
+        return iter(comb_load)
 #   
 #
 def get_comb_number(conn, load_name:int):

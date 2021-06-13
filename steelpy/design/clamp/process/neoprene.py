@@ -6,18 +6,18 @@
 #from typing import ClassVar # NamedTuple, List, 
 
 # package imports
-from steelpy.process.units.main import Units
-from steelpy.f2uModel.material.main import Materials
+#from steelpy.process.units.main import Units
+#from steelpy.f2uModel.material.main import Materials
 
 #
 class Neoprene:
     """
     """
-    __slots__ = ['_units', '_material', 
+    __slots__ = ['_material', #'_units', 
                  'Ln', 'tn', 'Mu', 'IRHD', 'Kn', 'E_alpha', 
                  'neoprene_type', 'name', 'gamma', 'strain_limit']
     
-    def __init__(self):
+    def __init__(self, material):
         """
         Ln : Neoprene Length
         tn : Neoprene Thickness
@@ -31,15 +31,16 @@ class Neoprene:
         neoprene_type : Plain/Ribbed
         gamma : factor of safety 
         """
-        self._units = Units()
+        #self._units = Units()
         #_material = Materials()
         #_material[1] = 'plastic'
-        #self._material = _material[1]
+        self._material = material
+        self._material['neoprene'] = 'linear'
         #
         #self.Ln = 0 * self._units.mm
         #self.tn = 0 * self._units.mm
         self.Mu = 0.10
-        self.IRHD = 65.0 * self._units.Mpa
+        self.IRHD = 65.0 #* self._units.Mpa
         #self.Kn = 0
         #self.E_alpha = 0 * self._units.MPa
         self.neoprene_type = "PLAIN"
@@ -48,16 +49,16 @@ class Neoprene:
         # % of compressive strain in neoprene to avoid non-linear behaviour
         self.strain_limit = 10
     #
-    @property
-    def units(self):
-        """
-        """
-        return self._units
-    
+    #@property
+    #def units(self):
+    #    """
+    #    """
+    #    return self._units
+    #
     @property
     def material(self):
         """
         """
-        return self._material
+        return self._material['neoprene']
     # 
 #

@@ -28,8 +28,8 @@ def print_deflections(disp_result):
     #print("** Static Displacements")
     print("")
     for wk in disp_result["basic"].values():
-        print("-- Basic Load: {:}, Title: {:}, System: {:}"
-              .format(wk.name, wk.title, "global"))
+        print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
+              .format(wk.name, wk.number, wk.title, "global"))
         out_dis(wk.items)
         print("")
     #
@@ -40,8 +40,8 @@ def print_deflections(disp_result):
         #print("** Static Displacements")
         print("")
         for key, wk in disp_result["combination"].items():
-            print("-- Load Combination: {:}, Title: {:}, System: {:}"
-                  .format(wk.name, wk.title, "global"))
+            print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
+                  .format(wk.name, wk.number, wk.title, "global"))
             out_dis(wk.items)
             print("")
     #except EOFError:
@@ -103,20 +103,18 @@ def print_member_forces(element_force,
     print("")
     #
     for key, item in element_force["basic"].items():
-        print("-- Basic Load: {:}, Title: {:}, System: {:}"
-              .format(item.name, item.title, system))
-        mforces = [memb for memb in item.items
-                   if memb[3] == system]
+        print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
+              .format(item.name, item.number, item.title, system))
+        mforces = [memb for memb in item.items if memb[3] == system]
         print_member_end_forces(mforces)
         print("")
     #
     try:
         print('{:}'.format(52 * '-'))
         for key, item in element_force["combination"].items():
-            print("-- Load Combination: {:}, Title: {:}, System: {:}"
-                  .format(item.name, item.title, system))
-            mforces = [memb for memb in item.items
-                       if memb[3] == system]
+            print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
+                  .format(item.name, item.number, item.title, system))
+            mforces = [memb for memb in item.items if memb[3] == system]
             print_member_end_forces(mforces)
             print("")
     except EOFError:

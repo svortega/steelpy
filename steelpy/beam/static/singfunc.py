@@ -1,10 +1,10 @@
 # 
-# Copyright (c) 2019-2020 steelpy
+# Copyright (c) 2019-2021 steelpy
 # 
 
 # Python stdlib imports
 #from collections.abc import Mapping
-from typing import NamedTuple, Dict, List, Tuple
+#from typing import NamedTuple, Dict, List, Tuple
 from dataclasses import dataclass
 from math import factorial
 
@@ -69,7 +69,7 @@ class Trapezoidal(SingFunction):
         self.q2: float = q2
         self.L2: float = L2
         #
-        self._L3 = self.L-self.L2
+        self._L3 = self.L - self.L2
         self._slope = (self.q2 - self.q1) / (self._L3 - self.L1)
     #
     def q(self, x:float) -> float:
@@ -84,7 +84,7 @@ class Trapezoidal(SingFunction):
         """ Shear Force"""
         step1 = x - self.L1
         step2 = x - self._L3
-        func1 = (self._step(step1, 2) - self._step(step2, 2))* -self._slope/factorial(2)
+        func1 = -self._slope/2 * (self._step(step1, 2) - self._step(step2, 2))
         func2 = -self._step(step1, 1)*self.q1 + self._step(step2, 1)*self.q2
         return func1 + func2
     #
@@ -92,8 +92,8 @@ class Trapezoidal(SingFunction):
         """ Bending Moment"""
         step1 = x - self.L1
         step2 = x - self._L3
-        func1 = (self._step(step1, 3) - self._step(step2, 3)) * - self._slope/factorial(3)
-        func2 = (-self._step(step1, 2)*self.q1 + self._step(step2, 2)*self.q2)/factorial(2)
+        func1 = - (self._slope/factorial(3) * (self._step(step1, 3) - self._step(step2, 3)))
+        func2 = -0.50*(self.q1*self._step(step1, 2) - self.q2 * self._step(step2, 2))
         return func1 + func2
     #
     def theta(self, x:float, E:float, I:float)->float:
@@ -101,7 +101,7 @@ class Trapezoidal(SingFunction):
         step1 = x - self.L1
         step2 = x - self._L3
         func1 = (self._step(step1, 4) - self._step(step2, 4))* -self._slope/(factorial(4)*E*I)
-        func2 = (-self._step(step1, 3)*self.q1 + self._step(step2, 3)*self.q2)/(factorial(3)*E*I)
+        func2 = -1/(factorial(3)*E*I)*(self._step(step1, 3)*self.q1 - self._step(step2, 3)*self.q2)
         return func1 + func2
     #
     def w(self, x:float, E:float, I:float)->float:
@@ -109,7 +109,7 @@ class Trapezoidal(SingFunction):
         step1 = x - self.L1
         step2 = x - self._L3
         func1 = (self._step(step1, 5) - self._step(step2, 5))*self._slope/(factorial(5)*E*I)
-        func2 = (self._step(step1, 4)*self.q1 - self._step(step2, 4)*self.q2)/(factorial(4)*E*I)
+        func2 = 1/(factorial(4)*E*I) * (self._step(step1, 4)*self.q1 - self._step(step2, 4)*self.q2)
         return func1 + func2
     #
 #
@@ -123,7 +123,7 @@ class Point(SingFunction):
         """
         """
         SingFunction.__init__(self, L, L1)
-        self.P: float = -1*P
+        self.P: float = P
     #
     def q(self, x:float) -> float:
         """ Loading Function"""
@@ -133,23 +133,23 @@ class Point(SingFunction):
     def V(self, x:float) -> float:
         """ Shear Force"""
         step = x-self.L1
-        return self._step(step, 0) * -self.P
+        return -self.P * self._step(step, 0) 
     #
     def M(self, x:float) -> float:
         """ Bending Moment"""
         step = x - self.L1
-        return self._step(step, 1) * -self.P
+        return -self.P * self._step(step, 1)
     #
     def theta(self, x: float, E:float, I:float) -> float:
         """ Slope = EIy' """
-        step = x-self.L1
+        step = x - self.L1
         return self._step(step, 2) * -self.P/(2*E*I)
     #
     def w(self, x:float, E:float, I:float) -> float:
         """ Deflection = EIy"""
-        step = x-self.L1
+        step = x - self.L1
         return self._step(step, 3) * self.P/(factorial(3)*E*I)
-    #
+#
 #
 @dataclass
 class Moment(SingFunction):
@@ -162,32 +162,21 @@ class Moment(SingFunction):
         SingFunction.__init__(self, L, L1)
         self.m: float = m
     #
-    def q(self, x:float) -> float:
-        """ Loading Function"""
-        step = x - self.L1
-        return self._step(step, -2) * self.m
-    #
-    def V(self, x:float) -> float:
-        """ Shear Force"""
-        step = x-self.L1
-        return self._step(step, -1) * self.m
-    #
     def M(self, x:float) -> float:
         """ Bending Moment"""
         step = x - self.L1
-        return self._step(step, 0) * -self.m
+        return -self.m * self._step(step, 0)
     #
     def theta(self, x: float, E:float, I:float) -> float:
         """ Slope = EIy' """
         step = x-self.L1
-        return self._step(step, 1) * -self.m/(E*I)
+        return -self.m/(E*I) * self._step(step, 1)
     #
     def w(self, x:float, E:float, I:float) -> float:
         """ Deflection = EIy"""
         step = x-self.L1
-        return self._step(step, 2) * self.m/(2*E*I)
+        return self.m/(2*E*I) * self._step(step, 2)
     #
-#
 #
 #
 class SingularFunction:

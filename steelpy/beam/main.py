@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2020 steelpy
+# Copyright (c) 2019-2021 steelpy
 # 
 
 # Python stdlib imports
@@ -8,43 +8,56 @@ from typing import NamedTuple, Dict, List, Tuple, Union
 
 
 # package imports
-from steelpy.beam.static.operations import BeamOps
-from steelpy.beam.static.load import Load
+from steelpy.beam.static.operations import BeamResponse
+from steelpy.beam.static.load import Load, Combination
 from steelpy.beam.static.support import Support
 from steelpy.f2uModel.sections.main import Sections
 from steelpy.f2uModel.material.main import Materials
-
+from steelpy.design.beam.main import BeamDesign
 
 
 #
 class Beam:
-    __slots__ = ['_labels', '_fixity', '_supcoord',
-                 '_load', '_section', '_material', 'steps',
-                 '_beam_length', '_reactions', '_response']
+    __slots__ = ['_support', '_load', '_section', '_material', 
+                 'steps', 'beam_length', '_response', 
+                 '_load_combination', '_design', 'beam_name'] 
 
-    def __init__(self, beam_length):
+    def __init__(self, name:Union[int,str]='beam_design',
+                 mesh_type:str='inmemory'):
         """
         beam_length : total length of the beam 
         section_type:str
         """
-        print("-- module : Beam Version 0.10dev")
+        print("-- module : Beam Version 0.15dev")
         print('{:}'.format(52*'-'))
         #
-        self._beam_length:float = beam_length.value
+        self.beam_name = name
         self.steps: int = 10
         #
-        self._material = Materials()
+        db_file:str = "beam_f2u.db"
+        self._material = Materials(mesh_type=mesh_type,
+                                   db_file=db_file)
         self._material['beam'] = 'elastic'
-        self._section = Sections()
-        #self._section['beam'] = section_type
-        #
-        self._labels:List = []
-        self._fixity:List = []
-        self._supcoord:List = []
-        self._reactions:List = []
+        self._section = Sections(mesh_type=mesh_type,
+                                 db_file=db_file)
         #
         self._load = Load(cls=self)
-        self._response = BeamOps(cls=self)
+        self._response = BeamResponse(cls=self)
+        self._support = Support(cls=self)
+        self._load_combination = Combination(cls=self)
+        #
+        component = "-"*12
+        self._design = BeamDesign(name=name, component=component)
+    #
+    @property
+    def length(self):
+        """ """
+        return self.beam_length
+    
+    @length.setter
+    def length(self, beam_length):
+        """ """
+        self.beam_length = beam_length.value
     #
     @property
     def section(self):
@@ -65,18 +78,19 @@ class Beam:
         """
         """
         return self._material['beam']
-
-    #@material.setter
-    #def material(self, value):
-    #    """
-    #    """
-    #    self._material = value
     #
     @property
     def support(self):
         """
         """
-        return Support(self)
+        return self._support #Support(self)
+    
+    #@support.setter
+    #def support(self, value:list):
+    #    """
+    #    """
+    #    self._support = value
+    #    #Support(self)
     #
     @property
     def load(self):
@@ -84,6 +98,11 @@ class Beam:
         """
         return self._load
     #
+    @property
+    def load_combination(self):
+        """
+        """
+        return self._load_combination    
     #
     def join(self, other, join_type):
         """
@@ -117,5 +136,15 @@ class Beam:
     def response(self):
         """ """
         return  self._response
+    #
+    @property
+    def design(self):
+        """
+        """
+        self._design.material = self._material['beam']
+        self._design.section = self._section["beam"]
+        self._design.L = self.length
+        self._design._stress = self._response.stress()
+        return self._design
 #
 #

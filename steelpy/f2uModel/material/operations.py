@@ -560,3 +560,24 @@ def update_Fu(geometry, foundation, Fu_update):
                             break
     #
 #
+#
+# -----------------------------
+#
+def get_linear_mat_properties(properties):
+    """ """
+    set_prop = [280_000_000, 0, 205_000_000_000,
+                77_200_000_000, 0.30, 7.850E12, 1.2E-5]
+    set_units = ['pascal', 'pascal', 'pascal', 'pascal', None, 'kilogram/mstre^3', 'kelvin']
+    for x, item in enumerate(set_prop):
+        try:
+            set_prop[x] = properties[x].convert(set_units[x]).value
+        except AttributeError:
+            set_prop[x] = properties[x]
+        except IndexError:
+            pass
+    # check if Fu
+    if not set_prop[1]:
+        set_prop[1] = set_prop[0]/0.75
+    return set_prop
+#
+#

@@ -11,7 +11,7 @@ from itertools import chain
 # package imports
 from steelpy.trave3D.preprocessor.assemble import Rmatrix # get_element_K, 
 #from steelpy.trave3D.processor.operations import zeros
-from steelpy.f2uModel.load.operations.basic_load import get_basic_load
+#from steelpy.f2uModel.load.operations.basic_load import get_basic_load
 from steelpy.trave3D.processor.operations import zeros, matAbd, trns_3Dv
 from steelpy.process.math.vector import Vector
 #

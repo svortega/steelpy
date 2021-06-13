@@ -3,8 +3,8 @@
 # Python stdlib imports
 
 # package imports
-from steelpy.design.clamp.clamp import ClampDesign
-from steelpy.design.beam.design import BeamDesign
+from steelpy.design.clamp.main import ClampDesign
+from steelpy.design.beam.main import BeamDesign
 
 class Design:
     """

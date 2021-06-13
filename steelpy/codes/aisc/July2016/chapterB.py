@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019 iLift
+# Copyright (c) 2021 steelpy
 #
 # Python stdlib imports
 from typing import NamedTuple, Tuple

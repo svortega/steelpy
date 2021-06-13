@@ -4,7 +4,7 @@
 #
 from steelpy.codes.main import CodeCheck
 from steelpy.roarks.main import CircularRing
-from steelpy.design.main import Design
+from steelpy.design.main import ClampDesign as Clamp
 #from steelpy.metocean.main import Metocean
 from steelpy.trave3D.main import Trave3D
 from steelpy.beam.main import Beam

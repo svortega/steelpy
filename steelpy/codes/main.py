@@ -9,25 +9,26 @@
 #from steelpy.codes.piping.pipeline import Pipeline_Assessment
 #from steelpy.codes.api.wsd_22ed import APIwsd22ed
 #
-from steelpy.process.units.main import Units
+#from steelpy.process.units.main import Units
 #from steelpy.material.material import Material
 #from steelpy.sections.tubular import Tubular
 
-from steelpy.codes.api.design import API_design
+from steelpy.codes.api.main import API_design
 
 class CodeCheck:
     """
     """
     def __init__(self):
         """"""
-        self._units = Units()
+        #self._units = Units()
+        pass
     
-    @property
-    def units(self):
-        """
-        """
-        return self._units    
-    
+    #@property
+    #def units(self):
+    #    """
+    #    """
+    #    return self._units    
+    #
     @property
     def API(self):
         """

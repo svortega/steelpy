@@ -25,7 +25,7 @@ class SelfWeight:
         self.z: float = 0
 #
 #
-class PointNode(NamedTuple):
+class NodeForce(NamedTuple):
     """
     """
     fx: float
@@ -39,21 +39,21 @@ class PointNode(NamedTuple):
     system:str
     load_complex:int
     #
-    def __str__(self):
-        print('-->')
-        return "{: 14.5f} {: 14.5f} {: 14.5f} {: 14.5f} {: 14.5f} {: 14.5f}".format(self.fx, self.fy, self.fz,
-                                                                                    self.mx, self.my, self.mz)
+    def __str__(self,units:str="si") -> str:
+        """ """
+        output  = (f"{str(self.number):12s} {10*' '} "
+                   f"{self.fx: 1.3e} {self.fy: 1.3e} {self.fy: 1.3e}"
+                   f"{0: 1.3e} {0: 1.3e} {0: 1.3e}\n")
+        #step = 12*" "
+        output += (f"{self.coordinate_system.upper():12s} {10*' '} "
+                   f"{self.mx: 1.3e} {self.my: 1.3e} {self.mz: 1.3e}\n")
+        return output
     #
-    #@property
-    #def name(self):
-      #  """
-      #  """
-      #  return self.load_name
-    #@name.setter
-    #def name(self, load_name:str):
-    #    """
-    #    """
-    #    self.load_name = load_name
+    @property
+    def coordinate_system(self):
+        if self.system != 0:
+            return "local"
+        return "global" 
 #
 #
 #
@@ -115,29 +115,35 @@ class Actions:
     """
     Force & bending moments
     """
-    __slots__ = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                 '_units']
+    __slots__ = ['_Fx', '_Fy', '_Fz', '_Mx', '_My', '_Mz']
     
     def __init__(self):
         """
         """
-        self._units = Units()
-        self.Fx: ClassVar = 0 * self._units.N
-        self.Fy: ClassVar = 0 * self._units.N
-        self.Fz: ClassVar = 0 * self._units.N
-        self.Mx: ClassVar = 0 * self._units.N * self._units.m
-        self.My: ClassVar = 0 * self._units.N * self._units.m
-        self.Mz: ClassVar = 0 * self._units.N * self._units.m
+        #self._units = Units()
+        self._Fx = 0 #* self._units.N
+        self._Fy = 0 #* self._units.N
+        self._Fz = 0 #* self._units.N
+        self._Mx = 0 #* self._units.N * self._units.m
+        self._My = 0 #* self._units.N * self._units.m
+        self._Mz = 0 #* self._units.N * self._units.m
         #
         # ----- Load offsets -----
         #self.Xe = 0 * units.m # load offset from support 1
     
-    @property
-    def units(self):
-        """
-        units [length, mass, time, temperature, force, pressure/stress]/n
-        """
-        return self._units    
+    #@property
+    #def units(self):
+    #    """
+    #    units [length, mass, time, temperature, force, pressure/stress]/n
+    #    """
+    #    return self._units    
+    #
+    def __setattr__(self, name, value):
+        """ """
+        if name=="device":
+            print("device test")
+        else:
+            super().__setattr__(name, value)
     #
     #def __setitem__(self, **kwargs):
     #    """
@@ -147,5 +153,14 @@ class Actions:
         """
         """
         assign_force_item(self, kwargs)
-    #  
+    #
+    #
+    #def __str__(self, units:str="si") -> str:
+    #    """ """
+    #    output  = (f"{str(self.number):12s} {self.fx: 1.3e} "
+    #               f"{self.fy: 1.3e} {self.fy: 1.3e}\n")
+    #    step = 12*" "
+    #    output += (f"{step} {10*' '} {self.mx: 1.3e} "
+    #               f"{self.my: 1.3e} {self.mz: 1.3e}\n")
+    #    return output
 #

@@ -1,147 +1,130 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2021 fem2ufo
 # 
 
 
 # Python stdlib imports
 from collections.abc import Mapping
 from typing import NamedTuple, Dict, List, Iterable, Union
-#from array import array
+#
 
 # package imports
 import steelpy.f2uModel.material.operations as operations
-from steelpy.f2uModel.material.mechanical import MaterialElastic, Curve
-#from steelpy.process.units.units import Units
+from steelpy.f2uModel.material.matsql import MaterialSQL
+from steelpy.f2uModel.material.matinmemory import MaterialInmemory
 #
-#
-"""This module stores material classes.
-   -------------------------------
-   Nonlinear materials:
-   - Nonlinear elastic material
-   - Bilinear elastoplastic material
-     Yield criterion:
-      - von Mises
-      - Treca
-      - Morh-Coulomb
-      - Drucker-Prager
-     Hardering rules:
-      - Isotropic
-      - Kinematic
-      - Isotropic + Kinematic
-   - Multilinear plastic material
-   - Rigid-plastic material
-   
-   -----------------------------
-"""
-#
-# 
 #
 #
 class Materials(Mapping):
+    """This module stores material classes.
+       -------------------------------
+       Nonlinear materials:
+       - Nonlinear elastic material
+       - Bilinear elastoplastic material
+         Yield criterion:
+          - von Mises
+          - Treca
+          - Morh-Coulomb
+          - Drucker-Prager
+         Hardering rules:
+          - Isotropic
+          - Kinematic
+          - Isotropic + Kinematic
+       - Multilinear plastic material
+       - Rigid-plastic material
+       
+       -----------------------------
     """
-    """
-    __slots__ =  ['_type', '_labels', '_number',
-                  '_elastic', '_curve', '_default']
+    __slots__ = ['_material', '_default']
     
-    def __init__(self):
+    def __init__(self, mesh_type:str, db_file:Union[str,None]) -> None:
         """
         """
-        self._default:Union[str,None] = None
-        self._labels:List[Union[str,int]] = []
-        self._type:List[Union[str,int]] = []
-        self._number:List[int] = []
+        if mesh_type != "inmemory":
+            self._material = MaterialSQL(db_file=db_file,
+                                         db_system=mesh_type)
+        else:
+            self._material = MaterialInmemory()
         #
-        self._elastic = MaterialElastic(self)
-        self._curve = Curve(self)
+        self._default = None
+    #
     
     def __setitem__(self, material_name:Union[str, int], 
-                    material_type:str) -> None:
+                    properties: Union[List[float], Dict[str, float], str]) -> None:
         """
         """
-        try:
-            self._labels.index(material_name)
-            raise IOError('   error material {:} already exist'.format(material_name))
-        except ValueError:
-            _material_type = operations.find_material_type(material_type)
-            self._labels.append(material_name)
-            self._type.append(_material_type)
-            number = next(self.get_number())
-            self._number.append(number)
-            #
-            if 'curve' == _material_type :
-                self._curve[material_name]
-            elif 'elastic' == _material_type :
-                self._elastic[material_name] = [280_000_000] # default
-            else:
-                raise IOError(' material type {:} not recognised'
-                              .format(material_type))
+        # get material type
+        if isinstance (properties, str):
+            material_type = operations.find_material_type(properties) 
+            properties = []
+        else:
+            material_type = operations.find_material_type(properties[0])
+            properties = properties[1:]
         #
-    
+        # set material default plastic
+        if 'curve' == material_type :
+            raise Exception('--> Mat type No ready')
+        elif 'elastic' == material_type :
+            properties = operations.get_linear_mat_properties(properties)
+        else:
+            raise IOError(' material type {:} not recognised'
+                          .format(material_type))            
+        #
+        self._material[material_name] = [material_type, *properties]
+    #
     def __getitem__(self, material_name:str):
         """
         """
+        return self._material[material_name]
+    #
+    @property
+    def default(self):
+        """ """
+        return self._default
+    
+    @default.setter
+    def default(self, material_name):
+        """ """
         try:
-            _index = self._labels.index(material_name)
-            _material_type = self._type[_index]
-        except IndexError:
-            raise KeyError('Invalid material name : {:}'.format(material_name))
-        #
-        if 'curve' == _material_type :
-            return self._curve[material_name]
-        elif 'elastic' == _material_type :
-            return self._elastic[material_name]
-        else:
-            raise IOError(' material type {:} not recognised'
-                          .format(_material_type))
-    
-    def __delitem__(self, material_name: str) -> None:
-        """
-        """
-        #material_number = self._materials[material_name].number
-        del self._labels[material_name]
-        #del self._labels[material_number]
-    
-    def __len__(self):
-        return len(self._labels)
-    
+            self._material[material_name]
+        except KeyError:
+            raise IOError(f'material {material_name} missing')
+            
+        self._default = material_name
+    #
+    def __len__(self) -> float:
+        return len(self._material)
+
     def __iter__(self):
         """
         """
-        return iter(self._labels)
-    
-    def __contains__(self, value):
-        return value in self._labels
+        return iter(self._material)
+
+    def __contains__(self, value) -> bool:
+        return value in self._material
     #
-    # Modify material
-    #
-    #
-    #@property
-    def get_item_by_number(self, material_name):
-        """
-        """
-        #_items = {_item.number:key for key, _item in self._materials.items()}
-        try:
-            #material_name = _items[material_number]
-            return self.__getitem__(material_name)
-        except KeyError:
-            raise KeyError('Invalid material name')
-    #
-    def get_material(self):
-        """
-        """
-        summary = {}
-        for key, mat in self._labels.items():
-            summary[key] = mat._get_data()
-        return summary
-    #
-    def get_number(self, start:int=1)-> Iterable[int]:
-        """
-        """
-        try:
-            n = max(self._number) + 1
-        except ValueError:
-            n = start
+    def __str__(self, units:str="si") -> str:
+        """ """
+        stress = "N/mm2"
+        density = "kg/m3"
+        space = " "
         #
-        while True:
-            yield n
-            n += 1    
+        output = "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += f"{33*space}MATERIAL PROPERTIES\n"
+        output += "\n"
+        output += (f"Member ID      Fy [{stress}] Fu [{stress}] E  [{stress}] "
+                   f"G  [{stress}] Poisson    Rho[{density}]\n")
+        output += "\n"
+        output += "{:}\n".format(80*".")
+        output += "\n"
+        for name, mat in self._material.items():
+            output += "{:<14s} ".format(str(name))
+            output += mat.__str__()         
+            #output += "{:<14s} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E}\n"\
+            #    .format(str(name), mat.Fy.value, mat.Fu.value, mat.E.value,
+            #            mat.G.value, mat.poisson, mat.density.value)
+        return output
+#
+#

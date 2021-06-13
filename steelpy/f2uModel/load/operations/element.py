@@ -3,8 +3,8 @@
 # 
 
 # Python stdlib imports
-#from array import array
-#from collections.abc import Mapping
+from array import array
+from collections.abc import Mapping
 #from collections import defaultdict
 #from dataclasses import dataclass
 from typing import NamedTuple, Tuple, List, Union, Iterable, Dict  
@@ -40,6 +40,11 @@ class LineBeam(NamedTuple):
     system:int
     load_complex:int
     #
+    @property
+    def coordinate_system(self):
+        if self.system != 0:
+            return "local"
+        return "global"
     #
     def node_equivalent(self, elements, materials, sections):
         """ """
@@ -125,6 +130,18 @@ class LineBeam(NamedTuple):
             lnload[10] += eq_nload[3]
         #
         return lnload
+    #
+    def __str__(self, units:str="si") -> str:
+        """ """
+        output  = (f"{str(self.number):12s} {self.L0: 1.3e} {self.qx0: 1.3e} "
+                   f"{self.qy0: 1.3e} {self.qz0: 1.3e} "
+                   f"{self.coordinate_system.upper()}\n")
+        if (step := self.load_name) == "NULL":
+            step = 12 * " "
+        output += (f"{step[:12]:12s} {self.L1: 1.3e} {self.qx1: 1.3e} "
+                   f"{self.qy1: 1.3e} {self.qz1: 1.3e} "
+                   f"{self.load_complex}\n")
+        return output
 #
 #
 class PointBeam(NamedTuple):
@@ -142,6 +159,10 @@ class PointBeam(NamedTuple):
     system:int
     load_complex:int
     #
+    @property
+    def distance(self):
+        """ """
+        return self.L0
     #
     def node_equivalent(self, elements, materials, sections):
         """ """
@@ -253,7 +274,54 @@ class PointBeam(NamedTuple):
             lnload[11] -= eq_nload[3]
         #
         return lnload
+    #
+    @property
+    def coordinate_system(self):
+        if self.system != 0:
+            return "local"
+        return "global"    
+    #
+    def __str__(self, units:str="si") -> str:
+        """ """
+        output  = (f"{str(self.number):12s} {self.L0: 1.3e} {self.fx: 1.3e} "
+                   f"{self.fy: 1.3e} {self.fy: 1.3e} "
+                   f"{self.coordinate_system.upper()}\n")
+        if (step := self.load_name) == "NULL":
+            step = 12 * " "
+        output += (f"{step[:12]:12s} {10*' '} {self.mx: 1.3e} "
+                   f"{self.my: 1.3e} {self.mz: 1.3e} "
+                   f"{self.load_complex}\n")
+        return output    
 #
+#
+class BeamDistMaster(Mapping):
+    
+    def __init__(self) -> None:
+        """
+        """
+        self._labels: List[Union[str, int]] = []
+        self._title: List[str] = []
+        self._index: int
+        self._complex: array = array("I", [])
+        # 0-global/ 1-local
+        self._system_flag:int = 0
+        self._system: array = array("I", [])
+    #
+    def __len__(self) -> float:
+        return len(self._labels)
+    #
+    def __contains__(self, value) -> bool:
+        return value in self._labels
+    #
+    def __iter__(self) -> Iterable:
+        """
+        """
+        items = list(set(self._labels))
+        return iter(items)
+    #
+    def __str__(self) -> str:
+        """ """
+        print('---')    
 #
 # ---------------------------------
 #

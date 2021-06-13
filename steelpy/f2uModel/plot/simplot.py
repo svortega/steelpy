@@ -8,7 +8,7 @@ SimPlot 2.1  Provides basic plotting services based on Tk / Tkinter.
 from dataclasses import dataclass
 from tkinter import *
 from tkinter.messagebox import *
-from tkinter.simpledialog import askinteger, askstring, askfloat
+#from tkinter.simpledialog import askinteger, askstring, askfloat
 from tkinter.filedialog import *
 #from Canvas import Line, CanvasText, Rectangle
 Line = Canvas.create_line
@@ -22,7 +22,9 @@ from typing import NamedTuple, Dict, List, Tuple
 
 
 def minCoordinate(clist:List[float]):
-    if len(clist) < 2: return clist[0]
+    """ """
+    if len(clist) < 2: 
+        return clist[0]
     try:
         x,  y  = clist[0]
         for x1, y1 in clist[1:]:
@@ -33,7 +35,9 @@ def minCoordinate(clist:List[float]):
     return x, y
 
 def maxCoordinate(clist:List[float]):
-    if len(clist) < 2: return clist[0]
+    """ """
+    if len(clist) < 2: 
+        return clist[0]
     try:
         x,  y  = clist[0]
         for x1, y1 in clist[1:]:
@@ -43,30 +47,34 @@ def maxCoordinate(clist:List[float]):
         x, y = 0, 0
     return x, y
 
-def minBound(clist:List[float]):
-    x = 10000000
-    y = 10000000
+def minBound(clist:List[float], 
+             x:int = 10000000,
+             y:int = 10000000):
+    """ """
     for x1, y1 in clist:
         if x1 < x: x = x1
         if y1 < y: y = y1
     return x, y
 
-def maxBound(clist:List[float]):
-    x = -10000000
-    y = -10000000
+def maxBound(clist:List[float],
+             x:int = -10000000,
+             y:int = -10000000):
+    """ """
     for x1, y1 in clist:
         if x1 > x: x = x1
         if y1 > y: y = y1
     return x, y
 
-
-
+#
+#
 class SimPlot:
-    def __init__(self, root = Tk()):
-        self.root = root
+    def __init__(self):
+        #self.root = root
+        self.root = Tk()
         #pass
 
     def mainloop(self):
+        self.root.withdraw()
         self.root.mainloop()
 
     def makeLine(self, points:List[Tuple[float]], **attr):
@@ -154,9 +162,9 @@ class SimPlot:
         Return type: Reference to GraphBase object which contains the plot.
         """
         if points:
-            root = Toplevel()
-            f = Frame(root)
-            #f = Frame( self.root )
+            #root = Toplevel()
+            #f = Frame(root)
+            f = Frame(self.root)
             try: #if it is like a Monitor, take xlab, ylab from it
                 ylab = points.ylab
                 xlab = points.tlab
@@ -171,8 +179,8 @@ class SimPlot:
             graph.pack(side = LEFT, fill = BOTH, expand = YES)
             graph.draw(gr, xaxis = xaxis, yaxis = yaxis)
             #File menu
-            self.graphMenu(root, graph)
-            #self.graphMenu(self.root, graph)
+            #self.graphMenu(root, graph)
+            self.graphMenu(self.root, graph)
             f.pack()
             return graph
         else:
@@ -256,8 +264,9 @@ class SimPlot:
         'points' can be a Monitor instance.
         """
         if points != []:
-            root = Toplevel()
-            f = Frame(root)
+            #root = Toplevel()
+            #f = Frame(root)
+            f = Frame(self.root)
             try: #if it is like a Monitor, take xlab, ylab from it
                 ylab = points.ylab
                 xlab = points.tlab
@@ -274,7 +283,8 @@ class SimPlot:
             graph.pack(side = LEFT, fill = BOTH, expand = YES)
             graph.draw(gr, xaxis = xaxis, yaxis = yaxis)
             #File menu
-            self.graphMenu(root, graph)
+            #self.graphMenu(root, graph)
+            self.graphMenu(self.root, graph)
             f.pack()
             return graph
         else:
@@ -288,8 +298,9 @@ class SimPlot:
                     background = 'white', xlab = 'x', ylab = 'y',
                     xaxis = 'automatic', yaxis = 'automatic'):
         if points != []:
-            root = Toplevel()
-            f = Frame(root)
+            #root = Toplevel()
+            #f = Frame(root)
+            f = Frame(self.root)
             try: #if it is like a Monitor, take xlab, ylab from it
                 ylab = points.ylab
                 xlab = points.tlab
@@ -306,7 +317,8 @@ class SimPlot:
             graph.pack(side = LEFT, fill = BOTH, expand = YES)
             graph.draw(gr, xaxis = xaxis, yaxis = yaxis)
             #File menu
-            self.graphMenu(root, graph)
+            #self.graphMenu(root, graph)
+            self.graphMenu(self.root, graph)
             f.pack()
             return graph
         else:
@@ -632,10 +644,10 @@ class GraphBase(Frame):
                 return lower, upper
         
         if spec == 'automatic':
-            range = upper - lower
-            if range == 0.:
+            _range = upper - lower
+            if _range == 0.:
                 return lower - 0.5, upper + 0.5
-            log = math.log10(range)
+            log = math.log10(_range)
             power = math.floor(log)
             fraction = log - power
             if fraction <= 0.05:
@@ -799,7 +811,8 @@ class TextBox(Frame):
             if not filename[-3:] == '.ps':
                 filename += '.ps'
             self.canvas.postscript(width = self.width, height = self.height, file = filename)
-
+#
+#
 if __name__ == '__main__':
     """PARAMETER DEFAULTS:
     GraphBase
@@ -842,7 +855,7 @@ if __name__ == '__main__':
     """
     print('SimPlot.py')
     
-    plt = SimPlot()    
+    plt = SimPlot()
     
     #
     # ----------------------------------

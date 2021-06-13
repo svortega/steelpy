@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2021 fem2ufo
 # 
 
 # Python stdlib imports
@@ -8,7 +8,8 @@ from typing import Dict, Union, List
 
 
 # package imports
-from steelpy.f2uModel.load.main import Loading
+from steelpy.f2uModel.load.main import LoadingInmemory
+from steelpy.f2uModel.load.operations.operations import get_beam_line_load, get_beam_point_load
 
 
 class PointLoad:
@@ -84,22 +85,30 @@ class PointLoadConcept:
 #
 class BeamLoadSet:
     
-    __slots__ = ["_cls", "_beam", "_load_name"]
+    __slots__ = ["_cls", "_beam", "_load_name", "_beam_load"]
     
-    def __init__(self, cls, load_name, beam_load_type) -> None:
+    def __init__(self, cls, load_name, beam_load, load_type) -> None:
         """
         """
         self._cls = cls
-        self._beam = beam_load_type
+        self._beam = beam_load
         self._load_name = load_name
+        #
+        self._beam_load = get_beam_line_load
+        if "point" in load_type:
+            self._beam_load = get_beam_point_load
     #
     def __setitem__(self, load_name:Union[str,int],
                     load) -> None:
         """
         """
+        #
+        beam_line = self._beam_load(load)
+        #1/0
+        #
         beam_name = self._cls._beams[-1]
         self._beam.coordinate_system = self._cls._system_flag
-        self._beam[beam_name] = load
+        self._beam[beam_name] = beam_line
         self._beam.name = load_name
         self._cls._labels.append(load_name)
         index = len(self._cls._labels) - 1
@@ -142,8 +151,9 @@ class BeamLoadConcept:
     def point_load(self):
         """
         """
-        beam_load_type = self._cls._bload.basic[self._load_name]._beam_point
-        return BeamLoadSet(self._cls, self._load_name, beam_load_type)
+        beam_load = self._cls._bload.basic[self._load_name]._beam_point
+        load_type = "point"
+        return BeamLoadSet(self._cls, self._load_name, beam_load, load_type)
     
     #
     #
@@ -151,8 +161,9 @@ class BeamLoadConcept:
     def line_load(self):
         """
         """
-        beam_load_type = self._cls._bload.basic[self._load_name]._beam_line
-        return BeamLoadSet(self._cls, self._load_name, beam_load_type)
+        beam_load = self._cls._bload.basic[self._load_name]._beam_line
+        load_type = "line"
+        return BeamLoadSet(self._cls, self._load_name, beam_load, load_type)
     #
     #
     @property
@@ -244,7 +255,7 @@ class ConceptBasicLoad(Mapping):
     def __init__(self) -> None:
         """
         """
-        self._bload = Loading()
+        self._bload = LoadingInmemory()
         #
         self._load_case:List = []
         self._labels:List = []
