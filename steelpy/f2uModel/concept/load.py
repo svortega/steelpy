@@ -29,8 +29,9 @@ class PointLoad:
         """
         """
         node_name = self._cls._nodes[-1]
+        load |= {'title':load_name}
         self._point[node_name] = load
-        self._point.name = load_name
+        #self._point.name = load_name
         #
         self._cls._labels.append(load_name)
         index = len(self._cls._labels) - 1
@@ -104,12 +105,12 @@ class BeamLoadSet:
         """
         #
         beam_line = self._beam_load(load)
-        #1/0
+        beam_line[-1] = load_name
         #
         beam_name = self._cls._beams[-1]
         self._beam.coordinate_system = self._cls._system_flag
         self._beam[beam_name] = beam_line
-        self._beam.name = load_name
+        #self._beam.name = load_name
         self._cls._labels.append(load_name)
         index = len(self._cls._labels) - 1
         try:
@@ -131,6 +132,7 @@ class BeamLoadSet:
         #print('---')
     #
     def __iter__(self):
+        print('===')
         # return self._beam.__iter__()
         for key, item in self._beam.items():
             yield key, item

@@ -18,9 +18,6 @@ from steelpy.f2uModel.results.sqlite.operation.process_sql import create_connect
 #
 class NodeLoadSQL(NodeLoadBasic):
     __slots__ = ['_cls', '_labels', '_load_number']
-                 #'_system', '_title',
-                 #'_system_flag', '_load_name', '_index',
-                 #'_complex']
     
     def __init__(self, cls) -> None:
         """
@@ -145,8 +142,6 @@ class NodeLoadSQL(NodeLoadBasic):
         conn = create_connection(bd_file)
         create_table(conn, _table_node_load)
     #
-    #
-    #@property
     def get_group_nodes(self):
         """
         """
@@ -169,7 +164,6 @@ class NodeLoadSQL(NodeLoadBasic):
         except ValueError:
             return items
     #
-    #
     def get_sum_column(self, conn, node_name, load_number):
         """ """
         project = (node_name, load_number,)
@@ -180,17 +174,17 @@ class NodeLoadSQL(NodeLoadBasic):
         record = cur.fetchone()
         return record
     #
-    #
     def update(self, other) -> None:
         """
         """
         pl = other._point
         try:
-            title = pl.name
-            for index, node_name in enumerate(pl._labels):
-                point_load = [pl._fx[index], pl._fy[index], pl._fz[index],
-                              pl._mx[index], pl._my[index], pl._mz[index],
-                              title]
+            index = pl._index
+            #node_name = pl._labels[index]
+            for x, node_name in enumerate(pl._labels):
+                point_load = [pl._fx[x], pl._fy[x], pl._fz[x],
+                              pl._mx[x], pl._my[x], pl._mz[x],
+                              pl._title[x]]
                 self.__setitem__(node_name, point_load)
         except AttributeError:
             pass        
@@ -211,7 +205,7 @@ class NodeLoadSQL(NodeLoadBasic):
         items = [self._labels[x] for x in indexes]        
         return value in items
     #
-    def __iter__(self)-> Iterable:
+    def __iter__(self):
         """
         """
         index = self._cls._index
@@ -219,6 +213,7 @@ class NodeLoadSQL(NodeLoadBasic):
         indexes = [x for x, item in enumerate(self._load_number)
                  if item == load_name]
         items = [self._labels[x] for x in indexes]
+        items = list(set(items))
         return iter(items)
 #
 #

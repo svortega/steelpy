@@ -105,7 +105,6 @@ class BeamDistributedIM(BeamDistMaster):
             #self.load_name = load_name
             raise IndexError("load name not found")    
     #
-    #
     @property
     def coordinate_system(self):
         if self._system_flag != 0:
@@ -122,7 +121,6 @@ class BeamDistributedIM(BeamDistMaster):
             self._system_flag = 1
         
     #
-
     def __delitem__(self, element_name: int) -> None:
         """
         """
@@ -178,7 +176,6 @@ class BeamPointIM(NodeLoadMaster):
         """
         """
         super().__init__()
-    #
     #
     def __setitem__(self, element_name:Union[int, str], 
                     point_load: Union[List[float], Dict[str,float]]) -> None:

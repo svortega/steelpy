@@ -55,6 +55,23 @@ class Nodes(Mapping):
     def __contains__(self, value) -> bool:
         return value in self._nodes
     #
+    def __str__(self, units:str="si") -> str:
+        """ """
+        lenght = ' m'
+        space = " "
+        output = "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += f"{33*space}NODES\n"
+        output += "\n"
+        output += (f"Node {12*space} x  [{lenght}] {4*space} y  [{lenght}] {4*space} z  [{lenght}] ")        
+        output += "\n"
+        output += "{:}\n".format(80*".")
+        output += "\n"        
+        for key, node in self._nodes.items():
+            output += node.__str__()
+        return output
+    #
     def get_node_name(self, coordinates, tol: float = 0.01):
         """ """
         return self._nodes.get_point_name(coordinates, tol)

@@ -101,11 +101,10 @@ class BeamDistributedSQL(BeamDistMaster):
         """
         index = self._cls._index
         load_name = self._cls._labels[index]
-        load_list = list(set(self._load_number))
-        indexes = [x for x, item in enumerate(load_list)
+        indexes = [x for x, item in enumerate(self._load_number)
                    if item == load_name]
         items = [self._labels[x] for x in indexes]        
-        #items = list(set(self._labels))
+        items = list(set(items))
         return iter(items)
     #
     #@property
@@ -320,10 +319,10 @@ class BeamPointSQL(Mapping):
         """
         index = self._cls._index
         load_name = self._cls._labels[index]
-        load_list = list(set(self._load_number))
-        indexes = [x for x, item in enumerate(load_list)
+        indexes = [x for x, item in enumerate(self._load_number)
                    if item == load_name]
         items = [self._labels[x] for x in indexes]
+        items = list (set(items))
         return iter(items)
     #    
     #

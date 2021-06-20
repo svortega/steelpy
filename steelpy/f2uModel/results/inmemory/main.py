@@ -233,8 +233,8 @@ class BeamForce:
                                  load_type=ltype, items=item)
         return basic
     #
-    def _get_forces_items(self):
-        """ """
-        pass
+    #def _get_forces_items(self):
+    #    """ """
+    #    pass
 #
 #

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2021 fem2ufo
+# Copyright (c) 2009-2021 steelpy
 #
 # Python stdlib imports
 # from math import fsum
@@ -9,9 +9,7 @@ from typing import List #, NamedTuple, Union
 from itertools import chain
 #
 # package imports
-from steelpy.trave3D.preprocessor.assemble import Rmatrix # get_element_K, 
-#from steelpy.trave3D.processor.operations import zeros
-#from steelpy.f2uModel.load.operations.basic_load import get_basic_load
+from steelpy.trave3D.preprocessor.assemble import Rmatrix 
 from steelpy.trave3D.processor.operations import zeros, matAbd, trns_3Dv
 from steelpy.process.math.vector import Vector
 #

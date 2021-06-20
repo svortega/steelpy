@@ -125,9 +125,17 @@ class BeamElement:
     #
     #
     def __str__(self) -> str:
-        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f}"\
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:
+            data = get_element_data(conn, self.name)
+        #title =  data[-1]
+        if (title := data[-1]) == "NULL":
+            title = ""        
+        #
+        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f} {:>12s}\n"\
                .format(self.name, *self.connectivity,
-                       self.material, self.section, self.beta)    
+                       self.material, self.section, self.beta, title)
     #
     #
     @property
@@ -280,12 +288,15 @@ class ElementSQL(Mapping):
         # connectivity
         push_connectivity(conn, element_number, parameters[1:3])
         #
-        try:
-            roll_angle = parameters[5]
-        except IndexError:
-            roll_angle = 0.0
+        #try:
+        roll_angle = parameters[5]
+        #except IndexError:
+        #    roll_angle = 0.0
         #print('-->')
-        project = (element_number, None, 
+        if (title := parameters[6]) == "NULL":
+            title = None
+        #
+        project = (element_number, title, 
                    parameters[0],
                    materials[parameters[3]],
                    sections[parameters[4]],
@@ -462,7 +473,7 @@ def get_element_data(conn, element_name):
     """ """
     cur = conn.cursor()
     cur.execute ("SELECT tb_Elements.name, tb_Elements.number, tb_Elements.type,\
-                tb_Elements.roll_angle, tb_Materials.name, tb_Sections.name\
+                tb_Elements.roll_angle, tb_Materials.name, tb_Sections.name, tb_Elements.title\
                 FROM tb_Elements, tb_Materials, tb_Sections\
                 WHERE tb_Elements.name = {:} \
                 AND tb_Elements.material = tb_Materials.number \
@@ -470,7 +481,7 @@ def get_element_data(conn, element_name):
     row = cur.fetchone()
     #
     connodes = get_connectivity(conn, element_name)
-    data = [*row[0:6], connodes]
+    data = [*row[:6], connodes, row[-1]]
     #conn.close ()
     return data
 #

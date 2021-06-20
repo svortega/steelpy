@@ -62,14 +62,15 @@ class Meshing:
                     # elements [node1, node2, material, section]
                     elements[_mnumber] = ['beam', node_res, new_node,
                                           step.material.name, 
-                                          step.section.name, beam.beta]
+                                          step.section.name, 
+                                          beam.beta, key]
                     node_res = new_node
                 except ZeroDivisionError:
                     # elements [node1, node2, material, section]
                     elements[_mnumber] = ['beam', node_res, node_end,
                                           step.material.name, 
                                           step.section.name, 
-                                          beam.beta]
+                                          beam.beta, key]
             #print('-->')
         #print('end meshing')
     #
@@ -100,7 +101,7 @@ class Meshing:
             point = value.point
             try:
                 node_id = nodes.get_node_name(point)
-                boundaries.node[node_id] = support[:6]
+                boundaries.node[node_id] = [*support[:6], key]
                 print("Boundary: ", key, " @ Node: ", node_id)
             except IOError:
                 missing.append(key)
@@ -247,7 +248,7 @@ class Meshing:
             #pl = concept_bload.point
             basic_load[load_name].point_node.update(lcase.point.load)
         #
-        #print(' end meshing load')
+        #print('')
     #
 #
 #

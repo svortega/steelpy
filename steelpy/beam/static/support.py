@@ -351,9 +351,12 @@ class Support(Mapping):
         output += "\n"
         _reactions = self.__call__()
         for x, support_name in enumerate(self._labels):
-            output += "Support {:} : {:}\n".format(support_name, self._fixity[x])
-            output += _reactions[x].__str__()
-            output += "\n"
+            try:
+                output += "Support {:} : {:}\n".format(support_name, self._fixity[x])
+                output += _reactions[x].__str__()
+                output += "\n"
+            except IndexError:
+                continue
         return output
 #
 #

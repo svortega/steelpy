@@ -118,9 +118,11 @@ class NodeLoadInMemory(NodeLoadMaster):
     def update(self, other) -> None:
         """
         """
+        #1/0
         pl = other._point
         try:
-            _name = pl.name
+            #_name = pl.name
+            index = pl._index
             # update
             self._labels.extend(pl._labels)
             self._title.extend(pl._title)

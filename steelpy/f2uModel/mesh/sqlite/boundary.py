@@ -26,8 +26,10 @@ class BoundaryItem(NamedTuple):
     node:int
     
     def __str__(self) -> str:
-        return "{: 14.5f} {: 14.5f} {: 14.5f} {: 14.5f} {: 14.5f} {: 14.5f}".format(self.x, self.y, self.z,
-                                                                                    self.rx, self.ry, self.rz)
+        if (name := self.name) == 'NULL':
+            name = ""
+        return "{:12d} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {:>12s}\n"\
+            .format(self.node, self.x, self.y, self.z, self.rx, self.ry, self.rz, name)
 
 
 #
@@ -98,7 +100,12 @@ class BoundaryNodeSQL(Mapping):
     def _push_boundary(self, conn, node_name, fixity):
         """
         """
-        project = (None, node_name, *fixity[:6])
+        try:
+            title = fixity[6]
+        except IndexError:
+            title = None
+
+        project = (title, node_name, *fixity[:6])
         sql = 'INSERT INTO tb_Boundaries(title, node_name,\
                                          x, y, z, rx, ry, rz)\
                                          VALUES(?,?,?,?,?,?,?,?)'

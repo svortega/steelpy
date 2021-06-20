@@ -234,7 +234,7 @@ class CoordCartesian(NamedTuple):
     #    self.boundaries[self.number] = value
 
     def __str__(self) -> str:
-        return "{:12d} {: 12.5f} {: 12.5f} {: 12.5f}"\
+        return "{:12d} {: 12.5f} {: 12.5f} {: 12.5f}\n"\
             .format(self.name, self.x, self.y, self.z)
 
     def __eq__(self, other) -> bool:

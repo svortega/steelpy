@@ -44,17 +44,24 @@ class Elements(Mapping):
             node_2 = parameters[2]
             material = parameters[3]
             section = parameters[4]
+            #
+            if isinstance(parameters[-1], str):
+                title = parameters.pop()
+            else:
+                title = "NULL"
+            #
             try:
                 roll_angle = parameters[5]
             except IndexError:
                 roll_angle = 0.0
         elif isinstance(parameters, dict):
-            pass
+            1/0
         else:
             raise Exception('   *** Element input format not recognized')
         #
         self._elements[element_number] = [element_type, node_1, node_2, 
-                                          material, section, roll_angle]
+                                          material, section, 
+                                          roll_angle, title]
     #
     def __getitem__(self, element_number:str):
         """
@@ -71,6 +78,23 @@ class Elements(Mapping):
 
     def __contains__(self, value) -> bool:
         return value in self._elements
+    #
+    def __str__(self, units:str="si") -> str:
+        """ """
+        lenght = ' m'
+        space = " "
+        output = "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += f"{33*space}ELEMENTS\n"
+        output += "\n"
+        output += (f"Element     node1    node2 {4*space} material {4*space} section {4*space} beta {4*space} title")        
+        output += "\n"
+        output += "{:}\n".format(80*".")
+        output += "\n"
+        for key, element in self._elements.items():
+            output += element.__str__()
+        return output
     #
     @property
     def get_free_nodes(self):

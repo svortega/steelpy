@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2021 steelpy
 #
 # Python stdlib imports
 from itertools import chain
@@ -161,6 +161,7 @@ def assemble(idof, jdof, jbc, a, aa):
                         aa[ieqn2-1][jband] += a[i][j]
                     else:
                         jband = (ieqn2 - ieqn1)
+                        # TODO: check index = jband - 1
                         aa[ieqn1-1][jband] += a[i][j]
                 except ZeroDivisionError:
                     continue
@@ -268,7 +269,8 @@ def max_bandwidth(elements, nodes, jbc):
     
     npi ,npj, jbc, nel
     """
-    ibndm3 = []
+    #ibndm3 = [0]
+    ibndm4 = [0]
     for key, element in elements.items():
         conn = element.connectivity
         # end 1
@@ -278,13 +280,22 @@ def max_bandwidth(elements, nodes, jbc):
         end_2 = nodes[conn[1]].index
         bc2 = jbc[end_2]
         #
+        ieqn = bc1 + bc2
+        #
         try:
-            ibndm3.append(max([abs(ieqn1 - ieqn2)
-                              for ieqn1 in bc1 if ieqn1 > 0
-                              for ieqn2 in bc2 if ieqn2 > 0 ]))
+            ibndm4.append(max([abs(ieqn1 - ieqn2)
+                               for x, ieqn1 in enumerate(ieqn) if ieqn1 > 0
+                               for ieqn2 in ieqn[x+1:] if ieqn2 > 0]))
+            #ibndm3.append(max([abs(ieqn1 - ieqn2)
+            #                  for ieqn1 in bc1 if ieqn1 > 0
+            #                  for ieqn2 in bc2]))
+            #ibndm3.append(max([abs(ieqn1 - ieqn2)
+            #                  for ieqn1 in bc1 if ieqn1 > 0
+            #                  for ieqn2 in bc2 if ieqn2 > 0]))
         except ValueError:
             continue
-    return max(ibndm3) + 1
+    #
+    return max(ibndm4) + 1
 #
 def bd_condition(nodes, boundaries):
     """
@@ -361,8 +372,8 @@ def get_bandwidth(elements, nodes, boundaries, free_nodes):
                            boundaries=boundaries, 
                            free_nodes=free_nodes)
     #
-    iband = max_bandwidth(elements=elements, 
-                          nodes=nodes, jbc=jbcc)
+    iband = max_bandwidth(elements=elements, nodes=nodes,
+                          jbc=jbcc)
     return jbcc, neq, iband
 #    
 #

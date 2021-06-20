@@ -279,9 +279,11 @@ class BeamElement:
     #
     #
     def __str__(self) -> str:
-        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f}"\
+        if (title := self._elements._title[self.index]) == "NULL":
+            title = ""
+        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f} {:>12s}\n"\
                .format(self.name, *self.connectivity,
-                       self.material, self.section, self.beta)
+                       self.material, self.section, self.beta, title)
     #
     #
     #@property
@@ -388,7 +390,7 @@ class ElementInMemory(Mapping):
     __slots__ = ['_labels', '_number','_type', '_connectivity', '_element',
                  '_sections', '_materials', '_mesh', '_releases',  '_roll_angle',
                  '_direction_cosines', '_eccentricities', '_offset_index',
-                 '_f2u_nodes', '_f2u_materials', '_f2u_sections']
+                 '_f2u_nodes', '_f2u_materials', '_f2u_sections', '_title']
 
     
     def __init__(self, nodes, materials, sections) -> None:
@@ -409,7 +411,7 @@ class ElementInMemory(Mapping):
         #
         self._labels: array = array('i', [])
         self._number: array = array('i', [])
-        #self._sections = array('i', [])
+        self._title: List = []
         #self._materials = array('i', [])
         self._sections:List[Union[str,int]] = []
         self._materials:List[Union[str,int]] = []
@@ -460,7 +462,7 @@ class ElementInMemory(Mapping):
             self._materials.append(parameters[3])
             self._sections.append(parameters[4])
             self._roll_angle.append(parameters[5])
-            #self._properties.append(-1)
+            self._title.append(parameters[6])
             #self._offset_index.append(-1)
             #self._direction_cosines.append(-1)
             # should be in demand

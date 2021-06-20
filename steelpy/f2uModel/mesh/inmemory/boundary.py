@@ -27,8 +27,10 @@ class BoundaryItem(NamedTuple):
     node:int
     
     def __str__(self) -> str:
-        return "{: 14.5f} {: 14.5f} {: 14.5f} {: 14.5f} {: 14.5f} {: 14.5f}".format(self.x, self.y, self.z,
-                                                                                    self.rx, self.ry, self.rz)
+        if (name := self.name) == 'NULL':
+            name = ""
+        return "{:12d} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {:>12s}\n"\
+            .format(self.node, self.x, self.y, self.z, self.rx, self.ry, self.rz, name)
 
 
 #
@@ -80,6 +82,7 @@ class BoundaryNodes(Mapping):
             self._labels.index(node_number)
             raise Warning('    *** warning node {:} already exist'.format(node_number))
         except ValueError:
+            title = "NULL"
             if isinstance(value, str):
                 if re.match(r"\b(fix(ed)?)\b", value, re.IGNORECASE):
                     #self._title.append('fixed')
@@ -103,6 +106,12 @@ class BoundaryNodes(Mapping):
                 self._rz.append(value[5])
             else:
                 if isinstance( value, (list, tuple) ):
+                    #if isinstance(value[6], str):
+                    try:
+                        value[6]
+                        title = value.pop()
+                    except IndexError:
+                        pass
                     self._x.append(value[0])
                     self._y.append(value[1])
                     self._z.append(value[2])
@@ -116,12 +125,16 @@ class BoundaryNodes(Mapping):
                     self._rx.append(value['rx'])
                     self._ry.append(value['ry'])
                     self._rz.append(value['rz'])
+                    try:
+                        title = value['title']
+                    except KeyError:
+                        pass
                 else:
                     raise IOError('*** error input format not recognized')
             #
             self._labels.append(node_number)
             self._number.append(self._labels.index(node_number))
-            self._title.append(None)
+            self._title.append(title)
             # _type = _bound_type[_type]
 
     #
