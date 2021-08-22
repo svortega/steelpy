@@ -17,12 +17,11 @@ from typing import Dict, List, ClassVar, Tuple, Iterable, Union
 
 # package imports
 #from steelpy.interface.properties.beam import HydroBeamProperties
-from steelpy.f2uModel.mesh.inmemory.geometry import DirectionCosines, Eccentricities
-from steelpy.f2uModel.mesh.inmemory.geometry import Releases
-from steelpy.trave3D.preprocessor.assemble import (beam_stiffness, beam_Ks,
-                                                   trans_3d_beam, Rmatrix)
-# from steelpy.properties.codecheck.codecheck import CodeCheck
-
+#from steelpy.f2uModel.mesh.inmemory.geometry import DirectionCosines, Eccentricities
+#from steelpy.f2uModel.mesh.inmemory.geometry import Releases
+from steelpy.trave3D.preprocessor.assemble import beam_Ks, trans_3d_beam, Rmatrix
+#from steelpy.beam.main import Beam
+from steelpy.f2uModel.mesh.operations.element import BeamBasic
 #
 @functools.lru_cache(maxsize=2048)
 def get_node_end(_number_nodes: int, line: int) -> Tuple[int, int]:
@@ -281,17 +280,25 @@ class BeamElement:
     def __str__(self) -> str:
         if (title := self._elements._title[self.index]) == "NULL":
             title = ""
-        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f} {:>12s}\n"\
+        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f} {:>6.3f} {:>12s}\n"\
                .format(self.name, *self.connectivity,
-                       self.material, self.section, self.beta, title)
+                       self.material, self.section, self.beta,
+                       self.length, title)
     #
     #
     #@property
-    #def properties(self) -> List:
-    #    """
-    #    """
-    #    # property_number = self._elements._properties[self.index]
-    #    return self._elements._f2u_properties[self.index]
+    def beam(self) -> BeamBasic:
+        """
+        """
+        section = self.section
+        section = self._elements._f2u_sections[section]
+        section = section.properties
+        material = self.material
+        material = self._elements._f2u_materials[material]
+        beam = BeamBasic(L=self.length, 
+                         E=material.E.convert('pascal').value, 
+                         Iy=section.Iy, Iz=section.Iz)  
+        return beam
     #
     # @properties.setter
     # def properties(self, property_number:int) -> None:
@@ -348,33 +355,28 @@ class BeamElement:
         section = self._elements._f2u_sections[self.section].properties
         material = self._elements._f2u_materials[self.material]
         # solve K matrix
-        R = Rmatrix(*self.unit_vector, self.beta)
-        # R = Rmatrix(*self.direction_cosines, self.beta)
-        # K = beam_stiffness(self.length,
-        #                   section.area,
-        #                   section.J,
-        #                   section.Iy,
-        #                   section.Iz,
-        #                   material.E,
-        #                   material.G)
         K = beam_Ks(self.length,
                     section.area, section.J,
                     section.Iy, section.Iz,
                     material.E.convert("pascal").value, 
                     material.G.convert("pascal").value,
                     section.area, section.area)
-        return trans_3d_beam(K, R)
-    ##
-    #@property
-    #def R(self):
-    #    """
-    #    Rotation matrix
-    #    """
-    #    if self.type in ['beam', 'truss']:
-    #        beta = self._elements._roll_angle[self.index]
-    #        return Rmatrix(*self.unit_vector, beta)
-    #    else:
-    #        raise IOError("no yet included")        
+        return trans_3d_beam(K, self.R)
+        #return self.trans3d(K)
+    #
+    @property
+    def R(self):
+        """
+        Rotation matrix
+        """
+        if self.type in ['beam', 'truss']:
+            return Rmatrix(*self.unit_vector, self.beta)
+        else:
+            raise IOError("no yet included")
+    #
+    #def trans3d(self,M):
+    #    """ 3-d coordinate transformations"""
+    #    return trans_3d_beam(M, self.R)
     #
     @property
     def DoF(self):
@@ -382,7 +384,7 @@ class BeamElement:
         """
         dof = []
         for _node in self._elements._connectivity[self.index]:
-            dof.append((self._elements._f2u_nodes[_node].index) * 6)
+            dof.append(self._elements._f2u_nodes[_node].index)
         return dof
 #
 #

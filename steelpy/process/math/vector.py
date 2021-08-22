@@ -5,6 +5,7 @@
 # Python stdlib imports
 from array import array
 from dataclasses import dataclass
+from math import fsum
 from typing import Dict, List, ClassVar, Tuple, Iterable, Union
 
 # -----------------------------------------------------------------------
@@ -67,7 +68,7 @@ class Vector:
         """Return the inner product of self and Vector object other."""
         if not isinstance(other, Vector):
             raise TypeError("must be a vector class")
-        result = sum([x * y for x, y in zip(self._coords, other)])
+        result = fsum([x * y for x, y in zip(self._coords, other)])
         return result
 
     def __abs__(self) -> float:

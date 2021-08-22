@@ -6,7 +6,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from math import factorial
-from typing import NamedTuple, Dict, List, Tuple, Union, Iterator
+from typing import NamedTuple, Dict, List, Tuple, Union, Iterator, ClassVar
 
 
 # package imports
@@ -16,15 +16,12 @@ from steelpy.process.units.main import Units
 #
 #@dataclass
 class ReacRes(NamedTuple):
+    """Reactions"""
     R:Units
     M:Units
     theta:Units
     w:Units
-    #
-    #R_outplane: Units
-    #M_outplane:Units
-    #theta_outplane:Units
-    #w_outplane:Units
+
     def __str__(self) -> str:
         """ """
         output = ""
@@ -67,7 +64,7 @@ class ReactPlane:
         output += "theta  [rad]  {: 1.4E} {: 1.4E}\n".format(self.in_plane.theta.value,
                                                              self.out_plane.theta.value)
         output += "delta  [m  ]  {: 1.4E} {: 1.4E}\n".format(self.in_plane.w.value,
-                                            self.out_plane.w.value)
+                                                             self.out_plane.w.value)
         return output
 #       
 class FuncRes(NamedTuple):
@@ -169,10 +166,11 @@ class Support(Mapping):
         """ """
         L, I_plane, E = self._get_properties()
         loadres = {"in_plane":None, "out_plane":None}
+        loading = self.cls.load
         for plane in loadres.keys():
             V=[]; M=[]; theta=[]; w=[]; x=[]
             try:
-                for load in self.cls.load:
+                for load in loading:
                     V.append(load[plane].V(L))
                     M.append(load[plane].M(L))
                     theta.append(load[plane].theta(L, E, I_plane[plane]))
@@ -193,7 +191,7 @@ class Support(Mapping):
         L = self.cls.beam_length
         return L, I_plane, E
     #
-    def _get_support_1(self, load):
+    def _get_supports(self, load):
         """ solve support 1 according determined boundary conditions"""
         L, I_plane, E = self._get_properties()
         #
@@ -205,24 +203,33 @@ class Support(Mapping):
             self._labels.append(2)
             self._reactions.append(-1)
             self._supcoord.append(-1)
+        #
         suppfun = self._support_func(supp_1, supp_2)
+        #suppfun = SupportBasic(L)
+        #suppfun.supports([supp_1, supp_2])
         #
         supp = {"in_plane":None, "out_plane":None}
         for key, item in load.items():
+            #suppfun.properties(E=E, I=I_plane[key],
+            #                   k1=self._k[0][key],
+            #                   k2=self._k[1][key])
             if not item:
-                supp[key] = SuppBasic(E=E, I=I_plane[key],
-                                      FV=0, FM=0, Ftheta=0, Fw=0)
+                supp[key] = SuppBasic(L=L, E=E, I=I_plane[key])
                 continue
             try:
-                supp[key] = suppfun(E=E, I=I_plane[key],
-                                    FV=item.FV, FM=item.FM,
-                                    Ftheta=item.Ftheta, Fw=item.Fw,
+                supp[key] = suppfun(L=L, E=E, I=I_plane[key],
                                     k=self._k[0][key])
             except TypeError: # Two springs data
-                supp[key] = suppfun(E=E, I=I_plane[key],
-                                    FV=item.FV, FM=item.FM,
-                                    Ftheta=item.Ftheta, Fw=item.Fw,
-                                    k1=self._k[0][key], k2=self._k[1][key])                
+                supp[key] = suppfun(L=L, E=E, I=I_plane[key],
+                                    k1=self._k[0][key], k2=self._k[1][key])
+            #
+            supp[ key ].load(FV=item.FV, FM=item.FM,
+                         Ftheta=item.Ftheta, Fw=item.Fw)
+            supp[ key ].reactions()
+            #suppfun.load(FV=item.FV, FM=item.FM,
+            #             Ftheta=item.Ftheta, Fw=item.Fw)
+            #suppfun.load(item)
+            #supp[ key ]= suppfun.reactions()
         return supp
     #
     def _get_support_2(self, load, support_1):
@@ -238,8 +245,8 @@ class Support(Mapping):
             supp[key] = Response(E=E, I=I_plane[key])
             supp[key].load(FV=item.FV, FM=item.FM,
                            Ftheta=item.Ftheta, Fw=item.Fw)
-            supp[key].reacctions(support_1[key].V(L), support_1[key].M(L), 
-                                 support_1[key].theta(L), support_1[key].w(L))
+            supp[key].reacctions(support_1[key].V0, support_1[key].M0,
+                                 support_1[key].theta0, support_1[key].w0)
         return supp
     #
     def __call__(self):
@@ -250,25 +257,34 @@ class Support(Mapping):
         load = self._get_load()
         L = self.cls.beam_length
         #
-        supports = [self._get_support_1(load)]
+        supports = self._get_supports(load)
         #
-        supports.append(self._get_support_2(load, supports[0]))
+        #supports.append(self._get_support_2(load, supports[0]))
         #
         units = Units()
-        for index, item in enumerate(self._labels):
-            #fixity = self.cls._fixity[index]
-            in_plane = ReacRes(R= supports[index]["in_plane"].V(L)*units.N,
-                               M= supports[index]["in_plane"].M(L)*units.N*units.m,
-                               theta= supports[index]["in_plane"].theta(L)*units.radians,
-                               w= supports[index]["in_plane"].w(L)*units.m)
-            #
-            out_plane = ReacRes(R= supports[index]["out_plane"].V(L)*units.N,
-                                M= supports[index]["out_plane"].M(L)*units.N*units.m,
-                                theta= supports[index]["out_plane"].theta(L)*units.radians,
-                                w= supports[index]["out_plane"].w(L) *units.m) 
-            #
-            self._reactions[index] = ReactPlane(in_plane, out_plane)
-        #print('--')
+        #for index, item in enumerate(self._labels):
+        # End 1
+        in_plane = ReacRes(R= supports["in_plane"].V0*units.N,
+                           M= supports["in_plane"].M0*units.N*units.m,
+                           theta= supports["in_plane"].theta0*units.radians,
+                           w= supports["in_plane"].w0*units.m)
+        #
+        out_plane = ReacRes(R= supports["out_plane"].V0*units.N,
+                            M= supports["out_plane"].M0*units.N*units.m,
+                            theta= supports["out_plane"].theta0*units.radians,
+                            w= supports["out_plane"].w0 *units.m)
+        self._reactions[0] = ReactPlane(in_plane, out_plane)
+        # End 2
+        in_plane = ReacRes(R= supports["in_plane"].V1*units.N,
+                           M= supports["in_plane"].M1*units.N*units.m,
+                           theta= supports["in_plane"].theta1*units.radians,
+                           w= supports["in_plane"].w1*units.m)
+        #
+        out_plane = ReacRes(R= supports["out_plane"].V1*units.N,
+                            M= supports["out_plane"].M1*units.N*units.m,
+                            theta= supports["out_plane"].theta1*units.radians,
+                            w= supports["out_plane"].w1 *units.m)
+        self._reactions[1] = ReactPlane(in_plane, out_plane)
         return self._reactions
     #
     def _support_func(self, supp1, supp2):
@@ -414,60 +430,109 @@ class Response:
 #
 @dataclass
 class SuppBasic:
-    __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw']
+    __slots__ = ['L', 'E', 'I', '_response',
+                 'FV', 'FM', 'Ftheta', 'Fw',
+                 'V1', 'M1', 'w1', 'theta1']
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float) -> None:
+    def __init__(self, L:float, E: float, I: float) -> None:
         """
         """
+        self.L:float = L
         self.E:float = E
         self.I:float = I
+        #
+        #self.FV:float = 0
+        #self.FM:float = 0
+        #self.Ftheta:float = 0
+        #self.Fw:float = 0
+        # spring stiffness
+        #self.k1 = k1
+        #self.k2 = k2
+        self._response = Response(E=self.E, I=self.I)
+    #
+    def load(self, FV:float, FM:float, Ftheta:float, Fw:float):
+        """ """
         self.FV:float = FV
         self.FM:float = FM
         self.Ftheta:float = Ftheta
         self.Fw:float = Fw
-        # spring stiffness
-        #self.k1 = k1
-        #self.k2 = k2
+        # set response function
+        self._response.load(FV=FV, FM=FM, Ftheta=Ftheta, Fw=Fw)
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear """
         return 0     
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
         return 0
     #
-    def theta(self, L:float):
+    @property
+    def theta0(self):
         """ Slope"""
         return 0
     #
-    def w(self, L:float) -> float:
+    @property
+    def w0(self) -> float:
         """ Deflection"""
         return 0
     #
     #
-    def _spring_1(self, k1:float, L:float):
+    def _spring_1(self, k1:float):
         """ """
         #
-        A7 = 1 + k1 * L / (3*self.E*self.I)
-        A8 = 1/L + k1 / (2*self.E*self.I)
-        A9 = 1 + k1 * L / (4*self.E*self.I)
-        A10 = 1 + k1 * L / (self.E*self.I)
-        A11 = 3*self.E*self.I /L**3  + 3*k1 /L**2
+        A7 = 1 + k1 * self.L / (3*self.E*self.I)
+        A8 = 1/self.L + k1 / (2*self.E*self.I)
+        A9 = 1 + k1 * self.L / (4*self.E*self.I)
+        A10 = 1 + k1 * self.L / (self.E*self.I)
+        A11 = 3*self.E*self.I /self.L**3  + 3*k1 /self.L**2
         return  A7,A8,A9,A10,A11
     #
-    def _spring_2(self, k2:float, L:float):
+    def _spring_2(self, k2:float):
         """ """
-        A1 = 1/L - k2 / (2*self.E*self.I)
+        A1 = 1/self.L - k2 / (2*self.E*self.I)
         A2 = k2 * self.Ftheta - self.FM
-        A3 = 1 - k2 * L / (3*self.E*self.I)
-        A4 = 1 - k2 * L / (4*self.E*self.I)
-        A5 = 1 - k2 * L / (2*self.E*self.I)
-        A6 = 1 - k2 * L / (self.E*self.I)
+        A3 = 1 - k2 * self.L / (3*self.E*self.I)
+        A4 = 1 - k2 * self.L / (4*self.E*self.I)
+        A5 = 1 - k2 * self.L / (2*self.E*self.I)
+        A6 = 1 - k2 * self.L / (self.E*self.I)
         return A1, A2, A3, A4, A5, A6
-    #    
-#
+    #
+    #
+    @property
+    def respose(self):
+        """ """
+        return self._response
+    #
+    def reactions(self):
+        """
+        L : Length of the beam
+        """
+        #self._V0 = self.V(L)
+        #self._M0 = self.M(L)
+        #self._theta0 = self.theta(L)
+        #self._w0 = self.w(L)
+        self.V1, self.M1, self.theta1, self.w1 = self.__call__(self.L)
+        return [[self.V0, self.M0, self.theta0, self.w0],
+                [self.V1, self.M1, self.theta1, self.w1]]
+    #
+    def __call__(self, x:float) -> List[float]:
+        """
+        x : distance from end 1
+        """
+        # update load
+        self._response.load(FV=self.FV, FM=self.FM,
+                            Ftheta=self.Ftheta, Fw=self.Fw)
+        self._response.reacctions(V0=self.V0, M0=self.M0,
+                                  theta0=self.theta0, w0=self.w0)
+        V = self._response.V(x)
+        M = self._response.M(x)
+        theta = self._response.theta(x)
+        w = self._response.w(x)
+        return [V, M, theta, w]
+
 # Pinned
 #
 @dataclass
@@ -475,65 +540,62 @@ class PinnedPinned(SuppBasic):
     """ """
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float=0) -> float:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float=0, k2:float=0) -> float:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
     #
-    #@property
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear force"""
-        return -self.FM/L
+        return -self.FM/self.L
     #
-    #@property
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Slope"""
-        return self.Fw/L + self.FM * L/(6*self.E*self.I)
+        return self.Fw/self.L + self.FM * self.L/(6*self.E*self.I)
 #
 @dataclass
 class PinnedFixed(SuppBasic):
     """ """
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float=0) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float=0, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
     #
-    #@property
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear force"""
-        return (-3*self.E*self.I/L**3 * self.Fw
-                - 3*self.E*self.I/L**2  * self.Ftheta)
+        return (-3*self.E*self.I/self.L**3 * self.Fw
+                - 3*self.E*self.I/self.L**2  * self.Ftheta)
     #
-    #@property
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Slope"""
-        return 3*self.Fw/(2*L) + 0.50 * self.Ftheta
+        return 3*self.Fw/(2*self.L) + 0.50 * self.Ftheta
 #
 @dataclass
 class PinnedGuided(SuppBasic):
     """ """
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float=0) -> float:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float=0, k2:float=0) -> float:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
     #
-    #@property
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear force"""
         return -self.FV
     #
-    #@property
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Slope"""
         return L**2/(2*self.E*self.I) * self.FV - self.Ftheta
 #
@@ -542,26 +604,27 @@ class PinnedSpring(SuppBasic):
     """ """
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k2', 'k1']
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
+    def __init__(self, L:float, E: float, I: float,
                  k1:float, k2:float) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
         # spring stiffness
         self.k1 = k1
         self.k2 = k2
     #
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Bending moment"""
-        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2, L)
-        return (A1*self.Fw - L*A2/(6*self.E*self.I))/A3
+        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2)
+        return (A1*self.Fw - self.L*A2/(6*self.E*self.I))/A3
     
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear """
-        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2, L)
-        return ((self.k2/L**2)* self.Fw + A2/L)/A3
+        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2)
+        return ((self.k2/self.L**2)* self.Fw + A2/self.L)/A3
 #
 # Fixed
 #
@@ -570,44 +633,46 @@ class FixedPinned(SuppBasic):
     """ """
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float=0) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float=0, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear force"""
-        return -3*self.E*self.I/L**3 * self.Fw - 3/(2*L) * self.FM
+        return -3*self.E*self.I/self.L**3 * self.Fw - 3/(2*self.L) * self.FM
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        return 3*self.E*self.I/L**2 * self.Fw + 0.50*self.FM
+        return 3*self.E*self.I/self.L**2 * self.Fw + 0.50*self.FM
 #
 @dataclass
 class FixedFixed(SuppBasic):
     """ """
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float=0) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float=0, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
 
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear force"""
-        return (-12 * self.E * self.I / L**3 * self.Fw
-                - 6 * self.E * self.I / L**2 * self.Ftheta)
+        return (-12 * self.E * self.I / self.L**3 * self.Fw
+                - 6 * self.E * self.I / self.L**2 * self.Ftheta)
 
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        return (6 * self.E * self.I / L**2 * self.Fw
-                + 2 * self.E * self.I / L * self.Ftheta)
+        return (6 * self.E * self.I / self.L**2 * self.Fw
+                + 2 * self.E * self.I / self.L * self.Ftheta)
 
 #
 @dataclass
@@ -615,67 +680,70 @@ class FixedFree(SuppBasic):
     """ """
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float=0) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float=0, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__( self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__( self, L, E, I)
 
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear force"""
         return -self.FV
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        return L * self.FV - self.FM
+        return self.L * self.FV - self.FM
 #
 @dataclass
 class FixedGuided(SuppBasic):
     """ """
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float=0) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float=0, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__( self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__( self, L, E, I)
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear force"""
         return -self.FV
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        return - self.E*self.I/L * self.Ftheta + 0.50 * self.FV * L
+        return - self.E*self.I/self.L * self.Ftheta + 0.50 * self.FV * self.L
 #
 @dataclass
 class FixedSpring(SuppBasic):
     """ """
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k2', 'k1']
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
+    def __init__(self, L:float, E: float, I: float,
                  k1:float, k2:float) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
         # spring stiffness
         self.k1 = k1
         self.k2 = k2
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear """
-        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2, L)
-        return ((-3*self.E*self.I*A5 / L**3) * self.Fw + 3*A2 / (2*L))/A4
+        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2)
+        return ((-3*self.E*self.I*A5 / self.L**3) * self.Fw + 3*A2 / (2*self.L))/A4
     
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2, L)
-        return ((3*self.E*self.I / L**2 )* A6 * self.Fw - A2/2) / A4
+        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2)
+        return ((3*self.E*self.I / self.L**2 )* A6 * self.Fw - A2/2) / A4
 
 #
 # free
@@ -685,47 +753,49 @@ class FreeFixed(SuppBasic):
     """ """
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float=0) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float=0, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__( self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__( self, L, E, I)
 
     #
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Bending moment"""
         return -self.Ftheta
     
     #
-    def w(self, L:float) -> float:
+    @property
+    def w0(self) -> float:
         """ Shear force"""
-        return -self.Fw - L * self.Ftheta    
+        return -self.Fw - self.L * self.Ftheta
 #
 @dataclass
 class FreeSpring(SuppBasic):
     """ """
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k2', 'k1']
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
+    def __init__(self, L:float, E: float, I: float,
                  k1:float, k2:float) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
         # spring stiffness
         self.k1 = k1
         self.k2 = k2
     #
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Slope"""
-        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2, L)
-        return -self.Fw - L*A2/self.k2
+        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2)
+        return -self.Fw - self.L*A2/self.k2
     
     #
-    def w(self, L:float) -> float:
+    @property
+    def w0(self) -> float:
         """ Deflection"""
-        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2, L)
+        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2)
         return - A2/self.k2
 #
 # guide
@@ -735,67 +805,70 @@ class GuidedPinned(SuppBasic):
     """ """
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float=0) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float=0, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__( self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__( self, L, E, I)
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
         return - self.FM
     
     #
-    def w(self, L:float) -> float:
+    @property
+    def w0(self) -> float:
         """ Shear force"""
-        return - self.Fw -  0.50  * L**2 / (2*self.E*self.I) * self.FM
+        return - self.Fw -  0.50  * self.L**2 / (2*self.E*self.I) * self.FM
 #
 @dataclass
 class GuidedFixed(SuppBasic):
     """ """
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float=0) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float=0, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__( self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__( self, L, E, I)
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        return - self.E*self.I/L * self.Ftheta
+        return - self.E*self.I/self.L * self.Ftheta
     
     #
-    def w(self, L:float) -> float:
+    @property
+    def w0(self) -> float:
         """ Shear force"""
-        return - self.Fw -  0.50 * self.Ftheta * L  
+        return - self.Fw -  0.50 * self.Ftheta * self.L
 #
 @dataclass
 class GuidedSpring(SuppBasic):
     """ """
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k2', 'k1']
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
+    def __init__(self, L:float, E: float, I: float,
                  k1:float, k2:float) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
         # spring stiffness
         self.k1 = k1
         self.k2 = k2
     #
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Slope"""
-        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2, L)
-        return (-A6 * self.Fw + A2* (L**2 /(2*self.E*self.I))) / A6
+        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2)
+        return (-A6 * self.Fw + A2* (self.L**2 /(2*self.E*self.I))) / A6
     
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2, L)
+        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2)
         return A2 / A6
 #
 # Spring
@@ -805,74 +878,77 @@ class SpringPinned(SuppBasic):
     """ """
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k1']
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
         # spring stiffness
-        self.k1 = k
+        self.k1 = k1
         #self.k2 = k2    
     #
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Slope"""
-        A7,A8,A9,A10,A11 = self._spring_1(self.k1, L)
-        return (self.Fw/L + L*self.FM/(6*self.E*self.I))/A7
+        A7,A8,A9,A10,A11 = self._spring_1(self.k1)
+        return (self.Fw/self.L + L*self.FM/(6*self.E*self.I))/A7
     
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear """
-        A7,A8,A9,A10,A11 = self._spring_1(self.k1, L)
-        return -(self.k1/L**2 * self.Fw + self.FM * A8)/A7
+        A7,A8,A9,A10,A11 = self._spring_1(self.k1)
+        return -(self.k1/self.L**2 * self.Fw + self.FM * A8)/A7
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        return self.k1 * self.theta(L)
+        return self.k1 * self.theta0
 #
 @dataclass
 class SpringFixed(SuppBasic):
     """ """
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k1']
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
         # spring stiffness
-        self.k1 = k
+        self.k1 = k1
         #self.k2 = k2
     #
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Slope"""
-        A7,A8,A9,A10,A11 = self._spring_1(self.k1, L)
-        return (3*self.Fw/(2*L) + self.Ftheta/2) / A9
+        A7,A8,A9,A10,A11 = self._spring_1(self.k1)
+        return (3*self.Fw/(2*self.L) + self.Ftheta/2) / A9
     
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear """
-        A7,A8,A9,A10,A11 = self._spring_1(self.k1, L)
-        return -(A11 * self.Fw + (3*self.E*self.I/L) * self.Ftheta * A8)/A9
+        A7,A8,A9,A10,A11 = self._spring_1(self.k1)
+        return -(A11 * self.Fw + (3*self.E*self.I/self.L) * self.Ftheta * A8)/A9
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        return self.k1 * self.theta(L)    
+        return self.k1 * self.theta0
 #
 @dataclass
 class SpringFree(SuppBasic):
     """ """
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k1']
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
         # spring stiffness
-        self.k1 = k
+        self.k1 = k1
         #self.k2 = k2    
     #
     def theta(self, L:float) -> float:
@@ -895,30 +971,32 @@ class SpringGuided(SuppBasic):
     """ """
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k1']
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
-                 k:float) -> None:
+    def __init__(self, L:float, E: float, I: float,
+                 k1:float, k2:float=0) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
         # spring stiffness
-        self.k1 = k
+        self.k1 = k1
         #self.k2 = k2
     #
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Slope"""
-        A7,A8,A9,A10,A11 = self._spring_1(self.k1, L)
-        return (-self.Ftheta + (L**2/(2*self.E*self.I) * self.FV ))/ A10
+        A7,A8,A9,A10,A11 = self._spring_1(self.k1)
+        return (-self.Ftheta + (self.L**2/(2*self.E*self.I) * self.FV ))/ A10
     
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear """
         #A7,A8,A9,A10,A11 = self._spring_1(self.k1, L)
         return - self.FV
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        return self.k1 * self.theta(L)    
+        return self.k1 * self.theta0
 #
 @dataclass
 class SpringSpring(SuppBasic):
@@ -926,33 +1004,35 @@ class SpringSpring(SuppBasic):
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw',
                  'k2', 'k1']
 
-    def __init__(self, E: float, I: float,
-                 FV: float, FM: float, Ftheta: float, Fw: float,
+    def __init__(self, L:float, E: float, I: float,
                  k1:float, k2:float) -> None:
         """
         """
-        SuppBasic.__init__(self, E, I, FV, FM, Ftheta, Fw)
+        SuppBasic.__init__(self, L, E, I)
         # spring stiffness
         self.k1 = k1
         self.k2 = k2
     #
-    def theta(self, L:float) -> float:
+    @property
+    def theta0(self) -> float:
         """ Slope"""
-        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2, L)
-        A12, A13 = self._spring_12(self.k1, self.k2, L)
-        return (A5/L * self.Fw - L*A2 / (6*self.E*self.I))/A13
+        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2)
+        A12, A13 = self._spring_12(self.k1, self.k2, self.L)
+        return (A5/L * self.Fw - self.L*A2 / (6*self.E*self.I))/A13
     
     #
-    def V(self, L:float) -> float:
+    @property
+    def V0(self) -> float:
         """ Shear """
-        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2, L)
-        A7,A8,A9,A10,A11 = self._spring_1(self.k1, L)
-        A12, A13 = self._spring_12(self.k1, self.k2, L)
+        A1, A2, A3, A4, A5, A6 = self._spring_2(self.k2)
+        A7,A8,A9,A10,A11 = self._spring_1(self.k1)
+        A12, A13 = self._spring_12(self.k1, self.k2, self.L)
         return (A12 * self.Fw + A2 * A8) / A13
     #
-    def M(self, L:float) -> float:
+    @property
+    def M0(self) -> float:
         """ Bending moment"""
-        return self.k1 * self.theta(L)
+        return self.k1 * self.theta0
     #
     def _spring_12(self, k1:float, k2:float, L:float):
         """ """

@@ -142,9 +142,9 @@ class LoadCombination(LoadCombinationBasic):
                 #
                 for mname, member in memb_force[bname].items():
                     try:
-                        beam_load[mname] += member * factor
+                        beam_load[mname] += member.end_load * factor
                     except KeyError:
-                        beam_load[mname] =  member * factor
+                        beam_load[mname] =  member.end_load * factor
             memb_comb[lcomb] = beam_load
         return comb_res, memb_comb
 #

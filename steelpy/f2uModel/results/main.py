@@ -72,9 +72,19 @@ class NodeType:
         """ """
         self._cls._results.print_node_displacement()
     #
+    @property
     def reaction(self):
         """ """
-        pass    
+        return self._cls._results.node_reaction
+
+    @reaction.setter
+    def reaction(self, value:List):
+        """ """
+        self._cls._results.node_reaction = value
+
+    def print_reactions(self):
+        """ """
+        self._cls._results.print_node_reactions()
 #
 #
 class BeamType:

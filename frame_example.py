@@ -28,8 +28,9 @@ nodes[2] = [3, 0, 0]
 nodes[3] = [6, 0, 0]
 # boundary nodes
 boundary = mesh.boundaries
-boundary.node[1] = [1,1,1,1,0,0]
-boundary.node[3] = [1,1,1,0,0,0]
+boundary.node[1] = [1,1,1,1,1,1]
+#boundary.node[3] = [1,1,1,0,0,0]
+print(boundary)
 # elements [type, node1, node2, material, section]
 elements = mesh.elements
 elements[1] = ['beam', 1, 2, 1, 1]
@@ -44,10 +45,10 @@ load = f2umodel.load
 basic = load.basic
 basic[111] = 'wind load'
 #
-#basic[111].point_node[2] = [0, -1000, 0, 'test']
+basic[111].point_node[3] = [0, -1000, 0, 'test']
 #basic[111].point_beam[1] = [3.0, 0, -1000, 0, 'test']
-basic[111].line_beam[1] = [0, -1_000, 0, 'wind_1']
-basic[111].line_beam[2] = [0, -1_000, 0, 'wind_1']
+#basic[111].line_beam[1] = [0, -1_000, 0, 'wind_1']
+#basic[111].line_beam[2] = [0, -1_000, 0, 'wind_1']
 #
 print(load)
 #

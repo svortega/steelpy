@@ -20,7 +20,9 @@ def node_renumbering(nodes, elements):
     nodes_conn = get_nodes_connected(nodes, connectivities)
     node_degrees = get_node_degrees(connectivities)
     new_nodes_number = get_node_renumber(nodes, node_degrees, nodes_conn)
-    return new_nodes_number
+    #single_nodes = [key for key, item in nodes_conn.items()
+    #                if len(item) == 1]
+    return new_nodes_number #, single_nodes
 
 #
 def get_nodes_connected(nodes, connectivities):
@@ -102,7 +104,7 @@ def get_node_renumber(nodes, first_degree, nodes_conn):
 #
 def get_node_degree(connectivities):
     """
-    Scan all the nodes and order them according to their dregree.
+    Scan all the nodes and order them according to their degree.
     The degree of a node is the number of nodes connected to it
     """
     flat_nodes = list(chain.from_iterable(connectivities))

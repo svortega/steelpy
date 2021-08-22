@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2021 fem2ufo
 #
 
 # Python stdlib imports
@@ -76,6 +76,8 @@ class BoundaryNodes(Mapping):
     def __setitem__(self, node_number: int,
                     value:Union[List, Tuple, Dict, str]) -> None:
         """
+        1 : fix
+        0 : free
         """
         try:
             # TODO : update data
@@ -89,9 +91,9 @@ class BoundaryNodes(Mapping):
                     value = [1,1,1,1,1,1]
                 elif re.match(r"\b(pinn(ed)?|roll)\b", value, re.IGNORECASE):
                     #self._title.append('pinned')
-                    value = [1,1,1,1,0,0]
+                    value = [1,1,1,0,0,0]
                 elif re.match(r"\b(free)\b", value, re.IGNORECASE):
-                    return
+                    value = [0,0,0,0,0,0]
                 else:
                     raise IOError("boundary type {:} not implemented".format(value))
                 #

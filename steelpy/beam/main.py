@@ -57,7 +57,10 @@ class Beam:
     @length.setter
     def length(self, beam_length):
         """ """
-        self.beam_length = beam_length.value
+        try:
+            self.beam_length = beam_length.value
+        except AttributeError: # unit must be in metres
+            self.beam_length = beam_length
     #
     @property
     def section(self):
@@ -78,6 +81,12 @@ class Beam:
         """
         """
         return self._material['beam']
+
+    #@material.setter
+    #def material(self, value):
+    #    """
+    #    """
+    #    self._material['beam'] = value
     #
     @property
     def support(self):

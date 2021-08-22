@@ -148,5 +148,40 @@ def print_member_end_forces(element_forces):
             print("")
     #print("\n")
 #
+def print_node_reactions(reactions):
+    """
+    :return:
+    """
+    print('{:}'.format(52 * '-'))
+    print("** Reloaded Joint Reactions")
+    print('{:}'.format(52 * '-'))
+    print("")
+    for wk in reactions["basic"].values():
+        print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
+              .format(wk.name, wk.number, wk.title, "global"))
+        out_rac(wk.items)
+        print("")
+    if reactions["combination"]:
+    #try:
+        #comb = pickle.load(file)
+        print('{:}'.format(52 * '-'))
+        #print("** Static Displacements")
+        print("")
+        for key, wk in reactions["combination"].items():
+            print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
+                  .format(wk.name, wk.number, wk.title, "global"))
+            out_rac(wk.items)
+            print("")
+    #print('-->')
 #
-#
+def out_rac(disp, str1=""):
+    """
+    Report the relative displacement of the structure
+    """
+    # TODO: send this to mesh node?
+    print("     node  x-force    y-force    z-force    x-moment   y-moment   z-moment")
+    for item in disp:
+        print("{:9d} ".format(item[0]), end='')
+        for _disp in item[1:]:
+            print("{: 1.3e} ".format(_disp), end='')
+        print("")

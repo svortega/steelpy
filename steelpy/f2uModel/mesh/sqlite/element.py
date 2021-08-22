@@ -133,9 +133,10 @@ class BeamElement:
         if (title := data[-1]) == "NULL":
             title = ""        
         #
-        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f} {:>12s}\n"\
+        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f} {:>6.3f} {:>12s}\n"\
                .format(self.name, *self.connectivity,
-                       self.material, self.section, self.beta, title)
+                       self.material, self.section, self.beta,
+                       self.length, title)
     #
     #
     @property
@@ -147,7 +148,7 @@ class BeamElement:
         for node_name in self.connectivity:
             node = get_node(conn, node_name=node_name)
             number = node[0] - 1
-            dof.append(number * 6)
+            dof.append(number) #  * 6
         return dof
     #
     @property
@@ -221,7 +222,17 @@ class BeamElement:
         beta = row[6]
         conn.close()
         return material, section, beta
-
+    #
+    @property
+    def R(self):
+        """
+        Rotation matrix
+        """
+        if self.type in ['beam', 'truss']:
+            return Rmatrix(*self.unit_vector, self.beta)
+        else:
+            raise IOError("no yet included")
+    #
 #
 #
 #

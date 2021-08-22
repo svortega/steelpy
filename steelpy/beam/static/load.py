@@ -228,7 +228,10 @@ class LoadType:
     def _get_line_load(self, load):
         """ """
         if isinstance(load, (list, tuple)):
-            load = check_list(load)
+            try:
+                load = check_list(load)
+            except AttributeError:
+                return load
         elif isinstance(load, dict):
             load = check_beam_dic(load)
         else:
@@ -335,7 +338,7 @@ def check_list(data)->List[float]:
         elif unit == 'newton':
             load['N'].append(data[x].convert(unit).value)
         elif unit == 'newton*metre':
-            load['N*m'].append(data[x].convert(unit).value)        
+            load['N*m'].append(data[x].convert(unit).value)
         else: # "newton/metre"
             load['N/m'].append(data[x].convert(unit).value)
     #

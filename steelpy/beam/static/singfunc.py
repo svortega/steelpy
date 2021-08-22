@@ -3,12 +3,12 @@
 # 
 
 # Python stdlib imports
-#from collections.abc import Mapping
-#from typing import NamedTuple, Dict, List, Tuple
+from bisect import bisect_right
 from dataclasses import dataclass
 from math import factorial
 
 # package imports
+from steelpy.process.math.vector import Vector
 
 #
 #
@@ -52,6 +52,12 @@ class SingFunction:
             return 1
         else:
             return step**n
+    #
+    def __call__(self, x:float, E:float, I:float):
+        """ """
+        return Vector([self.V(x), self.M(x), 
+                       self.w(x, E, I), self.theta(x, E, I)])
+#
 #
 #
 @dataclass
@@ -64,7 +70,7 @@ class Trapezoidal(SingFunction):
                  L:float, L1:float, L2:float) -> None:
         """
         """
-        SingFunction.__init__ (self, L, L1)
+        super().__init__ (L, L1)
         self.q1: float = q1
         self.q2: float = q2
         self.L2: float = L2
@@ -112,6 +118,38 @@ class Trapezoidal(SingFunction):
         func2 = 1/(factorial(4)*E*I) * (self._step(step1, 4)*self.q1 - self._step(step2, 4)*self.q2)
         return func1 + func2
     #
+    def max_steps(self):
+        """ """
+        wl = self.L - self.L1 - self.L2
+        try:
+            1/self.q1 # end 1
+            try:
+                1/self.q2  # end 2
+                if self.q1 == self.q2: # uniform
+                    a = self.L1 + wl/2.0
+                    b = self.L2 + wl/2.0
+                    maxM = (a + wl * (b-a)/(2*self.L)) / self.L
+                else: # trapezoidal
+                    qrad = [0.2, 0.4, 0.6, 0.8, 1.0]
+                    xrad = [0.555, 0.536, 0.520, 0.508, 0.50]
+                    interp = Interpolate(qrad, xrad)
+                    #
+                    if self.q1 <= self.q2:
+                        rad = interp(self.q1/self.q2)
+                    else:
+                        rad = interp(self.q2/self.q1)
+                        rad = 1-rad
+                    maxM = (self.L1 / self.L) + rad
+            except ZeroDivisionError: # triangular
+                maxM = (self.L1/ self.L) + (1 - 0.5774)
+        except ZeroDivisionError: # triangular
+            maxM = (self.L1 / self.L) + 0.5774 
+        #
+        x_steps = [0,1/4, 3/8, 2/4, 5/8, 3/4, 1, maxM]
+        x_steps = sorted(list(set(x_steps)))
+        x_steps = [item for item in x_steps if item <= 1]
+        return x_steps        
+#
 #
 #
 @dataclass
@@ -122,7 +160,7 @@ class Point(SingFunction):
     def __init__(self, P: float, L: float, L1: float):
         """
         """
-        SingFunction.__init__(self, L, L1)
+        super().__init__(L, L1)
         self.P: float = P
     #
     def q(self, x:float) -> float:
@@ -159,7 +197,7 @@ class Moment(SingFunction):
     def __init__(self, m: float, L: float, L1: float) -> None:
         """
         """
-        SingFunction.__init__(self, L, L1)
+        super().__init__(L, L1)
         self.m: float = m
     #
     def M(self, x:float) -> float:
@@ -219,3 +257,23 @@ class SingularFunction:
         else:
             self._divisor /= self._n
             self._n -= 1
+#
+#
+class Interpolate:
+    def __init__(self, x_list, y_list):
+        if any(y - x <= 0 for x, y in zip(x_list, x_list[1:])):
+            raise ValueError("x_list must be in strictly ascending order!")
+        self.x_list = x_list
+        self.y_list = y_list
+        intervals = zip(x_list, x_list[1:], y_list, y_list[1:])
+        self.slopes = [(y2 - y1) / (x2 - x1) for x1, x2, y1, y2 in intervals]
+
+    def __call__(self, x):
+        if not (self.x_list[0] <= x <= self.x_list[-1]):
+            raise ValueError("x out of bounds!")
+        if x == self.x_list[-1]:
+            return self.y_list[-1]
+        i = bisect_right(self.x_list, x) - 1
+        return self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
+#
+#

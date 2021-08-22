@@ -145,10 +145,13 @@ class BeamResponse:
                         load, reaction):
         """ """
         result = Response(E=E, I=I)
-        result.reacctions(V0=reaction.R.convert("newton").value,
-                          M0=reaction.M.convert("newton*metre").value,
+        # TODO : fix negative sign
+        result.reacctions(V0=-reaction.R.convert("newton").value,
+                          M0=-reaction.M.convert("newton*metre").value,
                           theta0=reaction.theta.value,
                           w0=reaction.w.value)
+        #
+        #result = reaction.response
         #
         V=[]; M=[]; theta=[]; w=[]
         x_steps = load.x

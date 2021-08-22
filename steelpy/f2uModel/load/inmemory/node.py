@@ -115,29 +115,29 @@ class NodeLoadInMemory(NodeLoadMaster):
                                    self._complex[_index]))
         return items
     #
-    def update(self, other) -> None:
-        """
-        """
-        #1/0
-        pl = other._point
-        try:
-            #_name = pl.name
-            index = pl._index
-            # update
-            self._labels.extend(pl._labels)
-            self._title.extend(pl._title)
-            self._system.extend(pl._system)
-            self._distance.extend(pl._distance)
-            self._complex.extend(pl._complex)
-            #
-            self._fx.extend(pl._fx)
-            self._fy.extend(pl._fy)
-            self._fz.extend(pl._fz)
-            self._mx.extend(pl._mx)
-            self._my.extend(pl._my)
-            self._mz.extend(pl._mz)
-            # print('?????')
-        except AttributeError:
-            pass
+    #def update(self, other) -> None:
+    #    """
+    #    """
+    #    #1/0
+    #    pl = other._point
+    #    try:
+    #        #_name = pl.name
+    #        index = pl._index
+    #        # update
+    #        self._labels.extend(pl._labels)
+    #        self._title.extend(pl._title)
+    #        self._system.extend(pl._system)
+    #        self._distance.extend(pl._distance)
+    #        self._complex.extend(pl._complex)
+    #        #
+    #        self._fx.extend(pl._fx)
+    #        self._fy.extend(pl._fy)
+    #        self._fz.extend(pl._fz)
+    #        self._mx.extend(pl._mx)
+    #        self._my.extend(pl._my)
+    #        self._mz.extend(pl._mz)
+    #        # print('?????')
+    #    except AttributeError:
+    #        pass
     #
 #

@@ -67,6 +67,8 @@ class Boundaries:
         output += "{:}\n".format(80*".")
         output += "\n"
         for key, node in self._nodes.items():
+            if sum(node[:6]) == 0:
+                continue
             output += node.__str__()
         return output
 #

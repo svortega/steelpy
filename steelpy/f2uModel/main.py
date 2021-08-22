@@ -64,7 +64,7 @@ class f2uModel:
                  '_boundaries', '_nodes', '_load', '_meshing']
 
     def __init__(self, component: Union[str, int],
-                 mesh_type:str='sqlite') -> None:
+                 mesh_type:str='inmemory') -> None:
         """
         mesh_type : sqlite/inmemory
         """

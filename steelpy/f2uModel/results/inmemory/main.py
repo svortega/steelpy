@@ -4,12 +4,13 @@
 
 # Python stdlib imports
 from array import array
-from collections import defaultdict
+from collections import defaultdict, Mapping
 from typing import NamedTuple, Dict, List, Tuple, Union
 #
 #
 # package imports
-from steelpy.f2uModel.results.operations.output import Results, print_deflections, print_member_forces
+from steelpy.f2uModel.results.operations.output import (Results, print_deflections,
+                                                        print_member_forces, print_node_reactions)
 #
 #
 # --------------------------
@@ -17,7 +18,8 @@ from steelpy.f2uModel.results.operations.output import Results, print_deflection
 #
 class ResultInmemory:
     
-    __slots__ = ['_displacement', '_beam_force', '_basic_loads']
+    __slots__ = ['_displacement', '_beam_force', 
+                 '_basic_loads', '_reaction']
 
     def __init__(self, basic_loads):
         """
@@ -25,6 +27,7 @@ class ResultInmemory:
         self._basic_loads = basic_loads
         self._displacement = NodeDisplacement()
         self._beam_force = BeamForce()
+        self._reaction = BoundaryNodes()
     #
     #
     @property
@@ -67,6 +70,30 @@ class ResultInmemory:
     def print_element_forces(self):
         """ """
         print_member_forces(self.element_force)
+    #
+    #
+    #
+    @property
+    def node_reaction(self):
+        """
+        [node, load_tile, system, x, y, z, rx, ry, rz]
+        """
+        return self._reaction._get_node_displacements(self._basic_loads)
+    #
+    @node_reaction.setter
+    def node_reaction(self, values:List):
+        """
+        values = [node, load_tile, system, x, y, z, rx, ry, rz]
+        """
+        for value in values:
+            self._reaction[value[0]] = value[1:]
+        #print("-->")
+    #
+    def print_node_reactions(self):
+        """
+        """
+        print_node_reactions(self.node_reaction)
+    #
 #
 #
 def iter_items(rows):
@@ -80,7 +107,8 @@ def iter_items(rows):
     return member_load
 #
 #
-class NodeDisplacement:
+#
+class NodeBasic:
     __slots__ = ['_system', '_labels', '_system',
                  '_load_title', '_load_number',
                  '_x', '_y', '_z', '_rx', '_ry', '_rz',]
@@ -116,6 +144,7 @@ class NodeDisplacement:
         self._ry.append(result[6])
         self._rz.append(result[7])
     #
+    #
     #def __getitem__(self, node_number: int)-> List[Tuple]:
     #    """
     #    """
@@ -149,6 +178,19 @@ class NodeDisplacement:
             basic[key] = Results(name=lname, number=x+step, title=key,
                                  load_type=ltype, items=item)
         return basic
+#
+#
+class NodeDisplacement(NodeBasic):
+    #__slots__ = ['_system', '_labels', '_system',
+    #             '_load_title', '_load_number',
+    #             '_x', '_y', '_z', '_rx', '_ry', '_rz',]
+
+    def __init__(self):
+        """
+        """
+        super().__init__()
+    #
+
 #
 #
 class BeamForce:
@@ -237,4 +279,36 @@ class BeamForce:
     #    """ """
     #    pass
 #
+#
+class BoundaryNodes(NodeBasic):
+    
+    def __init__(self):
+        """
+        """
+        super().__init__()
+    #
+    #
+    #def _get_node_reaction(self):
+    #    """" """
+    #    pass
+
+
+#
+class Boundary:
+    
+    def __init__(self) -> None:
+        """
+        """
+        self._nodes = BoundaryNodes()
+    #
+    @property
+    def node(self):
+        """"""
+        return self._nodes
+    
+    @node.setter
+    def node(self, values):
+        """"""
+        for value in values:
+            self._nodes[value[0]] = value[1:]
 #

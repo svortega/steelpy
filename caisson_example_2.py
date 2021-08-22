@@ -42,6 +42,12 @@ elevation[4] = [0*units.m, -39.0*units.m, 0*units.m]
 elevation[5] = [0*units.m, -64.0*units.m, 0*units.m]
 elevation[6] = [0*units.m, -74.0*units.m, 0*units.m]
 #
+point = concept.points
+point[22] = [0*units.m, 8.0*units.m, -1.5*units.m]
+point[33] = [0*units.m, -14.0*units.m, -1.5*units.m]
+point[44] = [2.7*units.m, -39.0*units.m, 0*units.m]
+point[55] = [2.7*units.m, -64.0*units.m, 0*units.m]
+#
 # -----------------------------------
 # Start beam modelling
 beam = concept.beam
@@ -50,32 +56,62 @@ material.default = "MAT345"
 #
 # Define Caisson from bottom to top
 #
-section.default = "T1350x40"
+section.default = "T1350x15"
 beam["bm12"] = elevation[6], elevation[5]
-#
-beam["bm9"] = elevation[5], elevation[4]
-#
-beam["bm6"] = elevation[4], elevation[3]
-#
-beam["bm3"] = elevation[3], elevation[2]
+beam["bm12"].step[1].length = 7.0 * units.m
+beam["bm12"].step[1].section = section["T1350x25"]
 #
 section.default = "T1350x25"
+beam["bm9"] = elevation[5], elevation[4]
+beam["bm9"].step[1].length = 1.5 * units.m
+beam["bm9"].step[1].section = section["T1350x15"]
+beam["bm9"].step[2].length = 23.5 * units.m
+beam["bm9"].step[2].section = section["T1350x25"]
+#
+beam["bm6"] = elevation[4], elevation[3]
+beam["bm6"].step[1].length = 1.5 * units.m
+beam["bm6"].step[1].section = section["T1350x15"]
+beam["bm6"].step[2].length = 23.5 * units.m
+beam["bm6"].step[2].section = section["T1350x25"]
+#
+beam["bm3"] = elevation[3], elevation[2]
+beam["bm3"].step[1].length = 1.5 * units.m
+beam["bm3"].step[1].section = section["T1350x15"]
+beam["bm3"].step[2].length = 9.0 * units.m
+beam["bm3"].step[2].section = section["T1350x25"]
+beam["bm3"].step[3].length = 20.5 * units.m
+beam["bm3"].step[3].section = section["T1350x40"]
+#
+section.default = "T1350x40"
 beam["bm27"] = elevation[2], elevation[1]
+beam["bm27"].step[1].length = 1.5 * units.m
+beam["bm27"].step[1].section = section["T1350x25"]
+#
+# Stub members
+section.default = "T610x16"
+beam["bm14"] = elevation[2], point[22]
+section.default = "T559x16"
+beam["bm15"] = elevation[3], point[33]
+beam["bm16"] = elevation[4], point[44]
+beam["bm17"] = elevation[5], point[55]
 #
 # -----------------------------------
 # Define boundary conditions
 boundary = concept.boundary
 #
-boundary["sp2"] = elevation[2]
+boundary["sp1"] = elevation[1]
+boundary["sp1"].support = "fixed"
+#
+boundary["sp2"] = point[22]
 boundary["sp2"].support = "fixed"
 #
-boundary["sp3"] = elevation[3]
-boundary["sp3"].support = 'pinned'
+boundary["sp3"] = point[33]
+boundary["sp3"].support = 'fixed'
 #
-boundary["sp4"] = elevation[4]
-boundary["sp4"].support = 'pinned'
+boundary["sp4"] = point[44]
+boundary["sp4"].support = 'fixed'
 #
-boundary["sp5"] = elevation[5] 
+boundary["sp5"] = point[55] 
 boundary["sp5"].support = 'fixed'
 #
 #
@@ -88,20 +124,33 @@ basic = load.basic
 #
 # create new basic load
 basic[1] = 'wave_loading'
+#
+#basic[1].point = elevation[2]
+#basic[1].point.load["point_22"] = {'fz': 5000 * units.kN}
+#
 basic[1].beam = beam["bm12"]
-basic[1].beam.line_load["wave_1"] = {'qz': 9 * units.kN / units.m}
+#basic[1].beam.local_system
+basic[1].beam.line_load["wave_1"] = {'qx': 90 * units.kN / units.m}
 #
 basic[1].beam = beam["bm9"]
-basic[1].beam.line_load["wave_2"] = {'qz': 9 * units.kN / units.m}
+basic[1].beam.line_load["wave_2"] = {'qx': 90 * units.kN / units.m}
 #
 basic[1].beam = beam["bm6"]
-basic[1].beam.line_load["wave_3"] = {'qz': 9 * units.kN / units.m}
+basic[1].beam.line_load["wave_3"] = {'qx': 90 * units.kN / units.m}
 #
 basic[1].beam = beam["bm3"]
-basic[1].beam.line_load["wave_4"] = {'qz': 9 * units.kN / units.m}
+basic[1].beam.line_load["wave_4"] = {'qx': 90 * units.kN / units.m}
 #
 basic[1].beam = beam["bm27"]
-basic[1].beam.line_load["wave_5"] = {'qz': 9 * units.kN / units.m}
+basic[1].beam.line_load["wave_5"] = {'qx': 90 * units.kN / units.m}
+#
+#
+basic[1].beam = beam["bm14"]
+basic[1].beam.line_load["wave_6"] = {'qx': 90 * units.kN / units.m}
+#
+basic[1].beam = beam["bm15"]
+basic[1].beam.line_load["wave_7"] = {'qx': 90 * units.kN / units.m}
+#
 #
 #basic[1].beam.line_load["snow_2"] = {'qy1': 0 * units.kN / units.m, # in plane triangular load
 #                                     'qy2':-2 * units.kN / units.m} # from node to node
@@ -112,7 +161,25 @@ basic[1].beam.line_load["wave_5"] = {'qz': 9 * units.kN / units.m}
 #                                     'd1': 0.5 * units.m, # load start 0.5m from node 1
 #                                     'd2': 1.0 * units.m} # load end 1m from node 2
 #
-#
+#basic[2] = 'point_loading'
+##
+#basic[2].point = elevation[1]
+#basic[2].point.load["point_1"] = {'fz': 1000 * units.kN} # nodal load in plane
+##
+#basic[2].point = elevation[2]
+#basic[2].point.load["point_2"] = {'fz': 1000 * units.kN}
+##
+#basic[2].point = elevation[3]
+#basic[2].point.load["point_3"] = {'fz': 1000 * units.kN}
+##
+#basic[2].point = elevation[4]
+#basic[2].point.load["point_4"] = {'fz': 1000 * units.kN}
+##
+#basic[2].point = elevation[5]
+#basic[2].point.load["point_5"] = {'fz': 1000 * units.kN}
+##
+#basic[2].point = elevation[6]
+#basic[2].point.load["point_6"] = {'fz': 1000 * units.kN}
 #
 #
 f2u_model.build()

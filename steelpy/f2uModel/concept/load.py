@@ -54,7 +54,12 @@ class PointLoad:
                   and self._cls._nodes[_index] != -1]
         return self._point[nodes[-1]]
         #return res
-    
+    #
+    def __iter__(self):
+        #print('===')
+        # return self._beam.__iter__()
+        for key, item in self._point.items():
+            yield key, item
 
 class PointLoadConcept:
     
@@ -132,7 +137,7 @@ class BeamLoadSet:
         #print('---')
     #
     def __iter__(self):
-        print('===')
+        #print('===')
         # return self._beam.__iter__()
         for key, item in self._beam.items():
             yield key, item

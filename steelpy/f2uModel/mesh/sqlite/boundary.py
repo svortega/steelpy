@@ -118,7 +118,7 @@ class BoundaryNodeSQL(Mapping):
             if re.match(r"\b(fix(ed)?)\b", fixity, re.IGNORECASE):
                 return [1,1,1,1,1,1]
             elif re.match(r"\b(pinn(ed)?|roll)\b", fixity, re.IGNORECASE):
-                return [1,1,1,1,0,0]
+                return [1,1,1,0,0,0]
             elif re.match(r"\b(free)\b", fixity, re.IGNORECASE):
                 return None
             else:

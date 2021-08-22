@@ -100,7 +100,10 @@ class Mesh:
         """
         print("** Renumbering Nodes")
         self._nodes.renumbering(self._elements)
-        #1/0
+        #for node in single_nodes:
+        #    boundary = self._boundaries.node[node]
+        #    if not boundary:
+        #        self._boundaries.node[ node ] = 'free'
         print("** End Renumbering Nodes")
     #
     #

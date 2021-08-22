@@ -4,14 +4,14 @@
 # Python stdlib imports
 from itertools import chain
 import math as math
-#import pickle
+import pickle
 import time
 from typing import Dict, List, Tuple # , ClassVar, Iterable, Union
 #from multiprocessing import Process, Manager
 
 # package imports
-from steelpy.trave3D.processor.operations import zeros, to_matrix
-
+from steelpy.trave3D.processor.operations import zeros, to_matrix, transposeM
+from steelpy.trave3D.processor.static_solver import UDUt
 
 #
 # -------------------- 
@@ -105,9 +105,16 @@ def Rmatrix(l:float, m:float, n:float, beta: float = 0):
             r[ 1 ][ 0 ] = -(m * cb + l * n * sb) / d
             r[ 1 ][ 1 ] = (l * cb - m * n * sb) / d
             r[ 1 ][ 2 ] = d * sb
-            r[ 2 ][ 2 ] = (m * sb - l * n * cb) / d
-            r[ 2 ][ 2 ] = -(l * sb + m * n * cb) / d
+            r[ 2 ][ 0 ] = (m * sb - l * n * cb) / d
+            r[ 2 ][ 1 ] = -(l * sb + m * n * cb) / d
             r[ 2 ][ 2 ] = d * cb
+    #
+    #for i in range(3):
+    #    for j in range(3):
+    #        try:
+    #            1/r[i][j]
+    #        except ZeroDivisionError:
+    #            r[ i ][ j ] = 0.0
     #
     return r
 #
@@ -118,30 +125,28 @@ def trans_3d_beam(ek: List, r_matrix: List):
     r  : rotation matrix 
     """
     # transpose rotation matrix
-    # rt = list( map( list, zip( *r_matrix ) ) )
-    rt = list(zip(*r_matrix))
+    rt = transposeM(r_matrix)
     #
     # take [rtrans][k][r] using the nature of [r] for speed.  
     # k is sectioned off into 3x3s : multiplied [rtrans][k][r]
     ktemp = zeros(12, 12)
-    for i in range(4):
-        for j in range(4):
-            j1 = i * 3
-            j2 = j * 3
+    for j1 in range(0, 12, 3):
+        for j2 in range(0, 12, 3):
+            # [k][r]
             for k in range(3):
                 for ii in range(3):
-                    ktemp[j1 + k][j2 + ii] = sum([ek[j1 + k][j2 + jj] * r_matrix[jj][ii]
-                                                  for jj in range(3)])
-            # 23
+                    ktemp[j1 + k][j2 + ii] = math.fsum([ek[j1 + k][j2 + jj] * r_matrix[jj][ii]
+                                                        for jj in range(3)])
+            # [rtrans][k][r]
             for k in range(3):
                 for ii in range(3):
-                    ek[j1 + k][j2 + ii] = sum([rt[k][jj] * ktemp[j1 + jj][j2 + ii]
-                                               for jj in range(3)])
+                    ek[j1 + k][j2 + ii] = math.fsum([rt[k][jj] * ktemp[j1 + jj][j2 + ii]
+                                                    for jj in range(3)])
             # 24
     # 22
     return ek
 #
-def assemble(idof, jdof, jbc, a, aa):
+def assembleX(idof, jdof, jbc, a, aa):
     """
     """
     # set ipv to the positions in the array of the nodes
@@ -150,12 +155,10 @@ def assemble(idof, jdof, jbc, a, aa):
     # store the values for individual array in global array
     for i in range(12):
         try:
-            1.0 / jbc[ipv[i]]
-            ieqn1 = jbc[ipv[i]]
+            1.0 / (ieqn1 := jbc[ipv[i]])
             for j in range(i, 12):
                 try:
-                    1.0 / jbc[ipv[j]]
-                    ieqn2 = jbc[ipv[j]]
+                    1.0 / (ieqn2 := jbc[ipv[j]])
                     if ieqn1 > ieqn2:
                         jband = (ieqn1 - ieqn2)
                         aa[ieqn2-1][jband] += a[i][j]
@@ -165,9 +168,28 @@ def assemble(idof, jdof, jbc, a, aa):
                         aa[ieqn1-1][jband] += a[i][j]
                 except ZeroDivisionError:
                     continue
-            # L30:
         except ZeroDivisionError:
-            continue    
+            continue
+#
+def assemble(ipv:List, a:List, aa:List):
+    """
+    ipv : member ends equations
+    a  : member stiffness matrix
+    aa : global stiffness matrix
+    """
+    for i in range(12):
+        try:
+            1.0 / (ieqn1 := ipv[i])
+            for j in range(i, 12):
+                try:
+                    1.0 / (ieqn2 := ipv[j])
+                    iband = min(ieqn1, ieqn2) - 1
+                    jband = abs(ieqn1 - ieqn2)
+                    aa[iband][jband] += a[i][j]
+                except ZeroDivisionError:
+                    continue                
+        except ZeroDivisionError:
+            continue
 #
 def beam_Ks(length: float, 
             area:float, J:float, Iy:float, Iz:float,
@@ -220,9 +242,9 @@ def beam_Ks(length: float,
     ek[ 8 ][ 10 ] = -ek[ 2 ][ 4 ]
     #
     # impose the geometry
-    for i in range( 12 ):
-        for j in range( i, 12 ):
-            ek[ j ][ i ] = ek[ i ][ j ]
+    for i in range(12):
+        for j in range(i, 12):
+            ek[j][i] = ek[i][j]
     # L10:
     return ek    
 #
@@ -238,27 +260,31 @@ def get_element_K(element:Tuple, section:Tuple, material:Tuple):
                 section.area, section.area)
     return trans_3d_beam(K, R)
 #
-def form_Kmatrix(elements, nodes, materials, 
-                 sections, jbc, neq, iband):
+def form_Kmatrix(elements, jbc:List, neq:int, iband:int):
     """
+    elements
+    jbc : node equations
+    neq : number of equations
+    iband : bandwidth
+
+    :return
+    a : global banded stiffness matrix (neq X iband)
     """
     start_time = time.time()
     aa = zeros(neq, iband)
-    #for element in elements.values():
-    #for element in elements.iter_elements:
     for key, element in elements.items():
-        idof, jdof = element.DoF #(nodes)
-        a = element.Kmatrix # (nodes, materials, sections)
-        assemble(idof, jdof, jbc, a, aa)
+        idof, jdof = element.DoF
+        a = element.Kmatrix
+        ipv = jbc[idof] + jbc[jdof]
+        assemble(ipv, a, aa)
     end_time = time.time()
     uptime = end_time - start_time
     print("** [K] assembly Finish Process Time: {:1.4e} sec".format(uptime))
     return aa
 #
-#
 # ---------------------
 #
-def max_bandwidth(elements, nodes, jbc):
+def max_bandwidth(elements,  jbc):
     """
     calculate max bandwidth
     ------------------------  
@@ -266,32 +292,19 @@ def max_bandwidth(elements, nodes, jbc):
     npj : connectivity end 2
     jbc : nodes freedom
     nel: number of elements
-    
+    if we
     npi ,npj, jbc, nel
     """
-    #ibndm3 = [0]
     ibndm4 = [0]
     for key, element in elements.items():
-        conn = element.connectivity
-        # end 1
-        end_1 = nodes[conn[0]].index
-        bc1 = jbc[end_1]
-        # end 2
-        end_2 = nodes[conn[1]].index
-        bc2 = jbc[end_2]
-        #
+        idof, jdof = element.DoF
+        bc1 = jbc[idof]
+        bc2 = jbc[jdof]
         ieqn = bc1 + bc2
-        #
         try:
             ibndm4.append(max([abs(ieqn1 - ieqn2)
                                for x, ieqn1 in enumerate(ieqn) if ieqn1 > 0
                                for ieqn2 in ieqn[x+1:] if ieqn2 > 0]))
-            #ibndm3.append(max([abs(ieqn1 - ieqn2)
-            #                  for ieqn1 in bc1 if ieqn1 > 0
-            #                  for ieqn2 in bc2]))
-            #ibndm3.append(max([abs(ieqn1 - ieqn2)
-            #                  for ieqn1 in bc1 if ieqn1 > 0
-            #                  for ieqn2 in bc2 if ieqn2 > 0]))
         except ValueError:
             continue
     #
@@ -323,6 +336,7 @@ def spclbc(elements, nodes, free_nodes, jbc):
         pos_node = set(conn) - set(free_nodes)
         for node_name in pos_node:
             ind = nodes[node_name].index
+            #ind
             # jbc[ind][3:] = [1, 1, 1]
             # jbc[ind][3] = 1
             # jbc[ind][4] = 1
@@ -341,7 +355,8 @@ def shape_cond(elements, nodes, boundaries, free_nodes):
     jcs: modify default = 0 free (1 fix)
     """
     jbc = bd_condition(nodes, boundaries)
-    jbc = spclbc(elements, nodes, free_nodes, jbc)
+    # TODO : check this module
+    #jbc = spclbc(elements, nodes, free_nodes, jbc)
     #
     # Number the equations  in jbc from 1 up to the order.
     # Start assigning equation numbers for zero dof's
@@ -372,8 +387,57 @@ def get_bandwidth(elements, nodes, boundaries, free_nodes):
                            boundaries=boundaries, 
                            free_nodes=free_nodes)
     #
-    iband = max_bandwidth(elements=elements, nodes=nodes,
-                          jbc=jbcc)
+    iband = max_bandwidth(elements=elements, jbc=jbcc)
     return jbcc, neq, iband
 #    
+# ---------------------
+#
+def get_stiffnes_matrix(elements, nodes, boundaries):
+    """ """
+    free_nodes = elements.get_free_nodes
+    #
+    print("** Processing Global [K] Matrix")
+    jbc, neq, iband = get_bandwidth(elements=elements, 
+                                     nodes=nodes, 
+                                     boundaries=boundaries, 
+                                     free_nodes=free_nodes)
+    print("** From datack: half band = {:}".format(iband))
+    #
+    # ---------------------------
+    # multiprocessing
+    #
+    #call(["python", "steelpy//frame3D//preprocessor//assemblyMatrix.py"])    
+    #
+    #with Manager() as manager:
+    #    d = manager.dict(elements)
+    #    l = manager.list(jbc)
+    #    st = manager.list(aa)
+    #    p = Process(target=loop_members, args=(d, l, st))
+    #    p.start()
+    #    p.join()
+    #
+    # ---------------------------
+    # Normal
+    stf = form_Kmatrix(elements= elements, jbc=jbc,
+                       neq=neq, iband=iband)
+    # set matrix
+    aa = UDUt(stf)
+    #aa = udu( stf )
+    #print("** Finished Processing Global [K] Matrix")
+    return aa, jbc
+#
+#
+def assemble_banded_matrix(elements, nodes, boundaries):
+    """
+    Asseable the element matrices in upper band form;
+    call separatly from formstif, formmass, formgeom
+    -------------------------------------------------
+    aa : stiffness matrix
+    jbc : nodes freedom
+    """
+    aa, jbc = get_stiffnes_matrix(elements, nodes, boundaries)
+    #
+    with open("stfmx.f2u", "wb") as f:
+        pickle.dump(jbc, f)
+        pickle.dump(aa, f)
 #

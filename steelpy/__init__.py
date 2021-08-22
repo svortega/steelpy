@@ -5,7 +5,7 @@
 from steelpy.codes.main import CodeCheck
 from steelpy.roarks.main import CircularRing
 from steelpy.design.main import ClampDesign as Clamp
-from steelpy.metocean.main import Metocean
+#from steelpy.metocean.main import Metocean
 from steelpy.trave3D.main import Trave3D
 from steelpy.beam.main import Beam
 from steelpy.f2uModel.main import f2uModel
@@ -16,7 +16,7 @@ from steelpy.process.units.main import Units
 # constants
 __major__ = 0.  # for major interface/format changes
 __minor__ = 3  # for minor interface/format changes
-__release__ = 5  # for tweaks, bug-fixes, or development
+__release__ = 6  # for tweaks, bug-fixes, or development
 
 __version__ = '%d.%d.%d' % (__major__, __minor__, __release__)
 

@@ -39,8 +39,7 @@ class Meshing:
         elements = mesh.elements
         elem_number = mesh.elements.get_number()
         cbeams = self.concept.beam
-        #cpoints = self.concept.points
-        #cpoints = mesh.nodes
+        #
         for key, beam in cbeams.items():
             total_length = beam.length
             p1,p2 = beam.connectivity
@@ -181,6 +180,7 @@ class Meshing:
         nodes = mesh.nodes
         basic_load = self.load.basic
         concept_bload = self.concept.load._basic
+        cpoints = self.concept.points
         for load_name, lcase in concept_bload.items():
             basic_load[load_name] = lcase.title
             # Beam line load process
@@ -246,7 +246,12 @@ class Meshing:
                         #basic_load[load_name].point_beam.name = label
             # Nodal load process
             #pl = concept_bload.point
-            basic_load[load_name].point_node.update(lcase.point.load)
+            for pname , loads in lcase.point.load:
+                point = cpoints[pname]
+                node_name = self._get_node_name(point[:3 ])
+                for load in loads:
+                    basic_load[load_name].point_node[node_name] = load[:6]
+            #basic_load[load_name].point_node.update(lcase.point.load)
         #
         #print('')
     #

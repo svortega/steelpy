@@ -17,6 +17,7 @@ from steelpy.f2uModel.load.operations.operations import(check_list_units,
                                                         check_list_number,
                                                         check_beam_dic)
 from steelpy.process.math.vector import Vector
+from steelpy.beam.static.singfunc import Trapezoidal, Point, Moment
 #
 # ---------------------------------
 #
@@ -46,15 +47,147 @@ class LineBeam(NamedTuple):
             return "local"
         return "global"
     #
-    def node_equivalent(self, elements, materials, sections):
+    def local_system(self, R):
+        """ """
+        # local nodal loading
+        nload = [self.qx0, self.qy0, self.qz0, 0, 0, 0,
+                 self.qx1, self.qy1, self.qz1, 0, 0, 0,]        
+        #
+        try:  # local system
+            1 / self.system
+        except ZeroDivisionError:
+            # global system
+            nload = trns_3Dv(nload, R)
+        return nload
+    #
+    def node_equivalent(self, elements, materials, sections, boundaries):
         """ """
         #nodal_load = []
-        eq_ln = self.line2node(elements, materials, sections)
+        eq_ln = self.line2nodeX(elements, materials, sections)
+        #print ( '-->')
+        #print(eq_ln)
+        #eq_ln = self.line2node( elements, materials, sections, boundaries)
+        #eq_ln2 = self.line2node(elements, boundaries)
+        #print(eq_ln2)
         global_nodal_load = local2global(eq_ln, elements)
         local_nodal_load = beam_eq(eq_ln)
         return global_nodal_load, local_nodal_load
     #
-    def line2node(self, element, material, section) -> List:
+    ##
+    #def line2node(self, element, boundaries) -> List:
+    #    """ """
+    #    beam = element.beam()
+    #    nodes = element.connectivity
+    #    #
+    #    boundary = []
+    #    for x, node in enumerate(nodes):
+    #        fixity = boundaries[node]
+    #        if fixity:
+    #            boundary.append(fixity[:6])
+    #        else:
+    #            boundary.append((1,1,1,1,1,1))
+    #    beam.supports(boundary)
+    #    #
+    #    # local nodal loading
+    #    nload = [self.qx0, self.qy0, self.qz0, 0, 0, 0,
+    #             self.qx1, self.qy1, self.qz1, 0, 0, 0,]
+    #    #
+    #    try:  # local system
+    #        1 / self.system
+    #    except ZeroDivisionError:
+    #        # global system
+    #        univec = element.unit_vector
+    #        R = Rmatrix(*univec, element.beta)
+    #        nload = trns_3Dv(nload, R)
+    #    #
+    #    #     line = [qy1,qz1, qy2,qz2, L1,L2]
+    #    beam.load.line = [nload[1], nload[2],
+    #                      nload[7], nload[8],
+    #                      self.L0, self.L1]
+    #    res = beam.reactions()
+    #    lnload = [0] * 12
+    #    #lnload
+    #    # lnload[ 0 ] # axial
+    #    lnload[ 1 ] = res[0][0][0] # y
+    #    lnload[ 5 ] = res[0][0][1] # mz
+    #    lnload[ 2 ] = res[1][0][0] # z
+    #    lnload[ 4 ] = res[1][0][1] # my
+    #    # End 2
+    #    lnload[ 7 ]  = -1*res[0][1][0]  # y
+    #    lnload[ 11 ] = -1*res[0][1][1]  # mz
+    #    lnload[ 8 ]  = -1*res[1][1][0]  # z
+    #    lnload[ 10 ] = -1*res[1][1][1]  # my
+    #    #
+    #    return lnload
+    ##
+    #def line2nodeYY(self, element, material, section, boundaries) -> List:
+    #    """
+    #    """
+    #    nodes = element.connectivity
+    #    beam = element.beam()
+    #    emod = material.E.convert('pascal').value
+    #    #gmod = material.G.convert('pascal').value
+    #    #area = section.area
+    #    Iy = section.Iz
+    #    Iz = section.Iy
+    #    L = element.length
+    #    #
+    #    boundary = []
+    #    for x, node in enumerate(nodes):
+    #        fixity = boundaries[node]
+    #        if fixity:
+    #            boundary.append("pinned")
+    #            #beam.support[ x + 1 ] = "pinned"
+    #        else:
+    #            boundary.append("pinned")
+    #            #beam.support[ x + 1 ] = "fixed"
+    #    beam.supports(boundary)
+    #    # local nodal loading
+    #    nload = [self.qx0, self.qy0, self.qz0, 0, 0, 0,
+    #             self.qx1, self.qy1, self.qz1, 0, 0, 0,]
+    #    #L1 = self.L0
+    #    #L2 = self.L1
+    #    #
+    #    try:  # local system
+    #        1 / self.system
+    #        # print('local system')
+    #    except ZeroDivisionError:
+    #        # global system
+    #        # print('global system')
+    #        univec = element.unit_vector
+    #        R = Rmatrix ( *univec, element.beta )
+    #        nload = trns_3Dv( nload, R )
+    #    #
+    #    lnload = [0] * 12
+    #    #
+    #    ### line = [qy1,qz1, qy2,qz2, L1,L2]
+    #    #beam.load.line = [nload[1], nload[2],
+    #    #                     nload[7], nload[8],
+    #    #                     L1, L2]
+    #    #res = beam.support()
+    #    in_place = Trapezoidal(q1=nload[1], q2=nload[7],
+    #                           L=L, L1=self.L0, L2=self.L1)
+    #    in_place = in_place(x=L,E=emod,I=Iy)
+    #    out_place = Trapezoidal(q1=nload[2], q2=nload[8],
+    #                            L=L, L1=self.L0, L2=self.L1)
+    #    out_place = out_place(x=L,E=emod,I=Iz)
+    #    # End 1
+    #    lnload = beam.load(in_place)
+    #    # lnload[ 0 ] # axial
+    #    lnload[ 1 ] = -res[0].in_plane.R.value/1000   # y
+    #    lnload[ 5 ] = -res[0].in_plane.M.value/1000   # mz
+    #    lnload[ 2 ] = -res[0].out_plane.R.value/1000  # z
+    #    lnload[ 4 ] = -res[0].out_plane.M.value/1000  # my
+    #    # End 2
+    #    lnload[ 7 ]  = -res[1].in_plane.R.value/1000   # y
+    #    lnload[ 11 ] = -res[1].in_plane.M.value/1000   # mz
+    #    lnload[ 8 ]  = -res[1].out_plane.R.value/1000  # z
+    #    lnload[ 10 ] = -res[1].out_plane.M.value/1000  # my
+    #    #
+    #    return lnload
+    #
+    #
+    def line2nodeX(self, element, material, section) -> List:
         """
         """
         length = element.length
@@ -79,7 +212,7 @@ class LineBeam(NamedTuple):
             univec = element.unit_vector
             R = Rmatrix ( *univec, element.beta )
             nload = trns_3Dv ( nload, R )
-            #
+        #
         lnload = [0] * 12
         #
         if nload[0] or nload[6]:
@@ -142,6 +275,21 @@ class LineBeam(NamedTuple):
                    f"{self.qy1: 1.3e} {self.qz1: 1.3e} "
                    f"{self.load_complex}\n")
         return output
+    #
+    def __call__(self, L:float, x:float, 
+                 E:float, Iy:float, Iz:float):
+        """ 
+        L : beam lenght
+        x : distance from end 1
+        E : Elastic module
+        Iy : In plane
+        Iz : Out plane
+        """
+        in_place = Trapezoidal(q1=self.qy0, q2=self.qy1, 
+                               L=L, L1=self.L0, L2=self.L1)
+        out_place = Trapezoidal(q1=self.qz0, q2=self.qz1, 
+                                L=L, L1=self.L0, L2=self.L1)
+        return [in_place(x,E,Iy), out_place(x,E,Iz)]
 #
 #
 class PointBeam(NamedTuple):
@@ -160,9 +308,27 @@ class PointBeam(NamedTuple):
     load_complex:int
     #
     @property
+    def coordinate_system(self):
+        if self.system != 0:
+            return "local"
+        return "global"    
+    #    
+    @property
     def distance(self):
         """ """
         return self.L0
+    #
+    def local_system(self, R):
+        """ """
+        # local nodal loading
+        pload = [self.fx, self.fy, self.fz, self.mx, self.my, self.mz]       
+        #
+        try:  # local system
+            1 / self.system
+        except ZeroDivisionError:
+            # global system
+            pload = trns_3Dv(pload, R)
+        return pload    
     #
     def node_equivalent(self, elements, materials, sections):
         """ """
@@ -274,12 +440,6 @@ class PointBeam(NamedTuple):
             lnload[11] -= eq_nload[3]
         #
         return lnload
-    #
-    @property
-    def coordinate_system(self):
-        if self.system != 0:
-            return "local"
-        return "global"    
     #
     def __str__(self, units:str="si") -> str:
         """ """
