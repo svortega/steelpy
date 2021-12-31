@@ -141,7 +141,7 @@ def trans_3d_beam(ek: List, r_matrix: List):
             for k in range(3):
                 for ii in range(3):
                     ek[j1 + k][j2 + ii] = math.fsum([rt[k][jj] * ktemp[j1 + jj][j2 + ii]
-                                                    for jj in range(3)])
+                                                     for jj in range(3)])
             # 24
     # 22
     return ek

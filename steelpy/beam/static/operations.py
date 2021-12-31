@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2021 steelpy
+# Copyright (c) 2019-2022 steelpy
 #
 
 # Python stdlib imports
@@ -13,8 +13,7 @@ import re
 from steelpy.beam.static.support import Response, ReactPlane, FuncRes
 from steelpy.f2uModel.plot.simplot import SimPlot
 from steelpy.process.math.vector import Vector
-#from steelpy.f2uModel.load.operations.actions import Actions
-from steelpy.f2uModel.sections.process.stress import BeamStress
+from steelpy.sections.process.stress import BeamStress
 from steelpy.process.units.main import Units
 #
 #

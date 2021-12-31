@@ -40,9 +40,10 @@ def rootsearch(f, a, b, dx):
             return None, None
         x1 = x2
         f1 = f2
-        x2 = x1 + dx
+        #x2 = x1 + dx
+        x2 += dx
         f2 = f(x2)
-    return x1,x2
+    return x1, x2
 #
 #
 #
@@ -57,11 +58,15 @@ def bisect(f, x1, x2, switch=0, epsilon=1.0e-9):
     f(x) increases as a result of a bisection.
     """
     f1 = f(x1)
-    if f1 == 0.0: 
+    try:
+        1/f1
+    except ZeroDivisionError:
         return x1
     #
     f2 = f(x2)
-    if f2 == 0.0: 
+    try:
+        1/f2
+    except ZeroDivisionError:
         return x2
     
     if f1*f2 > 0.0: 
@@ -73,16 +78,19 @@ def bisect(f, x1, x2, switch=0, epsilon=1.0e-9):
         x3 = 0.5*(x1 + x2)
         f3 = f(x3)
         #
-        if (switch == 1) and (abs(f3) >abs(f1)) and (abs(f3) > abs(f2)):
+        if switch == 1 and abs(f3) > abs(f1) and abs(f3) > abs(f2):
             return None
-        
-        if f3 == 0.0: 
+        try:
+            1/f3
+        except ZeroDivisionError:
             return x3
         
         if f2*f3 < 0.0:
-            x1 = x3; f1 = f3
+            x1 = x3
+            f1 = f3
         else:
-            x2 =x3; f2 = f3
+            x2 =x3
+            f2 = f3
     return (x1 + x2)/2.0
 #
 #

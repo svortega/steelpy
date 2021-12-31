@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020 steelpy
+# Copyright (c) 2019-2022 steelpy
 
 # Python stdlib imports
 import math
@@ -16,8 +16,8 @@ from steelpy.design.clamp.process.shell import ClampShell
 from steelpy.design.clamp.process.neoprene import Neoprene
 from steelpy.design.clamp.process.bolts import Bolts
 from steelpy.codes.api.main import API_design
-from steelpy.f2uModel.sections.main import Sections
-from steelpy.f2uModel.material.main import Materials
+from steelpy.sections.main import Sections
+from steelpy.material.main import Materials
 
 #
 #-------------------------------------------------

@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2021 steelpy
+# Copyright (c) 2019-2022 steelpy
 # 
 
 # Python stdlib imports
@@ -10,7 +10,7 @@ import re
 
 
 # package imports
-from steelpy.beam.static.singfunc import Trapezoidal, Point, Moment, SingFunction
+from steelpy.formulas.pilkey.singfunc import Trapezoidal, Point, Moment, SingFunction
 #
 #
 #

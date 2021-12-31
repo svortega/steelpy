@@ -1,50 +1,26 @@
 # Copyright (c) 2015-2016 steelpy
 
 # Python stdlib imports
+from __future__ import annotations
 import math
 import datetime
+#from typing import NamedTuple, Dict, List, Tuple, Union, Iterator
+
 
 # package imports
-from steelpy.math.rootsearch import GoalSeeker
+from steelpy.process.units.main import Units
+from steelpy.process.math.rootsearch import GoalSeeker
 from steelpy.codes.piping.ASME_B313 import ASME
 from steelpy.codes.piping.DNV_F101 import DNV
-from steelpy.wave.theory import WaveStokes5
-#
-
+from steelpy.codes.piping.process import MainPipe, pipe_section
 #
 #
-def pipe_section(Do, tnom, tcheck):
-    """
-    """
-    #
-    _Dinom = (Do - 2 * tnom)
-    
-    # Internal Area
-    Ai = (math.pi*_Dinom**2/4.0)    
-    
-    # External Area
-    Ae = (math.pi*Do**2/4.0)    
-    
-    # Pipe section area (nominal thickness)
-    CSA = ((math.pi / 4.)*
-           (Do**2 -(Do - 2*tnom)**2))
-    
-    # Pipe section area (Tnom - Tcorr thickness)
-    Anomfab = ((math.pi / 4.0)*
-               (Do**2 -(Do - 2 * tcheck)**2))
-    
-    #
-    Ze = ((math.pi / 64.0) * 
-          (Do**4 - (Do - 2 * tcheck)**4) /
-          (Do / 2.0))
-    #
-    return Ai, Ae, CSA, Anomfab, Ze
+# ===================================================
+#    PD8010-1:2004 Part 1 : Steel Pipelines on Land
+# ===================================================
 #
-#-------------------------------------------------
-#                  PD8010 Section
-#-------------------------------------------------
 #
-class PD8010_2015_1:
+class PD8010_2015_1(MainPipe):
     """
     PD 8010-1 & 2: 2015
     """
@@ -52,110 +28,10 @@ class PD8010_2015_1:
     def __init__(self):
         """
         """
-        pass
-    #
+        super().__init__()
+        self.a = 0.72
     # 
-    # ===================================================
-    # Section Properties
-    # ===================================================
-    #     
-    def section_input(self, Do, tnom, tmin): 
-        """
-        Do
-        tnom
-        tmin
-        """
-        #
-        self.Do = float(Do)
-        self.tnom = float(tnom)
-        self.tmin = (tmin)
-        #
-        print (' ')
-        print ('Section Properties ')
-        print ('Do =', self.Do)
-        print ('Tnom =',self.tnom)
-        print ('Tmin =',self.tmin)
-        print (' ')
-        #
-        #     
-        #-------------------------------------------------
-        #   Cross-Sectional Area
-        #
-        self.A = ((math.pi / 4.)*
-                  (self.Do**2 -(self.Do - 2*self.tmin)**2))
-        #   
-        #
-        #-------------------------------------------------
-        #               Section Properties
-        #-------------------------------------------------
-        #
-        #
-        #   Second Moment of Area about Mayor Axis
-        #   --------------------------------------
-        #
-        self.I = ((math.pi / 64.0)*
-                  (self.Do**4 - (self.Do - 2*self.tmin)**4))
-        # print ('circular Second Moment',self.Iip)
-        # 
-        #   
-        #
-        #
-        #-------------------------------------------------
-        #   Plastic Modulus about Mayor Axis
-        #    def Zx(self):
-        #
-        self.Zp = ((self.Do**3 - 
-                    (self.Do - 2 * self.tmin)**3) / 6.0 )
-        # print ('circular Plastic Modulus',self.Zpip)
-        #
-        #
-        #-------------------------------------------------
-        #   Radius of gyration about Mayor Axis
-        #
-        self.r = (math.sqrt(self.I / self.A))
-        # print ('circular Radius of gyration about Mayor Axis',self.rip)
-        # 
-        #self.rop = self.rip
-        #
-        #-------------------------------------------------
-        #   Torsional Constant
-        #
-        self.J = (2 * self.I)
-        # print ('Torsional Constant',self.J)
-        # 
-        #
-        #-------------------------------------------------
-        #   Polar Moment of Inertia
-        self.Ip = ((math.pi / 32.0) *
-                   (self.Do**4 - 
-                    (self.Do - 2*self.tmin)**4))
-        # print ('Polar Moment of Inertia Ip:',self.Ip)
-        #
-        #
-        #-------------------------------------------------
-        #  Mass
-        #self.mass = (self.A * self.Rhos)/1000**2
-        #
-    #
-    def material(self, sigma_y, E, Poisson, alpha_T):
-        """
-        """
-        self.sigma_y = sigma_y
-        self.E = E
-        self.Poisson = Poisson
-        print ('Material Properties ')
-        print ('Fy =',self.sigma_y)
-        #print ('Fu =',self.Sigmau)
-        print ('E =',self.E)
-        #print ('G =',self.G)
-        self.alpha_T = alpha_T
-    #
-    #
-    # ===================================================
-    #    PD8010-1:2004 Part 1 : Steel Pipelines on Land
-    # ===================================================
-    # 
-    def substances_categorization(self, category):
+    def substances_categorization(self, category:str):
         """
         category : A - Typically non-flammable water-based fluids
                    B - Flammable and/or toxic fluids that are liquids
@@ -165,7 +41,7 @@ class PD8010_2015_1:
                        gases at ambient temperature and
                        atmospheric pressure conditions
                    D - Non-toxic, single-phase natural gas
-                   C - Flammable and/or toxic fluids that are gases
+                   E - Flammable and/or toxic fluids that are gases
                        at ambient temperature and atmospheric
                        pressure conditions and are conveyed as
                        gases and/or liquids
@@ -192,20 +68,13 @@ class PD8010_2015_1:
         assessment [23].
         
         NOTE 3 - Additional guidance on CO2 pipelines is given in DNV-RP-J202.
-        
         """
-        #
         a = 0.72
-        #
-        #if category == "B":
-        #    a = 0.72
-        #
         if category == "C":
             a = 0.30
-        #
         return a
     #
-    def substance_factor(self, substance, Q=None):
+    def substance_factor(self, substance:str, Q=None):
         """
         substance : ammonia
                     carbon dioxide dense/gas phase
@@ -217,10 +86,8 @@ class PD8010_2015_1:
         
         Q         : Substance Factor
         
-        
         Table 3 Substance factors
         """
-        
         if 'ammonia' in substance:
             self.Q = 2.50
         
@@ -258,9 +125,7 @@ class PD8010_2015_1:
         """
         n :
         
-        
         6.2.2.3 Bends
-        
         Changes in direction may be made by bending pipe or installing factory-made
         bends or elbows. All bends should be free from buckling, cracks or other
         evidence of mechanical damage. The nominal internal diameter of a bend
@@ -269,43 +134,41 @@ class PD8010_2015_1:
         good alignment and to facilitate welding. Pipes bent cold should not contain a
         girth weld within the bent section.
         """
-        
         self.thin = 50.0 / (n + 1)
     #
     # 
-    def limits_calculated_stress(self, sigma_h, Sah, sigma_e, Sae, design_method):
+    def limits_calculated_stress(self, sigma_h:Units, Sah:Units, 
+                                 sigma_e:Units, Sae:Units, 
+                                 design_method:str):
         """
-        sigma_h
-        Sah
-        sigma_e
-        Sae
+        sigma_h : hoop stress
+        Sah     : allowable hoop stress
+        sigma_e : equivalent stress
+        Sae     : allowable equivalent stress
         
         6.4.3 Limits of calculated stress
-        
-
         """
         #
-        print (" ")
-        print ("Allowable Stress")
+        print(" ")
+        print("Allowable Stress")
         #
-        URhoop = (sigma_h / Sah )
-        print (("URhoop : {:2.3f}").format(URhoop))
+        URhoop = sigma_h.value / Sah.value
+        
         if 'stress' in design_method:
-            UReq = (sigma_e / Sae)
+            UReq = sigma_e.value / Sae.value
         else:
             UReq = self.epsilon_p / 0.0050
             
             if self.epsilon_p > 0.0050:
-                print (("Fail  Epsilonp > 0.0010:" +"%2.3f")%(self.epsilon_p))
-                
+                print (f"Fail  Epsilonp > 0.0010 : {self.epsilon_p:2.3f}")
             else:
-                print (("Pass  Epsilonp < 0.0010:" +"%2.3f")%(self.epsilon_p))            
+                print (f"Pass  Epsilonp < 0.0010 : {self.epsilon_p:2.3f}")            
         #
-        print (("UReq   : {:2.3f}").format(UReq))
-        #
+        print("UR_hoop = {:2.3f}".format(URhoop))
+        print("UR_eq   = {:2.3f}".format(UReq))
         return URhoop, UReq
     #
-    def allowable_hoop_stress(self, a, pipe_history=False):
+    def allowable_hoop_stress(self, a:float, pipe_history=False):
         """
         a : 
         pipe_history : unknown = False
@@ -328,18 +191,14 @@ class PD8010_2015_1:
         """
         e = 1.0
         if not pipe_history :
-            #
-            if self.Do > 114.0:
+            if self.Do.value > 0.114:
                 e = 0.80
-            
             else:
                 e = 0.60
         #
-        #
-        Sah = (a * e * self.sigma_y)
-        fd_hs = (a * e)
-        print ("Allowable hoop stress Sah = ", Sah)
-        #
+        Sah = a * e * self.sigma_y
+        fd_hs = a * e
+        print (f"Allowable hoop stress Sah = {Sah.convert('megapascal').value} MPa")
         return Sah, fd_hs
     #
     def allowable_equivalent_stress(self):
@@ -350,16 +209,13 @@ class PD8010_2015_1:
         
         NOTE Further guidance is given in BS EN 13480, ASME B31.3 and ASME B31.8.
         """
-        #
         Sae = 0.90 * self.sigma_y
         fd =  0.90
-        print ("Allowable equivalent stress Sah = {:}".format(Sae))
-        
+        print ("Allowable equivalent stress Sah = {:} MPa".format(Sae.convert('megapascal').value))
         return Sae, fd
     #
     def anchor_blocks(self):
         """
-        
         6.17 Anchor blocks
         
         The design of anchor blocks to prevent axial movement of a pipeline should
@@ -376,7 +232,7 @@ class PD8010_2015_1:
         self.F = (A * (self.E * self.alpha * (self.T2 - self.T1) 
                        + (self.sigma_hl / (K**2 + 1))
                        - self.Poisson * (self.sigma_hl - P)))
-        #
+    #
     #
     def hydrostatic_test(self, D, t, Tf):
         """
@@ -392,15 +248,14 @@ class PD8010_2015_1:
         """
         self.delta_p = 0.10 * (264.70 * Tf / (D/t + 100))
     #
-    def hoop_stress(self, Pi, Po,
-                    Do=None, tmin=None):
+    def hoop_stress(self, P:Units,
+                    Do:Units|None=None, tmin:Units|None=None):
         """
         Do   :
         tmin : minimimum wall thickness (m)
-        Pi : Internal pressure
-        Po : External pressure
+        P : External Overpressure
 
-        6.4.2.2 Hoop stress
+        6.4.2.1 Hoop stress
 
         The wall thickness used for hoop stress calculation should be the minimum value
         allowing for permitted wall thickness variations, such as fabrication tolerances,
@@ -408,18 +263,13 @@ class PD8010_2015_1:
         tnom = tmin + tfab + tcorr    (4)
         """
         #
-        _tmin = self.tmin
-        if tmin:
-            _tmin = float(tmin)
+        if not tmin:
+            tmin = self.tmin
 
-        _Do = self.Do
-        if Do:
-            _Do = float(Do)
+        if not Do:
+            Do = self.Do
 
-        _Dih = (_Do - 2*_tmin)
-
-        Pi = float(Pi)
-        Po = float(Po)
+        Dih = Do - 2*tmin
         #
         # NOTE For clad or lined pipelines, the strength contribution
         # of the cladding or lining is usually not taken into account,
@@ -428,53 +278,45 @@ class PD8010_2015_1:
         # For all other stress checks in this section, tnom should
         # be used in the calculation of component stresses.
         #
-        if _Do/_tmin > 20:
+        # Thin wall
+        if Do.value/tmin.value > 20:
             # Hoop stress should be calculated using equation (3)
             # (thin wall) when the ratio of Do/tmin is greater than 20.
-            sigma_h = (Pi - Po)*(_Do/(2 * _tmin))
-        #
+            sigma_h = P * Do /(2 * tmin)
         else:
             # Equation (5) (thick wall) should be used when the ratio
             # of Do/tmin is less than or equal to 20.
-            sigma_h = ((Pi - Po)*
-                       ((_Do**2 + _Dih**2) / 
-                        (_Do**2 - _Dih**2)))
-            #
+            sigma_h = P * (Do**2 + Dih**2) / (Do**2 - Dih**2)
         #
-        print (" ")
-        print ("Hoop Stress", _tmin)
-        print (("Sigmah  = "+"%2.3f")%(sigma_h))
-        #
-        # self.sigma_h = sigma_h
+        print(" ")
+        #print(f"Hoop Stress = {tmin.convert('megapascal').value:2.3f}")
+        print(f"Sigmah = {sigma_h.convert('megapascal').value:1.3f} MPa")
         #
         return sigma_h
-        #
     #
-    def shear_stress(self, tcheck, T, Fs):
+    #
+    def shear_stress(self, tcheck, T, Fs, output=False):
         """
         T  : torque
         Fs : Shear Force
         
-        
         6.4.2.4 Shear stree
-        
         The shear stress, tau, should be calculated from the torque and shear force applied
         to the pipeline using equation (9)(7).
         """
-        #
-        Ai, Ae, CSA, Anomfab, Ze =  pipe_section(self.Do, self.tnom, tcheck)
-        #
-        tau = ((T / (2.0 * Ze)) + (2 * Fs / Anomfab))
-        #
-        print (("Tau  = {:2.3f}").format(tau))
-        #
+        Ai, Ae, CSA, Anomfab, I, Ze, C =  pipe_section(self.Do, self.tnom, tcheck)
+        tau = T / (2.0 * C) + (2 * Fs / Anomfab)
+        if output:
+            print("")
+            print("Shear stress")
+            print("Tau  = {:2.3f} MPa".format(tau.convert('megapascal').value))
         return tau
     #    
     def longitudinal_stress(self, tcheck, 
-                            Fx, Mb, sigma_h, 
-                            T1, T2, Pi, Po,
-                            restrained=False,
-                            temperature_pressure=False):
+                            sigma_h:Units, delta_T:Units, 
+                            P:Units, Fx:Units, Mb:Units, 
+                            restrained=False, output=False):
+        
         """
         restrained : False/True
         temperature_pressure : False/True
@@ -490,11 +332,30 @@ class PD8010_2015_1:
         """
         #
         #   --------------------------------------
+        Ai, Ae, CSA, Anomfab, I, Ze, C =  pipe_section(self.Do, self.tnom, tcheck)
+        sigma_b = Mb / Ze
+        sigma_x = Fx / Anomfab
+        try:
+            1/ delta_T.value
+            temp_delta = (delta_T.value - 273.15)   # from K to C
+        except ZeroDivisionError:
+            temp_delta = 0
+        alpha = (self.alpha.value - 1/273.15) # from K to C
         #
-        Ai, Ae, CSA, Anomfab, Ze =  pipe_section(self.Do, self.tnom, tcheck)
-        #
-        print (" ")
-        print ("Longitudinal Stress Calculation")
+        print(" ")
+        print("Longitudinal Stress Calculation")
+        print("Pressure    = {: 1.3e} bar"
+              .format(P.convert('megapascal').value*10))
+        print("Temperature = {: 1.3e} C".format(temp_delta))
+        print("Fx          = {: 1.3e} kN"
+              .format(Fx.convert('kilonewton').value))
+        print("Mb          = {: 1.3e} kN-m"
+              .format(Mb.convert('kilonewton*metre').value))        
+        print("-----------------------------")
+        print("Sigma_b     = {: 1.3e} MPa"
+              .format(sigma_b.convert('megapascal').value))
+        print("Sigma_x     = {: 1.3e} MPa"
+              .format(sigma_x.convert('megapascal').value))        
         #
         # ------------------------------------------
         # Hoop Stress Component of von Mises Stress
@@ -505,87 +366,60 @@ class PD8010_2015_1:
         if restrained:
             # Temperature induced part of Force
             # - As*E*AlphaT*DeltaT
-            Stemp = 0
-            if T2:
-                delta_T = (T2 - T1)
-                Stemp = self.E * self.alpha_T * delta_T # CSA * 
-                temperature_pressure = True
-                print (("Temperature Long Stress = {: 2.3f}").format(Stemp))
+            Stemp = 0 * self.units.MPa
+            #if delta_T:
+            Stemp += self.E * alpha * temp_delta
+            #
+            print("Sigma_t     = {: 1.3e} MPa"
+                  .format(Stemp.convert('megapascal').value))
             #
             # Pressure induced part of Force
-            # -DeltaPi*Ai*(1-2*poisson)
-            _Sp = 0
-            if Pi:
-                v = self.Poisson #Ai * (1 - 2 * self.Poisson)
-
-                if self.Do/self.tnom > 20:
-                    _Sp = sigma_h * v 
-                else:
-                    p = (Pi - Po)
-                    _Sp = (sigma_h - p) * v 
-
-                temperature_pressure = True
-                print (("Pressure Long Stress = {: 2.3f}").format(_Sp))
+            Sp = 0 * self.units.MPa
+            #if P:
+            v = self.Poisson
+            # thin wall
+            if self.Do.value/self.tnom.value > 20:
+                Sp += sigma_h * v 
+            else:
+                Sp += (sigma_h - P) * v 
             #
-            #            
-            _SL = _Sp - Stemp
-            print("SL = {:2.3f}".format(_SL))
-
-        # Unrestrained
+            print("Sigma_p     = {: 1.3e} MPa"
+                   .format(Sp.convert('megapascal').value))
+            #       
+            sigma_L = (Sp + Stemp)
+            #print("SL = {:2.3f}".format(SL))
         else:
+            # Unrestrained
             # Bending Stress due to temperature, weight
             # of pipe contents, insulation, snow and ice,
             # wind or earthquake is calculated by the 
             # following equation:
             #
-            if self.Do/self.tnom > 20:
-                k = Do / (Do - 2 * tcheck)
-
+            # thin wall
+            if self.Do.value / self.tnom.value > 20:
+                k = self.Do.value / (self.Do.value - 2 * tcheck.value)
             else:
                 k = 1.0
             #
-            SL2 = sigma_h/(k**2 + 1) + (Mb / Ze)
-            #
-            print('k = {:2.3f}'.format(k))
-            print ("SL = {:2.3f}".format(SL2))            
-            _SL = (_Sp  + SL2)
+            print('k  = {:1.3e}'.format(k))
+            sigma_L = sigma_h/(k**2 + 1) + sigma_b
         #
-        # ------------------------------------------
-        # True Wall Axial Force
-        # N = S - PiAi + PeAe
-        _PiAi = 0
-        _PeAe = 0
-        #if Pi:
-            # Internal Pressure (N)
-            #_PiAi = Pi * Ai
-            # External Pressure (N)
-            #_PeAe = Po * Ae
-        #
-        #print ("Pi, Pe",_PiAi, _PeAe ) 
-        #
-        sigma_b = Mb / Ze
-        # ------------------------------------------        
+        # ------------------------------------------      
         # Summing all components of longitudinal
-        # normal stress:
-        #self.sigma_L = self.Sb + self.Sdl + self.Sp - self.Stemp
         #
-        _Fx = ( _SL + _PiAi - _PeAe + Fx )
-        # Include Temperature + hoop stress + given axial load
-        sigma_L =   _SL + Fx / Anomfab
-        #Fx = abs(min(( _SL + _PiAi - _PeAe + Fx ),0))
-
-        #
-        #print(' Fx = {:}'.format(_Fx))
-        print (("Longitudinal Stress = {:2.3f}").format(sigma_L))
+        sigma_L += sigma_x
+        print("-----------------------------")
+        print (("Sigma_L     = {: 1.3e} MPa")
+               .format(sigma_L.convert('megapascal').value))
         return sigma_L, sigma_b
     # 
-    def equivalent_stress(self, sigma_h, sigma_L, tau):
+    def equivalent_stress(self, sigma_h, sigma_L, tau, output=False):
         """
         sigma_h
         sigma_L
         tau
         
-        6.4.2.4 Equivalent stress
+        6.4.2.5 Equivalent stress
         
         Unless a strain-based design approach is adopted (see 6.4.3), equivalent stresses
         should be evaluated using the von Mises stress criterion shown in equation (6).
@@ -611,17 +445,114 @@ class PD8010_2015_1:
         # (see 6.4.3), equivalent stresses should be evaluated
         # using the von Mises stress criterion shown in equation(6)
         # (6)
-        sigma_e = math.sqrt(sigma_h**2 + sigma_L**2
-                            - sigma_h * sigma_L
-                            + 3*tau**2)
+        sigma_e = (sigma_h**2 + sigma_L**2 - sigma_h * sigma_L + 3*tau**2)**0.50
         #
-        print (("sigmae  = {:2.3f}").format(sigma_e))
+        if output:
+            print (" ")
+            print ("Functional Stress Calculation")             
+            print (("sigmae  = {:2.3f}")
+                   .format(sigma_e.convert('megapascal').value))
         #
         #self.SFeq = (self.fd * self.sigma_y / self.sigma_e)
         #print (("Equiv Stress Usage Factor: " +"%2.3f")%(self.SFeq))
         #
         return sigma_e
+    #
+    #
+    def equivalent_strain(self, epsilon_pL, epsilon_ph, epsilon_pr, output=False):
+        """
+        epsilon_pL : Principal longitudinal plastic strain
+        epsilon_ph : Principal circunferential (hoop) strain
+        epsilon_pr : Radial plastic strain
+        
+        6.4.3 Strain-based design
+        
+        The limit on equivalent stress recommended in 6.4.2.4 
+        may be replaced by a limit on allowable strain,
+        provided that all the following conditions are met:
+        
+        a) The allowable hoop stress criterion (see 6.4.2.1 and
+           6.4.2.2) is met.
+        
+        b) Under the maximum operating temperature and pressure,
+           the plastic component of the equivalent strain does 
+           not exceed 0.005 (0.5 %).
+           
+        c) The reference state for zero strain is the as-built 
+          state (after pressure test). The plastic component 
+          of the equivalent uniaxial tensile strain should be
+          calculated using equation (8).
+          This analysis can be performed conservatively by assuming
+          a linearly elastic - perfectly plastic stress/strain curve.
+          Other, more realistic stress/strain curves may be used. 
+          However, it is essential that the assumed curve is validated 
+          as being conservative by material stress/strain curves from
+          the manufactured pipe.
+        
+        d) Any plastic deformation occurs only when the pipeline is
+           first raised to its maximum operating pressure and temperature,
+           but not during subsequent cycles of depressurization, reduction
+           in temperature to the minimum operating temperature, or return 
+           to the maximum operating pressure and temperature. This should 
+           be determined via analytical methods or an appropriate finite 
+           element analysis. The analysis should include an estimate of 
+           the operational cycles that the pipeline is likely to 
+           experience during the operational lifetime.
+        
+        e) The Do/tnom ratio does not exceed 60.
+        
+        f) Axial or angular misalignment at welds is maintained within defined
+           tolerances.
+        
+        g) A fracture analysis is carried out in accordance with 6.4.5.
+        
+        h) A fatigue analysis is carried in accordance with 6.4.6
+        
+        i) The weld metal yield stress matches or overmatches the longitudinal yield
+           stress of the pipe.
+           
+        j) For welds where allowable defect sizes are based on an ECA,
+           UT supplements radiographic testing, unless automated ultrasonic
+           testing (AUT) is performed.
+        
+        k) Additional limit states are analysed as follows:
+           1) bending failure resulting from application of a moment in
+              excess of the moment capacity of the pipe;
+           2) ovalization - distortion of the pipe wall associated with
+              bending to high strain levels (see 6.4.4.2 and Annex G);
+           3) local buckling (see 6.4.4.1 and Annex G);
+           4) global buckling - lateral or upheaval buckling due to 
+              overall axial compression (see 6.4.4.1 and Annex G).
+        
+        Plastic deformation reduces pipeline flexural rigidity; this effect can reduce
+        resistance to upheaval buckling and should be checked if upheaval buckling
+        might occur. The effects of strain localization should be taken into account in
+        the strain-based design.
+        
+        NOTE Strain localization is associated with discontinuities in stiffness of the pipeline
+            (bending or axial) and can therefore develop in the following locations:
+          - changes in wall thickness;
+          - buckle arrestor locations;
+          - locally thinned regions, e.g. due to corrosion;
+          - field joints and coatings;
+          - welds, due to undermatching of the strength of the weld.
+        
+        """
+        #
+        if self.Do.value/self.tnom.value > 60:
+            print ("Do/tnom > 60  --> Strain Design Not Applicable")
+            sys.exit()
+        else:
+            epsilon_P = (2.0/3.0 * (epsilon_pL**2 + epsilon_ph**2 + epsilon_pr**2))**0.50
+        #
+        if output:
+            print (" ")
+            print ("Strain Design")
+            print ("Equivalent Uniaxial Tensile Strain : {:2.5f}"
+                   .format(epsilon_P))
+        return epsilon_P
     #    
+    #
     def expansion_flexibility(self, FS_code, SIFs_type, pipe_description,
                               flanges=0, T_= 0, r2=0, R1S=0, theta=0):
         """ 
@@ -697,7 +628,6 @@ class PD8010_2015_1:
                            r2, 
                            R1S, 
                            theta)
-
             h, k, lo, li, C1 = asme.AppendixD()
         #
         # BS EN 13480
@@ -707,12 +637,10 @@ class PD8010_2015_1:
             if SIFs_type == 'BEND':
                 #
                 print ("No implement yet")
-            #
             # Tee Flexibility
             elif SIFs_type == 'TEE':
                 #
                 print ("No implement yet")
-            #
             # Unknow
             else:
                 print ("No implement yet")
@@ -721,13 +649,9 @@ class PD8010_2015_1:
             # Flanges
             if self.Flanges == 0 or self.Flanges > 2:
                 self.C1 = 1.0
-            #
             # Rest
             else:
-                print ("No implement yet")
-            #
-            #
-        #        
+                print ("No implement yet")        
         #
         # No flexibility & Stress Factors
         else:
@@ -744,18 +668,18 @@ class PD8010_2015_1:
             C1 = 1.0
         #
         #
-        print (" ")
-        print ("Expansion Flexibility ")
-        print ("Based on ",FS_code)
-        print ("Member Description: ", pipe_description)
-        print ("Member Type: ",SIFs_type)
-        print (("h  = "+"%2.3f")%(h))
-        print (("k  = "+"%2.3f")%(k))
-        print (("lo = "+"%2.3f")%(lo))
-        print (("li = "+"%2.3f")%(li))
-        print (("C1 = "+"%2.3f")%(C1))
+        print(" ")
+        print("Expansion Flexibility ")
+        print("Based on ",FS_code)
+        print("Member Description: ", pipe_description)
+        print("Member Type: ",SIFs_type)
+        print(("h  = "+"%2.3f")%(h))
+        print(("k  = "+"%2.3f")%(k))
+        print(("lo = "+"%2.3f")%(lo))
+        print(("li = "+"%2.3f")%(li))
+        print(("C1 = "+"%2.3f")%(C1))
         #
         return h, k, lo, li, C1
-    #    
+#    
 #     
 

@@ -104,7 +104,7 @@ class BasicLoadBasic(Mapping):
     #
     #
     def get_basic_load(self, load_name:str, elements, nodes,
-                       boundaries, materials, sections):
+                       boundaries):
         """
         """
         member_nload = {}
@@ -158,21 +158,35 @@ class BasicLoadBasic(Mapping):
         # beam point load
         for key, item in lcase.point_beam.items():
             element = elements[key]
-            material = materials[element.material]
-            section = sections[element.section].properties
-            #
             end_nodes = element.connectivity
             n_index0 = nodes[end_nodes[0]].index
             n_index1 = nodes[end_nodes[1]].index
+            #
+            beam = element.beam()
             for point_load in item:
-                res = point_load.node_equivalent(element, material, section)
-                # global nodal load
-                update_node_force(nodal_load, n_index0, n_index1, res[0])
-                # local beam nodal load
-                update_member_force(member_nload, key, res[1])
+                #res = point_load.node_equivalent(element, material, section)
+                pload = point_load.local_system(element.R)
+                beam.load.point = [ *pload, point_load.L0]
+            #
+            boundary = []
+            for x, node in enumerate(end_nodes):
+                fixity = bnodes[node]
+                if fixity:
+                    boundary.append(fixity[:6])
+                else:
+                    boundary.append((1,1,1,1,1,1))
+            beam.supports(boundary)
+            # get total reactions
+            reactions = beam.reactions
+            # convert local to global
+            gnload, bnload = update_line_load(element, reactions)            
+            # global nodal load
+            update_node_load(nodal_load, n_index0, n_index1, gnload)
+            # local beam nodal load
+            update_member_load(member_nload, key, bnload, beam)
         #
         return BasicLoad(load_name, lcase.number,  lcase.title,
-                        nodal_load, member_nload)
+                         nodal_load, member_nload)
         #print('---')
     #
     def get_member_force(self, load_name:str, elements, nodes,

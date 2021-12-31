@@ -4,7 +4,8 @@
 
 # Python stdlib imports
 from array import array
-from collections import defaultdict, Mapping
+from collections.abc import Mapping
+from collections import defaultdict #, Mapping
 from typing import NamedTuple, Dict, List, Tuple, Union
 #
 #

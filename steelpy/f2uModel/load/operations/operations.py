@@ -39,12 +39,23 @@ def get_beam_point_load(load):
     
     elif isinstance(load, (list, tuple)):
         load = check_list_units(load)
-    
     else:
         raise Exception('   *** Load input format not recognized')
     return load     
-    
 #
+#
+def get_cbeam_point_load(load):
+    """
+    """
+    #print('--->')
+    if isinstance(load, dict):
+        load = check_point_dic(load)
+        load.insert(0, load.pop(6))
+    elif isinstance(load, (list, tuple)):
+        load = check_list_units(load)
+    else:
+        raise Exception('   *** Load input format not recognized')
+    return load 
 #
 #
 def get_beam_concept_load(load):

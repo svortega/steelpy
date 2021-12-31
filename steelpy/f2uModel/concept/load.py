@@ -9,7 +9,8 @@ from typing import Dict, Union, List
 
 # package imports
 from steelpy.f2uModel.load.main import LoadingInmemory
-from steelpy.f2uModel.load.operations.operations import get_beam_line_load, get_beam_point_load
+from steelpy.f2uModel.load.operations.operations import (get_beam_line_load, 
+                                                         get_cbeam_point_load)
 
 
 class PointLoad:
@@ -102,7 +103,7 @@ class BeamLoadSet:
         #
         self._beam_load = get_beam_line_load
         if "point" in load_type:
-            self._beam_load = get_beam_point_load
+            self._beam_load = get_cbeam_point_load
     #
     def __setitem__(self, load_name:Union[str,int],
                     load) -> None:

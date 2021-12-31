@@ -6,7 +6,7 @@
 #from collections import Counter
 #from collections import defaultdict
 from dataclasses import dataclass
-from math import factorial
+from math import factorial, cosh, sinh
 #import functools
 #import re
 from typing import NamedTuple, Dict, Union, Tuple, List
@@ -257,14 +257,22 @@ class Response:
     def M(self, x: float) -> float:
         """ Bending moment"""
         return self.M0 + self.V0 * x + self.FM
-
+    #
+    def T(self, x: float) -> float:
+        """Torsion """
+        step = x - self.L1
+        return  self.T0  + self.To * self.function_n(step, 0)
     #
     def theta(self, x: float) -> float:
         """ Slope"""
         return (self.theta0 + self.V0 * x ** 2 / (2 * self.E * self.I)
                 + self.M0 * x / (self.E * self.I) 
                 + self.Ftheta)
-
+    #
+    def phi(self, x: float) -> float:
+        """ angle of rotation at a distance x from the left end (radians) """
+        # F1, F2, F3, F4 = self.F(x)
+        return self.phi0 + self.T0 * x / (self.G * self.J) + self.Fphi
     #
     def w(self, x: float) -> float:
         """ Deflection"""
@@ -272,8 +280,18 @@ class Response:
                 - self.V0 * x ** 3 / (factorial ( 3 ) * self.E * self.I)
                 - self.M0 * x ** 2 / (2 * self.E * self.I) 
                 + self.Fw)
-
-
+    #
+    #
+    def function_n(self, step:float,  n:int) -> float:
+        """ <x-L>^n """
+        if n < 0:
+            return 0
+        elif step < 0:
+            return 0
+        elif n == 0:
+            return 1
+        else:
+            return step**n
 #
 #
 @dataclass
@@ -307,7 +325,10 @@ class SuppBasic:
         self.Ftheta: float = Ftheta
         # set response function
         self._response.load( FV=FV, FM=FM, Fw=Fw, Ftheta=Ftheta)
-
+    #
+    #def torsion(self):
+    #    """ """
+    #    pass
     #
     @property
     def V0(self) -> float:
@@ -319,7 +340,16 @@ class SuppBasic:
     def M0(self) -> float:
         """ Bending moment"""
         return 0
-
+    #
+    @property
+    def T0(self) -> float:
+        """ Torsional moment"""
+        return 0
+    #
+    @property
+    def phi0(self):
+        """ Angle of rotation"""
+        return 0
     #
     @property
     def theta0(self):
@@ -387,6 +417,17 @@ class SuppBasic:
         theta = self._response.theta( x )
         w = self._response.w( x )
         return [ V, M, w, theta]
+    #
+    # Torsion
+    def F(self, x: float):
+        """ x : distance from the left end"""
+        #a = self.a.value
+        beta_x = self.beta * x
+        F1 = cosh(beta_x)
+        F2 = sinh(beta_x)
+        F3 = cosh(beta_x) - 1.0
+        F4 = sinh(beta_x) - beta_x
+        return [F1, F2, F3, F4]
 #
 #
 # Pinned
@@ -413,8 +454,22 @@ class PinnedPinned ( SuppBasic ):
     def theta0(self) -> float:
         """ Slope"""
         return self.Fw / self.L + self.FM * self.L / (6 * self.E * self.I)
-
-
+    #
+    # Torsion
+    @property
+    def phi0(self) -> float:
+        """ angle of rotation (radians) """
+        phiA_0 = 0
+        phiA_I = (self.To/(self.Cw*self.E*self.beta**2)
+                  * (1 - self.L1/self.L - Ca2/C2))
+        phiA_II = 0
+        phiA_III = 0
+        return [phiA_0, phiA_I, phiA_II, phiA_III]
+    #
+    @property
+    def T0(self) -> float:
+        """ Torsional moment"""
+        return -self.To * (1 - self.L1/self.L)
 #
 @dataclass
 class PinnedFixed ( SuppBasic ):
@@ -439,7 +494,22 @@ class PinnedFixed ( SuppBasic ):
     def theta0(self) -> float:
         """ Slope"""
         return 3 * self.Fw / (2 * self.L) + 0.50 * self.Ftheta
-
+    #
+    # torsion
+    def phi0(self) -> float:
+        """ angle of rotation (radians)
+        Left end free to wrap but not twist, right end fixed"""
+        phiA_0 = 0
+        phiA_I = (self.To/(self.Cw*self.E*self.beta**2)
+                  * (C3*Ca4 - C4*Ca3)/(C1*C4 - C2*C3))
+        phiA_II = 0
+        phiA_III = 0
+        return [phiA_0, phiA_I, phiA_II, phiA_III]
+    #
+    @property
+    def T0(self) -> float:
+        """ Torsional moment"""
+        return -self.To * (C1*Ca4 - C2*Ca3)/(C1*C4 - C2*C3)
 
 #
 @dataclass
@@ -465,7 +535,21 @@ class PinnedGuided ( SuppBasic ):
         """ Slope"""
         return L ** 2 / (2 * self.E * self.I) * self.FV - self.Ftheta
 
-
+    # torsion
+    def phi0(self) -> float:
+        """ angle of rotation (radians) """
+        phiA_0 = (self.To/(self.Cw*self.E*self.beta**3)
+                  * (C3*Ca2 / C1) -Ca4)
+        phiA_I = 0
+        phiA_II = (-self.To/(self.Cw*self.E*self.beta)
+                  * (Ca2/C1))
+        phiA_III = 0
+        return [phiA_0, phiA_I, phiA_II, phiA_III]
+    #
+    @property
+    def T0(self) -> float:
+        """ Torsional moment"""
+        return 0
 #
 @dataclass
 class PinnedSpring ( SuppBasic ):
@@ -522,7 +606,21 @@ class FixedPinned ( SuppBasic ):
         """ Bending moment"""
         return 3 * self.E * self.I / self.L ** 2 * self.Fw + 0.50 * self.FM
 
-
+    #
+    # torsion
+    def phi0(self) -> float:
+        """ angle of rotation (radians) """
+        phiA_0 = 0
+        phiA_I = 0
+        phiA_II = (self.To/(self.Cw*self.E*self.beta)
+                  * (self.beta*self.L*A2 - self.beta*self.L1*C2)/(C1*C4 - C2*C3))
+        phiA_III = -self.To / (self.Cw*self.E) * (A2-self.beta*self.L1*C1)/(C1*C4 - C2*C3)
+        return [phiA_0, phiA_I, phiA_II, phiA_III]
+    #
+    @property
+    def T0(self) -> float:
+        """ Torsional moment"""
+        return -self.To - self.To * (C1*Ca4 - C2*Ca3)/(C1*C4 - C2*C3)
 #
 @dataclass
 class FixedFixed( SuppBasic ):
@@ -549,7 +647,20 @@ class FixedFixed( SuppBasic ):
         return (6 * self.E * self.I / self.L ** 2 * self.Fw
                 + 2 * self.E * self.I / self.L * self.Ftheta)
 
-
+    #
+    # torsion
+    def phi0(self) -> float:
+        """ angle of rotation (radians) """
+        phiA_0 = 0
+        phiA_I = (self.To/(self.Cw*self.E*self.beta)
+                  * (C3*Ca4 - C4*Ca3) / (C2*C4 - C3**2))
+        phiA_II = 0
+        return [phiA_0, phiA_I, phiA_II]
+    #
+    @property
+    def T0(self) -> float:
+        """ Torsional moment"""
+        return - self.To * (C2*Ca4 - C3*Ca3) / (C2*C4 - C3**2)
 #
 @dataclass
 class FixedFree ( SuppBasic ):
@@ -574,7 +685,20 @@ class FixedFree ( SuppBasic ):
         """ Bending moment"""
         return self.L * self.FV - self.FM
 
-
+    #
+    # torsion
+    def phi0(self) -> float:
+        """ angle of rotation (radians) """
+        phiA_0 = 0
+        phiA_I = (self.To/(self.Cw*self.E*self.beta)
+                  * ((A2-C2) / C1 ))
+        phiA_II = 0
+        return [phiA_0, phiA_I, phiA_II]
+    #
+    @property
+    def T0(self) -> float:
+        """ Torsional moment"""
+        return -self.To
 #
 @dataclass
 class FixedGuided ( SuppBasic ):
@@ -656,7 +780,21 @@ class FreeFixed ( SuppBasic ):
         """ Shear force"""
         return -self.Fw - self.L * self.Ftheta
 
-
+    #
+    # torsion
+    def phi0(self) -> float:
+        """ angle of rotation (radians) """
+        phiA_0 = (self.To/(self.Cw*self.E*self.beta**3)
+                  * (C2*Ca3 / C1 - Ca4))
+        phiA_I = (self.To/(self.Cw*self.E*self.beta**2)
+                  * (Ca3 / C1 ))
+        phiA_II = 0
+        return [phiA_0, phiA_I, phiA_II]
+    #
+    @property
+    def T0(self) -> float:
+        """ Torsional moment"""
+        return 0
 #
 @dataclass
 class FreeSpring ( SuppBasic ):

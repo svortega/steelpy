@@ -85,10 +85,10 @@ class Units:
         # temperature
         elif re.match(r"\b(k(elvin)?(s)?)\b", str(key), re.IGNORECASE):
             return Number(1, dims = 'kelvin')
-        elif re.match(r"\b((o)?c(elsius)?((\_)?deg(rees)?)?)\b", str(key), re.IGNORECASE):
-            return Number(1, dims = 'celsius')
-        elif re.match(r"\b((o)?f(ahrenheit(s)?)?((\_)?deg(rees)?)?)\b", str(key), re.IGNORECASE):
-            return Number(1, dims = 'fahrenheit')
+        #elif re.match(r"\b((o)?c(elsius)?((\_)?deg(rees)?)?)\b", str(key), re.IGNORECASE):
+        #    return Number(1, dims = 'celsius')
+        #elif re.match(r"\b((o)?f(ahrenheit(s)?)?((\_)?deg(rees)?)?)\b", str(key), re.IGNORECASE):
+        #    return Number(1, dims = 'fahrenheit')
         elif re.match(r"\b(r(ankine(s)?)?((\_)?deg(rees)?)?)\b", str(key), re.IGNORECASE):
             return Number(1, dims = 'rankine')
         #
@@ -101,7 +101,7 @@ class Units:
             return Number(1, dims = 'meganewton')
         elif re.match(r"\b(g(iga)?n(ewton)?(s)?)\b", str(key), re.IGNORECASE):
             return Number(1, dims = 'giganewton')
-        elif re.match(r"\b((lbf|pound)(s)?(\_)?f(orce)?)\b", str(key), re.IGNORECASE):
+        elif re.match(r"\b((lb|pound)(s)?(\_)?f(orce)?)\b", str(key), re.IGNORECASE):
             return Number(1, dims = 'lbf')
         elif re.match(r"\b(k(ilo)?(ip|lbf|pound)(s)?(\_)?(f(orce)?)?)\b", str(key), re.IGNORECASE):
             return  Number(1, dims = 'kilolbf')
@@ -113,12 +113,12 @@ class Units:
             return Number(1, dims = 'pascal')
         elif re.match(r"\b(k(ilo)?pa(scal(s)?)?)\b", str(key), re.IGNORECASE):
             return Number(1, dims = 'kilopascal')
-        elif re.match(r"\b(m(ega)?pa(scal(s)?)?|bar)\b", str(key), re.IGNORECASE):
+        elif re.match(r"\b(m(ega)?pa(scal(s)?)?)\b", str(key), re.IGNORECASE):
             return  Number(1, dims = 'megapascal')
         elif re.match(r"\b(g(iga)?pa(scal(s)?)?)\b", str(key), re.IGNORECASE):
             return Number(1, dims = 'gigapascal')
-        elif re.match(r"\b(mb(ar)|hectopascal(s)?)\b", str(key), re.IGNORECASE):
-            return Number(1, dims = 'hectopascal')
+        elif re.match(r"\b(bar(s)?)\b", str(key), re.IGNORECASE):
+            return Number(0.1, dims = 'megapascal')
         elif re.match(r"\b(psf)\b", str(key), re.IGNORECASE):
             return Number(1, dims = 'lbf / foot^2')
         elif re.match(r"\b(psi)\b", str(key), re.IGNORECASE):

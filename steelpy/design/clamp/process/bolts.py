@@ -7,7 +7,7 @@ from typing import ClassVar # NamedTuple, List,
 
 # package imports
 from steelpy.process.units.main import Units
-from steelpy.f2uModel.material.main import Materials
+from steelpy.material.main import Materials
 
 #-------------------------------------------------
 #

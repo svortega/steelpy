@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2021 steelpy
+# Copyright (c) 2019-2022 steelpy
 # 
 
 # Python stdlib imports
@@ -11,8 +11,8 @@ from typing import NamedTuple, Dict, List, Tuple, Union
 from steelpy.beam.static.operations import BeamResponse
 from steelpy.beam.static.load import Load, Combination
 from steelpy.beam.static.support import Support
-from steelpy.f2uModel.sections.main import Sections
-from steelpy.f2uModel.material.main import Materials
+from steelpy.sections.main import Sections
+from steelpy.material.main import Materials
 from steelpy.design.beam.main import BeamDesign
 
 

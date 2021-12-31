@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021 steelpy
+# Copyright (c) 2019-2022 steelpy
 
 # Python stdlib imports
 #import datetime
@@ -9,7 +9,7 @@ from steelpy.codes.api.main import API_design
 from steelpy.process.units.main import Units
 #from steelpy.design.beam.process import BeamDesignParameters
 from steelpy.f2uModel.load.operations.actions import Actions
-from steelpy.f2uModel.sections.process.stress import BeamStress
+from steelpy.sections.process.stress import BeamStress
 #
 
 class BeamDesign: #(BeamDesignParameters):

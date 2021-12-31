@@ -98,7 +98,14 @@ class Vector:
             raise TypeError("must be a scalar")
         result = [x * scalar for x in self._coords]
         return Vector(result)
-
+    
+    def __truediv__(self, scalar) -> List[float]:
+        """Return the product of self and numeric object alpha."""
+        if not isinstance(scalar, (float, int)):
+            raise TypeError("must be a scalar")
+        result = [x / scalar for x in self._coords]
+        return Vector(result)
+    
     __rmul__ = __mul__
 #
 # -----------------------------------------------------------------------
@@ -109,10 +116,10 @@ class Vector:
 def test():
     import doctest
     doctest.testmod()
-
-
-test()
-
+#
+#
+#test()
+#
 # def main():
 #
 #    xCoords = [1.0, 2.0, 3.0, 4.0]

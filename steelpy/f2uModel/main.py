@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2021 fem2ufo
+# Copyright (c) 2009-2022 fem2ufo
 #
 
 # Python stdlib imports
@@ -10,12 +10,13 @@ from typing import Tuple, Dict, List, ClassVar, Union
 # package imports
 from steelpy.f2uModel.mesh.main import Mesh
 from steelpy.f2uModel.concept.main import Concepts
-from steelpy.f2uModel.sections.main import Sections
-from steelpy.f2uModel.material.main import Materials
 from steelpy.f2uModel.properties.main import Properties
 from steelpy.f2uModel.load.main import Load
 from steelpy.f2uModel.results.main import Results
 from steelpy.f2uModel.concept.meshing import Meshing
+#
+from steelpy.sections.main import Sections
+from steelpy.material.main import Materials
 
 #
 def get_number(items: dict) -> int:

@@ -247,7 +247,7 @@ def temperature_in(value:float, dims:str):
     
     elif re.match(r"\bcelsius\b", str(dims), re.IGNORECASE):
         dims = dims.replace('celsius', 'kelvin')        
-        _value += 273.15
+        _value = (_value + 273.15)
     
     elif re.match(r"\brankine\b", str(dims), re.IGNORECASE):
         dims = dims.replace('rankine', 'kelvin')        
@@ -265,7 +265,7 @@ def temperature_out(value:float, dims:str):
     
     elif re.match(r"\bcelsius\b", str(dims), re.IGNORECASE):
         dims = dims.replace('celsius', 'kelvin')
-        _value -= 273.15
+        _value = (_value - 273.15)
     
     elif re.match(r"\rankine\b", str(dims), re.IGNORECASE):
         dims = dims.replace('rankine', 'kelvin')

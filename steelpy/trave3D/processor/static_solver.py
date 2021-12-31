@@ -46,12 +46,12 @@ def UDUt(a: List[float]) -> List:
             a[j][0] -= a[k][j - k] * temp
             a[k][j - k] = temp
             imult += 2
-        # L30:
+        # check diagonal zero terms
         try:
             1.0 / a[j][0]
         except ZeroDivisionError:
             raise RuntimeError("error:  zero diagonal term")
-    # L10:
+    #
     print("** Finished Processing UDU: mults & divs {:}".format(imult))
     return a
 #
@@ -80,7 +80,6 @@ def BAK(a: List[float], b: List[float]) -> List:
     # for i in range(neq-1 , -1, -1):
     #    wkk[i] -= sum([a[i][k - i] * wkk[k]
     #                  for k in range(iband-1, i+1, -1)])
-    # L50:
     return wk
 #
 #
@@ -110,8 +109,7 @@ def solve_displacement(elements, nodes, boundaries,
     memf_basic = {}
     basic_res = {}
     for key, item in basic_load.items():
-        load_res = basic_load.get_basic_load(key, elements, nodes, boundaries,
-                                             materials, sections)
+        load_res = basic_load.get_basic_load(key, elements, nodes, boundaries)
         # member end load in local system
         memf_basic[item.title] = load_res.member_load
         # node load in global system
@@ -122,15 +120,6 @@ def solve_displacement(elements, nodes, boundaries,
         # get displacement in global system
         basic = Vector(BAK(stf, nloads))
         basic_res[item.title] = basic  # Vector(BAK(stf, nloads))
-        ##
-        ## This section is to determine member force along lenght
-        #ndisp = [basic[ieqnum - 1] if ieqnum != 0 else ieqnum
-        #        for ieqnum in jbcc]
-        #ndisp = to_matrix(ndisp, 6)
-        ##nloads = to_matrix ( nloads, 6 )
-        #fmemb[item.title] = basic_load.get_member_force(key, elements, nodes,
-        #                                                nodal_load, ndisp)
-        #fmemb
     #
     comb_res, memf_comb = load_combination.solve_combinations(basic_res, memf_basic)
     #
@@ -151,7 +140,6 @@ def solve_displacement(elements, nodes, boundaries,
         disp = to_matrix(disp, 6)
         disp = [[node_index[number], load_tile, "global"] + item
                 for number, item in enumerate(disp)]
-        #self._f2u._results.node.deflection = disp
         deflection.extend(disp)
     # load combination
     for load_tile, comb in comb_res.items():
@@ -160,7 +148,6 @@ def solve_displacement(elements, nodes, boundaries,
         disp = to_matrix(disp, 6)
         disp = [[node_index[number], load_tile, "global"] + item
                 for number, item in enumerate(disp)]
-        #self._f2u._results.node.deflection = disp
         deflection.extend(disp)
     print("** Finished Calculating Joint Displacements")
     return deflection
@@ -192,7 +179,10 @@ def beam_end_force(elements, ndisp:List[List[float]], mbload:List[Vector]):
         nlforce = trns_3Dv(ngforce, R)
         # get nodal force based on beam local system
         try:
-            m_nload = mbload[mname].end_force
+            try:
+                m_nload = mbload[mname].end_force
+            except AttributeError:
+                m_nload = mbload[mname]
             #nlforce = [(nlforce[i] - m_nload[i]) if i >= 6
             #           else 1*(nlforce[i] - m_nload[i])
             #           for i in range(12)]
@@ -200,18 +190,22 @@ def beam_end_force(elements, ndisp:List[List[float]], mbload:List[Vector]):
             # [FV,FM,Fw,Ftheta]
             #nlforce2 = [nlforce[i] if i >= 6 else -1*nlforce[i]
             #           for i in range(12)]
-            bres1 = [ -nlforce[ 1 ], nlforce[ 5 ], lcndisp[ 1 ], -lcndisp[ 5 ] ]
-            bres2 = [ nlforce[ 2 ], nlforce[ 4 ],  lcndisp[ 2 ], lcndisp[ 4 ] ]
-            beam_res[mname] = mbload[mname].response([bres1, bres2])
+            #bres1 = [ -nlforce[ 1 ], nlforce[ 5 ], lcndisp[ 1 ], -lcndisp[ 5 ] ]
+            #bres2 = [ nlforce[ 2 ], nlforce[ 4 ],  lcndisp[ 2 ], lcndisp[ 4 ] ]
+            #beam_res[mname] = mbload[mname].response([bres1, bres2])
             #1/0
         except KeyError:
             #nlforce = [nlforce[i] if i >= 6 
             #           else 1 * nlforce[i] 
             #           for i in range(12)]
             mbload[mname] = element.beam()
-            bres1 = [ -nlforce[ 1 ], nlforce[ 5 ], lcndisp[ 1 ], -lcndisp[ 5 ] ]
-            bres2 = [ nlforce[ 2 ], nlforce[ 4 ],  lcndisp[ 2 ], lcndisp[ 4 ] ]
+        # get beam forces along length
+        bres1 = [ -nlforce[ 1 ], nlforce[ 5 ], lcndisp[ 1 ], -lcndisp[ 5 ] ]
+        bres2 = [ nlforce[ 2 ], nlforce[ 4 ],  lcndisp[ 2 ], lcndisp[ 4 ] ]
+        try:
             beam_res[mname] = mbload[mname].response([bres1, bres2])
+        except AttributeError:
+            beam_res[mname] = mbload[mname]
         #
         nreac[in1] += Vector(ngforce[:6])
         nreac[in2] += Vector(ngforce[6:])

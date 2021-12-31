@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2021 fem2ufo
+# Copyright (c) 2009-2022 fem2ufo
 
 # 
 # Python stdlib imports
@@ -13,8 +13,8 @@ from itertools import chain
 
 # package imports
 from steelpy.f2uModel.mesh.sqlite.nodes import get_node
-from steelpy.f2uModel.material.matsql import get_materialSQL
-from steelpy.f2uModel.sections.main import get_sectionSQL
+from steelpy.material.matsql import get_materialSQL
+from steelpy.sections.main import get_sectionSQL
 from steelpy.f2uModel.results.sqlite.operation.process_sql import create_connection, create_table
 from steelpy.trave3D.preprocessor.assemble import (beam_stiffness, beam_Ks,
                                                    trans_3d_beam, Rmatrix)

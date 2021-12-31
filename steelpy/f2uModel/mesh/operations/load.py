@@ -11,7 +11,7 @@ from typing import NamedTuple, Dict, List, Tuple, Union, Iterator
 
 # package imports
 from steelpy.process.math.vector import Vector
-from steelpy.beam.static.singfunc import Trapezoidal, Point, Moment, SingFunction
+from steelpy.formulas.pilkey.singfunc import Trapezoidal, Point, Moment, SingFunction
 #
 #
 class LineBeam(NamedTuple):
@@ -52,7 +52,7 @@ class LineBeam(NamedTuple):
         output += "{:8s} {: 1.4E} {: 1.4E} {: 1.4E}  [2]\n".format(" ", self.qy2, self.qz2, self.L2)
         return output
 #
-class PointBeam(NamedTuple):
+class PointBeamX(NamedTuple):
     """
     """
     #fx: float
@@ -86,6 +86,40 @@ class MomentBeam(NamedTuple):
         output += "{:8s} {: 1.4E} {: 1.4E} {: 1.4E}\n".format(str(self.name), self.my, self.mz, self.L1)
         return output
 #
+class PointBeam(NamedTuple):
+    """
+    """
+    fx: float
+    fy: float
+    fz: float
+    mx: float
+    my: float
+    mz: float    
+    L1:float
+    beam_length: float
+    load_type: str = "point"
+    #
+    #
+    def get_function(self):
+        """ """
+        output1 = Point(self.fy,
+                        self.beam_length,
+                        self.L1)
+
+        output2 = Point(self.fz,
+                        self.beam_length,
+                        self.L1)
+        #
+        output3 = Moment(self.my,
+                        self.beam_length,
+                        self.L1)
+        
+        output4 = Moment(self.mz,
+                        self.beam_length,
+                        self.L1)        
+
+        return [output1, output2, output3, output4]
+#
 #
 #
 class BeamLoad:
@@ -113,6 +147,18 @@ class BeamLoad:
         load.extend([ self.beam_length, "line" ])
         self._line.append(LineBeam._make(load))
     #
+    @property
+    def point(self):
+        """ """
+        return self._point
+    
+    @point.setter
+    def point(self, load:List[int]):
+        """load: [Fx, Fy, Fz, Mx, My, Mz, L0] local system"""
+        load.extend([ self.beam_length, "line" ])
+        self._point.append(PointBeam._make(load))        
+    #
+    #
     def response(self, x: float,  E: float, Iy: float, Iz: float):
         """ """
         in_plane = Vector([0,0,0,0])
@@ -123,6 +169,16 @@ class BeamLoad:
             in_plane += func[0](x, E, Iy)
             out_plane += func[1](x, E, Iz)
         # point
+        for point in self._point:
+            func = point.get_function()
+            # Axial
+            # Shear
+            in_plane += func[0](x, E, Iy)
+            out_plane += func[1](x, E, Iz)
+            # Moment
+            in_plane += func[2](x, E, Iy)
+            out_plane += func[3](x, E, Iz)
+            # Torsion
         return [in_plane, out_plane]
     #
     def get_steps(self):
@@ -133,12 +189,12 @@ class BeamLoad:
             func = line.get_function()
             x_steps.extend(func[0].max_steps())
         # point
+        for point in self._point:
+            func = point.get_function()
+            x_steps.extend(func[0].max_steps())        
         #
-        #if steps:
         x_steps = sorted(list(set(x_steps)))
         x_steps = [item for item in x_steps if item <= 1]
-        #else:
-        #    x_steps = [0,0.25,0.5,0.75,1]
         return x_steps
     #
     #

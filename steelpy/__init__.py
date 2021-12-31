@@ -1,14 +1,17 @@
-# Copyright (c) 2021 steelpy
+# Copyright (c) 2009-2022 steelpy
 #
 # TODO: host until sure no longer needed
 #
 from steelpy.codes.main import CodeCheck
-from steelpy.roarks.main import CircularRing
+from steelpy.formulas.main import Formulas
 from steelpy.design.main import ClampDesign as Clamp
-#from steelpy.metocean.main import Metocean
+from steelpy.metocean.main import Metocean
 from steelpy.trave3D.main import Trave3D
 from steelpy.beam.main import Beam
 from steelpy.f2uModel.main import f2uModel
+#
+from steelpy.material.main import Materials
+from steelpy.sections.main import Sections
 from steelpy.process.units.main import Units
 
 
