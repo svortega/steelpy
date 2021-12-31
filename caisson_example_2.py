@@ -2,14 +2,12 @@ from steelpy import f2uModel
 from steelpy import Units
 from steelpy import Trave3D
 #
-#
+units = Units()
 #
 # -----------------------------------
 # Start conceptual modelling
 # -----------------------------------
 f2u_model = f2uModel(component="EA_PDQ_Caisson_C1", mesh_type="inmemory")
-concept = f2u_model.concept
-units = Units()
 #
 # -----------------------------------
 # define material
@@ -33,6 +31,9 @@ section["T900x35"] = ['Tubular', 900 * units.mm, 35 * units.mm]
 section["T100x25"] = ['Tubular', 100 * units.mm, 25 * units.mm]
 #
 # -----------------------------------
+#
+concept = f2u_model.concept
+#
 # define Elevations
 elevation = concept.points
 elevation[1] = [0*units.m, 14.2*units.m, 0*units.m]
@@ -123,34 +124,34 @@ load = concept.load
 basic = load.basic
 #
 # create new basic load
-basic[1] = 'wave_loading'
-#
-#basic[1].point = elevation[2]
-#basic[1].point.load["point_22"] = {'fz': 5000 * units.kN}
-#
-basic[1].beam = beam["bm12"]
-#basic[1].beam.local_system
-basic[1].beam.line_load["wave_1"] = {'qx': 90 * units.kN / units.m}
-#
-basic[1].beam = beam["bm9"]
-basic[1].beam.line_load["wave_2"] = {'qx': 90 * units.kN / units.m}
-#
-basic[1].beam = beam["bm6"]
-basic[1].beam.line_load["wave_3"] = {'qx': 90 * units.kN / units.m}
-#
-basic[1].beam = beam["bm3"]
-basic[1].beam.line_load["wave_4"] = {'qx': 90 * units.kN / units.m}
-#
-basic[1].beam = beam["bm27"]
-basic[1].beam.line_load["wave_5"] = {'qx': 90 * units.kN / units.m}
-#
-#
-basic[1].beam = beam["bm14"]
-basic[1].beam.line_load["wave_6"] = {'qx': 90 * units.kN / units.m}
-#
-basic[1].beam = beam["bm15"]
-basic[1].beam.line_load["wave_7"] = {'qx': 90 * units.kN / units.m}
-#
+#basic[1] = 'wave_loading'
+##
+##basic[1].point = elevation[2]
+##basic[1].point.load["point_22"] = {'fz': 5000 * units.kN}
+##
+#basic[1].beam = beam["bm12"]
+##basic[1].beam.local_system
+#basic[1].beam.line_load["wave_1"] = {'qx': 90 * units.kN / units.m}
+##
+#basic[1].beam = beam["bm9"]
+#basic[1].beam.line_load["wave_2"] = {'qx': 90 * units.kN / units.m}
+##
+#basic[1].beam = beam["bm6"]
+#basic[1].beam.line_load["wave_3"] = {'qx': 90 * units.kN / units.m}
+##
+#basic[1].beam = beam["bm3"]
+#basic[1].beam.line_load["wave_4"] = {'qx': 90 * units.kN / units.m}
+##
+#basic[1].beam = beam["bm27"]
+#basic[1].beam.line_load["wave_5"] = {'qx': 90 * units.kN / units.m}
+##
+##
+#basic[1].beam = beam["bm14"]
+#basic[1].beam.line_load["wave_6"] = {'qx': 90 * units.kN / units.m}
+##
+#basic[1].beam = beam["bm15"]
+#basic[1].beam.line_load["wave_7"] = {'qx': 90 * units.kN / units.m}
+##
 #
 #basic[1].beam.line_load["snow_2"] = {'qy1': 0 * units.kN / units.m, # in plane triangular load
 #                                     'qy2':-2 * units.kN / units.m} # from node to node
@@ -181,6 +182,10 @@ basic[1].beam.line_load["wave_7"] = {'qx': 90 * units.kN / units.m}
 #basic[2].point = elevation[6]
 #basic[2].point.load["point_6"] = {'fz': 1000 * units.kN}
 #
+basic[3] = 'crane load'
+basic[3].beam = beam["bm3"]
+basic[3].beam.point_load["crane_1"] = {'fx':-100 * units.kN,  # beam point axial load
+                                       'd1': 3 * units.m}   # 2.5m from node 1
 #
 f2u_model.build()
 #

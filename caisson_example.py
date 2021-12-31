@@ -112,7 +112,7 @@ basic[2].beam.line_load["snow_3"] = {'qz1': 2 * units.kN / units.m, # start load
 basic[3] = 'crane load'
 basic[3].beam = beam["bm2"]
 basic[3].beam.point_load["crane_1"] = {'fx':-100 * units.kN,  # beam point axial load
-                                       'd1': 2.5 * units.m}   # 2.5m from node 1
+                                       'd1': 2.55 * units.m}   # 2.5m from node 1
 #
 # create new basic load
 basic[4] = 'dead load'
