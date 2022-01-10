@@ -6,7 +6,7 @@
 from typing import Union, Dict
 
 # package imports
-from steelpy.metocean.irregular.main import WaveIrregular
+#from steelpy.metocean.irregular.main import WaveIrregular
 from steelpy.metocean.regular.main import RegularWaves
 #from steelpy.metocean.irregular.spectrum import Sprectrum
 #from steelpy.process.units.units import Units
@@ -51,7 +51,7 @@ class Metocean:
         """
         """
         self.regular_waves = RegularWaves()
-        self.iregular_waves = WaveIrregular()
+        #self.iregular_waves = WaveIrregular()
         #self._wind = Winds()
         #self._current = Currents()
         #self._units = Units()
@@ -64,11 +64,11 @@ class Metocean:
     #    """
     #    return self._spectrum
     #
-    @property
-    def irregular_wave(self):
-        """
-        """
-        return self.iregular_waves    
+    #@property
+    #def irregular_wave(self):
+    #    """
+    #    """
+    #    return self.iregular_waves
     #
     @property
     def regular_wave(self):
