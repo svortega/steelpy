@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2021 steelpy
+# Copyright (c) 2009-2022 steelpy
 #
 # Python stdlib imports
 from itertools import chain
@@ -418,7 +418,7 @@ def get_stiffnes_matrix(elements, nodes, boundaries):
     #
     # ---------------------------
     # Normal
-    stf = form_Kmatrix(elements= elements, jbc=jbc,
+    stf = form_Kmatrix(elements=elements, jbc=jbc,
                        neq=neq, iband=iband)
     # set matrix
     aa = UDUt(stf)

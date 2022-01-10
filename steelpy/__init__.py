@@ -14,12 +14,12 @@ from steelpy.material.main import Materials
 from steelpy.sections.main import Sections
 from steelpy.process.units.main import Units
 
-
+from steelpy.process.spreadsheet.xl_main import Spreadsheet
 
 # constants
 __major__ = 0.  # for major interface/format changes
-__minor__ = 3  # for minor interface/format changes
-__release__ = 6  # for tweaks, bug-fixes, or development
+__minor__ = 4  # for minor interface/format changes
+__release__ = 0  # for tweaks, bug-fixes, or development
 
 __version__ = '%d.%d.%d' % (__major__, __minor__, __release__)
 

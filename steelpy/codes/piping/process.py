@@ -8,7 +8,7 @@ import math
 # package imports
 from steelpy.process.units.main import Units
 #from steelpy.metocean.main import Stoke5
-from steelpy.metocean.regular.main import Stokes5
+#from steelpy.metocean.regular.main import Stokes5
 from steelpy.process.math.rootsearch import GoalSeeker
 #
 #
