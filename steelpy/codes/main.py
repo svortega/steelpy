@@ -6,7 +6,7 @@
 #from steelpy.codes.aisc.aisc360 import AISC_360_16
 #from steelpy.codes.aisc.aisc335 import AISC_335_89
 #from steelpy.codes.iso.ISO19902 import ISOCodeCheck
-from steelpy.codes.piping.pipeline import Pipeline_Assessment
+from steelpy.codes.piping.pipeline import PipelineDesign
 #from steelpy.codes.api.wsd_22ed import APIwsd22ed
 from steelpy.codes.dnv.pannel import CodeCheckPanel
 #
@@ -36,10 +36,10 @@ class CodeCheck:
         """
         return API_design()
     #
-    @property
-    def pipe(self):
+    # @property
+    def pipeline(self, code: str = 'PD8010'):
         """ """
-        return Pipeline_Assessment()
+        return PipelineDesign(code)
     #
     def DNV_pannel(self):
         """ """

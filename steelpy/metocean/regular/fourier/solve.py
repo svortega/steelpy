@@ -12,7 +12,7 @@ from steelpy.metocean.regular.fourier.Dsvdcmp import dsvdcmp
 from steelpy.metocean.regular.fourier.Dsvbksb import dsvbksb
 #
 #
-def solver(a, b, m, n, MP, NP):
+def solver(a: List[array], b: array, m: int, n: int, NP: int):
     """
     """
     # Perform decomposition
@@ -25,7 +25,7 @@ def solver(a, b, m, n, MP, NP):
     w = [w[i] if w[i] > wmin else 0
          for i in range(n+1)]
     # Back substitute
-    solution = dsvbksb(a, w, v, m, n, b, NP)
+    solution = dsvbksb(a, w, v, m, n, b)
     return solution, a
 #
 #

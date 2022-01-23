@@ -161,23 +161,28 @@ def get_etas(n, z, Y, B, Tanh, nprofiles, is_finite):
     eta = array('f', [0 for i in range(npt)])    
     return xx, eta
 #
-def get_surface(n, z, Y, nprofiles):
+def get_surface(n, kd, Y, nprofiles, is_finite):
     """ """
     pi = math.pi
-    kd = z[1]
+    #kd = z[1]
     #
     npt = number_steps(nprofiles)
-    xx =  array('f', [0 for i in range(npt)])
+    x =  array('f', [0 for i in range(npt)])
     eta = array('f', [0 for i in range(npt)])
+    phase = array('f', [0 for i in range(npt)])
     for j in range(npt):
         #X = 0.5 * L * (j / nprofiles)
         X = pi * j / nprofiles
-        eta[j] = Surface(X, Y, n)/kd
-        xx[j] = X/kd
+        phase[j] = X * 180 / pi
+        eta[j] = Surface(X, Y, n) #/kd
+        x[j] = X #/kd
         #print("# X/d = {: 8.4f}, Phase = {: 6.1f} theta/d = {: 8.4f}"
         #      .format(xx[j], kd*xx[j] * 180 / pi, eta[j]))
-    #print("")   
-    return xx, eta 
+    #print("")
+    if is_finite:
+        eta = [item/kd for item in eta] # array('f', [item/kd for item in eta])
+        x   = [item/kd for item in x] #array('f', [item/kd for item in x])
+    return x, eta, phase
 #
 def get_kinematicX(n, z, Y, B, Tanh, nprofiles, points, is_finite):
     """ """
@@ -215,9 +220,9 @@ def get_kinematicX(n, z, Y, B, Tanh, nprofiles, points, is_finite):
     xx =  array('f', [0 for i in range(npt)])
     yy =  [] # array('f', [0 for i in range(npt)])
     eta = array('f', [0 for i in range(npt)])
-    for j in range(nprofiles):
+    for j in range(npt):
         #X = 0.5 * L * (j / nprofiles)
-        xx[j] = pi * (j / nprofiles)
+        xx[j] = pi * (j / npt)
         eta[j] = Surface(xx[j], Y, n)
         yy.append([])
         print("# X/d = {: 8.4f}, Phase = {: 6.1f}".format(xx[j]/kd, xx[j] * 180 / pi ))
@@ -249,73 +254,40 @@ def get_kinematic(n, z, B, Tanh, d, etas, xx, points, is_finite):
     R=1+z[9]/z[1]
     #
     npt = len(etas)
-    X = [xx[j] * kd for j in range(npt)]
+    X = xx * kd / d # reset to dimensionless units
     #eta = [etas[j] * kd for j in range(npt)]
     #
     if is_finite:
         # y = i * (1 + eta[j] / kd) / points
-        y = [[i/points * (1 + etas[j]) for i in range(points+1)]
+        y = [[i/points * (1 + etas[j]/d) for i in range(points+1)]
              for j in range(npt)]
         #
         #output = [[Point(X[j], kd*((i*y[j])-1), kd, Tanh,B, n, ce, c, R, z, is_finite) 
         #          for i in range(points)] for j in range(npt)]
         #
-        #output = []
-        #for j in range(npt):
-        #    output.append([])
-        #    for i in range(points):
-        #        #print(y[j][i])
-        #        output[j].append(Point(X[j], kd*(y[j][i]-1), 
-        #                               kd, Tanh,B, n, ce, c, R, z, is_finite))             
-        #
         factors = [d, (g*d)**0.5, (g*d)**0.5, g*d, g, g, (g/d)**0.5, (g/d)**0.5, g*d, 1]
-        output = [['z', 'u', 'v', 'dphidt', 'ut', 'vt', 'ux', 'uz', 'pressure', 'Bernoulli_check']]
+        header = ['z', 'u', 'v', 'dphidt', 'ut', 'vt', 'ux', 'uz', 'pressure', 'Bernoulli_check']
+        #output = [['z', 'u', 'v', 'dphidt', 'ut', 'vt', 'ux', 'uz', 'pressure', 'Bernoulli_check']]
         #
-        output.extend([Point(X[j], kd*(y[j][i]-1), 
-                             kd, Tanh,B, n, ce, c, R, z, is_finite) 
-                       for j in range(npt) for i in range(points+1)])
+        output = [Point(X[j], kd*(y[j][i]-1), kd, Tanh, B, n, ce, c, R, z, is_finite)
+                  for j in range(npt) for i in range(points+1)]
     else:
-        #
-        y = [[- pi + i / points * (etas[j]* kd + pi) for i in range(points+1)] 
+        # y = -pi + i / points * (eta[j] + pi)
+        y = [[- pi + i / points * (etas[j]/d + pi) for i in range(points+1)] 
               for j in range(npt)]
         #output = [[Point(X[j], y[j], kd, Tanh,B, n, ce, c, R, z, is_finite) 
         #          for i in range(points)] for j in range(npt)]
         #
         factors = [1/kd, (g/kd)**0.5, (g/kd)**0.5, g/kd, g, g, (g*kd)**0.5, (g*kd)**0.5, g/kd, 1]
-        output = [['kz', 'u', 'v', 'dphidt', 'ut', 'vt', 'ux', 'uz', 'pressure', 'Bernoulli_check']]
-        output.extend([Point(X[j], y[j][i], 
-                             kd, Tanh,B, n, ce, c, R, z, is_finite) 
-                       for j in range(npt) for i in range(points+1)] )       
+        header = ['kz', 'u', 'v', 'dphidt', 'ut', 'vt', 'ux', 'uz', 'pressure', 'Bernoulli_check']
+        output = [Point(X[j], y[j][i], kd, Tanh,B, n, ce, c, R, z, is_finite) 
+                  for j in range(npt) for i in range(points+1)]
     #
     output = list(zip(*output))
-    #for j in range(npt):
-    #    print("# X/d = {: 8.4f}, Phase = {: 6.1f}".format(X[j]/kd, X[j] * 180 / pi ))
-    #    for i in range(points):
-    #        print(*[f'{output[j][i][x]: 7.4f}' for x in range(9)], sep=' ')
+    output = [[row * factors[x] for row in col]
+              for x, col in enumerate(output)]
     #
-    #
-    #for j in range(npt):
-    #    X = xx[j] * kd
-    #    eta = etas[j] * kd
-    #    print("# X/d = {: 8.4f}, Phase = {: 6.1f}".format(X/kd, X * 180 / pi ))
-    #    for i in range(points):
-    #        if is_finite:
-    #            y = i * (1 + eta / kd) / points
-    #            (u, v, dphidt, ut, vt, ux, uy, 
-    #             Pressure, Bernoulli_check) = Point(X, kd*(y-1), kd, Tanh,
-    #                                                   B, n, ce, c, R, z, is_finite)                
-    #        else:
-    #            y = -pi + i / points * (eta + pi)
-    #            (u, v, dphidt, ut, vt, ux, uy, 
-    #             Pressure, Bernoulli_check) = Point(X, y, kd, Tanh, 
-    #                                                  B, n, ce, c, R, z, is_finite)
-    #
-    #        print("{: 7.4f} {: 7.4f} {: 7.4f} {: 7.4f} {: 7.4f} {: 7.4f} {: 7.4f} {: 7.4f} {:7.0e}"
-    #              .format(y, u, v, dphidt, ut, vt, ux, uy, Bernoulli_check))   
-    #print('--')
-    #for x, item in enumerate(header):
-    #    output[x].insert(0, item)
-    return output, factors
+    return {item: output[x] for x, item in enumerate(header)}
     
 #
 def print_velo(H, n, z, Y, B, Tanh, surface_points, method):
@@ -366,8 +338,8 @@ def Surface(x, Y, n):
     """
     Surface elevation
     """
-    kEta = 0
-    kEta += sum([Y[j] * math.cos(j * x) 
+    #kEta = 0
+    kEta = sum([Y[j] * math.cos(j * x) 
                 for j in range(1, n)])
     kEta += 0.5 * Y[n] * math.cos(n * x)
     return kEta
@@ -433,7 +405,6 @@ def Point(X, Y, kd, Tanh, B, n, ce, c, R, z, Is_finite):
         u = z[5] + u
         phi = z[5] * X + phi
         dphidt = -z[4] * u
-
         ut = -z[4] * ux
         vt = -z[4] * vx
         uy = vx

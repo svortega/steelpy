@@ -8,7 +8,7 @@ from typing import NamedTuple, Tuple, Union, List, Dict
 #from steelpy.metocean.regular.current.main_current import MeanCurrent
 from steelpy.metocean.regular.stokes.Stokes import StokesModule
 from steelpy.metocean.regular.fourier.Fourier import FourierModule
-from steelpy.metocean.regular.cnoidal.Cnoidal import CnoidalModule
+#from steelpy.metocean.regular.cnoidal.Cnoidal import CnoidalModule
 
 class RegularWaves:
     __slots__ = ['_wave']
@@ -16,17 +16,17 @@ class RegularWaves:
     def __init__(self)-> None:
         """
         """
-        self._wave = StokesModule()
+        self._wave = FourierModule()
     #
     @property
     def Stokes(self):
         """ """
         return StokesModule
     #
-    @property
-    def Cnoidal(self):
-        """ """
-        return CnoidalModule    
+    #@property
+    #def Cnoidal(self):
+    #    """ """
+    #    return CnoidalModule
     #
     @property
     def Fourier(self):

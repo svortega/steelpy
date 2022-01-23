@@ -6,7 +6,10 @@ sheets = wb.sheet_names
 #print(sheets)
 #
 ws = wb.sheets["Caisson Supports"]
-data = ws.head()
+data = ws.dataframe()
 print(data)
-print(data['x'])
+item = data['y']
+print(item.max())
+print(data['y'])
+index = item.idxmax()
 print('--')

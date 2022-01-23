@@ -71,7 +71,8 @@ ring2 = formulas.ring(72)
 ring2.material = material["X65"]
 ring2.geometry = section["TUB"]
 # 
-ring2.load[4] = [2, W, 90 * units.deg, 90* units.deg]
+#ring2.load[4] = {'case':1, 'W':W} # 'phase':90*units.deg
+ring2.load[4] = [2, 10*units.kN, 45 * units.deg, 0* units.deg]
 #ring2.load[4] = [18, W, 10 * units.deg, 20* units.deg, 90* units.deg]
 #ring2.load[4] = {'case':18, 'load':W, 
 #                 'theta':10 * units.deg, 
@@ -88,6 +89,7 @@ ring2.load[4] = [2, W, 90 * units.deg, 90* units.deg]
 #forces[2].printout()
 #phi = 65 * units.deg
 #W = 10000 * units.lbf
+#ring2.load[4] = [4, W, phase*0, 45 * units.deg]
 #ring2.load[4] = [7, W, phase*0, 5 * units.deg]
 #ring2.load[4] = [19, W, phase*0, theta*0]
 #ring2.load[5] = [20, W, phase*0]
@@ -96,25 +98,27 @@ ring2.load[4] = [2, W, 90 * units.deg, 90* units.deg]
 #
 #
 #forces2 = ring2.radial_forces
-#forces2[8].plot()
-##forces2[12].plot()
+#forces2[8].plot_radial()
+##forces2[12].plot_radial()
 #forces2[8].printout()
 ##forces2[12].printout()
 #
 ## Printing Results
-force = ring2.radial_force
+force = ring2.force_combined()
 #force.printout()
-#Mmax = force.Mmax * units.N * units.m
-#print(f'Mmax = {Mmax.convert("lbf*inch").value : 1.3e} lbf-inch')
-##
-#Nmax = force.Nmax * units.N
-#print(f'Nmax = {Nmax.convert("lbf").value : 1.3e} lbf')
-##
-#Vmax = force.Vmax * units.N
-#print(f'Vmax = {Vmax.convert("lbf").value : 1.3e} lbf')
-#force.plot2d()
+Mmax = force.Mmax * units.N * units.m
+print(f'Mmax = {Mmax.convert("lbf*inch").value : 1.3e} lbf-inch')
 #
-stress = ring2.radial_stress
+Nmax = force.Nmax * units.N
+print(f'Nmax = {Nmax.convert("lbf").value : 1.3e} lbf')
+#
+Vmax = force.Vmax * units.N
+print(f'Vmax = {Vmax.convert("lbf").value : 1.3e} lbf')
+force.plot(x='x', y='M')
+#force.plot_radial()
+force.plot_force(column="M")
+#
+stress = ring2.radial_stress()
 stress.printout()
 ##ring1.print_results()
 #

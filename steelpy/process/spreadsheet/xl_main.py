@@ -1,6 +1,7 @@
 # Copyright (c) 2021 LMSp
 #
 # Python stdlib imports
+from array import array
 from dataclasses import dataclass
 from pathlib import Path
 import re
@@ -9,8 +10,9 @@ from typing import NamedTuple, Dict, List, Iterable, Union
 
 # package imports
 from steelpy.process.spreadsheet.pylightxl.pylightxl import (readxl, readcsv, writexl, writecsv,
-                                                             Database, utility_address2index)
-
+                                                             Database, utility_address2index,
+                                                             utility_columnletter2num)
+from steelpy.process.spreadsheet.dataframe import DataFrame
 
 #
 #
@@ -122,18 +124,46 @@ class xlCells:
         """
         """
         if re.search(r"\:", cell_name):
-            tokens = re.split(r'[:]', cell_name)
-            row_i, col_i = utility_address2index(tokens[0])
-            row_j, col_j = utility_address2index(tokens[1])
-            for i in range(row_i, row_j + 1):
-                for j in range(col_i, col_j + 1):
-                    self._wb.ws(ws=self._ws_name).update_index(row=i, col=j, val=value)
+            return self._wb.ws(ws=self._ws_name).range(address=cell_name)
+            #
+            #tokens = re.split(r'[:]', cell_name)
+            #row_i, col_i = utility_address2index(tokens[0])
+            #row_j, col_j = utility_address2index(tokens[1])
+            #for i in range(row_i, row_j + 1):
+            #    for j in range(col_i, col_j + 1):
+            #        #self._wb.ws(ws=self._ws_name).update_index(row=i, col=j, val=value)
+            #        self._wb.ws(ws=self._ws_name).index(row=i, col=j)
         else:
-            return self._wb.ws(ws=self._ws_name).index(address=cell_name)
+            return self._wb.ws(ws=self._ws_name).address(address=cell_name)
             # row_id, col_id = utility_address2index(cell_name)
             # return self._wb.ws(ws=self._ws_name).index(row=row_id, col=col_id)
     #
-    def head(self,  row:int=1, column:Union[int,str]=1,
+    @property
+    def column(self):
+        """ """
+        return xlColumn(self._wb, self._ws_name)
+    #
+    @property
+    def row(self):
+        """ """
+        return xlRow(self._wb, self._ws_name)     
+    #
+    #
+    def key(self, row:Union[int,str,None]=None, 
+            column:Union[int,str,None]=None):
+        """ """
+        ws_name = self._ws_name
+        
+        #if row:
+        #    if isinstance(column, str):
+        #        
+        #
+        #if column:
+        #    if isinstance(column, str):
+        return self._wb.ws(ws=self._ws_name).ssd(keyrows=row, keycols=column)
+    #
+    #
+    def dataframe(self,  row:int=1, column:Union[int,str]=1,
              title:Union[int,List]=0):
         """ """
         columns = []
@@ -148,49 +178,6 @@ class xlCells:
         #
         #print('--')
         return DataFrame(headers)
-#
-#
-@dataclass
-class DataFrame:
-    __slots__ = ['_headers']
-
-    def __init__(self, data:Union[None, Dict]=None):
-        """
-        """
-        self._headers: Dict = {}
-        if data:
-            self._headers= data
-    #
-    def __setitem__(self, name: str, value:List) -> None:
-        """
-        """
-        self._headers[name] = value
-    #
-    #
-    def __getitem__(self, name: str) -> Dict :
-        """
-        """
-        #xx = [isinstance(val, (float, int)) for val in self._headers[name]]
-        #xx = any(xx)
-        return self._headers[name]
-    #
-    # Return a string representation of self.
-    def __str__(self) -> str:
-        output = ""
-        rows = [*([i] + j for i, j in self._headers.items())]
-        gaps = [max(len(str(x)) for x in item) for item in rows]
-        rows = list(zip(*rows))
-        for row in rows:
-            output += " ".join(f'{item:>{gaps[x]}}' for x, item in enumerate(row)) +"\n"
-        return output
-    #
-    def drop(self):
-        """ """
-        pass
-#
-#
-class DataFrameItem:
-    pass
 #
 #
 def get_data(sheet):
@@ -222,6 +209,62 @@ class xlset:
         """
         """
         return self._ws.range(cell_name).value
+#
+#
+#
+class xlColumn:
+    __slots__ = ['_wb', '_ws_name']
+
+    def __init__(self, wb, ws_name: str):
+        """ ws : sheet"""
+        self._wb = wb
+        self._ws_name = ws_name
+    #
+    def __setitem__(self, col_name: str, value: float) -> None:
+        """
+        """
+        1/0
+        self._wb.range(col_name).value = value
+
+    #
+    def __getitem__(self, col_name: int):
+        """
+        """
+        if isinstance(col_name, int):
+            return self._wb(ws=self._ws_name).col(col=col_name)
+        elif isinstance(col_name, str):
+            col_name = utility_columnletter2num(col_name)
+            return self._wb.ws(ws=self._ws_name).col(col=col_name)
+        else:
+            raise IOError(f"column name : {col_name} not valid")
+#
+#
+class xlRow:
+    __slots__ = ['_wb', '_ws_name']
+
+    def __init__(self, wb, ws_name: str):
+        """ ws : sheet"""
+        self._wb = wb
+        self._ws_name = ws_name
+    #
+    def __setitem__(self, row_name: str, value: float) -> None:
+        """
+        """
+        1/0
+        self._wb.range(row_name).value = value
+
+    #
+    def __getitem__(self, row_name: int):
+        """
+        """
+        if isinstance(row_name, int):
+            return self._wb.ws(ws=self._ws_name).row(row=row_name)
+        #elif isinstance(col_name, str):
+        #    col_name = utility_columnletter2num(col_name)
+        #    return self._wb.ws(ws=self._ws_name).row(row=row_name)
+        else:
+            raise IOError(f"column name : {col_name} not valid")
+#
 #
 #
 class ColumnName(dict):

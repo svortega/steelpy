@@ -20,8 +20,9 @@ from steelpy.metocean.regular.operations.waveops import zeros
 #
 
 
-def initial(height, Hoverd, current, current_criterion,
-            num, n, is_finite, case):
+def initial(height: float, Hoverd: float,
+            current: float, current_criterion: int,
+            num: int, n: int, is_finite: bool, case: str):
     """ """
     pi = math.pi
     sol = zeros(num + 1, 2 + 1)
@@ -105,8 +106,10 @@ def initial(height, Hoverd, current, current_criterion,
 #
 
 
-def eqns(height, Hoverd, z, cosa, sina, num, n, current,
-         current_criterion, is_finite, case):
+def eqns(height: float, Hoverd: float,
+         z: array, cosa: array, sina: array,
+         num: int, n: int, current: float,
+         current_criterion: int, is_finite: bool, case: str):
     """
     EVALUATION OF EQUATIONS
     """
@@ -183,7 +186,7 @@ def eqns(height, Hoverd, z, cosa, sina, num, n, current,
 #
 
 
-def Newton(height, Hoverd, z, count, cosa, sina, num, n, current,
+def Newton(height, Hoverd, z, cosa, sina, num, n, current,
            current_criterion, is_finite, case):
     """
     SET UP JACOBIAN MATRIX AND SOLVE MATRIX EQUATION
@@ -213,12 +216,11 @@ def Newton(height, Hoverd, z, count, cosa, sina, num, n, current,
     # SOLVE MATRIX EQUATION
     # **************************************************
     #
-    x, a = solver(a, rhs, num, num, num, num)
+    x, a = solver(a, rhs, num, num, num)
 
     for i in range(1, num + 1):
         z[i] += x[i]
     #
     _sum = sum([abs(x[i]) for i in range(10, n + 10 + 1)]) / n
-    #_sum /= n
     return z, _sum, Tanh
 #

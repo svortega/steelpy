@@ -89,20 +89,21 @@ class Cases(Mapping):
             rforces[load_name] = ring.get_load(R, k1, k2)
         return rforces
     #
-    def radial_force(self, R, k1, k2):
+    def force_combined(self, R, k1, k2):
         """ """
         rforces = self.radial_forces(R, k1, k2)
         for item in rforces.values():
             try:
-                xm += item[1]
-                xh += item[2]
-                xs += item[3]
+                xm += item['M']
+                xh += item['N']
+                xs += item['V']
             except UnboundLocalError:
-                xm = item[1]
-                xh = item[2]
-                xs = item[3]
-                xloc = item[0]
-        return RadialForces(xloc, xm, xh, xs)
+                xm = item['M']
+                xh = item['N']
+                xs = item['V']
+                xloc = item['x']
+        #return RadialForces(xloc, xm, xh, xs)
+        return RadialForces({'x':xloc, 'M':xm, 'N':xh, 'V':xs})
     #
     def print(self):
         """ """
@@ -296,21 +297,21 @@ class  Ring:
         return self._stiffener
         #return self._section
     #
-    @property
+    #@property
     def radial_forces(self):
         """ """
         k1, k2, alpha, beta = self.k_factors()
         R = self._R
         return self._load_case.radial_forces(R, k1, k2)    
     #
-    @property
-    def radial_force(self):
+    #@property
+    def force_combined(self):
         """ """
         k1, k2, alpha, beta = self.k_factors()
         R = self._R
         #
         #try:
-        return self._load_case.radial_force(R, k1, k2)
+        return self._load_case.force_combined(R, k1, k2)
         #except NameError:
         #    section = self._section()
         #    properties = section.properties
@@ -320,7 +321,7 @@ class  Ring:
         #    #self._load_case.properties(beta, area, Iy)
         #    return self._load_case.radial_force(R, k1, k2, beta, area, Iy)
     #
-    @property
+    #@property
     def radial_stress(self):
         """ """
         # get cross section of ring
@@ -341,11 +342,10 @@ class  Ring:
         else:
             F = max(F, 1.50)
         #
-        rforce = self.radial_force
+        rforce = self.force_combined()
         #
-        return stress2(Iy, area, 
-                       c, c1, ki, ko, F,
-                       rforce.x, rforce.M, rforce.N, rforce.V)
+        return stress2(Iy, area, c, c1, ki, ko, F, rforce)
+                       #rforce['x'], rforce['M'], rforce['N'], rforce['V'])
     #
     def _section(self):
         """ """

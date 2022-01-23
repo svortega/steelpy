@@ -8,8 +8,8 @@ import math
 from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
-from steelpy.metocean.regular.fourier.Subroutines import zeros, Newton, initial
-from steelpy.metocean.regular.operations.inout import title_block, get_Height, output
+from steelpy.metocean.regular.fourier.Subroutines import Newton, initial
+from steelpy.metocean.regular.operations.inout import title_block, output
 from steelpy.metocean.regular.operations.waveops import WaveRegModule, WaveItem, zeros, get_wave_data
 
 #
@@ -168,7 +168,7 @@ def FourierMain(MaxH:float, case:str,
             print("# Iteration {:}:".format(_iter))
             # Calculate right sides of equations and differentiate numerically
             # to obtain Jacobian matrix, : solve matrix equation
-            z, error, Tanh = Newton(height, hoverd, z, _iter, cosa, sina,
+            z, error, Tanh = Newton(height, hoverd, z, cosa, sina,
                                     num, norder, current, c_type, is_finite, case)
             # Convergence criterion satisfied?
             print("# Mean of corrections to free surface: {: 1.4e}".format(error))

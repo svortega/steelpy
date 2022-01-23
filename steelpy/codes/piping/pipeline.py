@@ -38,8 +38,9 @@ def search_line(lineIn, key, keyWord=None, count=1):
 def get_code(lineIn):
     """
     """
-    key = {"PD8010_1": r"\b((PD|BS)\s*((\_|\-)\s*)?8010\s*((\_|\-)\s*)?(part)?\s*((\_|\-)\s*)?1)\b",
-            "PD8010_2": r"\b((PD|BS)\s*((\_|\-)\s*)?8010\s*((\_|\-)\s*)?(part)?\s*((\_|\-)\s*)?2)\b",
+    key = {"PD8010": r"\b((PD|BS)\s*((\_|\-)\s*)?8010)\b",
+           #"PD8010_1": r"\b((PD|BS)\s*((\_|\-)\s*)?8010\s*((\_|\-)\s*)?(part)?\s*((\_|\-)\s*)?1)\b",
+            #"PD8010_2": r"\b((PD|BS)\s*((\_|\-)\s*)?8010\s*((\_|\-)\s*)?(part)?\s*((\_|\-)\s*)?2)\b",
             "DNV_F101": r"\b(DNV\s*((\_|\-)\s*)?(OS)?\s*((\_|\-)\s*)?F101)\b",
             "ASME_B31": r"\b(ASME\s*((\_|\-)\s*)?B\s*((\_|\-)\s*)?31\s*((\_|\-|\.)\s*)?3)\b"}
 
@@ -83,18 +84,23 @@ def functional_stress(self, t_check, PD8010, output):
     """
     """
     # External overpressure
-    P = abs(self.Pi - self.Po)
+    #P = abs(self.Pi - self.Po)
+    P = self.pressure
+    Fa = self.functional_load[0]
+    Fs = self.functional_load[1]
+    Mb = self.functional_load[2]
+    T  = self.functional_load[3]
     # hoop stress
     sigma_h = PD8010.hoop_stress(P, tmin=t_check)
     # longitudinal stress
-    deltaT = self.delta_T[0]
+    deltaT = self.delta_T
     sigma_L, Sb = PD8010.longitudinal_stress(t_check, 
                                              sigma_h, deltaT, 
-                                             P, self.Fa, self.Mb,
+                                             P, Fa, Mb,
                                              self.pipe_restrained,
                                              output=output)
     # shear stress
-    tau = PD8010.shear_stress(t_check, self.T, self.Fs, output=output)
+    tau = PD8010.shear_stress(t_check, T, Fs, output=output)
     # 
     sigma_e = PD8010.equivalent_stress(sigma_h, sigma_L, tau, output=output)   
     return sigma_e
@@ -142,7 +148,8 @@ def get_PD80101(self, output):
     self.a = PD8010.substances_categorization(self.substance_category)
     self.Sah, self.fd_hs = PD8010.allowable_hoop_stress(self.a, self.pipe_history)
     # External overpressure
-    P = abs(self.Pi - self.Po)    
+    #P = abs(self.Pi - self.Po)
+    P = abs(self.pressure)
     self.sigma_h = PD8010.hoop_stress(P, tmin=t_check)
     self.UR_h, self.UR_eq = PD8010.limits_calculated_stress(self.sigma_h, self.Sah, 
                                                             self.sigma_e, self.Sae,
@@ -231,23 +238,34 @@ def get_PD80102(self, output):
 #               Main Driver Section
 #-------------------------------------------------
 #
-class Pipeline_Assessment:
+class PipelineDesign:
     """
     """
     #
-    def __init__(self, RootSearch="FAST"):
+    def __init__(self, code: str, RootSearch="FAST"):
         """
         """
         self.units = Units()
         #
         self.root_search = RootSearch.upper()
+        self._onshore = False
+        #
+        self.code = get_code(code)
+        if not self.code:
+            print('   *** error design code {:} not recognised'.format(code))
+            sys.exit()        
+        #
         #
         self.header = 1
+        self.T_sw = 0 * self.units.K
+        self.delta_T = []
         #
         ## Default General Data
         ##
         ##
         ##
+        self._coating = 0 * self.units.m
+        self.pipe_restrained = False
         self.material_derating = False
         #self.material_type = "CMN"
         #self.derate_method = "DNV"
@@ -255,7 +273,7 @@ class Pipeline_Assessment:
         ##
         ##
         ## Default Loading
-        self.load_type = False
+        #self.load_type = False
         ##
         ##
         ## Default Flexibility Factors 
@@ -279,11 +297,15 @@ class Pipeline_Assessment:
         #self.Tr = 0
         ## ------
         ##
-        #self.load_type = None
-        self.Fa = 0 * self.units.N
-        self.Fs = 0 * self.units.N
-        self.Mb = 0 * self.units.N * self.units.m
-        self.T  = 0 * self.units.N * self.units.m
+        self.pipe_history = False
+        self.load_type = False
+        self._fun_load = [0 * self.units.N, 0 * self.units.N,
+                          0 * self.units.N * self.units.m,
+                          0 * self.units.N * self.units.m]
+        #self.Fa = 0 * self.units.N
+        #self.Fs = 0 * self.units.N
+        #self.Mb = 0 * self.units.N * self.units.m
+        #self.T  = 0 * self.units.N * self.units.m
         ##
         #self.T_inlet = False
         #self.ovality = False
@@ -298,26 +320,38 @@ class Pipeline_Assessment:
         ##
         ## Env Forces
         ##
-        self.Px = 0 * self.units.N
-        # Shear        
-        self.Vip = 0 * self.units.N
-        self.Vop = 0 * self.units.N
-        # Bending
-        self.BMip = 0 * self.units.N * self.units.m
-        self.BMop = 0 * self.units.N * self.units.m        
-        self.BMt = 0 * self.units.N * self.units.m        
+        self._env_load = [0 * self.units.N, 0 * self.units.N, 
+                          0 * self.units.N,
+                          0 * self.units.N * self.units.m, 
+                          0 * self.units.N * self.units.m,
+                          0 * self.units.N * self.units.m]        
+        ##
+        #self.Px = 0 * self.units.N
+        ## Shear        
+        #self.Vip = 0 * self.units.N
+        #self.Vop = 0 * self.units.N
+        ## Bending
+        #self.BMip = 0 * self.units.N * self.units.m
+        #self.BMop = 0 * self.units.N * self.units.m        
+        #self.BMt = 0 * self.units.N * self.units.m        
     #
-    def design_code(self, code):
-        """
-        code : PD8010 Part 1 (2015) Steel pipelines on land
-               PD8010 Part 2 (2015) Subsea pipelines
-               DNV-OS-F101   (2007) Submarine Pipeline Systems
-               ASME B31.3    (2006) Process Piping
-        """
-        self.code = get_code(code)
-        if not self.code:
-            print('   *** error design code {:} not recognised'.format(code))
-            sys.exit()
+    #@property
+    def onshore(self):
+        """ """
+        self._onshore = True
+    #
+    #
+    #def design_code(self, code):
+    #    """
+    #    code : PD8010 Part 1 (2015) Steel pipelines on land
+    #           PD8010 Part 2 (2015) Subsea pipelines
+    #           DNV-OS-F101   (2007) Submarine Pipeline Systems
+    #           ASME B31.3    (2006) Process Piping
+    #    """
+    #    self.code = get_code(code)
+    #    if not self.code:
+    #        print('   *** error design code {:} not recognised'.format(code))
+    #        sys.exit()
     #
     #
     def design_data(self, design_condition, design_method):
@@ -329,30 +363,23 @@ class Pipeline_Assessment:
         self.design_condition = get_design_condition(design_condition)
         if not self.design_condition:
             print('   *** error design condition {:} not recognised'
-                  .format(desing_condition))
+                  .format(design_condition))
             sys.exit()
         
         self.design_method = get_design_method(design_method)
         if not self.design_method:
             print('   *** error design method {:} not recognised'
-                  .format(method))
+                  .format(design_method))
             sys.exit()
     #
     #
-    def pipe_data(self, pipe_type, pipe_name=None,
-                  pipe_restraint=False, pipe_history=False):
+    def pipe_data(self, pipe_type, pipe_name=None):
         """
         pipe_type : riser/landfall/seabed (subsea)
                     above ground/buried    (land)
         
         name      : pipe name/identification
         
-        restrain  : True/False (A pipeline is deemed to be totally restrained 
-                                when axial movement and bending resulting from
-                                temperature or pressure change is totally prevented)
-        
-        pipe_history : unknown = False
-                         known = True --> weld joint factor = 1.0
         
         """
         self.pipe_type = get_pipe_type(pipe_type)
@@ -360,9 +387,19 @@ class Pipeline_Assessment:
             print('   *** error pipe type {:} not recognised'.format(pipe_type))
             sys.exit()
         
-        self.pipe_restrained = pipe_restraint
-        self.pipe_history = pipe_history
         self.pipe_name = pipe_name
+    #
+    def history(self):
+        """pipe_history : unknown = False
+                          known = True --> weld joint factor = 1.0"""
+        self.pipe_history = True
+    #
+    def restrained(self):
+        """restrain  : True/False (A pipeline is deemed to be totally restrained 
+                        when axial movement and bending resulting from
+                        temperature or pressure change is totally prevented)"""
+        self.pipe_restrained = True
+    #
     #
     def pipe_section(self, tcorr:Units, tol:float=0.125, fo=0.025, 
                      Lc:Units|None=None, coating:Units|None=None):
@@ -373,7 +410,6 @@ class Pipeline_Assessment:
         tol   : Manufacturing Tolerance (-ve) (include percentage sign)
         fo    : Maximum Ovality
         Lc    : Pipe section length
-        coating : pipe over coating
         """
         #
         #self.Do = Do
@@ -386,9 +422,20 @@ class Pipeline_Assessment:
         if not self.Lc:
             self.Lc = 0 * self.units.m
         #
-        self.coating = coating
-        if not self.coating:
-            self.coating = 0 * self.units.m
+        #self.coating = coating
+        #if not self.coating:
+        #    self.coating = 0 * self.units.m
+    #
+    #
+    @property
+    def coating(self):
+        """ coating : pipe over coating"""
+        return self._coating
+    
+    @coating.setter
+    def coating(self, tickness:Units):
+        """ coating : pipe over coating"""
+        self._coating = tickness
     #
     #
     @property
@@ -415,33 +462,6 @@ class Pipeline_Assessment:
         self._material = value
     #
     #
-    #def material(self, SMYS:Units, SMTS:Units|None=None, 
-    #             E:Units|None=None, G:Units|None=None, 
-    #             alpha:float=1.10E-05, Poisson:float=0.30):
-    #    """
-    #    SMYS : Specified minimum yield strength
-    #    E    : Young's modulus of Elasticity
-    #    alpha : Linear coefficient of thermal expansion
-    #    Poisson : Poisson's ratio
-    #    """
-    #    # 
-    #    self.SMYS = SMYS
-    #    #
-    #    self.E = E
-    #    if not self.E:
-    #        self.E = 200000 * self.units.MPa
-    #    #
-    #    self.G = G
-    #    if not self.G:
-    #        self.G = 77200.0 * self.units.MPa   
-    #    #
-    #    self.alpha_T = alpha
-    #    self.Poisson = float (Poisson)
-    #    #
-    #    self.SMTS = SMTS
-    #    if not self.SMTS:
-    #        self.SMTS= self.SMYS / 0.90
-    #
     #
     def material_derate(self, material_type:str="CMN", 
                         derate_code:str="DNV", Tmax:Units|None=None):
@@ -459,54 +479,80 @@ class Pipeline_Assessment:
         self.material_derating = True
     #
     #
-    def design_pressure(self, Pi, Po:Units|None=None):
+    @property
+    def pressure(self):
+        """ """
+        return sum(self._pressure)
+    
+    @pressure.setter
+    def pressure(self, P:Units|list[Units]):
         """
         Pi : Internal pressure
         Po : External pressure
         """
-        self.Pi = Pi
-        self.Po = Po
-        if not self.Po:
-            self.Po = 0 * self.units.bar
-        self.pressure = True
+        #
+        if isinstance(P, (list,tuple)):
+            self._pressure = [P[0]]
+            self._pressure.append(-1*P[1])
+        
+        elif isinstance(P, dict):
+            #self._pressure = [P]
+            1/0
+        else:
+            self._pressure = [P]
+        #self.pressure = True
     #
-    def design_temperature(self, T1:Units|None=None, 
-                           T2:Units|None=None,
-                           T_sw:Units|None=None, 
-                           delta_T:Units|None=None,
-                           T_inlet:list|None=None):
+    @property
+    def temperature(self):
+        """ """
+        return max(self._temperature)
+    
+    @temperature.setter
+    def temperature(self, temp):
+        #            T1:Units|None=None, 
+        #            T2:Units|None=None,
+        #            T_sw:Units|None=None, 
+        #            delta_T:Units|None=None,
+        #            T_inlet:list|None=None):
         """
         T1 : Installation temperature
         T2 : Maximum or minimum metal temperature
         delta_T : 
         Tw : Seawater temperature
         """
+        self._temperature = temp
         #
-        self.T1 = T1
-        if not self.T1:
-            self.T1 = 0 * self.units.K 
-        
-        self.T2 = T2
-        if not self.T2:
-            self.T2 = 0 * self.units.K 
+        #self.T1 = T1
+        #if not self.T1:
+        #    self.T1 = 0 * self.units.K 
         #
-        self.T_sw = T_sw
-        if not self.T_sw:
-            self.T_sw = 0 * self.units.K      
-        
-        self.delta_T = []
-        if delta_T:
-            self.delta_T = delta_T
+        #self.T2 = T2
+        #if not self.T2:
+        #    self.T2 = 0 * self.units.K 
+        ##
+        #self.T_sw = T_sw
+        #if not self.T_sw:
+        #    self.T_sw = 0 * self.units.K      
         #
-        if T_inlet:
-            self.T_inlet = []
-            for j in range(T_inlet):
-                self.T_inlet.append(j)
+        #self.delta_T = []
+        #if delta_T:
+        #    self.delta_T = delta_T
+        ##
+        #if T_inlet:
+        #    self.T_inlet = []
+        #    for j in range(T_inlet):
+        #        self.T_inlet.append(j)
         #
-        self.temperature = True
+        #self.temperature = True
     #
     #
-    def functional_load(self, Fa:Units, Fs:Units, Mb:Units, T:Units):
+    @property
+    def functional_load(self):
+        """ """
+        return self._fun_load
+    
+    @functional_load.setter
+    def functional_load(self, functional:list[Units]):
         """
         F  : Axial force
         Fs : Shear Force applied to a pipeline
@@ -521,16 +567,19 @@ class Pipeline_Assessment:
         e) hydrostatic pressure of the environment
         f) residual installation load remaining after hydrotest
         """      
-        self.Fa = Fa
-        self.Fs = Fs
-        self.Mb = Mb
-        self.T = T
+        #self.Fa = Fa
+        #self.Fs = Fs
+        #self.Mb = Mb
+        #self.T = T
+        self._fun_load = functional
     #
     #
-    def enviromental_load(self, Px:Units|None=None, 
-                          Vip:Units|None=None, Vop:Units|None=None, 
-                          BMip:Units|None=None, BMop:Units|None=None,
-                          BMt:Units|None=None):
+    @property
+    def enviromental_load(self):
+        """ """
+        return self._env_load
+    
+    def enviromental_load(self, enviromental:list[Units]):
         """
         Px   : Axial force
         Vip  : Shear Force In Plane
@@ -542,29 +591,30 @@ class Pipeline_Assessment:
         Environmental loads can be due to wind, waves, currents, earthquakes and
         other environmental phenomena.
         """
+        self._env_load = enviromental
+        ##
+        ## Axial        
+        #self.Px = Px
+        #if not self.Px:
+        #    self.Px = 0 * self.units.N
+        ## Shear        
+        #self.Vip = Vip
+        #if not self.Vip:
+        #    self.Vip = 0 * self.units.N
+        #self.Vop = Vop
+        #if not self.Vop:
+        #    self.Vop = 0 * self.units.N
+        ## Bending
+        #self.BMip = BMip
+        #if not self.BMip:
+        #    self.BMip = 0 * self.units.N * self.units.m
+        #self.BMop = BMop
+        #if not self.BMop:
+        #    self.BMop = 0 * self.units.N * self.units.m        
+        #self.BMt = BMt
+        #if not self.BMt:
+        #    self.BMt = 0 * self.units.N * self.units.m
         #
-        # Axial        
-        self.Px = Px
-        if not self.Px:
-            self.Px = 0 * self.units.N
-        # Shear        
-        self.Vip = Vip
-        if not self.Vip:
-            self.Vip = 0 * self.units.N
-        self.Vop = Vop
-        if not self.Vop:
-            self.Vop = 0 * self.units.N
-        # Bending
-        self.BMip = BMip
-        if not self.BMip:
-            self.BMip = 0 * self.units.N * self.units.m
-        self.BMop = BMop
-        if not self.BMop:
-            self.BMop = 0 * self.units.N * self.units.m        
-        self.BMt = BMt
-        if not self.BMt:
-            self.BMt = 0 * self.units.N * self.units.m
-        
         self.load_type = "load"
     #
     #
@@ -756,10 +806,12 @@ class Pipeline_Assessment:
         #
         # Temperature
         if not self.delta_T:
-            self.delta_T = [abs(self.T2 - self.T1) - self.T_sw]
+            temp = abs(self._temperature[1] - self._temperature[0])
+            #self.delta_T = [abs(self.T2 - self.T1) - self.T_sw]
+            self.delta_T = temp - self.T_sw
         #
         #if self.Tmax == 0.0:
-        self.Tmax = max(self.T1, self.T2)
+        #self.Tmax = max(self.T1, self.T2)
         #
         # Material Derate
         #
@@ -784,10 +836,11 @@ class Pipeline_Assessment:
             self.Po = process.get_external_pressure(self, output)
         #
         #
-        if "PD8010_1" in self.code :
+        if self._onshore:
+        #if "PD8010_1" in self.code :
             get_PD80101(self, output)
     
-        elif "PD8010_2" in self.code :
+        elif "PD8010" in self.code :
             get_PD80102(self, output)
         #
         #elif self.code == "DNV":

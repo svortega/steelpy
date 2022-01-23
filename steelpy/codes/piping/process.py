@@ -123,11 +123,12 @@ def PD8010_buckling(self, PD8010, output):
         print("6.4.4 Buckling Check (Annex H)")
     # 6.4.4.1.a
     # G.1.2 External pressure
-    if self.Po.value > 0:       
+    if self._pressure[1]:
+    #if self.Po.value > 0:       
         # 6.4.4.1.b
         # G.2 Propagation buckling
-        self.P, self.Pp = PD8010.propagation_buckling(self.Pi, self.Po,
-                                                      self.tnom, output=output)
+        P = max(self.pressure, self._pressure[0])
+        self.P, self.Pp = PD8010.propagation_buckling(P, self.tnom, output=output)
         #
         self.Pc = PD8010.external_pressure(self.P, self.fo,
                                            self.sigma_u,
@@ -151,25 +152,33 @@ def PD8010_buckling(self, PD8010, output):
         #if self.load_type:
         #if "load" in self.load_type :
         # G.1.3 Axial compression
-        #if self.Fx:
-        self.Fxc = PD8010.axial_compression(self.Px + self.Fa, 
+        Px = self._env_load[0]
+        Fa = self.functional_load[0]
+        self.Fxc = PD8010.axial_compression(Px + Fa, 
                                             self.Do, self.tnom,
                                             output=output)
         #else:
         #    self.Fxc = 0
         # G.1.4 Bending
-        M = (self.BMip**2 + self.BMop**2)**0.50
-        self.Mc, self.epsilon_bc = PD8010.bending(self.Mb + M, 
+        Mb = self.functional_load[2]
+        BMip = self._env_load[3]
+        BMop = self._env_load[4]
+        M = (BMip**2 + BMop**2)**0.50
+        self.Mc, self.epsilon_bc = PD8010.bending(Mb + M, 
                                                   self.Do, self.tnom,
                                                   output=output)
         # G.1.5 Torsion
-        self.tau_c = PD8010.torsion(self.T + self.BMt, 
+        T  = self.functional_load[3]
+        BMt = self._env_load[5]
+        self.tau_c = PD8010.torsion(T + BMt, 
                                     self.Do, self.tnom,
                                     output=output)
-        # G.1.6 Load Combination       
-        self.UR_lc = PD8010.load_combination(Mb = self.Mb + M, 
+        # G.1.6 Load Combination
+        Px = self._env_load[0]
+        Mb = self.functional_load[2]
+        self.UR_lc = PD8010.load_combination(Mb = Mb + M, 
                                              Mc = self.Mc, 
-                                             Fx = self.Px + self.Fa, 
+                                             Fx = Px + Fa, 
                                              Fxc = self.Fxc,
                                              fo = self.fo, 
                                              P = self.P, 
@@ -604,7 +613,7 @@ class MainPipe:
     #
     # -------------------------
     # G.2  Propagation buckling
-    def propagation_buckling(self, Pi, Po, t, output=False):
+    def propagation_buckling(self, P, t, output=False):
         """
         H.2  Propagation Buckling
         
@@ -620,10 +629,10 @@ class MainPipe:
         #
         # The external overpressure, P, can be calculated using
         # equation (H.20).
-        P = Po - Pi
+        #P = Po - Pi
         # Check if external pressure is not significant
-        if P.value < 0:
-            P = Po
+        #if P.value < 0:
+        #    P = Po
         #
         # If P is less than Pp, then, even though it is possible
         # for the pipe to develop a local buckle, the buckle will

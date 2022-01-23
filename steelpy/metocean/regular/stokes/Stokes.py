@@ -63,7 +63,8 @@ class StokesModule(WaveRegModule):
         number : Maximum number of iterations for each step (20)
         accuracy   : Criterion for convergence
         """
-        super().__init__()
+        super().__init__(n=n, nstep=nstep,
+                         number=number, accuracy=accuracy)
     #
     def __setitem__(self, case_name: int,
                     case_data: Union[List[float], Dict[str, float]]) -> None:

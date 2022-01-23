@@ -43,15 +43,15 @@ class Metocean:
       : seastate : metocean combination
     """
     #
-    __slots__ = ['regular_waves', 'iregular_waves',
+    __slots__ = ['_regular_wave', '_iregular_wave',
                  '_current', '_wind', '_units',
                  '_combination', '_spectrum']
     #
     def __init__(self):
         """
         """
-        self.regular_waves = RegularWaves()
-        #self.iregular_waves = WaveIrregular()
+        self._regular_wave = RegularWaves()
+        #self._iregular_wave = WaveIrregular()
         #self._wind = Winds()
         #self._current = Currents()
         #self._units = Units()
@@ -68,13 +68,13 @@ class Metocean:
     #def irregular_wave(self):
     #    """
     #    """
-    #    return self.iregular_waves
+    #    return self._iregular_wave
     #
-    @property
+    #@property
     def regular_wave(self):
         """
         """
-        return self._regular_waves
+        return self._regular_wave
     #
     #@property
     #def linear_wave(self):

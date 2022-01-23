@@ -9,7 +9,8 @@ from typing import Dict, List, Tuple, NamedTuple
 
 # package imports
 from steelpy.process.units.main import Units
-from steelpy.process.math.vector import Vector
+#from steelpy.process.math.vector import Vector
+from steelpy.process.spreadsheet.dataframe import DataFrame, SeriesItem
 
 #
 # ************************************************
@@ -21,124 +22,196 @@ from steelpy.process.math.vector import Vector
 #
 #-------------------------------------------------
 #
-def stress2(smac, area, ceni, ceno, fki, fko, F, 
-            xloc, xm, xh, xs):
+def stress2(smac, area, ceni, ceno, fki, fko, F, rforces):
+            #xloc, xm, xh, xs):
     '''
     Calculate stress for curved beams
     F : shear factor
     '''
     # Circunferencial normal stress due tu pure bending M:
-    bstri = xm * ( fki * ceni / smac) # Stresses Bending Inner
-    bstro = xm * (-fko * ceno / smac) # Stresses Bending Outer
+    bstri = rforces['M'] * ( fki * ceni / smac) # Stresses Bending Inner
+    bstro = rforces['M'] * (-fko * ceno / smac) # Stresses Bending Outer
     #
     # Circunferencial normal stress due to hoop tension N:
-    hstr =  xh / area # Hoop Stresses
+    hstr =  rforces['N'] / area # Hoop Stresses
     #
     # Shear stress due to the radial shear force V:
     # Tau_r_theta = V(R-e)/(trAer^2) (RAr - Qr)
-    sstr =  xs * F / area  # Shear Stresses
+    sstr =  rforces['V'] * F / area  # Shear Stresses
     #
-    return RadialStress(xloc, bstri, bstro, hstr, sstr, fki, fko)
+    return RadialStress({'x':rforces['x'], 
+                         'bs_ri':bstri, 'bs_ro':bstro, 
+                         'axial':hstr, 'tau':sstr})
 #
+def polar(xx, yy):
+    """returns r, theta(degrees)
+    """
+    r = [(x**2 + y**2)**0.5 for x,y in zip(xx, yy)]
+    theta = [math.degrees(math.atan2(y,x)) for x,y in zip(xx, yy)]
+    return r, theta
 #
-class RadialForces(NamedTuple):
-    """ """
-    x:List[float]
-    M:array
-    N:array
-    V:array
+def rect(rad, Theta):
+    """theta in degrees
+
+    returns tuple; (float, float); (x,y)
+    """
+    x = [r * math.cos(math.radians(theta)) for r, theta in zip(rad, Theta)]
+    y = [r * math.sin(math.radians(theta)) for r, theta in zip(rad, Theta)]
+    return x,y
+#
+class RadialForces(DataFrame):
+
+    def __init__(self, data:Dict):
+        """
+        data {x, M, N, V}
+        """
+        #x:List[float]
+        #M:array
+        #N:array
+        #V:array
+        super().__init__(data)
+
     #
     @property
     def Mmax(self) -> float:
         """ """
-        mmax = min(self.M)
-        if max(self.M) > abs(mmax):
-            mmax = max(self.M)
-        return mmax  # --> N
+        #mmax = min(self._data['M'])
+        #if max(self._data['M']) > abs(mmax):
+        #    mmax = max(self._data['M'])
+        #return mmax  # --> N
+        return self._data['M'].maxabs()
     #
     @property
     def Nmax(self) -> float:
         """ """
-        mmax = min(self.N)
-        if max(self.N) > abs(mmax):
-            mmax = max(self.N)
-        return mmax  # --> N
+        #mmax = min(self._data['N'])
+        #if max(self._data['N']) > abs(mmax):
+        #    mmax = max(self._data['N'])
+        #return mmax  # --> N
+        return self._data['N'].maxabs()
     #
     @property
     def Vmax(self) -> float:
         """ """
-        mmax = min(self.V)
-        if max(self.V) > abs(mmax):
-            mmax = max(self.V)
-        return mmax  # --> N    
+        #mmax = min(self._data['V'])
+        #if max(self._data['V']) > abs(mmax):
+        #    mmax = max(self._data['V'])
+        #return mmax  # --> N
+        return self._data['V'].maxabs()
     #
     def printout(self):
         """ """
-        #istep = len(self.x)
+        #
+        #print(self.__str__())
         #out = ""
         print('LOCATION    MOMENT      THRUST      SHEAR')
         print('             N.m          N           N')
-        for i, x in  enumerate(self.x):
+        for i, x in  enumerate(self._data['x']):
             print("{:>5.1f}    {: 1.4e} {: 1.4e} {: 1.4e}"
-                  .format(x, self.M[i], self.N[i], self.V[i]))
+                  .format(x, self._data['M'][i], self._data['N'][i], self._data['V'][i]))
     #
-    def plot(self):
+    def plot_radial(self):
         """ Polar Plot"""
         import matplotlib.pyplot as plt
         import numpy as np
         #r = []
-        steps = len(self.x)
+        steps = len(self._data['x'])
         # Normalise
-        mm = self.M
-        nn = self.N
-        vv = self.V
-        M = self.M / self.Mmax
+        mm = self._data['M']
+        nn = self._data['N']
+        vv = self._data['V']
+        M = mm / self.Mmax
         M = [1. + item for item in M]
-        N = self.N / self.Nmax
+        N = nn / self.Nmax
         N = [1. + item for item in N]
-        V = self.V / self.Vmax
+        V = vv / self.Vmax
         V = [2 + item for item in V]
         #
         plt, ax = plot_view(2, steps)
         #
         rtheta = np.arange(0, 1, 1/steps)
         r = [1 for x in range(steps)]
-        theta = 2 * np.pi * rtheta 
+        theta = 2 * np.pi * rtheta
         plt.plot(theta, M, color = 'blue', linewidth=1)
         #
         title:str="Forces"
         #close_view(ax, title)
         ax.set_rmax(3)
         ax.set_rticks([1, 1.5, 2, 3])  # Less radial ticks
-        ax.grid(True, linestyle='--')        
+        ax.grid(True, linestyle='--')
         plt.show()
         print('--')
     #
-    def plot2d(self):
-        """ Radial Force"""
+    def plot_force(self, column:str):
+        """ Polar Plot"""
+        #import numpy as np
         import matplotlib.pyplot as plt
-        #r = []
-        #theta = [2 * math.pi * r for r in self.x]
-        plt.plot(self.x, self.M)
-        plt.show()    
-        
+        #
+        data = self._data[column]
+        dataMax = max(data)
+        dataMin = min(data)
+        Mmax = dataMax
+        if Mmax < abs(dataMin):
+            Mmax = dataMin
+        mm = [item for item in data]
+        mm.append(mm[0])
+        #M = [1+(item / Mmax ) for item in mm]
+        M = [item for item in mm]
+        #
+        x = [item for item in self._data['x']]
+        x.append(x[0])        
+        theta = [math.radians(item) for item in x]
+        rad = 0
+        #if dataMax == 0:
+        #    fix = max([item for item in M if not math.isclose(abs(item), 0, abs_tol=0.05)])
+        #    M = [abs(dataMin) + item for item in mm]
+        rad = [rad for item in x]
+        plt.polar(theta, rad, color='black', lw=2)
+        plt.polar(theta, M, lw=2)
+        #
+        z1 = [item < M[i] for i, item in enumerate(rad)]
+        plt.fill_between(theta, rad, M, where=(z1),
+                         alpha=0.25, color='red', interpolate=True,
+                         label=f'max {dataMax: 1.3e}')
+        #
+        z2 = [item >= M[i] for i, item in enumerate(rad)]
+        plt.fill_between(theta, rad, M, where=(z2),
+                         alpha=0.25, color='green', interpolate=True,
+                         label=f'min {dataMin: 1.3e}')        
+        #
+        #get current axes
+        ax = plt.gca()
+        #hide x-axis
+        #ax.get_xaxis().set_visible(False)
+        #hide y-axis
+        #ax.get_yaxis().set_visible(False)
+        #
+        plt.grid(True, linestyle='--')
+        #plt.axis('off')
+        #
+        plt.legend()
+        plt.show()
+        #print('---')
 #
 #
-class RadialStress(NamedTuple):
-    """
-    sigma_x : Circumferential stress on cross section of curved bars 
-              or normal stress or fiber stres.
-    sigma_z : Radial stress.
-    sigma_h : Hoop stress
-    tau : Shear stress.
-    """
-    x:List[float]
-    bs_ri:array
-    bs_ro:array
-    axial:array
-    tau: array
-    ki:float
-    ko:float
+class RadialStress(DataFrame):
+    
+    def __init__(self, data:Dict):
+        """
+        sigma_x : Circumferential stress on cross section of curved bars 
+                  or normal stress or fiber stres.
+        sigma_z : Radial stress.
+        sigma_h : Hoop stress
+        tau : Shear stress.
+        """
+        #x:List[float]
+        #bs_ri:array
+        #bs_ro:array
+        #axial:array
+        #tau: array
+        super().__init__(data) 
+        #self.ki = ki
+        #self.ko = ko
     #
     #@property
     #def sigma_i(self):
@@ -153,27 +226,27 @@ class RadialStress(NamedTuple):
     @property
     def tau_max(self):
         """Maximum shear stress """
-        shmax = min(self.tau)
-        if max(self.tau) > abs(shmax):
-            shmax = max(self.tau)
+        shmax = min(self._data['tau'])
+        if max(self._data['tau']) > abs(shmax):
+            shmax = max(self._data['tau'])
         return shmax / 1000**2 # N/m2 --> N/mm2
     #
     @property
     def sigma_axial(self):
         """Maximum shear stress """
-        shmax = min(self.axial)
-        if max(self.axial) > abs(shmax):
-            shmax = max(self.axial)
+        shmax = min(self._data['axial'])
+        if max(self._data['axial']) > abs(shmax):
+            shmax = max(self._data['axial'])
         return shmax / 1000**2 # N/m2 --> N/mm2
     #
     @property
     def sigma_bending(self):
         """ Maximum Section Combined Stress"""
-        cstri = self.bs_ri
-        cstro = self.bs_ro
+        cstri = self._data['bs_ri']
+        cstro = self._data['bs_ro']
         #
         #xloc = []
-        istep = len(self.x)
+        istep = len(self._data['x'])
         #step = 360.0 / istep
         cstmax = 0
         for i in range(istep):
@@ -201,8 +274,8 @@ class RadialStress(NamedTuple):
     @property
     def sigma_comb(self):
         """ Maximum Section Combined Stress"""
-        cstri = self.bs_ri + self.axial  # * fki  # Stresses Bending Inner + Hoop
-        cstro = self.bs_ro + self.axial  # * -fko # Stresses Bending Outer + Hoop
+        cstri = self._data['bs_ri'] + self._data['axial']  # * fki  # Stresses Bending Inner + Hoop
+        cstro = self._data['bs_ro'] + self._data['axial']  # * -fko # Stresses Bending Outer + Hoop
         scomb1 = max(max(cstro), max(cstri))
         scomb2 = min(min(cstro), min(cstri))
         #
@@ -361,7 +434,7 @@ class RingBase:
             xm[i] += xmom[j]
             xh[i] += xhop[j]
             xs[i] += xshr[j]
-        return RadialForces(xloc, Vector(xm), Vector(xh), Vector(xs))
+        return RadialForces({'x':xloc, 'M':xm, 'N':xh, 'V':xs})
     #    
 #
 #
@@ -611,7 +684,7 @@ class ring_3(RingBase):
         print (' ')
         print ('roark case 3 Opposing Moments')
         print ("")
-        print('Applied load: ',apld)
+        print(f'Applied load W: {apld: 1.3e}')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ("")
@@ -700,7 +773,7 @@ class ring_4(RingBase):
         print (' ')
         print ('roark case 4 Two Parallel Forces with Reaction')
         print ("")
-        print('Applied load: ',apld)
+        print(f'Applied load W: {apld: 1.3e}')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ("")
@@ -792,7 +865,7 @@ class ring_5(RingBase):
         print (" ")
         print ('roark case 5 Two Radial Forces with Reactions')
         print (" ")
-        print('Applied load: ',apld)
+        print(f'Applied load W: {apld: 1.3e}')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print (" ")
@@ -882,7 +955,7 @@ class ring_6(RingBase):
         print (' ')
         print ('roark case 6 Two Tangential Forces with their Reactions')
         print (" ")
-        print('Applied load: ',apld)
+        print(f'Applied load W: {apld: 1.3e}')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print (" ")
@@ -1126,7 +1199,7 @@ class ring_9(RingBase):
         print ("")
         print ('roark case 9 Linear varying unit load at Base theta > pi/2')
         print ("")
-        print('Applied load C: ',apld)
+        print(f'Applied load C: {apld: 1.3e}')
         print(f'Applied load w: {w: 1.3e}')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
@@ -1226,7 +1299,7 @@ class ring_10(RingBase):
         print (" ")
         print ('roark case 10 Uniform Compressive Unit Load from 180 to theta')
         print ("")
-        print('Applied load w: ',apld)
+        print(f'Applied load w: {apld: 1.3e}')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ("")
@@ -1324,7 +1397,7 @@ class ring_11(RingBase):
         print (' ')
         print ('roark case 11 Linear Varying Unit Load')
         print ("")
-        print('Applied load w: ',apld)
+        print(f'Applied load w: {apld: 1.3e}')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ("")
@@ -1525,7 +1598,7 @@ class ring_13(RingBase):
         print ('')
         print ('roark case 13 Lineary Varying Radial Unit Load')
         print ('')
-        print('Applied load C: ',apld)
+        print(f'Applied load C: {apld: 1.3e}')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ('')
@@ -1621,7 +1694,7 @@ class ring_14(RingBase):
         print ('')
         print ('roark case 14 Radial Quadratic Unit Load')
         print ('')
-        print('Applied load C: ',apld)
+        print(f'Applied load C: {apld: 1.3e}')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ('')
@@ -1727,7 +1800,7 @@ class ring_15(RingBase):
         print (' ')
         print ('roark case 15 Ring Supported at the Base and Loaded by Own Weight')
         print ("")
-        print('Applied load: ',apld)
+        print(f'Applied load W: {apld: 1.3e}')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ("")
@@ -1800,7 +1873,7 @@ class ring_16(RingBase):
         print (' ')
         print ('roark case 16 Unit Axial Segment of Pipe Filled with Liquid')
         print ("")
-        print(f'Rho  : {rho: 1.3f} kg/m^3')
+        print(f'Rho  : {rho: 1.3e} kg/m^3')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ("")
@@ -1882,7 +1955,7 @@ class ring_17(RingBase):
         print (' ')
         print ('roark case 17 Unit Axial Segment of Pipe Partly Filled with Liquid')
         print ("")
-        print(f'Rho  : {rho: 1.3f} kg/m^3')
+        print(f'Rho  : {rho: 1.3e} kg/m^3')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ("")
@@ -1988,8 +2061,8 @@ class ring_18(RingBase):
         cthi = math.cos(phi)
         #
         v = apld / (tau * crad**2)
-        print(f'Applied load W: {apld: 1.3f} N-m')
-        print(f'Applied load v: {v: 1.3f} N')
+        print(f'Applied load W: {apld: 1.3e} N-m')
+        print(f'Applied load v: {v: 1.3e} N')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print(f'Phi  : {math.degrees(phi): 1.3f} deg')
@@ -2107,8 +2180,8 @@ class ring_19(RingBase):
         cth = math.cos(a)
         #
         v = apld / (tau * crad**2)
-        print(f'Applied load W: {apld: 1.3f} N-m')
-        print(f'Applied load v: {v: 1.3f} N')
+        print(f'Applied load W: {apld: 1.3e} N-m')
+        print(f'Applied load v: {v: 1.3e} N')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ("")      
@@ -2204,8 +2277,8 @@ class ring_20(RingBase):
         #
         v = sum([apld * math.sin(math.radians(x)) / (pi * crad)
                  for x in range(180)])
-        print(f'Applied load W: {apld: 1.3f} N')
-        print(f'Applied load v: {v: 1.3f} N/m')
+        print(f'Applied load W: {apld: 1.3e} N')
+        print(f'Applied load v: {v: 1.3e} N/m')
         print(f'Phase: {math.degrees(self.phase): 1.3f} deg')
         print(f'Theta: {math.degrees(self.theta): 1.3f} deg')
         print ("")        

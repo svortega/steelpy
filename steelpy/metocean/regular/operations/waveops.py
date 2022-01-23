@@ -14,7 +14,7 @@ from steelpy.metocean.regular.current.main_current import MeanCurrent
 from steelpy.metocean.regular.operations.inout import (get_etas, get_kinematic, 
                                                        get_surface, get_kinematicX,
                                                        get_Height)
-
+from steelpy.process.spreadsheet.dataframe import DataFrame, SeriesItem
 
 #
 #
@@ -96,18 +96,21 @@ class WaveItem:
     def L(self):
         """ Wave Length"""
         try:
-            return self._wave_length
+            return self._wave_length * self.d
         except AttributeError:
             self.__call__()
-            return self._wave_length 
+            return self._wave_length * self.d
     #
     #
-    def surface(self, surface_points:int = 36):
+    def surface(self, surface_points:int = 36,
+                step_size=None):
         """Free surface (wave) profile
         surface_points : Number of points on free surface (the program clusters them near crest)
+        step_size: deg
         """
         self.__call__()
         n = self.order
+        kd = self._z[1]
         #method = self.method
         #x, eta = print_elevation(n, z, Y, B, Tanh, surface_points, method)
         # n, z, Y, B, Tanh, nprofiles, points, is_finite
@@ -116,35 +119,43 @@ class WaveItem:
         #x, eta = get_etas(n, self._z, self._Y, self._B, self._Tanh, 
         #                  surface_points, self.finite_deep)
         #
-        x, eta = get_surface(n, self._z, self._Y, surface_points)
+        x, eta, phase = get_surface(n, kd, self._Y, 
+                                    surface_points, self.finite_depth)
+        #
+        #dataframe = {'x': x, 'eta': eta, 'phase': phase,
+        #             'zeta': [(1+item) for item in eta]}
+        #
+        dataframe = {'x': [item*self.d for item in x],
+                     'eta': [item*self.d for item in eta],
+                     'phase': phase,
+                     'zeta': [(1+item)*self.d for item in eta]}
         #eta = [self.d + item for item in eta]
-        kd = self._z[1]
-        return SurfaceResults(eta, x, self.Tw, self.d, kd, self.finite_depth)
+        return SurfaceResults(dataframe, self.Tw, self.d, self.finite_depth)
     #
-    def kinematic(self, surface=None, depth_points:int = 20,
-                  surface_points:int = 36):
+    def kinematics(self, surface=None, depth_points:int = 20,
+                   surface_points:int = 36):
         """ """
         self.__call__()
         if not surface:
             surface = self.surface(surface_points)        
         n = self.order
-        method = self.method
+        #method = self.method
         #
-        etas = surface.eta_kd
-        xx = surface.x_kd
-        surface_points = len(etas)
+        #get_kinematicX(n, self._z, self._Y, self._B, self._Tanh,
+        #               surface_points, depth_points, self.finite_depth)
         #
-        #get_kinematicX(n, self._z, self._Y, self._B, self._Tanh, 
-        #               surface_points, depth_points, self.finite_deep)
         #
-        #     
-        kout, factors = get_kinematic(n, self._z, self._B, self._Tanh,
-                                      self.d, etas, xx, depth_points, self.finite_depth)
+        kout = get_kinematic(n, self._z, self._B, self._Tanh, self.d, 
+                             surface['eta'], surface['x'],
+                             depth_points, self.finite_depth)
         #
-        kd = self._z[1]
-        return KinematicResults(kout, factors, xx, 
-                                self.Tw, self.d, kd, 
-                                depth_points+1, self.finite_depth)
+        dataframe = KinematicResults(kout, depth_points+1, self.finite_depth)
+        #kd = self._z[1]
+        dataframe['x'] = surface['x'] #[item * self.d for item in surface.x_kd]
+        dataframe['phase'] = surface['phase'] #dataframe['x'] * kd * 180 / math.pi
+        return dataframe
+        #return KinematicResults (dataframe,
+        #                        depth_points+1, self.finite_depth)
         #print ( 'end' )
     #
     #
@@ -198,50 +209,54 @@ class WaveRegModule:
         return self._current
 #
 #
-class SurfaceResults(NamedTuple):
-    """
-    zeta:
-    x  : 
-    d  : Water depth
-    k  : wave number
-    """
-    eta_kd :List
-    #A : List
-    #w : List
-    #phase : List
-    #eta: List
-    x_kd : List
-    t:float
-    d:float
-    #order:int=1
-    kd:float
-    finite_depth:bool
+class SurfaceResults(DataFrame):
+    
+    def __init__(self, data:Union[None, Dict], 
+                 d:float, t:float, finite_depth:bool):
+        """
+        zeta:
+        x  : 
+        d  : Water depth
+        k  : wave number
+        """
+        super().__init__(data)    
+        #eta_kd :List
+        #A : List
+        #w : List
+        #phase : List
+        #eta: List
+        #x_kd : List
+        self.t = t
+        self.d = d
+        #order:int=1
+        #kd:float
+        self.finite_depth = finite_depth
+        #
+        #def k(self):
+        #    """Wave number"""
+        #    #k, niter = wavenum(self.w, self.d)
+        #    kd = self.z[1]
+        #    return k
     #
-    #def k(self):
-    #    """Wave number"""
-    #    #k, niter = wavenum(self.w, self.d)
-    #    kd = self.z[1]
-    #    return k
-    #
-    @property
-    def eta(self):
-        """ """
-        return [xx*self.d for xx in self.eta_kd]
-    #
-    @property
-    def zeta(self):
-        """ """
-        return [(1+xx)*self.d for xx in self.eta_kd]
-    #
-    @property
-    def phase(self):
-        """ """
-        return [self.kd*xx * 180 / math.pi for xx in self.x_kd]
-    #
-    @property
-    def x(self):
-        """ """
-        return [self.d*item for item in self.x_kd]
+    #@property
+    #def eta(self):
+    #    """ """
+    #    return [xx*self.d for xx in self.eta_kd]
+    ##
+    #@property
+    #def zeta(self):
+    #    """ """
+    #    return [(1+xx)*self.d for xx in self.eta_kd]
+    ##
+    #@property
+    #def phase(self):
+    #    """ """
+    #    return [xx * 180 / math.pi for xx in self._data['x']]
+    ##
+    #@property
+    #def x(self):
+    #    """ """
+    #    return [self.d*item for item in self.x_kd]
     #
     #
     #
@@ -249,11 +264,11 @@ class SurfaceResults(NamedTuple):
         """ """
         import matplotlib.pyplot as plt
         #
-        x = [-1*item for item in reversed(self.x[1:])]
-        x.extend(self.x)
+        x = [-1*item for item in reversed(self._data['x'][1:])]
+        x.extend(self._data['x'])
         #
-        y = [item for item in reversed(self.zeta[1:])]
-        y.extend(self.zeta)
+        y = [item for item in reversed(self._data['zeta'][1:])]
+        y.extend(self._data['zeta'])
         #
         plt.plot(x, y)
         plt.title('Surface')
@@ -269,45 +284,50 @@ class SurfaceResults(NamedTuple):
         print("#")
         print("# Surface of wave - trough-crest-trough,")
         if self.finite_depth:
-            header1 = "X/d"
-            header2 = "theta/d"
-            print("# Non-dimensionalised with respect to depth")
+            header1 = "X"
+            header2 = "theta"
+            #print("# Non-dimensionalised with respect to depth")
         else:
             header1 = "kX"
             header2 = "k eta"
-            print("# Non-dimensionalised with respect to wavenumber")
+            #print("# Non-dimensionalised with respect to wavenumber")
         #
-        npt = len(self.eta_kd)
+        npt = len(self._data['eta'])
         for j in range(npt):
             print("# {:} = {: 8.4f}, Phase = {: 6.1f} {:} = {: 8.4f}"
-                  .format(header1, self.x_kd[j], self.phase[j], header2, self.eta_kd[j]))            
+                  .format(header1, self._data['x'][j], 
+                          self._data['phase'][j], 
+                          header2, self._data['eta'][j]))
 #
 #
 #
-class KinematicResults(NamedTuple):
-    """ """
-    kout:List
-    factors: List
-    x:List
-    t : float
-    d : float
-    kd:float
-    depth_points:int
-    finite_depth:bool
-    #
+#class KinematicResults(NamedTuple):
+#    """ """
+#    dataframe:List
+#    #x:List
+#    #kd:float
+#    depth_points:int
+#    finite_depth:bool
+#    #
+class KinematicResults(DataFrame):
+    
+    def __init__(self, data:Union[None, Dict], 
+                 depth_points:int, finite_depth:bool):
+        """
+        """
+        super().__init__(data)
+        
+        self.depth_points = depth_points
+        self.finite_depth = finite_depth
+    
     def get_data(self, name):
         """ """
-        #xxx = self.kout
-        #depth_points = len(self.x)
-        for x, column in enumerate(self.kout):
-            if column[0] == name:
-                coldata = [item*self.factors[x] for item in column[1:]]
-                items = to_matrix(coldata, n=self.depth_points)
-                new_data = {}
-                for x, step in enumerate(self.x):
-                    new_data[step] = items[x]
-                return new_data
-        raise IOError(f'item {name:} not found')
+        x = self._data['x']
+        #coldata = [item*self.factors[name] for item in self.dataframe[name]]
+        items = to_matrix(self._data[name], n=self.depth_points)
+        new_data = {step: items[i] for i, step in enumerate(x)}
+        return DataFrame(new_data)
+        #raise IOError(f'item {name:} not found')
     #
     @property
     def z(self):
@@ -351,30 +371,34 @@ class KinematicResults(NamedTuple):
     #
     def printout(self):
         """ """
-        x = self.x
+        #pi = math.pi
+        x = self._data['x']
+        phase = self._data['phase']
         #z = self.z
-        pi = math.pi
-        #xxx = self.kout
-        surface_points = len(self.x)
+        #xx = self.dataframe
+        headers = list(self._data.keys())
+        #headers.pop()
+        #del headers[10:] # remove x and phase
+        surface_points = len(x)
         index = surface_points * self.depth_points
-        items = len(self.kout)
+        #items = len(headers)
         #
         print("#")
         print("# Velocity and acceleration profiles and Bernoulli checks")
         if self.finite_depth:
             header = "X/d"
-            print("# All quantities are dimensionless with respect to g and/or d")
+            #print("# All quantities are dimensionless with respect to g and/or d")
             print("#*******************************************************************************")
             print("# y        u       v    dphi/dt   du/dt   dv/dt  du/dx   du/dy Bernoulli check")
-            print("# -     -------------   -------  ------   -----  ------------- ---------------")
-            print("# d        sqrt(gd)       gd        g       g       sqrt(g/d)        gd       ")            
+            #print("# -     -------------   -------  ------   -----  ------------- ---------------")
+            #print("# d        sqrt(gd)       gd        g       g       sqrt(g/d)        gd       ")            
         else:
             header = "kX"
-            print("# All quantities are dimensionless with respect to g and/or k")
+            #print("# All quantities are dimensionless with respect to g and/or k")
             print("#*******************************************************************************")
             print("# ky       u       v    dphi/dt   du/dt   dv/dt  du/dx   du/dy Bernoulli check")
-            print("#       -------------   -------  ------   -----  ------------- ---------------")
-            print("#         sqrt(g/k)       g/k       g       g       sqrt(gk)        g/k       ")
+            #print("#       -------------   -------  ------   -----  ------------- ---------------")
+            #print("#         sqrt(g/k)       g/k       g       g       sqrt(gk)        g/k       ")
         #
         print("#*******************************************************************************")
         print("# Note that increasing X/d and 'Phase' here describes half of a wave for")
@@ -383,15 +407,16 @@ class KinematicResults(NamedTuple):
         print("# negative and not positive as passing down the page here implies.")
         print("#")        
         #
-        step = 1
+        step = 0
         j = 0
-        for i in range(1, index+1):
+        for i in range(index):
             if step == i:
                 print("# {:} = {: 8.4f}, Phase = {: 6.1f}"
-                      .format(header, x[j], self.kd*x[j] * 180 / pi))
+                      .format(header, x[j], phase[j] ))
+                      #.format(header, x[j], self.kd*x[j] * 180 / pi))
                 step += self.depth_points
                 j += 1
-            test = [f'{self.kout[x][i]: 7.4f}' for x in range(items)]
+            test = [f'{self._data[key][i]: 1.3e}' for key in headers[:10]]
             print(*test, sep=' ')
         #print('--')
     #
@@ -399,13 +424,7 @@ class KinematicResults(NamedTuple):
         """ """
         import matplotlib.pyplot as plt
         #xxx = self.kout
-        zlev = self.z
-        #
-        #if self.finite_depth:
-        #    pass
-        #else:
-        #    pass
-        #    
+        zlev = self.z  
         #
         velh = self.ux
         velv = self.uz
@@ -445,10 +464,10 @@ class KinematicResults(NamedTuple):
         zlev = self.z
         for key, z in zlev.items():
             Y = z
-            X = [key*self.d for x in z]
+            X = [key for x in z]
             U = velh[key]
             V = velv[key]
-            plt.quiver(X, Y, U, V, color='b', 
+            plt.quiver(X, Y, U, V, color='b',
                        scale_units='xy', scale=1, pivot='mid')
         # Vector origin location
         #X = [0]
