@@ -218,7 +218,8 @@ def get_PD80102(self, output):
                   .format(self.sigma_e.convert('megapascal').value))
         #
         # Overpressure
-        P = abs(self.Pi - self.Po)
+        #P = abs(self.Pi - self.Po)
+        P = abs(self.pressure)
         #if P.value < 0:
         #    P = self.Po
         self.sigma_h = PD8010.hoop_stress(P, tmin=self.tmin, output=output)
@@ -240,9 +241,12 @@ def get_PD80102(self, output):
 #
 class PipelineDesign:
     """
+    tol   : Manufacturing Tolerance (-ve) (include percentage sign)
+    fo    : Maximum Ovality
     """
     #
-    def __init__(self, code: str, RootSearch="FAST"):
+    def __init__(self, code: str, RootSearch:str="FAST",
+                 tol:float=0.125, fo:float=0.025):
         """
         """
         self.units = Units()
@@ -255,10 +259,16 @@ class PipelineDesign:
             print('   *** error design code {:} not recognised'.format(code))
             sys.exit()        
         #
+        self.design_condition = "operating"
+        self.design_method = "stress"
         #
         self.header = 1
         self.T_sw = 0 * self.units.K
         self.delta_T = []
+        #
+        self.tcorr = 0 * self.units.m
+        self.tol = tol
+        self.fo = fo
         #
         ## Default General Data
         ##
@@ -373,21 +383,29 @@ class PipelineDesign:
             sys.exit()
     #
     #
-    def pipe_data(self, pipe_type, pipe_name=None):
+    def hydrotest(self):
+        """ """
+        self.design_condition = "hydrotest"
+    #
+    @property
+    def pipe_type(self):
+        """ """
+        return self._pipe_type
+    #
+    @pipe_type.setter
+    def pipe_type(self, pipe_type:str):
         """
         pipe_type : riser/landfall/seabed (subsea)
                     above ground/buried    (land)
         
         name      : pipe name/identification
-        
-        
         """
-        self.pipe_type = get_pipe_type(pipe_type)
-        if not self.pipe_type:
+        self._pipe_type = get_pipe_type(pipe_type)
+        if not self._pipe_type:
             print('   *** error pipe type {:} not recognised'.format(pipe_type))
             sys.exit()
         
-        self.pipe_name = pipe_name
+        #self.pipe_name = pipe_name
     #
     def history(self):
         """pipe_history : unknown = False
@@ -401,7 +419,7 @@ class PipelineDesign:
         self.pipe_restrained = True
     #
     #
-    def pipe_section(self, tcorr:Units, tol:float=0.125, fo=0.025, 
+    def pipe_section(self, tcorr:Units, #tol:float=0.125, fo=0.025, 
                      Lc:Units|None=None, coating:Units|None=None):
         """
         Do    : Outside diameter of a pipe
@@ -415,8 +433,8 @@ class PipelineDesign:
         #self.Do = Do
         #self.tnom = tnom
         self.tcorr = tcorr
-        self.tol = tol
-        self.fo = fo
+        #self.tol = tol
+        #self.fo = fo
         #
         self.Lc = Lc
         if not self.Lc:
@@ -508,7 +526,7 @@ class PipelineDesign:
         return max(self._temperature)
     
     @temperature.setter
-    def temperature(self, temp):
+    def temperature(self, T):
         #            T1:Units|None=None, 
         #            T2:Units|None=None,
         #            T_sw:Units|None=None, 
@@ -520,7 +538,12 @@ class PipelineDesign:
         delta_T : 
         Tw : Seawater temperature
         """
-        self._temperature = temp
+        if isinstance(T, (list,tuple)):
+            self._temperature = T
+        elif isinstance(T, dict):
+            1/0
+        else:
+            self._temperature = [0*self.units.K, T]        
         #
         #self.T1 = T1
         #if not self.T1:

@@ -1,9 +1,9 @@
 from steelpy import Spreadsheet
 
 sp = Spreadsheet()
-wb = sp.workbook("Clair Caisson C3 Test Data HW v0 25-Aug-2020.xlsx")
+wb = sp.read_book("Clair Caisson C3 Test Data HW v0 25-Aug-2020.xlsx")
 sheets = wb.sheet_names
-#print(sheets)
+print(sheets)
 #
 ws = wb.sheets["Caisson Supports"]
 data = ws.dataframe()
