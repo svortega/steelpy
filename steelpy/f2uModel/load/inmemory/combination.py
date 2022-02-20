@@ -6,10 +6,10 @@
 #from array import array
 from collections.abc import Mapping
 #from collections import defaultdict
-from collections import Counter, defaultdict
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Union, Dict, List, Union
-from math import prod
+#from math import prod
 
 # package imports
 from steelpy.f2uModel.load.operations.combination import LoadCombinationBasic

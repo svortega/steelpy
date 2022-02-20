@@ -3,20 +3,21 @@
 #
 
 # Python stdlib imports
-from array import array
+#from array import array
 #import datetime
 from typing import List, ClassVar, Dict, NamedTuple, Union
-from itertools import chain
+#from itertools import chain
 
 
 #import multiprocessing
 
 # package imports
+import numpy as np
 #from scipy.linalg import solve_banded
 #
-from steelpy.trave3D.processor.static_solver import UDUt, solve_forces, solve_displacement
-from steelpy.trave3D.preprocessor.assemble import assemble_banded_matrix
-
+from steelpy.trave3D.processor.static_solver import UDUt,  solve_displacement 
+from steelpy.trave3D.preprocessor.assemble import assemble_banded_Kmatrix
+from steelpy.trave3D.processor.operations import solve_forces
 
 
 
@@ -34,7 +35,7 @@ class Trave3D:
         """       
         #self._units = Units()
         #self._mesh = Mesh()
-        print ("-- module : trave3D version 2.10")
+        print ("-- module : trave3D version 2.20")
         print ('{:}'.format(52 * '-'))
     
     
@@ -65,28 +66,38 @@ class Trave3D:
         """
         self._load = value
     #
-    def run_static(self):
+    def run_static(self, method:Union[str,None]=None):
         """
         Solves the static system 
+        method : banded, frontal
         """
-        materials = self._f2u.materials
-        sections = self._f2u.sections
+        # geometry
         elements = self._f2u.mesh.elements
         nodes = self._f2u.mesh.nodes
         boundaries = self._f2u.mesh.boundaries
-        #
+        # loading
         basic_load = self._f2u.load.basic
         load_combination = self._f2u.load.combination
+        # solution
+        if not method:
+            try:
+                # numpy sulution
+                import numpy as np
+                from steelpy.trave3D.preprocessor.assemble_np import assemble_Kmatrix
+                from steelpy.trave3D.processor.static_solver_np import solve_displacement_numpy
+                #
+                assemble_Kmatrix(elements, nodes, boundaries)
+                ndisp = solve_displacement_numpy(elements, nodes, boundaries,
+                                                 basic_load, load_combination)
+            except ModuleNotFoundError:
+                # pure python solution
+                assemble_banded_Kmatrix(elements, nodes, boundaries)
+                ndisp = solve_displacement(elements, nodes, boundaries,
+                                           basic_load, load_combination)
         #
-        #
-        assemble_banded_matrix(elements, nodes, boundaries)
-        ndisp = solve_displacement(elements, nodes, boundaries,
-                                   materials, sections,
-                                   basic_load, load_combination)
         self._f2u._results.node.deflection = ndisp
         #
         membf, nreacs = solve_forces(elements, self._f2u._results.node.deflection)
-        #                             basic_load, load_combination)
         #
         nbound = {key:nodes[key].index for key, item in boundaries.node.items()
                   if sum(item[:6])!= 0}
@@ -99,6 +110,13 @@ class Trave3D:
         self._f2u._results.element.force = membf
         #print("-->")
     #
+    def run_dynamic(self, type:Union[str,None]=None):
+        """
+        Solves the static system 
+        type : modal, time history
+        mass : lumped, consistent
+        damping : 
+        """    
     #
     def print_results(self):
         """

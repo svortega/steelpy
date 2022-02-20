@@ -11,8 +11,8 @@ from typing import NamedTuple, Tuple, List, Union, Iterable, Dict
 
 
 # package imports
-from steelpy.trave3D.processor.operations import trns_3Dv
-from steelpy.trave3D.preprocessor.assemble import Rmatrix
+from steelpy.process.math.operations import trns_3Dv
+from steelpy.f2uModel.mesh.operations.beam.stiffness import Rmatrix # FIXME : should be in element
 from steelpy.f2uModel.load.operations.operations import(check_list_units,
                                                         check_list_number,
                                                         check_beam_dic)

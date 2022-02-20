@@ -166,6 +166,7 @@ class SeriesItem:
     #
     __rmul__ = __mul__
     #
+    # ---------------------------------------
     #
     def maxabs(self):
         """ """
@@ -190,6 +191,12 @@ class SeriesItem:
         return statistics.stdev(self._serie)
     #
     def mean(self):
-        """standard deviation"""
-        return statistics.mean(self._serie)    
+        """standard deviation / average"""
+        return statistics.mean(self._serie)
+    #
+    def sum(self):
+        """ sum"""
+        return sum(self._serie)
+#
+#
 #

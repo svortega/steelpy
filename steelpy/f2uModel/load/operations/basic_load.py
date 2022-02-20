@@ -11,8 +11,8 @@ from typing import NamedTuple, Tuple, List, Iterator, Dict, Iterable, ClassVar, 
 
 # package imports
 # package imports
-from steelpy.trave3D.preprocessor.assemble import Rmatrix
-from steelpy.trave3D.processor.operations import zeros, trns_3Dv, zeros_vector
+from steelpy.f2uModel.mesh.operations.beam.stiffness import Rmatrix #FIXME 
+from steelpy.process.math.operations import zeros, trns_3Dv, zeros_vector
 from steelpy.process.math.vector import Vector
 #
 #
@@ -141,11 +141,12 @@ class BasicLoadBasic(Mapping):
             #
             boundary = []
             for x, node in enumerate(end_nodes):
-                fixity = bnodes[node]
-                if fixity:
-                    boundary.append(fixity[:6])
-                else:
-                    boundary.append((1,1,1,1,1,1))
+                #fixity = bnodes[node]
+                #if fixity:
+                #    boundary.append(fixity[:6])
+                #else:
+                boundary.append((1,1,1,1,1,1))
+            
             beam.supports(boundary)
             # get total reactions
             reactions = beam.reactions
@@ -170,11 +171,11 @@ class BasicLoadBasic(Mapping):
             #
             boundary = []
             for x, node in enumerate(end_nodes):
-                fixity = bnodes[node]
-                if fixity:
-                    boundary.append(fixity[:6])
-                else:
-                    boundary.append((1,1,1,1,1,1))
+                #fixity = bnodes[node]
+                #if fixity:
+                #    boundary.append(fixity[:6])
+                #else:
+                boundary.append((1,1,1,1,1,1))
             beam.supports(boundary)
             # get total reactions
             reactions = beam.reactions
@@ -249,33 +250,33 @@ def update_line_load(element, res):
     """ """
     lnload = [0] * 12
     # lnload[ 0 ] # axial
-    lnload[ 1 ] = res[0][0][0] # y
-    lnload[ 5 ] = res[0][0][1] # mz
+    lnload[ 1 ] = -1*res[0][0][0] # y
+    lnload[ 5 ] = -1*res[0][0][1] # mz
     lnload[ 2 ] = res[1][0][0] # z
-    lnload[ 4 ] = res[1][0][1] # my
+    lnload[ 4 ] = -1*res[1][0][1] # my
     # End 2
-    lnload[ 7 ]  = -1*res[0][1][0]  # y
-    lnload[ 11 ] = -1*res[0][1][1]  # mz
+    lnload[ 7 ]  = res[0][1][0]  # y
+    lnload[ 11 ] = res[0][1][1]  # mz
     lnload[ 8 ]  = -1*res[1][1][0]  # z
-    lnload[ 10 ] = -1*res[1][1][1]  # my
+    lnload[ 10 ] = res[1][1][1]  # my
     #
     gnload = trns_3Dv(lnload, element.R)
     #
     # axial
-    gnload[0] *= -1
-    gnload[6] *= -1
+    #gnload[0] *= -1
+    #gnload[6] *= -1
     #
     # rotation X
     #gnload[3] *= -1
     #gnload[9] *= -1
     #
     # rotation Y
-    gnload[4] *= -1
-    gnload[10] *= -1
+    #gnload[4] *= -1
+    #gnload[10] *= -1
     #
     # rotation Z
-    gnload[5] *= -1
-    gnload[11] *= -1
+    #gnload[5] *= -1
+    #gnload[11] *= -1
     #
     #gnload = Vector(gnload)
     bnload = beam_eq(lnload)
@@ -286,8 +287,8 @@ def beam_eq(eq_lnloads):
     item = eq_lnloads
     #
     # axial
-    item[0] *= -1
-    item[6] *= -1
+    #item[0] *= -1
+    #item[6] *= -1
     #
     # rotation X
     #item[3] *= -1

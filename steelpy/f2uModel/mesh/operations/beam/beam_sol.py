@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2021 fem2ufo
+# Copyright (c) 2009-2022 fem2ufo
 #
 # Python stdlib imports
 #from itertools import chain

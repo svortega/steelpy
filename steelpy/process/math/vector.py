@@ -149,3 +149,18 @@ def test():
 # |x|      = 5.477225575051661
 # <x, y>   = 25.0
 # |x - y|  = 5.0990195135927845
+#
+#import numpy as np
+#import numpy.linalg as la
+##
+#xCoords        = np.array([1.0, -2.0, 3.0, 4.0])
+#yCoords        = np.array([5.0, 2.0, 4.0, 1.0])
+##
+#x = Vector(xCoords)
+#print(abs(x))
+#print(la.norm(xCoords))
+##
+#print(xc)
+#print(Vector([abs(item) for item in x])/ abs(x))
+#print(np.abs(xCoords)/la.norm(xCoords))
+#print('---')

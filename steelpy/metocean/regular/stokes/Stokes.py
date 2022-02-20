@@ -9,7 +9,7 @@ from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
 from steelpy.metocean.regular.stokes.subroutines import F, CDE, AB
-from steelpy.metocean.regular.operations.inout import title_block, get_Height, output
+from steelpy.metocean.regular.operations.inout import title_block, output
 from steelpy.metocean.regular.operations.waveops import WaveRegModule, WaveItem, zeros, get_wave_data
 
 #
@@ -63,8 +63,7 @@ class StokesModule(WaveRegModule):
         number : Maximum number of iterations for each step (20)
         accuracy   : Criterion for convergence
         """
-        super().__init__(n=n, nstep=nstep,
-                         number=number, accuracy=accuracy)
+        super().__init__()
     #
     def __setitem__(self, case_name: int,
                     case_data: Union[List[float], Dict[str, float]]) -> None:
@@ -157,7 +156,7 @@ def StokesMain(MaxH:float, case:str,
     #if Lw:
     if case == 'wavelength':
         if L > 10:
-            print(f'The dimensionless wavelength [{Lrad:1.2f}] is greater than 10')
+            print(f'The dimensionless wavelength [{L:1.2f}] is greater than 10')
             raise IOError("Stokes theory should not be applied")
         #
         kd = 2.0 * pi / L
