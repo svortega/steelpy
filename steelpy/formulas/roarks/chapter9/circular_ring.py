@@ -10,7 +10,7 @@ from typing import Dict, List, Tuple, NamedTuple
 # package imports
 from steelpy.process.units.main import Units
 #from steelpy.process.math.vector import Vector
-from steelpy.process.spreadsheet.dataframe import DataFrame, SeriesItem
+from steelpy.process.dataframe.main import DBframework #, SeriesItem
 
 #
 # ************************************************
@@ -59,7 +59,7 @@ def rect(rad, Theta):
     y = [r * math.sin(math.radians(theta)) for r, theta in zip(rad, Theta)]
     return x,y
 #
-class RadialForces(DataFrame):
+class RadialForces():
 
     def __init__(self, data:Dict):
         """
@@ -69,7 +69,7 @@ class RadialForces(DataFrame):
         #M:array
         #N:array
         #V:array
-        super().__init__(data)
+        #super().__init__(data)
 
     #
     @property
@@ -194,7 +194,7 @@ class RadialForces(DataFrame):
         #print('---')
 #
 #
-class RadialStress(DataFrame):
+class RadialStress():
     
     def __init__(self, data:Dict):
         """
@@ -209,7 +209,7 @@ class RadialStress(DataFrame):
         #bs_ro:array
         #axial:array
         #tau: array
-        super().__init__(data) 
+        #super().__init__(data) 
         #self.ki = ki
         #self.ko = ko
     #

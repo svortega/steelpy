@@ -13,7 +13,7 @@ from typing import Dict, List, Tuple, Union, NamedTuple
 from steelpy.material.main import Materials
 from steelpy.process.units.main import Units
 from steelpy.sections.main import Sections
-from steelpy.formulas.roarks.circular_ring import circular_ring, stress2, RadialForces
+from .circular_ring import circular_ring, stress2, RadialForces
 
 #
 #
