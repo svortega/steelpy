@@ -1,20 +1,21 @@
 # 
-# Copyright (c) 2009-2021 steelpy
+# Copyright (c) 2009-2023 steelpy
 #
+from __future__ import annotations
 # Python stdlib imports
 #import math
-#
-# package imports
-from steelpy.trave3D.processor.operations import zeros
-#import sys
+import sys
 #from array import array
 #
+# package imports
+from steelpy.process.math.operations import to_matrix, zeros, mtxmul, trns_3Dv
 #
-def jacobi(a, b, n, rtol, nsmax, ibandm, x, neqmas):
+#
+#
+def jacobi(a, b, n, rtol, nsmax, ibandm, x): #, neqmas
     """
     Jacobi based on bathe pp 643-645
     """
-    # dim a(n,n) , b(n,neqmas) , eigv(n) , d(n) , x(n,n)
     eigv = zeros(n)
     d = zeros(n)
     # check for zero diagonal terms
@@ -28,10 +29,7 @@ def jacobi(a, b, n, rtol, nsmax, ibandm, x, neqmas):
             d[i] = a[i][i] / bii
             eigv[i] = a[i][i] / bii
         else:
-            # open report.txt for app# end as #1
-            print(' matrices not positive definite')
-            sys.exit('ERROR: 1')
-            #close #1:exit def "error: 1"        
+            raise RuntimeError('matrices not positive definite')      
     
     # initialize the modal matrix to the unit matrix
     x = [[1.0 if i == j else 0.0 for j in range(n)]
@@ -74,8 +72,8 @@ def jacobi(a, b, n, rtol, nsmax, ibandm, x, neqmas):
                 #
                 radicl = (ab*ab + 4.0*akk*ajj) / 4.0
                 if radicl < 0.0 :
-                    print('error 2" : matrices not positive definite')
-                    sys.error("error 2 : matrices not positive definite")
+                    raise RuntimeError('matrices not positive definite')
+                    #sys.error("error 2 : matrices not positive definite")
                 #
                 sqch = radicl**0.50
                 d1 = ab / 2.0 + sqch

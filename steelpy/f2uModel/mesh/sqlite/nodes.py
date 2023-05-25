@@ -1,21 +1,24 @@
-# Copyright (c) 2009-2021 fem2ufo
+# Copyright (c) 2009-2023 fem2ufo
 
 # Python stdlib imports
-from array import array
+from __future__ import annotations
+#from array import array
 from collections.abc import Mapping
 from math import isclose, dist
-from typing import NamedTuple, Tuple, List, Iterator, Iterable, Union, Dict
+from typing import NamedTuple
 
 # package imports
 #from steelpy.process.units.main import Units
-from steelpy.f2uModel.mesh.operations.nodes import (check_point_list, check_point_dic, 
-                                                    get_coordinate_system)
-from steelpy.f2uModel.results.sqlite.operation.process_sql import create_connection, create_table
+# steelpy.f2uModel.mesh
+from ..process.elements.nodes import (check_point_list, check_point_dic, 
+                                      get_coordinate_system, NodeBasic)
+# steelpy
+from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table
 
 
 
 #
-class NodeSQL(Mapping):
+class NodeSQL(NodeBasic):
     """
     This is a fem2ufo model node class
 
@@ -42,13 +45,12 @@ class NodeSQL(Mapping):
     __slots__ = ['_system', 'db_file', '_labels']
 
     def __init__(self, db_file: str,
-                 db_system:str="sqlite") -> None:
+                 db_system:str="sqlite",
+                 system:str = 'cartesian') -> None:
         """
         """
-        #self._units = Units()
+        super().__init__(system)
         self.db_file = db_file
-        self._labels : array = array('I', [])
-        self._system = 'cartesian'
         # create node table
         conn = create_connection(self.db_file)
         with conn:
@@ -56,8 +58,8 @@ class NodeSQL(Mapping):
     #
     # ---------------------------------
     #
-    def __setitem__(self, node_name: int,
-                    coordinates: Union[List[float], Dict[str, float]]) -> None:
+    def __setitem__(self, node_name: int|str,
+                    coordinates: list[float]|dict[str, float]) -> None:
         """
         """
         try:
@@ -71,117 +73,58 @@ class NodeSQL(Mapping):
             conn = create_connection(self.db_file)
             with conn:
                 self._push_node(conn, node_name, coordinates)
-                conn.commit()
+                #conn.commit()
     #
-    def __getitem__(self, node_name: int) -> Tuple:
+    def __getitem__(self, node_name: int|str) -> tuple:
         """
         node_name : node number
         """
         try:
-            index = self._labels.index(node_name)
+            self._labels.index(node_name)
             conn = create_connection(self.db_file)
-            data = get_node(conn, node_name)
-            system = get_coordinate_system(data[2])
+            node = get_node(conn, node_name)
+            #system = get_coordinate_system(data[2])
             # FIXME : include rest system
             #number = data[0] - 1
-            return system(x=data[3], y=data[4], z=data[5],
-                          name=node_name, number=data[0], 
-                          index=data[0]-1)
+            #return system(x=data[3], y=data[4], z=data[5],
+            #              name=node_name, number=data[0], 
+            #              index=data[0]-1)
+            return node
         except ValueError:
             raise IndexError('   *** node {:} does not exist'.format(node_name))    
     #
-    def __len__(self) -> float:
-        return len(self._labels)
-
-    def __iter__(self) -> Iterator:
-        """
-        """
-        return iter(self._labels)
-
-    def __contains__(self, value) -> bool:
-        return value in self._labels
-    #
-    @property
-    def system(self) -> str:
-        """
-        """
-        return self._system
-
-    @system.setter
-    def system(self, value:str) -> None:
-        """
-        """
-        self._system = value
-    #
-    #
-    def _get_coordinates(self, coordinates):
-        """ """
-        if isinstance(coordinates, (list, tuple)):
-            coordinates = check_point_list(coordinates, steps=3)
-        elif isinstance(coordinates, dict):
-            coordinates = check_point_dic(coordinates)
-        else:
-            raise Exception('   *** Node input format not recognized')
-        return coordinates
+    # ------------------
+    # SQL ops
+    # ------------------
     #
     def _push_node(self, conn, node_name, coordinates):
         """
         Create a new project into the projects table
         """
-        #number = len(self._labels) - 1
+        # get row number
+        cur = conn.cursor()
+        sql = 'SELECT max(number) from tb_Nodes;'
+        if (idx := max(cur.execute(sql))[0]) == None:
+            idx = 0
+        #
         if self.system == 'cylindrical': # z, r, theta,
             project = (node_name, self.system,
-                       None, None, *coordinates, None)
+                       None, None, *coordinates, None, idx)
         
         elif self.system == 'spherical': # r, theta, phi
             project = (node_name, self.system,
-                       None, None, None, *coordinates)
+                       None, None, None, *coordinates, idx)
         
         else:
             project = (node_name, self.system,
-                       *coordinates, None, None, None)
+                       *coordinates, None, None, None, idx)
         #
         sql = 'INSERT INTO tb_Nodes(name, type,\
-                                    x, y, z, r, theta, phi)\
-                                    VALUES(?,?,?,?,?,?,?,?)'
+                                    x, y, z, r, theta, phi, idx)\
+                                    VALUES(?,?,?,?,?,?,?,?,?)'
+        # push
         cur = conn.cursor()
         cur.execute(sql, project)
-    #
-    #
-    def get_new_point(self, coordinates):
-        """ """
-        #create a new point
-        while True:
-            #node_name = "pnt_{:}".format(str(next(self.get_number())))
-            node_name = next(self.get_number())
-            try:
-                self._labels.index(node_name)
-            except ValueError:
-                break
-        self.__setitem__(node_name, coordinates)
-        return node_name
-    #
-    def get_point_name(self, coordinates,
-                       tol:float=0.01, rel_tol:float=1e-6) -> int:
-        """
-        tol: absolte tolerance in metres (0.010 m default)
-        """
-        # check if point already exist
-        system = get_coordinate_system(self.system)
-        if isinstance(coordinates, system):
-            return coordinates.name
-        # get index of x coord location in existing database
-        coord = self._get_coordinates(coordinates)
-        #
-        items = self._iscloseSQL(key='*', item='x', value=coord[0],
-                                 abs_tol=tol, rel_tol=rel_tol)
-        # check if y and z coord match
-        if items:
-            for item in items:
-                if isclose(coord[1], item[4], abs_tol=tol, rel_tol=rel_tol):
-                    if isclose(coord[2], item[5], abs_tol=tol, rel_tol=rel_tol):
-                        return item[1]
-        raise IOError('   error coordinate not found')
     #
     def _iscloseSQL(self, key:str, item:str, value:float,
                     rel_tol:float=1e-9, abs_tol:float=0.0)-> tuple:
@@ -193,42 +136,6 @@ class NodeSQL(Mapping):
         cur.execute(sql)
         records = cur.fetchall()
         return records
-    #
-    def get_number(self, start:int=1)-> Iterable[int]:
-        """
-        """
-        try:
-            n = max(self._labels) + 1
-        except ValueError:
-            n = start
-        #
-        while True:
-            yield n
-            n += 1
-    #
-    #
-    def renumbering(self, new_numbers:List[int]):
-        """ """
-        indexes = [self._labels.index(node_name) 
-                   for node_name in new_numbers]
-        conn = create_connection(self.db_file)
-        with conn:
-            nodes = get_nodes(conn)
-            #nindex = [item[1] for item in nodes]
-            nodes = [nodes[indx][1:] for indx in indexes]
-            update_table(conn, nodes)
-            conn.commit()
-    #
-    #def update_number(self, node_name:int, value:Union[float,int]):
-    #    """ """
-    #    conn = create_connection(self.db_file)
-    #    with conn:
-    #        nodes = get_nodes(conn)
-    #        nindex = [item[1] for item in nodes]
-    #        row = nodes.pop(nindex.index(node_name))
-    #        nodes.insert(value-1, row)
-    #        update_table(conn, nodes)
-    #        conn.commit()
     #
     def _update_item(self, conn, name, item, value):
         """ """
@@ -247,14 +154,73 @@ class NodeSQL(Mapping):
         cur.execute(sql)
         conn.commit()
         conn.close()
+    #
+    # ------------------
+    # ops
+    # ------------------
+    #
+    def get_point_name(self, coordinates,
+                       tol:float=0.01, rel_tol:float=1e-6) -> int:
+        """
+        tol: absolte tolerance in metres (0.010 m default)
+        """
+        # check if point already exist
+        try:
+            #system = self.system # get_coordinate_system(self.system)
+            #if isinstance(coordinates, system):
+            return coordinates.name
+        except AttributeError:
+            # get index of x coord location in existing database
+            coord = self._get_coordinates(coordinates)
+            #
+            items = self._iscloseSQL(key='*', item='x', value=coord[0],
+                                     abs_tol=tol, rel_tol=rel_tol)
+            # check if y and z coord match
+            if items:
+                for item in items:
+                    if isclose(coord[1], item[4], abs_tol=tol, rel_tol=rel_tol):
+                        if isclose(coord[2], item[5], abs_tol=tol, rel_tol=rel_tol):
+                            return item[1]
+        raise IOError('   error coordinate not found')
+    #
+    #
+    def renumbering(self, new_numbers:list[int]):
+        """ """
+        indexes = [self._labels.index(node_name) 
+                   for node_name in new_numbers]
+        conn = create_connection(self.db_file)
+        with conn:
+            update_colum(conn, colname='idx', newcol=indexes)
+            #
+            #nodes = get_nodes(conn)
+            #nindex = [item[1] for item in nodes]
+            #nodes = [nodes[indx][1:] for indx in indexes]
+            #update_table(conn, nodes)
+            #conn.commit()
+    #
+    #def update_number(self, node_name:int, value:Union[float,int]):
+    #    """ """
+    #    conn = create_connection(self.db_file)
+    #    with conn:
+    #        nodes = get_nodes(conn)
+    #        nindex = [item[1] for item in nodes]
+    #        row = nodes.pop(nindex.index(node_name))
+    #        nodes.insert(value-1, row)
+    #        update_table(conn, nodes)
+    #        conn.commit()
+    #
 #
 #
 #
-def get_node(conn, node_name:int, item:str='*'):
+def get_node(conn, node_name:int|str, item:str='*'):
     """ """
     with conn:
-        value = get_item_table(conn, node_name, item)
-    return value
+        data = get_item_table(conn, node_name, item)
+    system = get_coordinate_system(data[2])
+    return system(x=data[3], y=data[4], z=data[5],
+                  name=node_name, number=data[0], 
+                  index=data[0]-1)
+    #return value
 #
 def get_item_table(conn, node_name, item):
     """ """
@@ -290,12 +256,13 @@ def new_node_table(conn) -> None:
                     number INTEGER PRIMARY KEY NOT NULL,\
                     name INTEGER NOT NULL,\
                     type TEXT NOT NULL,\
-                    x DECIMAL,\
-                    y DECIMAL,\
-                    z DECIMAL,\
+                    x DECIMAL NOT NULL,\
+                    y DECIMAL NOT NULL,\
+                    z DECIMAL NOT NULL,\
                     r DECIMAL,\
                     theta DECIMAL,\
-                    phi DECIMAL);"
+                    phi DECIMAL,\
+                    idx INTEGER NOT NULL);"
     #
     create_table(conn, _table_nodes)
 #
@@ -329,5 +296,11 @@ def push_nodes(conn, nodes):
     cur.executemany(sql, project)
 #
 #
+def update_colum(conn, colname: str, newcol: list):
+    """update entire column values"""
+    sql = f'UPDATE tb_Nodes SET {colname} = ?'
+    cur = conn.cursor()
+    cur.executemany(sql, ((val,) for val in newcol))
+#    
 #
 #

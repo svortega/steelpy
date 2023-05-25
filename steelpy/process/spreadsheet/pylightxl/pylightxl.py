@@ -4,7 +4,7 @@
 """
 Title: pylightxl
 Developed by: pydpiper
-Version: 1.58
+Version: 1.60
 License: MIT
 
 Copyright (c) 2019 Viktor Kis
@@ -123,7 +123,9 @@ def readxl(fn, ws=None):
         name = nr_dict['nr']
         worksheet = nr_dict['ws']
         address = nr_dict['address']
-        db.add_nr(name=name, ws=worksheet, address=address)
+        # note that nr adds the ws if they are not already in the wb, thus it needs to be filtered here if the user didnt want those sheets then the nr are also not loaded
+        if ws is None or worksheet in ws:
+            db.add_nr(name=name, ws=worksheet, address=address)
 
     # get common string cell value table
     sharedString = readxl_get_sharedStrings(fn)
@@ -225,6 +227,7 @@ def readxl_get_workbook(fn):
             tree = ET.parse(file)
             root = tree.getroot()
 
+    wbrels = readxl_get_workbookxmlrels(fn)
     for tag_sheet in root.findall('./default:sheets/default:sheet', ns):
         name = tag_sheet.get('name')
         try:
@@ -233,7 +236,6 @@ def readxl_get_workbook(fn):
             # the output of openpyxl can sometimes not write the schema for "r" relationship
             rId = tag_sheet.get('id')
         sheetId = int(re.sub('[^0-9]', '', rId))
-        wbrels = readxl_get_workbookxmlrels(fn)
         rv['ws'][name] = {'ws': name, 'rId': rId, 'order': sheetId, 'fn_ws': wbrels[rId]}
 
     for tag_sheet in root.findall('./default:definedNames/default:definedName', ns):
@@ -316,7 +318,7 @@ def readxl_get_sharedStrings(fn):
     for i, tag_si in enumerate(root.findall('./default:si', ns)):
         tag_t = tag_si.findall('./default:r//default:t', ns)
         if tag_t:
-            text = ''.join([tag.text for tag in tag_t])
+            text = ''.join([tag.text for tag in tag_t if tag.text])
         else:
             text = tag_si.findall('./default:t', ns)[0].text
         sharedStrings.update({i: text})
@@ -349,9 +351,39 @@ def readxl_get_styles(fn):
             tree = ET.parse(file)
             root = tree.getroot()
 
+    custom_styles = {}
+    try:
+        tag_numFmts = root.findall('./default:numFmts', ns)[0]
+    except IndexError:
+        tag_numFmts = []
+    for tag in tag_numFmts:
+        if any([timetype in tag.get('formatCode') for timetype in [
+            r'm/d/yy\ h:mm'
+            ]]):
+            custom_styles[tag.get('numFmtId')] = '22'
+        elif any([datetype in tag.get('formatCode') for datetype in [
+            r'dddd\,\ mmmm\ dd\,\ yyyy',
+            'm/d',
+            r'yyyy\-mm\-dd',
+            'mm/dd/yy',
+            r'd\-mmm',
+            r'mmm\-yy',
+            r'mmmm\ d\,\ yyyy',
+            'mmmmm',
+            r'd\-mmm\-yyyy',
+            ]]):
+            custom_styles[tag.get('numFmtId')] = '14'
+        elif any([timetype in tag.get('formatCode') for timetype in [
+            'mm:ss',
+            'h:mm'
+            ]]):
+            custom_styles[tag.get('numFmtId')] = '18'
+
+
     for i, tag_cellXfs in enumerate(root.findall('./default:cellXfs', ns)[0]):
         numFmtId = tag_cellXfs.get('numFmtId')
-        styles.update({i: numFmtId})
+        styles.update({i: custom_styles[numFmtId] if numFmtId in custom_styles else numFmtId})
+
 
     return styles
 
@@ -478,6 +510,16 @@ def readxl_scrape(fn, fn_ws, sharedString, styles, comments):
                         cell_val = (EXCEL_STARTDATE + timedelta(days=int(cell_val))).strftime('%Y/%m/%d')
                     else:
                         cell_val = '/'.join((EXCEL_STARTDATE + timedelta(days=int(cell_val))).isoformat().split('T')[0].split('-'))
+                elif styles[cell_style] in ['18', '19', '20', '21']:
+                    partialday = float(cell_val) % 1
+                    if PYVER > 3:
+                        cell_val = (EXCEL_STARTDATE + timedelta(seconds=partialday * 86400)).strftime('%H:%M:%S')
+                    else:
+                        cell_val = (EXCEL_STARTDATE + timedelta(seconds=partialday * 86400)).isoformat().split('T')[1]
+                elif styles[cell_style] in ['22']:
+                    partialday = float(cell_val) % 1
+                    cell_val = '/'.join((EXCEL_STARTDATE + timedelta(days=int(cell_val.split('.')[0]))).isoformat().split('T')[0].split('-')) + ' ' + \
+                               (EXCEL_STARTDATE + timedelta(seconds=partialday * 86400)).isoformat().split('T')[1]
                 else:
                     cell_val = int(cell_val)
             else:
@@ -1461,6 +1503,9 @@ class Database:
         :return: None
         """
 
+        if new == "":
+            raise UserWarning('pylightxl - sheetname should not be set to an empty string, excel will cause a warning when trying to open.')
+
         try:
             self._ws[new] = self._ws[old]
             del(self._ws[old])
@@ -1491,7 +1536,7 @@ class Database:
         for ws in self.ws_names:
             self.ws(ws).set_emptycell(val)
 
-    def add_nr(self, name, ws,  address):
+    def add_nr(self, name, ws, address):
         """
         Add a NamedRange to the database. There can not be duplicate name or addresses. A named range
         that overlaps either the name or address will overwrite the database's existing NamedRange
@@ -1501,6 +1546,9 @@ class Database:
         :param str address: range of address (single cell ex: "A1", range ex: "A1:B4")
         :return: None
         """
+
+        if ws not in self.ws_names:
+            self.add_ws(ws)
 
         full_address = ws + '!' + address.replace('$', '')
         if full_address in self._NamedRange.values():
@@ -1567,6 +1615,33 @@ class Database:
         ws, address = full_address.split('!')
         return self.ws(ws).range(address, output=output)
 
+    def nr_loc(self, name):
+        """Returns the worksheet and address loction of a named range
+
+        :param str name: NamedRange name
+        :return list(str,str): [worksheet, address]
+        """
+        try:
+            full_address = self._NamedRange[name]
+        except KeyError:
+            return [[]]
+
+        ws, address = full_address.split('!')
+        return [ws, address]
+
+    def update_nr(self, name, val):
+        """Updates a NamedRange with a single value. Raises UserWarning if name not in workbook.
+
+        :param str name: NamedRange name
+        :param int/float/str value: cell value; equations are string and must being with "="
+        """
+        try:
+            full_address = self._NamedRange[name]
+        except KeyError:
+            raise UserWarning('pylightxl - update_nr operation with name={name} is not in the workbook.'.format(name=name))
+        
+        ws, address = full_address.split('!')
+        self.ws(ws).update_range(address, val)
 
 class Worksheet():
 
@@ -1667,7 +1742,7 @@ class Worksheet():
 
     def range(self, address, formula=False, output='v'):
         """
-        Takes an range (ex: "A1:A2") and returns a nested list [row][col]
+        Takes a range (ex: "A1:A2") and returns a nested list [row][col]
 
         :param str address: cell range (ex: "A1:A2", or "A1")
         :param bool formula: returns the values if false, or formulas if true of cells
@@ -1742,7 +1817,6 @@ class Worksheet():
         :param int row: row index
         :param int col: column index
         :param int/float/str val: cell value; equations are strings and must begin with "="
-        :return: None
         """
         address = utility_index2address(row, col)
         self.maxcol = col if col > self.maxcol else self.maxcol
@@ -1760,7 +1834,6 @@ class Worksheet():
 
         :param str address: excel address (ex: "A1")
         :param int/float/str val: cell value; equations are strings and must begin with "="
-        :return: None
         """
         address = address.replace('$', '')
         row, col = utility_address2index(address)
@@ -1772,6 +1845,26 @@ class Worksheet():
             self._data.update({address: {'v': '', 'f': val[1:], 's': ''}})
         else:
             self._data.update({address: {'v': val, 'f': '', 's': ''}})
+
+    def update_range(self, address, val):
+        """
+        Update worksheet data via address range with a single value
+
+        :param str address: excel address (ex: "A1:B3")
+        :param int/float/str val: cell value; equations are strings and must begin with "="
+        """
+
+        if ':' in address:
+            address_start, address_end = address.split(':')
+            row_start, col_start = utility_address2index(address_start)
+            row_end, col_end = utility_address2index(address_end)
+
+            # +1 to include the end
+            for n_row in range(row_start, row_end + 1):
+                for n_col in range(col_start, col_end + 1):
+                    self.update_index(n_row, n_col, val)
+        else:
+            self.update_address(address, val)
 
     def row(self, row, formula=False, output='v'):
         """

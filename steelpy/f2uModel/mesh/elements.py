@@ -1,17 +1,22 @@
 # 
-# Copyright (c) 2009-2021 fem2ufo
+# Copyright (c) 2009-2023 fem2ufo
 # 
-
-
+#
 # Python stdlib imports
+from __future__ import annotations
 from collections.abc import Mapping
-from typing import NamedTuple, Dict, List, Iterable, Union
+#from typing import NamedTuple
+#from dataclasses import dataclass
+#import re
 #
 
 # package imports
-from steelpy.f2uModel.mesh.sqlite.element import ElementSQL
-from steelpy.f2uModel.mesh.inmemory.element import ElementInMemory
+# steelpy.f2uModel.mesh
+from .sqlite.elements import ElementsSQL
+from .inmemory.elements import ElementsIM
 #
+# steelpy.f2uModel.mesh
+#from .process.elements import BeamBasic
 #
 #
 #
@@ -21,47 +26,24 @@ class Elements(Mapping):
     __slots__ = ['_elements']
     
     def __init__(self, nodes, materials, sections,
-                 mesh_type:str="inmemory",
-                 db_file:Union[str,None]=None):
+                 mesh_type:str, db_file:str|None=None):
         """
         """
         if mesh_type != "inmemory":
-            self._elements = ElementSQL(db_file=db_file,
+            self._elements = ElementsSQL(db_file=db_file,
                                         db_system=mesh_type)
         else:
-            self._elements = ElementInMemory(nodes=nodes,
-                                             materials=materials,
-                                             sections=sections)
+            self._elements = ElementsIM(nodes=nodes,
+                                       materials=materials,
+                                       sections=sections)
     #
     def __setitem__(self, element_number: int,
-                    parameters: Union[List[float], Dict[str, float]]) -> None:
+                    parameters: list[float]|dict[str, float]) -> None:
         """
         parameters = ['beam', node1, node2, material, section, roll_angle]
         """
-        if isinstance(parameters, (list, tuple)):
-            element_type = parameters[0]
-            node_1 = parameters[1]
-            node_2 = parameters[2]
-            material = parameters[3]
-            section = parameters[4]
-            #
-            if isinstance(parameters[-1], str):
-                title = parameters.pop()
-            else:
-                title = "NULL"
-            #
-            try:
-                roll_angle = parameters[5]
-            except IndexError:
-                roll_angle = 0.0
-        elif isinstance(parameters, dict):
-            1/0
-        else:
-            raise Exception('   *** Element input format not recognized')
-        #
-        self._elements[element_number] = [element_type, node_1, node_2, 
-                                          material, section, 
-                                          roll_angle, title]
+        self._elements[element_number] = parameters
+        
     #
     def __getitem__(self, element_number:str):
         """
@@ -88,12 +70,13 @@ class Elements(Mapping):
         output += "\n"
         output += f"{33*space}ELEMENTS\n"
         output += "\n"
-        output += (f"Element     node1    node2 {4*space} material {4*space} section {4*space} beta {4*space} title")        
+        output += (f"Element     node1    node2 {4*space} material  section {3*space} beta {3*space} lenght   title")
         output += "\n"
         output += "{:}\n".format(80*".")
         output += "\n"
         for key, element in self._elements.items():
             output += element.__str__()
+            output += "\n"
         return output
     #
     @property
@@ -109,30 +92,65 @@ class Elements(Mapping):
     #    return self._elements.iter_elements(arraysize)
     #
     #
-    def get_number(self, start:int=0)-> Iterable[int]:
+    def get_number(self, start:int=0):
         """
         """
         return self._elements.get_number(start)
     #
+    #@property
+    #def get_connectivities(self):
+    #    """ """
+    #    return self._elements.get_connectivities
+    #
     @property
-    def get_connectivities(self):
+    def sections(self):
         """ """
-        return self._elements.get_connectivities
+        return self._elements._sections
+    #
+    @property
+    def materials(self):
+        """ """
+        return self._elements._materials
     #
     #
+    #@property
+    def beams(self, values:None|list|dict=None, df=None):
+        """
+        """
+        return self._elements.beams(values=values, df=df)
     #
-    #def update_item(self, element_number:int, item:str, value:Union[float,int]):
-    #    """ """
-    #    if "number" in item:
-    #        self._elements[element_number].number = value
-    #    else:
-    #        raise IOError("item not recognized")
-    #    #self._elements.update_item(element_number, item, value)
-    #    #print('here')
-    ##
-    ##
-    #def update_number(self, element_number:int, number:int):
-    #    """ """
-    #    self._elements[element_number].number = number
-#   #
+    #
+    def max_bandwidth(self,  jbc):
+        """
+        calculate max bandwidth
+        ------------------------  
+        npi : connectivity end 1
+        npj : connectivity end 2
+        jbc : nodes freedom
+        nel: number of elements
+        if we
+        npi ,npj, jbc, nel
+        """
+        #TODO : plates 
+        ibndm4 = [0]
+        for key, element in self._elements.items():
+            #idof, jdof = element.DoF
+            #bc1 = jbc[idof]
+            #bc2 = jbc[jdof]        
+            nodes = element.connectivity
+            #for node in nodes:
+            bc1 = jbc.loc[nodes[0]].tolist()
+            bc2 = jbc.loc[nodes[1]].tolist()
+            ieqn = bc1 + bc2
+            try:
+                ibndm4.append(max([abs(ieqn1 - ieqn2)
+                                   for x, ieqn1 in enumerate(ieqn) if ieqn1 > 0
+                                   for ieqn2 in ieqn[x+1:] if ieqn2 > 0]))
+            except ValueError:
+                continue
+        #
+        return max(ibndm4) + 1    
+#
+#
+#
 #

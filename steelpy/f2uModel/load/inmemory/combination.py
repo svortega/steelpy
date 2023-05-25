@@ -1,54 +1,23 @@
 # 
-# Copyright (c) 2019-2021 steelpy
+# Copyright (c) 2019-2023 steelpy
 #
 # 
 # Python stdlib imports
+from __future__ import annotations
 #from array import array
 from collections.abc import Mapping
 #from collections import defaultdict
-from collections import defaultdict
 from dataclasses import dataclass
-from typing import Union, Dict, List, Union
+#from typing import Union, Dict, List, Union
 #from math import prod
 
 # package imports
-from steelpy.f2uModel.load.operations.combination import LoadCombinationBasic
+# steelpy.f2uModel.load
+#import pandas as pd
+from steelpy.process.dataframe.main import DBframework
+from ..process.combination import LoadCombinationBasic
 
 #
-#
-class CombTypes:
-    """
-    """
-    __slots__ = ['_basic', '_metocean', 'name', 'number',
-                 'title', '_combination']
-    
-    def __init__(self, name:int, title:str):
-        """
-        """
-        self.name = name
-        self.title = title
-        #
-        self._basic:Dict = BasicLoad("basic")
-        self._metocean = BasicLoad("metocean")
-        self._combination = BasicLoad("combination")
-    #
-    @property
-    def metocean(self):
-        """
-        """
-        return self._metocean
-    #
-    @property
-    def basic_load(self):
-        """
-        """
-        return self._basic
-    #
-    @property
-    def load_combination(self):
-        """
-        """
-        return self._combination
 #
 class LoadCombination(LoadCombinationBasic):
     """
@@ -88,65 +57,87 @@ class LoadCombination(LoadCombinationBasic):
             self._title.append(load_title)
             #
             self._combination[load_name] = CombTypes(name=load_name, title=load_title)
-            # TODO: fix numbering sequence
-            load_number =  len(self._combination)
+            #
+            load_number = next(self.get_number())
             self._combination[load_name].number = load_number
             self._number.append(load_number)
     
-    def __getitem__(self, load_name:Union[str,int]):
+    def __getitem__(self, load_name:str|int):
         """
         """
         return self._combination[load_name]
     #
-    def __delitem__(self, load_name:Union[str,int]):
+    def __delitem__(self, load_name:str|int):
         """
         """
         del self._combination[load_name]
     #
-    def to_basic(self):
-        """ """
-        # get load combination and convert to basic loads
-        for key, item in self._combination.items():
-            for comb_name, factor in item._combination.items():
-                for precomb, prefactor in self._combination[comb_name]._basic.items():
-                    try:
-                        item._basic[precomb] += prefactor * factor
-                    except KeyError:
-                        item._basic[precomb] = prefactor * factor
-        # organize basic load
-        basic_loads = defaultdict(list)
-        for key, item in self._combination.items():
-            for bname, factor in item._basic.items():
-                try:
-                    basic = self._basic[bname]
-                    basic_loads[item.name].append([basic.title, factor])
-                except KeyError:
-                    raise Warning("  warning basic load {:} not found".format(bname))
-        #print('-->')
-        return basic_loads
     #
-    def solve_combinations(self, basic_res, memb_force):
+    #def to_basic(self):
+    #    """ """
+    #    db = DBframework()
+    #    # get combination of combination and convert them to basic loads
+    #    # TODO : check this loop works
+    #    for key, item in self._combination.items():
+    #        for comb_name, factor in item._combination.items():
+    #            for precomb, prefactor in self._combination[comb_name]._basic.items():
+    #                try:
+    #                    item._basic[precomb] += prefactor * factor
+    #                except KeyError:
+    #                    item._basic[precomb] = prefactor * factor
+    #    # organize basic load
+    #    #basic_loads = defaultdict(list)
+    #    # form combination formed by basic loads only
+    #    dftemp = []
+    #    for key, item in self._combination.items():
+    #        for bl_name, factor in item._basic.items():
+    #            #basic_loads[key].append([bl_name, factor])
+    #            dftemp.append([key, item.number, 'combination', item.title, bl_name, factor])
+    #            #try:
+    #            #    #basic = self._basic[bname]
+    #            #    #basic_loads[item.name].append([basic.title, factor])
+    #            #    basic_loads[key].append([bl_name, factor])
+    #            #except KeyError:
+    #            #    raise Warning("  warning basic load {:} not found".format(bname))
+    #    #
+    #    header = ['load_name', 'load_number','load_type', 'load_title', 'basic_load', 'factor']
+    #    dfcomb = db.DataFrame(data=dftemp, columns=header, index=None)
+    #    return dfcomb #, basic_loads
+#
+#
+class CombTypes:
+    """
+    """
+    __slots__ = ['_basic', '_metocean', 'name', 'number',
+                 'title', '_combination']
+    
+    def __init__(self, name:int, title:str):
         """
         """
-        comb_res = {}
-        memb_comb = {}
-        bloads = self.to_basic()
-        for cname, comb in bloads.items():
-            lcomb = self._combination[cname].title
-            beam_load = {}
-            for bname, factor in comb:
-                try:
-                    comb_res[lcomb] += basic_res[bname] * factor
-                except KeyError:
-                    comb_res[lcomb] = basic_res[bname] * factor
-                #
-                for mname, member in memb_force[bname].items():
-                    try:
-                        beam_load[mname] += member.end_force * factor
-                    except KeyError:
-                        beam_load[mname] =  member.end_force * factor
-            memb_comb[lcomb] = beam_load
-        return comb_res, memb_comb
+        self.name = name
+        self.title = title
+        #
+        self._basic = BasicLoad("basic")
+        self._metocean = BasicLoad("metocean")
+        self._combination = BasicLoad("combination")
+    #
+    @property
+    def metocean(self):
+        """
+        """
+        return self._metocean
+    #
+    @property
+    def basic(self):
+        """
+        """
+        return self._basic
+    #
+    @property
+    def combination(self):
+        """
+        """
+        return self._combination
 #
 #
 class BasicLoad(Mapping):
@@ -158,22 +149,22 @@ class BasicLoad(Mapping):
     def __init__(self, bl_type:str):
         """
         """
-        self._basic:Dict = {}
+        self._basic:dict = {}
         self._type = bl_type
     #
-    def __setitem__(self, load_name: Union[str,int], factor: float) -> None:
+    def __setitem__(self, load_name: str|int, factor: float) -> None:
         """
         """
         self._basic[load_name] = factor
     #
-    def __getitem__(self, load_name:Union[str,int]):
+    def __getitem__(self, load_name:str|int):
         """
         """
         return self._basic[load_name]
 
     #
     #
-    def __delitem__(self, load_name:Union[str,int]):
+    def __delitem__(self, load_name:str|int):
         """
         """
         del self._basic[load_name]
@@ -184,6 +175,8 @@ class BasicLoad(Mapping):
     def __iter__(self):
         """
         """
+        #comb =  list(dict.fromkeys(self._basic))
+        #return iter(comb)
         return iter(self._basic)
     #
     #
@@ -218,23 +211,23 @@ class MetoceanCombination(Mapping):
     def __init__(self):
         """
         """
-        self._combination:Dict = {}
+        self._combination:dict = {}
     
     #
     #
-    def __getitem__(self, comb_name:Union[str,int]):
+    def __getitem__(self, comb_name:str|int):
         """
         """
         return self._combination[comb_name]
     
     
-    def __setitem__(self, comb_name: Union[str,int], comb_title: str) -> None:
+    def __setitem__(self, comb_name: str|int, comb_title: str) -> None:
         """
         """
         self._combination[comb_name] = Combination_Metocean(comb_title)
     #
     #
-    def __delitem__(self, load_name:Union[str,int]):
+    def __delitem__(self, load_name:str|int):
         """
         """
         del self._combination[load_name]
@@ -252,20 +245,20 @@ class Combination_Metocean:
     """
     """
     #__slots__ = []
-    name:Union[str,int]
+    name:str|int
     #number:int
-    wave:Union[str,int] = 0
+    wave:str|int = 0
     wave_direction:float = 0.0
     wave_kinematics:float = 0.0
     #
     buoyancy : bool = True
     #
-    current: Union[str,int] = 0
+    current: str|int = 0
     current_blockage:float  = 0.0
     current_stretching : bool = True
     current_direction:float = 0.0
     #
-    wind:Union[str,int] = 0
+    wind:str|int = 0
     wind_direction:float = 0.0
     #wind_areas:list = []
 #

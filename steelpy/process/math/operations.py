@@ -1,13 +1,16 @@
 # 
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
 #
-
+from __future__ import annotations
 # Python stdlib imports
 from array import array
 from math import fsum
+from collections.abc import Sequence
+from numbers import Integral
 
 # package imports
-from steelpy.process.math.vector import Vector
+#from steelpy.process.math.vector import Vector
+import numpy as np
 
 # --------------------
 # Matrix Operations       
@@ -50,17 +53,23 @@ def ones(m, n=None, code:str = 'd'):
     return new_matrix
 #
 def to_matrix(l, n):
-    return [l[i:i+n] for i in range(0, len(l), n)]
+    try:
+        return l.reshape(-1, n)
+    except AttributeError:
+        return [l[i:i+n] for i in range(0, len(l), n)]
 #
 #
-def matAbd(a, b, code:str = 'd'):
+def mtxmul(a, b, code:str = 'd'):
     """
     Multiply [a]{b} = {c}
     """
-    n = min(len(a), len(b))
-    c = array(code, [fsum([a[i][j] * b[j] for j in range(n)])
-                     for i in range(n)])
-    return c
+    try:
+        return a @ b
+    except TypeError:
+        n = min(len(a), len(b))
+        c = array(code, [fsum([a[i][j] * b[j] for j in range(n)])
+                         for i in range(n)])
+        return c
 #
 def transposeM(matrix):
     """
@@ -69,15 +78,19 @@ def transposeM(matrix):
     return list(zip(*matrix))
 #
 #
-def trns_3Dv(gloads, r_matrix):
+def trns_3Dv(gloads:list, r_matrix:list):
     """
     Makes 3-d vector transformations.
     """
-    lloads = zeros(12)    
-    for i in range(0, 12, 3):
-        lloads[i:i+3] = matAbd(r_matrix, gloads[i:i+3])
-    #yy = [matAbd(r_matrix, gloads[i:i+3]) 
+    index = len(gloads)  # 12
+    step = len(r_matrix) # 3
+    lloads = np.zeros(index) # 12
+    for i in range(0, index, step): # 12, 3
+        lloads[i:i+3] = mtxmul(r_matrix, gloads[i:i+step])
+        #lloads[i:i + 3] = r_matrix @ gloads[i:i + 3]
+    #yy = [mtxmul(r_matrix, gloads[i:i+3]) 
     #      for i in range(0, 12, 3)]
+    #
     return lloads
 #
 #
@@ -87,9 +100,74 @@ def Tmatrix(Rmat):
     """
     tmx = zeros(12, 12)
     #tmx = Matrix(12, 12)
-    for j1 in range ( 0, 12, 3 ):
-        for k in range( 3 ):
+    for j1 in range(0, 12, 3):
+        for k in range(3):
             for l in range( 3 ):
-                tmx[ j1 + k ][ j1 + l ]  = Rmat[ k ][ l ]
+                tmx[j1 + k][j1 + l]  = Rmat[k][l]
     return tmx
 #
+#
+def matrix_full(x):
+    """ """
+    neq = len(x)
+    iband = len(x[0])
+    #
+    a = zeros(neq, neq)
+    # reassign to full form  
+    for i in range(neq):
+        jmax = min(iband, neq - i)
+        for j in range(jmax):
+            a[i][i + j] = x[i][j]
+            a[i + j][i] = x[i][j]
+    return a
+#
+def linspace(start:int, stop:int, num:int, endpoint:bool=True):
+    """ equally space numbers"""
+    step = (stop - start) * 1.0 / (num)
+    if endpoint:
+        step = (stop-start) * 1.0 / (num - 1)
+    return [start+i*step for i in range(num)]
+#
+class linspace2(Sequence):
+    """linspace(start, stop, num) -> linspace object
+
+    Return a virtual sequence of num numbers from start to stop (inclusive).
+
+    If you need a half-open range, use linspace(start, stop, num+1)[:-1].
+    """
+
+    def __init__(self, start, stop, num):
+        if not isinstance(num, Integral) or num <= 1:
+            raise ValueError('num must be an integer > 1')
+        self.start, self.stop, self.num = start, stop, num
+        self.step = (stop - start) / (num - 1)
+
+    def __len__(self):
+        return self.num
+
+    def __getitem__(self, i):
+        if isinstance(i, slice):
+            return [self[x] for x in range(*i.indices(len(self)))]
+        if i < 0:
+            i = self.num + i
+        if i >= self.num:
+            raise IndexError('linspace object index out of range')
+        if i == self.num - 1:
+            return self.stop
+        return self.start + i * self.step
+
+    def __repr__(self):
+        return '{}({}, {}, {})'.format(type(self).__name__,
+                                       self.start, self.stop, self.num)
+
+    def __eq__(self, other):
+        if not isinstance(other, linspace):
+            return False
+        return ((self.start, self.stop, self.num) ==
+                (other.start, other.stop, other.num))
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __hash__(self):
+        return hash((type(self), self.start, self.stop, self.num))

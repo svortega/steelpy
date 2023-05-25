@@ -6,9 +6,9 @@
 #from typing import NamedTuple, Dict, List, Iterable, Union
 
 # package imports
-from steelpy.f2uModel.load.sqlite.basic_load import BasicLoadSQL
-from steelpy.f2uModel.load.sqlite.combination import LoadCombSQL
-from steelpy.f2uModel.results.sqlite.operation.process_sql import create_connection, create_table
+from .basic_load import BasicLoadSQL
+from .combination import LoadCombSQL
+from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table
 #
 #
 #
@@ -23,7 +23,9 @@ class LoadingSQL:
         self._basic = BasicLoadSQL(db_file)
         self._combination = LoadCombSQL(db_file)
         # create node table
-        self._create_table()
+        conn = create_connection(self.db_file)
+        with conn: 
+            self._create_table()
 
     @property
     def basic(self):
@@ -42,7 +44,7 @@ class LoadingSQL:
         """ """
         table_load = "CREATE TABLE IF NOT EXISTS tb_Load(\
                     number INTEGER PRIMARY KEY NOT NULL,\
-                    name INTEGER NOT NULL,\
+                    name TEXT NOT NULL,\
                     title TEXT NOT NULL,\
                     type TEXT NOT NULL);"
 
@@ -53,7 +55,7 @@ class LoadingSQL:
                             lc_number INTEGER REFERENCES tb_Load(number),\
                             factor DECIMAL NOT NULL);"
 
-        conn = create_connection(self.db_file)
+        #conn = create_connection(self.db_file)
         create_table(conn, table_load)
         create_table(conn, table_comb_load)
 #

@@ -1,22 +1,18 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2023 fem2ufo
 # 
-
-
+from __future__ import annotations
 # Python stdlib imports
-from typing import Tuple, Dict, List
+
 
 # package imports
+from ..concept.joint import Connection
+from ..concept.element import ConceptElements
+from ..concept.boundary import ConceptBoundaries
+from ..concept.load import ConceptLoad
 #
-from steelpy.f2uModel.concept.joint import Connection
-from steelpy.f2uModel.concept.element import ConceptElements
-from steelpy.f2uModel.concept.boundary import ConceptBoundaries
-from steelpy.f2uModel.concept.load import ConceptLoad
-#from steelpy.f2uModel.concept.beam import Beams
-#from steelpy.f2uModel.concept.shell import Shells
-#from steelpy.f2uModel.concept.spring import Springs
-from steelpy.f2uModel.mesh.inmemory.geometry import Releases
-from steelpy.f2uModel.mesh.inmemory.nodes import NodesInMemory
+from ..mesh.inmemory.geometry import Releases
+from ..mesh.inmemory.nodes import NodesIM
 
 
 
@@ -38,23 +34,25 @@ class Concepts:
     
     Contact
     """
-    __slots__ = ['joints', 'beam', 'pile', 'points', #'_load',
-                 'shells', 'membranes', 'solids', 'springs', 'load',
-                 '_hinges', 'boundary', '_properties', '_name', '_mesh']
+    __slots__ = ['joints', '_beams', 'pile', '_points',
+                 '_materials', '_sections', '_load',
+                 'shells', 'membranes', 'solids', 'springs',
+                 '_hinges', '_boundaries', '_properties', '_name']
     
-    def __init__(self, mesh, materials, sections, properties): # load, 
+    def __init__(self, materials, sections, properties): # load,
         """
         """
-        self._mesh = mesh
-        #self.points = mesh.nodes
-        self.points = NodesInMemory()
-        self.joints = Connection(points=self.points)
+        self._materials = materials
+        self._sections = sections
+        #
+        self._points = NodesIM()
+        self.joints = Connection(points=self._points)
         self._hinges = Releases()
         #
-        self.boundary = ConceptBoundaries()
+        self._boundaries = ConceptBoundaries()
         #
-        self.beam = ConceptElements(element_type="beam", points = self.points,
-                                    materials=materials, sections=sections)
+        self._beams = ConceptElements(element_type="beam", points=self._points,
+                                      materials=materials, sections=sections)
 
         #self.truss = Elements(element_type='truss', points = self.points,
         #                      materials=mesh.materials, sections=mesh.sections)
@@ -71,11 +69,86 @@ class Concepts:
         #                       points=self.points, materials=mesh.materials)
         #
         #self._load = load
-        self.load = ConceptLoad(self.points, self.beam) # self._load,
+        self._load = ConceptLoad(self._points, self._beams) # self._load,
+    #
+    def materials(self, values: None|list|dict=None,
+                  df=None):
+        """
+        """
+        if isinstance(values, list):
+            1/0
+            if isinstance(values[0], list):
+                for item in values:
+                    self._materials[item[0]] = item[1:]
+            else:
+                self._materials[values[0]] = values[1:]
+        #
+        try:
+            df.columns
+            self._materials.df = df
+        except AttributeError:
+            pass
+        #
+        return self._materials
     #
     #
+    def sections(self, values: None|list|dict=None,
+                 df=None):
+        """
+        """
+        if isinstance(values, list):
+            1/0
+            if isinstance(values[0], list):
+                for item in values:
+                    self._sections[item[0]] = item[1:]
+            else:
+                self._sections[values[0]] = values[1:]
+        #
+        # dataframe input
+        try:
+            df.columns
+            self._sections.df = df
+        except AttributeError:
+            pass
+        #
+        return self._sections
+    #
+    def points(self, values: None|list|dict=None,
+                 df=None):
+        return self._points
+    #
+    def beams(self, values: None|list|dict = None,
+              df=None):
+        """ """
+        if values:
+            1/0
+            if isinstance(values, list):
+                1/0
+            else:
+                raise IOError('beam input not valid')
+        #
+        try:
+            df.columns
+            self._beams.df = df
+        except AttributeError:
+            pass
+
+        return self._beams
     #
     #
+    def load(self, values: None|list|dict=None,
+                 df=None):
+        """ """
+        if values:
+            1/0
+
+        try:
+            df.columns
+            self._load.df = df
+        except AttributeError:
+            pass
+
+        return self._load
     #
     #def __iter__(self):
         #"""
@@ -90,11 +163,25 @@ class Concepts:
         #    yield self.piles[_name]
     #
     #
-    #@property
-    #def hinges(self):
-    #    """
-    #    """
-    #    return self._hinges
+    def boundaries(self, values: None|list|dict = None,
+                   df = None):
+        """
+        """
+        if values:
+            if isinstance(values, list):
+                1/0
+                for item in values:
+                    self._boundaries[item[0]] = item[1:]
+            else:
+                raise IOError('boundary input not valid')
+        #
+        try:
+            df.columns
+            self._boundaries.df(df)
+        except AttributeError:
+            pass
+            
+        return self._boundaries
     #
     #@property
     #def get_name(self):

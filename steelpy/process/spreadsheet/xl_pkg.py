@@ -1,17 +1,17 @@
 # Copyright (c) 2022 steelpy
 #
 # Python stdlib imports
+from __future__ import annotations
+
 # from dataclasses import dataclass
 from pathlib import Path
 import re
-import os
-from typing import NamedTuple, Dict, List, Iterable, Union
 
 # package imports
-from steelpy.process.spreadsheet.dataframe import DataFrame
+from steelpy.process.dataframe.main import DBframework
 from steelpy.process.spreadsheet.pylightxl.pylightxl import(utility_address2index,
-                                                            utility_columnletter2num,
                                                             utility_index2address)
+from .xlops import get_cell_name, get_cellcol_name
 
 
 #
@@ -75,7 +75,7 @@ class Sheets:
         """
         s_name = self.ws_names
         if ws_name in s_name:
-            return xlCells(self._wb, ws_name)
+            return SheetOps(self._wb, ws_name)
         else:
             raise IOError(f"sheet {ws_name} not found")
     #
@@ -94,8 +94,8 @@ class Sheets:
 #
 #
 #
-class xlCells:
-    __slots__ = ['_wb', '_ws_name', '_ws']
+class SheetOps:
+    __slots__ = ['_wb', '_ws_name', '_ws', '_df']
 
     def __init__(self, wb, ws_name: str):
         """ ws : sheet"""
@@ -104,7 +104,9 @@ class xlCells:
         try: # xlwings
             self._ws = self._wb.sheets[self._ws_name]
         except AttributeError: # openpyxl
-            self._ws  = self._wb[self._ws_name]        
+            self._ws  = self._wb[self._ws_name]
+        #
+        self._df = DataFrameOps(self._ws)
     #
     #
     def __setitem__(self, cell_name: str, value) -> None:
@@ -120,21 +122,31 @@ class xlCells:
         if isinstance(value, list):
             row_i, col_j = utility_address2index(cell_name)
             columns = len(value)
-            if isinstance(value[0], list):
-                rows =  len(value[0])
-                for j in range(columns):  # columns
-                    for i in range(rows):  # rows
-                        print('---', i)
-                        self._wb.ws(ws=self._ws_name).update_index(row=row_i + i,
-                                                                   col=col_j + j,
-                                                                   val=value[j][i])
+            if isinstance(value[0], (list,tuple)):
+                try: # xlwings
+                    self._ws.range(cell_name).value = value
+                except AttributeError: # openpyxl
+                    rows =  len(value[0])
+                    for j in range(columns):  # columns
+                        for i in range(rows):  # rows
+                            #print('---', i)
+                            self._ws.cell(row=row_i + i,
+                                          column=col_j + j,
+                                          value=value[j][i])
             else:
-                for j in range(columns):  # columns
-                    self._wb.ws(ws=self._ws_name).update_index(row=row_i,
-                                                               col=col_j + j,
-                                                               val=value[j])
+                try: # xlwings
+                    self._ws.range(cell_name).value = value
+                except AttributeError: # openpyxl
+                    for j in range(columns):  # columns
+                        self._ws.cell(row=row_i,
+                                      column=col_j + j,
+                                      value=value[j])
         else:
-            self._wb.ws(ws=self._ws_name).update_address(address=cell_name, val=value)
+            cell_name = get_cell_name(cell_name)
+            try: # xlwings
+                self._ws.range(cell_name).value = value
+            except AttributeError: # openpyxl
+                self._wb[cell_name] = value
 
     #
     def __getitem__(self, cell_name: str):
@@ -145,25 +157,26 @@ class xlCells:
             return self._ws.range(cell_name).value
         except AttributeError:
             #ws = self._wb[self._ws_name ]
-            return [[item.value for item in rows] 
-                    for rows in self._ws[cell_name]]
+            #return [[item.value for item in rows]
+            #        for rows in self._ws[cell_name]]
+            return self._ws[cell_name].value
     #
     @property
     def column(self):
         """ """
-        return xlColumn(self._wb, self._ws_name)
+        return xlColumn(self._ws)
     #
     @property
     def row(self):
         """ """
-        return xlRow(self._wb, self._ws_name)     
+        return xlRow(self._ws)     
     #
     #
-    def key(self, row:Union[int,str,None]=None, 
-            column:Union[int,str,None]=None):
+    def key(self, row:int|str|None=None,
+            column:int|str|None=None):
         """ """
-        ws_name = self._ws_name
-        
+        #ws_name = self._ws_name
+        #
         #if row:
         #    if isinstance(column, str):
         #        
@@ -173,10 +186,25 @@ class xlCells:
         return self._wb.ws(ws=self._ws_name).ssd(keyrows=row, keycols=column)
     #
     #
-    @property
-    def dataframe(self):
-        """ """
-        return DataFrameOps(ws=self._ws)
+    #def to_df(self, row:int=1, column:int|str=1,
+    #          skiprows:int|list=0, names:str|list|None=None):
+    #    """ convert sheet data to dataframe"""
+    #    return self._df.get_df(row, column, skiprows, names)
+    #
+    def to_df(self, skiprows:int|list=0, names:str|list|None=None):
+        """ convert sheet data to dataframe"""
+        return self._df.get_df(skiprows=skiprows, names=names)
+    #
+    #
+    #@property
+    def df_tool(self, index:int|bool=False, header:bool=False,
+                dates:None=None):
+        """ 
+        index : When writing, include or exclude the index by setting it to True or False
+        header : When writing, include or exclude the index and series names by setting it to True or False
+        dates : 
+        """
+        return DataFrameOps(self._ws, index=index, header=header)
     #
     def get_data(self):
         """ """
@@ -189,19 +217,24 @@ class xlCells:
 #
 #
 class DataFrameOps:
-    __slots__ = ['_ws',  '_column']
+    __slots__ = ['_ws',  '_column', '_index', '_header', '_df']
 
-    def __init__(self, ws):
+    def __init__(self, ws, index:int|bool=False, header:bool=False):
         """ ws : sheet"""
         self._ws = ws
+        self._index = index
+        self._header = header
         self._column = xlColumn(self._ws)
+        self._df = DBframework()
     #
     #
-    def __setitem__(self, cell_name: str, df) -> None:
+    def __setitem__(self, cell_name:str|int|tuple, df) -> None:
         """
         """
+        cell_name = get_cell_name(cell_name)
+        
         if re.search(r"\:", cell_name):
-            pass
+            1/0
         else:
             # [row, col]
             index = utility_address2index(cell_name)
@@ -210,27 +243,38 @@ class DataFrameOps:
                 col = index[1] + x
                 address = utility_index2address(row, col)
                 #self._ws.range(address).value = key
-                try:
-                    self._ws[address].value = key
-                except AttributeError:
-                    self._ws[address] = key
-                address = utility_index2address(row+1, col)
-                self._column[address] = value
-    #
-    def __call__(self, row:int=1, column:Union[int,str]=1,
-                  title:Union[int,List]=0):
+                if self._header:
+                    try:
+                        self._ws[address].value = key
+                    except AttributeError:
+                        self._ws[address] = key
+                    row += 1
+                #
+                address = utility_index2address(row, col)
+                self._column[address] = value.tolist()
+    # __call__
+    def get_df(self, skiprows:int|list=0,
+               names:str|list|None=None):
         """ """
+        #if not db_name:
+        #    db_name = self._ws_name
+        #
         data = self.get_data()
         columns = list(zip(*data))
         #
-        if isinstance(title, (list, tuple)):
+        if isinstance(skiprows, (list, tuple)):
             print('---')
             1/0
         else:
-            headers = {col[title]: col[title+1:] for col in columns}
+            if names:
+                data = {names[idx]: col[skiprows+1:]
+                        for idx, col in enumerate(columns)}
+            else:
+                data = {col[skiprows]: col[skiprows+1:]
+                        for col in columns}
         #
         #print('--')
-        return DataFrame(headers)
+        return self._df.DataFrame(data, columns=names)
     #
     #
     def get_data(self):
@@ -305,7 +349,7 @@ class WriteExcelData:
             #
 
     def update_column(self, ws_name: str, col: int,
-                      values: Dict, step: int):
+                      values: dict, step: int):
         """ """
         try:  # openpyxl
             cells = self._wb[ws_name]
@@ -332,7 +376,7 @@ class WriteExcelData:
 
 
 #
-class NewExcelFile:
+class NewExcelFileXX:
     __slots__ = ['_wb', '_wb_name']
 
     def __init__(self, wb_name: str):
@@ -410,8 +454,7 @@ class xlsetNew:
             return self._wb.ws(ws=self._ws_name).index(address=cell_name)
             # row_id, col_id = utility_address2index(cell_name)
             # return self._wb.ws(ws=self._ws_name).index(row=row_id, col=col_id)
-
-
+#
 #
 def get_column_data(sheet):
     """ """
@@ -442,35 +485,9 @@ class xlset:
         """
         """
         return self._ws.range(cell_name).value
-
-
 #
 #
-#class ColumnName(dict):
-#    """
-#    """
-#
-#    def __init__(self):
-#        import string
-#        super(ColumnName, self).__init__()
-#        self.alphabet = string.ascii_uppercase
-#        self.alphabet_size = len(self.alphabet)
-#
-#    def __missing__(self, column_number):
-#        ret = self[column_number] = self.get_column_name(column_number)
-#        return ret
-#
-#    def get_column_name(self, column_number):
-#        if column_number <= self.alphabet_size:
-#            return self.alphabet[column_number - 1]
-#        else:
-#            return self.alphabet[int(((column_number - 1) / self.alphabet_size)) - 1] + self.alphabet[
-#                ((column_number - 1) % self.alphabet_size)]
-#
-#
-#
-#
-def get_row_column(data_list: List, header: str):
+def get_row_column(data_list: list, header: str):
     """ """
     row = [x for x, item in enumerate(data_list) if header in item]
     col = [x for x, item in enumerate(data_list[row[0]]) if item == header]
@@ -484,51 +501,122 @@ class xlColumn:
     def __init__(self, ws):
         """ ws : sheet"""
         self._ws = ws
+        #self._ws_name = ws_name
     #
-    def __setitem__(self, col_name: str, value: float) -> None:
+    def __setitem__(self, col_name:int|str|tuple, 
+                    value:float|int|str|tuple|list) -> None:
         """
         """
-        if isinstance(col_name, int):
-            1/0
-        elif isinstance(col_name, str):
-            numbers = re.findall('[0-9]+', col_name)
-            if numbers:
-                row, col = utility_address2index(col_name)
-                row += 1
-            else:
-                col = utility_columnletter2num(col_name)
-                row = 2
-            rows = row + len(value)
-            address = utility_index2address(rows, col)
-            cell_name = col_name + f":{address}"
-        else:
-            raise IOError(f"column name : {col_name} not valid")
+        cname = get_cellcol_name(col_name)
         #
         # xlwings
         try:
-            self._ws.range(cell_name).options(transpose=True).value = value
+            self._ws.range(cname).options(transpose=True).value = value
         except: # openpyxl
+            #ws = self._wb[self._ws_name]
+            row, col = utility_address2index(cname)
             for x, item in enumerate(value):
                 row += x
-                self._ws.cell(row=row,column=col).value = item         
+                self._ws.cell(row=row, column=col).value = item         
     #
     #
-    def __getitem__(self, col_name: Union[int, str]):
+    def __getitem__(self, col_name: int|str):
         """
         """
         if isinstance(col_name, int):
-            return self._wb(ws=self._ws_name).col(col=col_name)
+            cname = f"{col_name}1"
+        
         elif isinstance(col_name, str):
             numbers = re.findall('[0-9]+', col_name)
             if numbers:
-                row, col = utility_address2index(col_name)
-                1/0
+                cname = col_name
             else:
-                #col_name = utility_columnletter2num(col_name)
-                #row = 1
-                return self._wb.ws(ws=self._ws_name).col(col=col_name)
+                cname = f"{col_name}1"
+        
         else:
             raise IOError(f"column name : {col_name} not valid")
+        #
+        #
+        try: # xlwings
+            return self._ws.range(cname).expand("down").value
+
+        except AttributeError: # openpyxl
+            #ws = self._wb[self._ws_name]
+            row, col = utility_address2index(cname)
+            cols = tuple(self._ws.columns)
+            data = [item.value for item in cols[col-1]]
+            return data[row-1:]
+            #try:
+            #    idx = data.index(None)
+            #except ValueError:
+            #    idx = -1
+            #return data[:idx]    
+#
+class xlRow:
+    __slots__ = ['_ws']
+
+    def __init__(self, ws):
+        """ ws : sheet"""
+        self._ws = ws
+    #
+    def __setitem__(self, row_name: str, value: float) -> None:
+        """
+        """
+        if isinstance(row_name, int):
+            rname = f"A{row_name}"
+
+        elif isinstance(row_name, str):
+            numbers = re.findall('[0-9]+', row_name)
+            if numbers:
+                rname = row_name
+            else:
+                rname = f"A{row_name}"
+        
+        else:
+            raise IOError(f"row name : {row_name} not valid")         
+        #
+        try:  # xlwings
+            self._ws.range(rname).expand("right").value = value
+        
+        except AttributeError:  # openpyxl
+            #ws = self._wb[self._ws_name]
+            row, col = utility_address2index(rname)
+            for x, item in enumerate(value):
+                col += x
+                self._ws.cell(row=row, column=col).value = item
+    #
+    def __getitem__(self, row_name:int|str):
+        """
+        """
+        if isinstance(row_name, int):
+            rname = f"A{row_name}"
+
+        elif isinstance(row_name, str):
+            numbers = re.findall('[0-9]+', row_name)
+            if numbers:
+                rname = row_name
+            else:
+                rname = f"A{row_name}"
+        
+        else:
+            raise IOError(f"row name : {row_name} not valid")
+        #
+        try:  # xlwings
+            return self._ws.range(rname).expand("right").value
+        
+        except AttributeError:  # openpyxl
+            #ws = self._wb[self._ws_name]
+            row, col = utility_address2index(rname)
+            rows = tuple(self._ws.rows)
+            data = [item.value for item in rows[row-1]]
+            return data[col-1:]
+            #try:
+            #    idx = data.index(None)
+            #except ValueError:
+            #    idx = -1
+            #return data[:idx]
+
+
 #
 #
 #

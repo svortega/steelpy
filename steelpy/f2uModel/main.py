@@ -1,23 +1,23 @@
 # 
-# Copyright (c) 2009-2022 fem2ufo
+# Copyright (c) 2009-2023 fem2ufo
 #
-
 # Python stdlib imports
-from dataclasses import dataclass
+from __future__ import annotations
+#from dataclasses import dataclass
 import os
-from typing import Tuple, Dict, List, ClassVar, Union
-
-# package imports
-from steelpy.f2uModel.mesh.main import Mesh
-from steelpy.f2uModel.concept.main import Concepts
-from steelpy.f2uModel.properties.main import Properties
-from steelpy.f2uModel.load.main import Load
-from steelpy.f2uModel.results.main import Results
-from steelpy.f2uModel.concept.meshing import Meshing
 #
+# package imports
+# steelpy.f2uModel
+from .mesh.main import Mesh
+from .concept.main import Concepts
+from .properties.main import Properties
+from .concept.meshing import Meshing
+from .plot.main import PlotModel
+# 
 from steelpy.sections.main import Sections
 from steelpy.material.main import Materials
-
+#
+#from steelpy.material.process.operations import get_isomat_prop_df
 #
 def get_number(items: dict) -> int:
     """
@@ -58,123 +58,211 @@ class f2uModel:
       :number:  integer internal number 
       :name:  string node external name
     """
-    __slots__ = ['component', 'type', 'data', '_results',
-                 'db_file',
+    __slots__ = ['component', 'type', 'data',
+                 'db_file', '_plot', 'mesh_type',
                  '_materials', '_sections', '_properties',
-                 'sets', 'mesh', '_concept', '_concept_flag',
-                 '_boundaries', '_nodes', '_load', '_meshing']
+                 '_mesh', '_concept', '_concept_flag']
+                 # '_nodes', '_meshing', '_boundaries',  'sets', '_load', '_results',
 
-    def __init__(self, component: Union[str, int],
-                 mesh_type:str='inmemory') -> None:
+    def __init__(self, component:str|int,
+                 mesh_type:str='sqlite') -> None:
         """
         mesh_type : sqlite/inmemory
         """
         print("-- module : fem2ufo Version 5.00dev")
         print('{:}'.format(52*'-'))
         #
-        self.component: Union[str, int] = component
-        self.type: str = 'substructure'
-        self.db_file:str = component + "_f2u.db"
-        if mesh_type != "inmemory":
+        self.component: str|int = component
+        self.type: str = 'substructure'        
+        #
+        #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        filename = component + "_f2u.db"
+        path = os.path.abspath(filename)
+        self.db_file = path
+        #directory = os.path.dirname(path)
+        #
+        #self.db_file:str = component + "_f2u.db"
+        if mesh_type != "ttt": #"inmemory":
             try: # remove file if exist
                 os.remove(self.db_file)
             except FileNotFoundError:
                 pass
         #
+        self.mesh_type = mesh_type
         # set main components
-        self._materials: ClassVar = Materials(mesh_type=mesh_type,
-                                              db_file=self.db_file)
-        self._sections: ClassVar = Sections(mesh_type=mesh_type,
-                                            db_file=self.db_file)
-        self._properties: ClassVar = Properties()
-        # set mesh components
-        self.mesh: ClassVar = Mesh(materials=self._materials,
-                                   sections=self._sections,
-                                   mesh_type=mesh_type,
-                                   db_file=self.db_file)
-        # loads component
-        self._load = Load(mesh_type=mesh_type,
+        #mesh_type2 = 'sqlite'
+        self._materials = Materials(mesh_type=mesh_type,
+                                    db_file=self.db_file)
+
+        self._sections = Sections(mesh_type=mesh_type,
+                                  db_file=self.db_file)
+
+        self._mesh = Mesh(materials=self._materials,
+                          sections=self._sections,
+                          mesh_type=self.mesh_type,
                           db_file=self.db_file)
-        self._results = Results(basic_loads=self._load,
-                                mesh_type=mesh_type,
-                                db_file=self.db_file)
         #
-        #self.sets: ClassVar = Groups(concepts=self._concept,
-        #                             mesh= self.mesh)
-        #self.data: Tuple = InputData()
+        self._properties = Properties()
         #
         # set concepts
-        self._concept: ClassVar = Concepts(mesh=self.mesh, 
-                                           materials=self.materials,
-                                           sections=self.sections,
-                                           properties= self._properties)
+        #self._concept = Concepts(materials=self._materials,
+        #                         sections=self._sections,
+        #                         properties= self._properties)
         self._concept_flag = False
         #
-        self._meshing = Meshing(mesh=self.mesh, 
-                                concept=self._concept,
-                                load=self._load)
+        #self._meshing = Meshing(concept=self._concept,
+        #                        mesh_type=mesh_type,
+        #                        db_file=self.db_file)
         #
         # start defaults
         #self._material_default: bool = None
         #self._section_default: bool = None
         #self._set_dafault: bool = None
-
+        self._plot = PlotModel()
+        #self._plot._mesh = self._mesh
+        #self._plot._load = self._mesh._load
+        #self._plot._concept = self._concept
     #
-    @property
-    def materials(self) -> ClassVar:
+    #@property
+    def materials(self, values:None|list=None,
+                  df=None):
         """
         """
+        if isinstance(values, list):
+            if isinstance(values[0], list):
+                for item in values:
+                    self._materials[item[0]] = item[1:]
+            else:
+                self._materials[values[0]] = values[1:]
+        #
+        try:
+            df.columns
+            self._materials.df = df
+            #group = df.groupby("type")
+            # Elastic type
+            #try:
+            #    elastic = group.get_group("elastic")
+            #    #elastic = get_isomat_prop_df(elastic)
+            #    #elastic = elastic.drop_duplicates(['name'])
+            #    self._materials.elastic(df=df)
+            #except KeyError:
+            #    # nonlin = group.get_group("plastic")
+            #    raise IOError('Material type not valid')
+        except AttributeError:
+            pass
+        #
         return self._materials   
 
     #
-    @property
-    def sections(self) -> ClassVar:
+    #@property
+    def sections(self, values:None|list=None,
+                 df=None):
         """
         """
+        #if values:
+        if isinstance(values, list):
+            if isinstance(values[0], list):
+                for item in values:
+                    self._sections[item[0]] = item[1:]
+            else:
+                self._sections[values[0]] = values[1:]
+        #
+        # dataframe input
+        try:
+            df.columns   
+            self._sections.df = df
+        except AttributeError:
+            pass            
+        #
         return self._sections
 
     #
-    @property
-    def properties(self) -> ClassVar:
+    #@property
+    def properties(self):
         """
         """
         return self._properties
     #
-    @property
-    def concept(self) -> ClassVar:
+    #@property
+    def concept(self):
         """
         """
+        self._concept = Concepts(materials=self._materials,
+                                 sections=self._sections,
+                                 properties= self._properties)
+        self._plot._concept = self._concept
         self._concept_flag = True
         return self._concept
 
     #
-    @property
+    #@property
     def groups(self):
         """ """
         return self.sets
     #
+    def mesh(self):
+        """ """
+        #self._mesh = Mesh(materials=self._materials,
+        #                  sections=self._sections,
+        #                  mesh_type=self.mesh_type,
+        #                  db_file=self.db_file)
+        return self._mesh
     #
-    #
-    @property
-    def load(self) -> ClassVar:
-        """
-        """
-        return self._load
+    #@property
+    #def load(self) -> ClassVar:
+    #    """
+    #    """
+    #    return self._load
     #
     #
     def build(self) -> None:
         """
         """
-        #_sql = f2uDB(component_name= self.component)
-        #_sql.materials = self._materials
-        self.sections.get_properties()
+        #
+        #def bd_condition(nodes, boundaries):
+        #    """
+        #    set boundary conditions
+        #    bcs: set default = 0 free (1 fix)
+        #    """
+        #    supports = boundaries.supports()
+        #    for node_name, bd in supports.items():
+        #        nodes.jbc.update_data(bd)
+        #
+        #
+        #print('---')
+        #
+        #
+        self._sections.get_properties()
+        #
         if self._concept_flag:
-            self._meshing.get_mesh()
-            self.mesh.renumbering()
+            meshing = Meshing(concept=self._concept,
+                              mesh=self._mesh)
+            meshing.get_mesh()
+            self._mesh.renumbering()
+            #mesh._load._basic.FER()
+            #return mesh
             #_sql.write_concept(self._concept)
+        #
+        # TODO : remove second _load for simplification
+        self._mesh._load._basic.FER()        
+        #
         #_sql.write_geometry(self.mesh)
         #_sql.write_load(self._load)
         #self._sql = _sql
+        #
+        #bd_condition(nodes=self._mesh._nodes,
+        #             boundaries=self._mesh._boundaries)
+        #
         print('end meshing')
+        return self._mesh
     #
-
+    @property
+    def plot(self):
+        """ """
+        #self._plot.mesh = self.mesh
+        #self._plot.load = self._load
+        return self._plot
+#
+#
+#
+#

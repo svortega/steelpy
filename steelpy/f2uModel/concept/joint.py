@@ -1,13 +1,12 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
-# 
-
-
-# Python stdlib imports
+# Copyright (c) 2009-2023 fem2ufo
+#
+from __future__ import annotations
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, ClassVar, Iterable, Union
+#from typing import Dict, List, Tuple, ClassVar, Iterable, Union
 from collections.abc import Mapping
 from collections import namedtuple
+import math
 
 # package imports
 #from fem2ufo.f2u_model.feclass.mesh.mesh import Mesh
@@ -50,13 +49,13 @@ class Joint:
 
     #_mesh = Mesh()
 
-    def __init__(self, name: str, nodes: ClassVar) -> None:
+    def __init__(self, name: str, nodes) -> None:
         """
         """
         self.name:str = name
-        self._nodes: ClassVar = nodes
-        self.brace: List = []
-        self.chord: List = []
+        self._nodes = nodes
+        self.brace: list = []
+        self.chord: list = []
         self.type: str = 'point'
 
     def get_name(self, number: int = None, name: str = None)-> str:
@@ -71,7 +70,7 @@ class Joint:
         self.name = name + str(number).zfill(3) + '_' + str(self._node.name)
     #
     @property
-    def spring(self)-> ClassVar:
+    def spring(self):
         """
         """
         return self._spring
@@ -88,7 +87,7 @@ class Joint:
             raise Exception('   *** Spring input format not recognized')    
     #
     @property
-    def node(self)-> ClassVar:
+    def node(self):
         """
         """
         try:
@@ -108,7 +107,7 @@ class Joint:
 
     #
     @property
-    def boundary(self)-> ClassVar:
+    def boundary(self):
         """
         """
         return self._mesh.boundaries[self._node]
@@ -143,13 +142,11 @@ class Connection(Mapping):
     def __init__(self, points) -> None:
         """
         """
-        self._points: ClassVar = points
-        #self._boundaries: ClassVar = self._points._boundaries
-        #self._nodes: ClassVar = self._points._nodes
-        self._joints: Dict = {}
+        self._points = points
+        self._joints: dict = {}
 
     def __setitem__(self, joint_name: str,
-                    node_item: Union[str, int, Dict, List, Tuple]) -> None:
+                    node_item: str|int|dict|list|tuple) -> None:
         """
         """
         #try:
@@ -165,7 +162,7 @@ class Connection(Mapping):
             self._nodes[node_number] = node_item
             self.map_joint_with_node(joint_name, node_number)
 
-    def __getitem__(self, joint_name: str)-> ClassVar:
+    def __getitem__(self, joint_name: str):
         """
         """
         try:
@@ -206,11 +203,10 @@ class Connection(Mapping):
         return len(self._joints)
 
     
-    def __iter__(self)-> Iterable:
+    def __iter__(self)-> iter:
         """
         """
         return iter(self._joints)
-        #
 
     def __contains__(self, value) -> bool:
         return value in self._joints
@@ -247,17 +243,16 @@ class Point:
     __slots__ = ['number', 'name', '_node', '_nodes',
                  '_boundaries','_type']
 
-    def __init__(self, name: str, nodes: ClassVar,
-                 boundaries: ClassVar) -> None:
+    def __init__(self, name: str, nodes, boundaries) -> None:
         """
         """
         self.name:str = name
-        self._nodes: ClassVar = nodes
-        self._boundaries: ClassVar = boundaries
+        self._nodes = nodes
+        self._boundaries = boundaries
         self._type:str = "node"
     #
     @property
-    def node(self)-> ClassVar:
+    def node(self):
         """
         """
         return self._nodes[self._node]
@@ -270,16 +265,16 @@ class Point:
             self._nodes[node_number]
             self._node = node_number
         except KeyError:
-            raise ('   *** error : Node {:} not found'.print(node_number))
+            raise(f'   *** error : Node {node_number} not found')
     #
     @property
-    def boundary(self)-> ClassVar:
+    def boundary(self):
         """
         """
         return self._boundaries[self._node]
 
     @boundary.setter
-    def boundary(self, fixity: Union[List, str])-> None:
+    def boundary(self, fixity: list|str)-> None:
         """
         """
         if isinstance(fixity, (list, tuple)):
@@ -295,13 +290,13 @@ class Point:
             raise IOError("**** error boundary type not recognised")
     #
     @property
-    def displacement(self)-> ClassVar:
+    def displacement(self):
         """
         """
         return self._boundaries[self._node]
 
     @displacement.setter
-    def displacement(self, fixity:List)-> None:
+    def displacement(self, fixity:list)-> None:
         """
         """
         self._boundaries[self._node] = fixity
@@ -341,9 +336,9 @@ class Points(Mapping):
         #self._mesh: ClassVar = mesh
         self._boundaries = boundaries
         self._nodes = nodes
-        self._points: Dict = {}
+        self._points: dict = {}
     
-    def __setitem__(self, point_name: str, coordinates:Tuple) -> None:
+    def __setitem__(self, point_name: str, coordinates:tuple) -> None:
         """
         """
         node_number = len(self._points) + 1
@@ -353,7 +348,7 @@ class Points(Mapping):
             self._nodes[node_number] = coordinates
             self.map_point_with_node(point_name, node_number)
     
-    def __getitem__(self, node_name: str)-> ClassVar:
+    def __getitem__(self, node_name: str):
         """
         """
         #try:
@@ -402,11 +397,10 @@ class Points(Mapping):
         return len(self._points)
 
 
-    def __iter__(self)-> Iterable:
+    def __iter__(self)-> iter:
         """
         """
         return iter(self._points)
-        #
 
     def __contains__(self, value) -> bool:
         return value in self._points

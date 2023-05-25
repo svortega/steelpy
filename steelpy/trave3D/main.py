@@ -1,26 +1,19 @@
 # 
-# Copyright (c) 2009-2021 steelpy
+# Copyright (c) 2009-2023 steelpy
 #
-
+from __future__ import annotations
 # Python stdlib imports
-#from array import array
-#import datetime
-from typing import List, ClassVar, Dict, NamedTuple, Union
-#from itertools import chain
-
-
+#from collections import defaultdict
 #import multiprocessing
+#import pickle
 
 # package imports
-import numpy as np
-#from scipy.linalg import solve_banded
-#
-from steelpy.trave3D.processor.static_solver import UDUt,  solve_displacement 
-from steelpy.trave3D.preprocessor.assemble import assemble_banded_Kmatrix
-from steelpy.trave3D.processor.operations import solve_forces
-
-
-
+#from steelpy.f2uModel.results.main import Results
+# steelpy.trave3D
+from .preprocessor.mass import form_mass
+from .processor.dynamic_solver import eigen, trnsient
+from .processor.static_solver import solve_deflections
+from .postprocessor.main import Results
 #
 #
 class Trave3D:
@@ -28,104 +21,111 @@ class Trave3D:
     A program for static & dynamic analysis
     of 3-d framed structures
     """
-    __slots__ = ['_mesh', '_load', '_f2u']
+    __slots__ = ['_mesh', '_load', '_f2u', '_results']
     
     def __init__(self) -> None:
         """
         """       
-        #self._units = Units()
-        #self._mesh = Mesh()
-        print ("-- module : trave3D version 2.20")
+        print ("-- module : trave3D version 2.50")
         print ('{:}'.format(52 * '-'))
-    
-    
-    @property
-    def f2u_model(self):
-        """
-        """
-        return self._f2u
-    
-    @f2u_model.setter
-    def f2u_model(self, model):
-        """
-        """
-        self._f2u = model
-        #self._mesh = model.mesh
-        #self._load = model.load
-    
+    #
     #
     @property
-    def load(self):
+    def mesh(self):
         """
         """
-        return self._load
+        return self._results.mesh
     
-    @load.setter
-    def load(self, value):
+    @mesh.setter
+    def mesh(self, value):
         """
         """
-        self._load = value
+        #self._mesh = value
+        self._results = Results(mesh=value)
     #
-    def run_static(self, method:Union[str,None]=None):
+    def run_static(self, method:str|None=None):
         """
         Solves the static system 
         method : banded, frontal
         """
-        # geometry
-        elements = self._f2u.mesh.elements
-        nodes = self._f2u.mesh.nodes
-        boundaries = self._f2u.mesh.boundaries
-        # loading
-        basic_load = self._f2u.load.basic
-        load_combination = self._f2u.load.combination
-        # solution
-        if not method:
-            try:
-                # numpy sulution
-                import numpy as np
-                from steelpy.trave3D.preprocessor.assemble_np import assemble_Kmatrix
-                from steelpy.trave3D.processor.static_solver_np import solve_displacement_numpy
-                #
-                assemble_Kmatrix(elements, nodes, boundaries)
-                ndisp = solve_displacement_numpy(elements, nodes, boundaries,
-                                                 basic_load, load_combination)
-            except ModuleNotFoundError:
-                # pure python solution
-                assemble_banded_Kmatrix(elements, nodes, boundaries)
-                ndisp = solve_displacement(elements, nodes, boundaries,
-                                           basic_load, load_combination)
+        # -----------------------------------
+        df_ndisp = self.deflection(method=method)
+        # -----------------------------------
         #
-        self._f2u._results.node.deflection = ndisp
+        self._results.postprocess(df_ndisp=df_ndisp)
         #
-        membf, nreacs = solve_forces(elements, self._f2u._results.node.deflection)
+        #self._results.node.deflection = df_ndisp
         #
-        nbound = {key:nodes[key].index for key, item in boundaries.node.items()
-                  if sum(item[:6])!= 0}
-        reactions = []
-        for lname, nreac in nreacs:
-            reactions.extend([[key, lname, 'global', *nreac[index]] 
-                              for key, index in nbound.items()])
-        self._f2u._results.node.reaction = reactions
-        #
-        self._f2u._results.element.force = membf
+        # -----------------------------------
         #print("-->")
+        return self._results
     #
-    def run_dynamic(self, type:Union[str,None]=None):
+    def run_dynamic(self, end_time: float, delta_t: float,
+                    type:str|None=None):
         """
-        Solves the static system 
+        Solves the dynamic system
+        
+        end_time: simulation time [seconds]
+        deltat : time increment [seconds]
         type : modal, time history
         mass : lumped, consistent
         damping : 
-        """    
-    #
-    def print_results(self):
         """
+        file = open( "stfmx.f2u", "rb" )
+        jbc = pickle.load( file )
+        stf = pickle.load( file )
+        mass =  pickle.load( file )
+        file.close()
+        #
+        ibandm = 1
+        #load = []
+        npt =  int(end_time // delta_t)
+        #
+        trnsient(stf, mass, jbc, npt, 
+                 #load,
+                 #disp, vel, acc, fmag, olddis,
+                 #wk, damp, loadin, maxnode,
+                 ibandm)        
+        #
+        print('--')
+    #
+    def nfreq(self):
+        """ """
+        # geometry
+        elements = self._mesh.elements()
+        nodes = self._mesh.nodes()
+        boundaries = self._mesh.boundaries()
+        # pure python solution
+        assemble_banded_Kmatrix(elements, nodes, boundaries)
+        #
+        mss, ibandm = form_mass(elements, nodes, boundaries)
+        eigen(ibandm=ibandm, ivib=2)
+        print('--')
+    #
+    #
+    def deflection(self, method: str, log: bool = False):
+        """Calculate node deflection
+        
+        method: numpy/banded/sparse
         """
-        self._f2u._results.node.print_deflections()
-        self._f2u._results.node.print_reactions()
-        self._f2u._results.element.print_forces()
-    #
-    #
+        # geometry
+        mesh = self._results.mesh
+        # loading
+        load = self._results.load
+        basic_load = load.basic()
+        #df_nload = basic_load.get_node_load2(elements, nodes, boundaries)
+        df_nload = basic_load.node_df()
+        #
+        # solution
+        #
+        jbc, K = mesh.K(solver=method, log=log)
+        #
+        #
+        df_ndisp, df_nload = solve_deflections(df_nload, method)
+        #
+        load._df_nodal = df_nload
+        return df_ndisp
+#
 #
 #    
     

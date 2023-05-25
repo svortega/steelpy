@@ -1,21 +1,25 @@
 # 
-# Copyright (c) 2019-2021 steelpy
+# Copyright (c) 2019-2023 steelpy
 #
 # 
 # Python stdlib imports
-from array import array
+from __future__ import annotations
+#from array import array
 from collections.abc import Mapping
 #from collections import defaultdict
 from collections import Counter, defaultdict
 #from dataclasses import dataclass
-from typing import Union, Dict, List, Union
+#from typing import Union, Dict, List, Union
 #from math import prod
 
 # package imports
-from steelpy.f2uModel.load.operations.operations import duplicates, indices
-from steelpy.f2uModel.load.operations.combination import LoadCombinationBasic
-from steelpy.f2uModel.results.sqlite.operation.process_sql import create_connection
-
+from steelpy.f2uModel.load.sqlite.basic_load import BasicLoadSQL
+# steelpy.f2uModel.load
+from ..process.operations import duplicates, indices
+from ..process.combination import LoadCombinationBasic
+# steelpy
+from steelpy.f2uModel.mesh.process.process_sql import create_connection
+from steelpy.process.dataframe.main import DBframework
 #
 #
 class LoadCombSQL(LoadCombinationBasic):
@@ -29,12 +33,13 @@ class LoadCombSQL(LoadCombinationBasic):
         super().__init__()
         self.bd_file = bd_file
         #
-        self._basic = BasicLoadSQL(self)
-        self._combination = LoadCombinationSQL(self)
+        self._basic = BasicLoadSQL(db_file=self.bd_file)
+        self._combination = {} #LoadCombinationSQL(self)
     #
-    def __setitem__(self, load_name:int, load_title:str) -> None:
+    def __setitem__(self, load_name:int|str, load_title:str) -> None:
         """
         """
+        load_name = str(load_name)
         try:
             self._labels.index(load_name)
             raise Exception('    *** warning load combination name {:} already exist'
@@ -42,32 +47,39 @@ class LoadCombSQL(LoadCombinationBasic):
         except ValueError:
             self._labels.append(load_name)
             self._title.append(load_title)
-            conn = create_connection(self.bd_file)
-            with conn:
-                load_number = self._push_load_combination(conn, load_name, load_title)
-                self._number.append(load_number)
-                conn.commit()
+            load_number = next(self.get_number())
+            self._number.append(load_number)
+            #conn = create_connection(self.bd_file)
+            #
+            self._combination[load_name] = CombTypeSQL(name=load_name,
+                                                       title=load_title,
+                                                       bd_file=self.bd_file)
+            #
+            self._combination[load_name].number = load_number
+            #
+            #with conn:
+            #    load_number = self._push_load_combination(conn, load_name, load_title)
+            #    self._number.append(load_number)
+            #    conn.commit()
     #
-    def __getitem__(self, load_name:Union[str,int]):
+    def __getitem__(self, load_name:str|int):
         """
         """
+        load_name = str(load_name)
         try:
             self._index = self._labels.index(load_name)
-            return CombTypeSQL(self)
+            #return CombTypeSQL(self)
+            return self._combination[load_name]
         except ValueError:
             raise IOError("load combination {:} not defined".format(load_name))
     #
-    def _push_load_combination(self, conn, load_name:int, load_title:str):
+    #
+    def to_basic2(self):
         """ """
         #
-        project = (load_name, load_title, "combination")
-        sql = 'INSERT INTO tb_Load(name, title, type) VALUES(?,?,?)'
-        cur = conn.cursor()
-        cur.execute(sql, project)
-        return cur.lastrowid
-    #
-    def to_basic(self):
-        """ """
+        db = DBframework()
+        dftemp = []
+        #
         conn = create_connection(self.bd_file)
         cur = conn.cursor()
         cur.execute ( "SELECT load_number, bl_number, factor\
@@ -101,7 +113,8 @@ class LoadCombSQL(LoadCombinationBasic):
                     blname = lnumber[name]
                     factor = [tlist[1][index] for index in load]
                     #basic_loads[key].append([name, sum(factor)])
-                    basic_loads[ lname ].append ( [ blname, sum ( factor ) ] )
+                    basic_loads[ lname ].append( [ blname, sum ( factor ) ] )
+                    #dftemp.append([key, item.number, 'combination', item.title, blname, sum(factor)])
                 # singles
                 sload = set(tlist[0]) - set(dup)
                 for name in sload:
@@ -112,136 +125,182 @@ class LoadCombSQL(LoadCombinationBasic):
             else:
                 #basic_loads[key] = item
                 basic_loads[lname] = [[lnumber[_bl[0]], _bl[1]] for _bl in item]
+                #dftemp.extend([[key, item.number, 'combination', item.title, lnumber[_bl[0]], _bl[1]]
+                #               for _bl in item])
+        #
+        #header = ['load_name', 'load_number','load_type', 'load_title', 'basic_load', 'factor']
+        #dfcomb = db.DataFrame(data=dftemp, columns=header, index=None)
+        #return dfcomb #, basic_loads
         return basic_loads
     #
-    def solve_combinations(self, basic_res, memb_force):
-        """
-        """
-        comb_res = {}
-        memb_comb = {}
-        bloads = self.to_basic()
-        for lcomb, comb in bloads.items():
-            #lcomb = load_combination[cname].title
-            beam_load = {}
-            for bname, factor in comb:
-                try:
-                    comb_res[lcomb] += basic_res[bname] * factor
-                except KeyError:
-                    comb_res[lcomb] = basic_res[bname] * factor
-                #
-                for mname, member in memb_force[bname].items():
-                    try:
-                        beam_load[mname] += member * factor
-                    except KeyError:
-                        beam_load[mname] =  member * factor
-            memb_comb[lcomb] = beam_load
-        return comb_res, memb_comb
+    #def solve_combinations(self, basic_res, memb_force):
+    #    """
+    #    """
+    #    comb_res = {}
+    #    memb_comb = {}
+    #    bloads = self.to_basic()
+    #    for lcomb, comb in bloads.items():
+    #        #lcomb = load_combination[cname].title
+    #        beam_load = {}
+    #        for bname, factor in comb:
+    #            try:
+    #                comb_res[lcomb] += basic_res[bname] * factor
+    #            except KeyError:
+    #                comb_res[lcomb] = basic_res[bname] * factor
+    #            #
+    #            for mname, member in memb_force[bname].items():
+    #                try:
+    #                    beam_load[mname] += member * factor
+    #                except KeyError:
+    #                    beam_load[mname] =  member * factor
+    #        memb_comb[lcomb] = beam_load
+    #    return comb_res, memb_comb
 #     
 #
 class CombTypeSQL:
     """
     """
-    __slots__ = ['_cls']
+    __slots__ = ['name', 'number', 'title', 
+                 '_basic', '_metocean', '_combination',
+                 'bd_file']
 
-    def __init__(self, cls):
+    def __init__(self, name:str, title:str, bd_file:str):
         """
         """
-        self._cls = cls
+        #self._cls = cls
+        self.name = name
+        self.title = title
+        self.bd_file = bd_file
+        #
+        self._basic = BasicCombSQL(bl_type="basic",
+                                   comb_name=self.name, 
+                                   bd_file=self.bd_file)
+        self._metocean = BasicCombSQL(bl_type="metocean",
+                                      comb_name=self.name,
+                                      bd_file=self.bd_file)
+        self._combination = BasicCombSQL(bl_type="combination",
+                                         comb_name=self.name,
+                                         bd_file=self.bd_file)        
+        #
+        conn = create_connection(self.bd_file)
+        with conn:
+            self._push_load_combination(conn, name, title)
+    #
+    def _push_load_combination(self, conn, load_name:int, load_title:str):
+        """ """
+        #
+        project = (load_name, load_title, "combination")
+        sql = 'INSERT INTO tb_Load(name, title, type) VALUES(?,?,?)'
+        cur = conn.cursor()
+        cur.execute(sql, project)
+        conn.commit() 
+        return cur.lastrowid
+    #
+    @property
+    def combination(self):
+        """
+        """
+        return self._combination
 
     #
     @property
-    def load_combination(self):
+    def basic(self):
         """
         """
-        return self._cls._combination
-
+        return self._basic
+    
     #
     @property
-    def basic_load(self):
+    def metocean(self):
         """
         """
-        return self._cls._basic
+        return self._metocean    
 #
-class BasicLoadSQL(Mapping):
+#
+class BasicCombSQL(Mapping):
     """
     FE Metocean Combination Class
     """
-    __slots__ = ['_cls', '_labels', '_number']
+    __slots__ = ['_labels', '_type', '_number', 'bd_file', '_comb_name']
 
-    def __init__(self, cls):
+    def __init__(self, bl_type:str, comb_name:str|int, bd_file:str):
         """
         """
-        self._cls = cls
-        self._labels: List[Union[str,int]] = []
-        self._number: List[Union[str,int]] = []
+        self._comb_name = comb_name
+        self._labels: list[str,int] = []
+        self._number: list[str,int] = []
+        self._type = bl_type
+        self.bd_file = bd_file
 
     #
-    def __getitem__(self, basic_load_name:int):
+    def __setitem__(self, load_name:int|str, factor: float) -> None:
         """
         """
-        #1/0
+        load_name = str(load_name)
+        #
+        self._labels.append(load_name)
+        #self._number.append(comb_name)
+        #
+        conn = create_connection(self.bd_file)
+        with conn:
+            if self._type == 'basic':
+                bl_number = get_basic_number(conn, load_name)
+                lc_number = None
+                
+            elif self._type == 'combination':
+                bl_number = None
+                lc_number = get_comb_number(conn, load_name)
+            
+            else:
+                1 / 0
+            #
+            load_number = get_comb_number(conn, self._comb_name)
+            self._push_combination(conn, load_number, bl_number, lc_number, factor)
+            
+    #
+    def __getitem__(self, load_name:int|str):
+        """
+        """
+        load_name = str(load_name)
         try:
-            index = self._cls._index
-            comb_name = self._cls._labels[index]
+            #index = self._cls._index
+            comb_name = self._comb_name
             #load_title = self._title[index]
             # load_number = self._load_number.index(load_name)
-            bd_file = self._cls.bd_file
+            bd_file = self.bd_file
             conn = create_connection(bd_file)
-            comb_number = get_comb_number( conn, comb_name )
-            basic_number = self._get_basic_load_number(conn, basic_load_name)
+
             # get beam load
             with conn:
-                factor = self._get_basic_load_factor(conn, comb_number, basic_number)
+                comb_number = get_comb_number( conn, comb_name )
+                if self._type == 'basic':
+                    basicn = get_basic_number(conn, load_name)                
+                    factor = get_basic_factor(conn, comb_number, basicn)
+                
+                elif self._type == 'combination':
+                    combn = get_comb_number(conn, load_name)                
+                    factor = get_comb_factor(conn, comb_number, combn)
+                
+                else:
+                    1 / 0
             return factor
         except TypeError:
-            raise KeyError(f"{basic_load_name}")
+            raise KeyError(f"{load_name}")
 
-    def __setitem__(self, basic_load_name:int, factor: float) -> None:
-        """
-        """
-        index = self._cls._index
-        #comb_title = self._cls._title[index]
-        comb_name = self._cls._labels[index]
-        conn = create_connection(self._cls.bd_file)
-        load_number = get_comb_number(conn, comb_name)
-        self._labels.append(basic_load_name)
-        self._number.append(comb_name)
-        with conn:
-            self._push_combination(conn, load_number, basic_load_name, factor)
-            conn.commit()
     #
     def _push_combination(self, conn, load_number:int, bl_name:int,
-                          factor:float):
+                          lc_name:int, factor:float):
         """
         """
         #
-        #try:
-        basic_number = self._get_basic_load_number(conn, bl_name)
         #
-        project = (load_number, basic_number, None, factor)
+        project = (load_number, bl_name, lc_name, factor)
         sql = 'INSERT INTO tb_LoadCombIndex(\
                load_number, bl_number, lc_number, factor)\
                VALUES(?,?,?,?)'
         cur = conn.cursor()
         cur.execute(sql, project)
-    #
-    def _get_basic_load_number(self, conn, load_name:int):
-        """ """
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM tb_Load\
-                     WHERE name = {:} \
-                     AND type = 'basic'".format(load_name))
-        loads = cur.fetchone()
-        return loads[0]
-    #
-    def _get_basic_load_factor(self, conn, load_number, basic_number):
-        """ """
-        cur = conn.cursor ()
-        cur.execute ( "SELECT * FROM tb_LoadCombIndex\
-                     WHERE load_number = {:} \
-                     AND bl_number = {:}".format(load_number, basic_number))
-        loads = cur.fetchone ()
-        return loads[4]
+        conn.commit()
     #
     @property
     def load_type(self):
@@ -258,13 +317,7 @@ class BasicLoadSQL(Mapping):
     def __iter__(self):
         """
         """
-        index = self._cls._index
-        comb_name = self._cls._labels[index]
-        basic_load = [self._labels[x] for x, item in enumerate(self._number)
-                      if item == comb_name]
-        #number = self._number
-        #basic = set(self._labels)
-        return iter(basic_load)
+        return iter(self._labels)
 #
 #
 class LoadCombinationSQL(Mapping):
@@ -275,8 +328,8 @@ class LoadCombinationSQL(Mapping):
         """
         """
         self._cls = cls
-        self._labels: List[Union[str, int]] = []
-        self._number: List[Union[str, int]] = []
+        self._labels: list[str|int] = []
+        self._number: list[str|int] = []
     #
     def __setitem__(self, load_name:int, factor: float) -> None:
         """
@@ -353,16 +406,6 @@ class LoadCombinationSQL(Mapping):
         return iter(comb_load)
 #   
 #
-def get_comb_number(conn, load_name:int):
-    """ """
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM tb_Load\
-                 WHERE name = {:} \
-                 AND type = 'combination'".format(load_name))
-    loads = cur.fetchone()
-    return loads[0]
-#
-#
 def get_load_list(conn):
     """ """
     cur = conn.cursor()
@@ -371,3 +414,38 @@ def get_load_list(conn):
     return loads
 #
 #
+def get_comb_number(conn, load_name:int|str):
+    """ """
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM tb_Load\
+                 WHERE name = {:} \
+                 AND type = 'combination'".format(load_name))
+    loads = cur.fetchone()
+    return loads[0]
+#
+def get_basic_number(conn, load_name:int):
+    """ """
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM tb_Load\
+                 WHERE name = {:} \
+                 AND type = 'basic'".format(load_name))
+    loads = cur.fetchone()
+    return loads[0]
+#
+def get_basic_factor(conn, load_number, basic_number):
+    """ """
+    cur = conn.cursor ()
+    cur.execute ( "SELECT * FROM tb_LoadCombIndex\
+                 WHERE load_number = {:} \
+                 AND bl_number = {:}".format(load_number, basic_number))
+    loads = cur.fetchone ()
+    return loads[4]
+#
+def get_comb_factor(conn, load_number, lc_number):
+    """ """
+    cur = conn.cursor ()
+    cur.execute ( "SELECT * FROM tb_LoadCombIndex\
+                 WHERE load_number = {:} \
+                 AND lc_number = {:}".format(load_number, lc_number))
+    loads = cur.fetchone ()
+    return loads[4]

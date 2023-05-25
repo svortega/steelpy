@@ -1,13 +1,13 @@
 # 
-# Copyright (c) 2009-2021 fem2ufo
+# Copyright (c) 2009-2023 fem2ufo
 #
-
+from __future__ import annotations
 # Python stdlib imports
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Dict, List, ClassVar, Tuple, Iterable, Union
-
+#from typing import Dict, List, ClassVar, Tuple, Iterable, Union
+import re
 
 # package imports
 from steelpy.process.units.main import Units
@@ -25,8 +25,8 @@ class Element:
         """
         """
         self.index: int = index
-        self._cls: ClassVar = cls
-        self.name: Union[int, str] = cls._labels[index]
+        self._cls = cls
+        self.name: int|str = cls._labels[index]
     #
     @property
     def number(self) -> int:
@@ -45,7 +45,7 @@ class Element:
 
     #
     @property
-    def connectivity(self) -> List:
+    def connectivity(self) -> list:
         """
         """
         #conn = self._cls._connectivity[self.index]
@@ -55,7 +55,7 @@ class Element:
         return jnt
     #
     @property
-    def material(self) -> List:
+    def material(self) -> list:
         """
         """
         material_name = self._cls._materials[self.index]
@@ -72,7 +72,7 @@ class Element:
             self._cls._materials[self.index] = material
     #
     @property
-    def section(self) -> List:
+    def section(self) -> list:
         """
         """
         section_name = self._cls._sections[self.index]
@@ -134,9 +134,10 @@ class SegmentedBeam:
     @property
     def material(self):
         """ """
+        materials = self._cls.f2u_materials
         index  = self._get_index()
         name = self._cls._materials[index[0]]
-        return self._cls.f2u_materials[name]
+        return materials[name]
 
     @material.setter
     def material(self, value):
@@ -151,8 +152,9 @@ class SegmentedBeam:
     @property
     def section(self):
         """ """
+        sections = self._cls.f2u_sections
         index = self._get_index()
-        return self._cls.f2u_sections[self._cls._sections[index[0]]]
+        return sections[self._cls._sections[index[0]]]
 
     @section.setter
     def section(self, value):
@@ -173,7 +175,7 @@ class SegmentedBeam:
         return self._cls._mesh[index[0]]
     
     @_mesh.setter
-    def _mesh(self, element:Union[str,int]):
+    def _mesh(self, element: str|int):
         """
         """
         index = self._get_index()
@@ -218,7 +220,7 @@ class Steps:
         self._cls._step_label[new_index] = step_name
     #    
     # 
-    def __getitem__(self, step_name: Union[int,str]) -> Tuple:
+    def __getitem__(self, step_name: int|str) -> tuple:
         """
         step_name : node number
         """
@@ -241,7 +243,7 @@ class Beam(Element):
     def __init__(self, cls, element_index) -> None:
         """
         """
-        Element.__init__(self, cls, element_index)
+        super().__init__(cls, element_index)
         self._steps = Steps(self)
     #
     #
@@ -254,7 +256,7 @@ class Beam(Element):
         return self.eccentricities
 
     @offsets.setter
-    def offsets(self, eccentricities: List) -> None:
+    def offsets(self, eccentricities: list) -> None:
         """
         input
         eccentricities : list [eccentricities number per node]
@@ -297,7 +299,7 @@ class Beam(Element):
 
     #
     @property
-    def releases(self) -> Tuple:
+    def releases(self) -> tuple:
         """
         """
         _list = []
@@ -307,7 +309,7 @@ class Beam(Element):
 
     #
     @property
-    def hinges(self) -> Tuple:
+    def hinges(self) -> tuple:
         """
         """
         return self.releases
@@ -351,7 +353,7 @@ class Beam(Element):
                            [_nodes[1].x, _nodes[1].y, _nodes[1].z])
         return length * self._cls.f2u_units.m
     #
-    def find_coordinate(self, node_distance:float, node_end:int=0) -> Tuple:
+    def find_coordinate(self, node_distance:float, node_end:int=0) -> tuple:
         """
         """
         _node = self.connectivity
@@ -386,7 +388,7 @@ class Beam(Element):
     #
     #
     @property
-    def unit_vector(self) -> List[float]:
+    def unit_vector(self) -> list[float]:
         """
         """
         _node1, _node2 = self.connectivity
@@ -421,31 +423,31 @@ class ConceptElements(Mapping):
         """
         #global f2u_materials, f2u_sections, f2u_units, f2u_points
         self.f2u_materials = materials
-        self.f2u_sections =  sections
+        self.f2u_sections = sections
         self.f2u_units = Units()
         self.f2u_points = points
         #
         self._element_type = element_type
         #
-        self._labels:List[Union[str,int]] = []
-        self._sections:List[Union[str,int]] = []
-        self._materials:List[Union[str,int]] = []
-        self._roll_angle:List[float] = []
-        self._number:List[int] = []
+        self._labels:list[str|int] = []
+        self._sections:list[str|int] = []
+        self._materials:list[str|int] = []
+        self._roll_angle:list[float] = []
+        self._number:list[int] = []
         #
-        self._type: List[str] = []
-        self._connectivity: List = []
-        self._segment:List[float] = []
-        self._step_label:List[Union[str,int]] = []
-        self._mesh:List[Union[str,int]] = []
+        self._type: list[str] = []
+        self._connectivity: list = []
+        self._segment:list[float] = []
+        self._step_label:list[str|int] = []
+        self._mesh:list[str|int] = []
         #
         #self._direction_cosines = array('i', [])
         #self._offset_index = array('i', [])        
         #self._eccentricities: List = []
         #self._releases: List = []        
     #
-    def __setitem__(self, element_name: Union[int, int], 
-                    parameters: Union[List[float], Dict[str, float]]) -> None:
+    def __setitem__(self, element_name: int|str, 
+                    parameters: list[float]|dict[str,float]) -> None:
         """
         farg = [name, connectivity, material, section, type, group]
         """
@@ -493,7 +495,7 @@ class ConceptElements(Mapping):
             #self._eccentricities.append([])
             #self._releases.append([])
     
-    def __getitem__(self, element_name: Union[str,int]) -> ClassVar:
+    def __getitem__(self, element_name: str|int):
         """
         """
         try:
@@ -509,13 +511,13 @@ class ConceptElements(Mapping):
             raise IndexError(' ** element {:} does not exist'.format(element_name))
 
     #
-    def __iter__(self) -> Iterable:
+    def __iter__(self):
         """
         """
         labels = list(dict.fromkeys(self._labels))
         return iter(labels)
 
-    def __delitem__(self, element_name: Union[str,int]) -> None:
+    def __delitem__(self, element_name: str|int) -> None:
         """
         """
         try:
@@ -622,6 +624,45 @@ class ConceptElements(Mapping):
         return step
     #
     #
+    @property
+    def df(self):
+        """ """
+        1/0
+
+    @df.setter
+    def df(self, df):
+        """ """
+        #col = df.columns.tolist()
+        coord = list(filter(lambda v: re.match('coord(inate)?(\_)?(x|y|z)(\_)?(1|2)',
+                                               v, re.IGNORECASE), df.columns))
+
+        if coord:
+            coord1 = list(filter(lambda v: re.match('coord(inate)?(\_)?(x|y|z)(\_)?1',
+                                                    v, re.IGNORECASE), coord))
+            coord1.sort(key=alphaNumOrder)
+            coord2 = list(set(coord) - set(coord1))
+            coord2.sort(key=alphaNumOrder)
+            #
+            for index, row in df.iterrows():
+                member_name = row['name']
+                self.__setitem__(member_name,
+                                 [list(row[coord1].values),
+                                  list(row[coord2].values)])
+                # update element
+                element = self.__getitem__(member_name)
+                element.material = row.material
+                element.section = row.section
+        else: # node, point
+            1/0
+    #
+    #print('-->')
 #
+#
+def alphaNumOrder(string):
+    """ Returns all numbers on 5 digits to let sort the string with numeric order.
+    Ex: alphaNumOrder("a6b12.125")  ==> "a00006b00012.00125"
+    """
+    return ''.join([format(int(x), '05d') if x.isdigit()
+                   else x for x in re.split(r'(\d+)', string)])
 #
 #

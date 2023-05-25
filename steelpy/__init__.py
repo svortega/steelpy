@@ -7,7 +7,7 @@ from steelpy.formulas.main import Formulas
 from steelpy.design.main import ClampDesign as Clamp
 from steelpy.metocean.main import Metocean
 from steelpy.trave3D.main import Trave3D
-from steelpy.beam.main import Beam
+from steelpy.beam.main import Beam #, SimpleBeam
 from steelpy.f2uModel.main import f2uModel
 #
 from steelpy.material.main import Materials
@@ -15,10 +15,11 @@ from steelpy.sections.main import Sections
 from steelpy.process.units.main import Units
 
 from steelpy.process.spreadsheet.xl_main import Spreadsheet
+#from steelpy.f2uModel.plot.model import PlotModel
 
 # constants
 __major__ = 0.  # for major interface/format changes
-__minor__ = 4  # for minor interface/format changes
+__minor__ = 5  # for minor interface/format changes
 __release__ = 1  # for tweaks, bug-fixes, or development
 
 __version__ = '%d.%d.%d' % (__major__, __minor__, __release__)

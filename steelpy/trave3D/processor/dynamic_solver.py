@@ -1,13 +1,16 @@
 # 
-# Copyright (c) 2009-2021  steelpy
+# Copyright (c) 2009-2023  steelpy
 #
 # Python stdlib imports
+from __future__ import annotations
+import copy
+#from itertools import chain
+import pickle
 #
 # package imports
-#import numpy as np
-#from scipy.linalg import eig
-from steelpy.trave3D.processor.operations import zeros
-from steelpy.trave3D.processor.jacobi import jacobi
+from steelpy.process.math.operations import zeros, matrix_full
+from ..processor.jacobi import jacobi
+#from ..processor.static_solver import BAK, UDUt
 #
 #
 #
@@ -15,159 +18,164 @@ from steelpy.trave3D.processor.jacobi import jacobi
 # eigenvalue solver
 # --------------------
 #
-def eigen(neqmas, ibandm, ivib, neq, iband, x, mtx):
+def eigen(ibandm: int, ivib: int,  
+          rtol: float = 1e-12, nsmax: int = 15):  # neqmas, x, mtx, neq, iband,
     """
     Solve eigenvalue problem using jacobi rotations
+    ivib : 1 geom / 2 mass
     """
+    #
+    file = open( "stfmx.f2u", "rb" )
+    jbc = pickle.load( file )
+    stf = pickle.load( file )
+    mtx =  pickle.load( file )
+    file.close()
+    #
+    #jbc = list(chain.from_iterable(jbcc))
+    neq = len(stf)
+    #iband = len(stf[0])      
+    #    
     # stiffness
-    #a = np.zeros((neq, iband), dtype = np.float64, order = 'F')
-    a = zeros(neq, neq)
+    a = matrix_full(stf)
+    #
     # mass
-    #b = np.zeros((neq, iband), dtype = np.float64, order = 'F')
-    b = zeros(neq, neq)
-    #
-    rtol = 1e-12
-    iwidth = neq
-    # x  = rdstff(iwidth, iband)
-    # reassign to full form  
-    for i in range(neq):
-        jmax = min(iband, neq - i)
-        for j in range(jmax):
-            a[i][i + j] = x[i][j]
-            a[i + j][i] = x[i][j]
-    #
-    #ilog = open('stadyn.log','a') 
-    # 
     if ivib == 2 :
         x = mtx  # rdmass(neqmas, iband)
         # reassign to [b] matrix 
         if ibandm == 1 :
+            b = zeros(neq, neq)
             for i in range(neq):
-                b[i][0] = x[i][0]
+                b[i][i] = x[i][0]
         else :
-            for i in range(neq):
-                jmax = min(ibandm, neq - i)
-                
-                for j in range(jmax):
-                    b[i][i + j] = x[i][j]
-                    b[i + j][i] = x[i][j]
-        #
+            b = matrix_full(mtx)
         #ilog.write("@@ eign:  reloaded [k] [m]  ok \n")
         print("@@ eign:  reloaded [k] [m]  ok")
     elif ivib == 1 :
-        iwidth =  neq
-        x = mtx # rdgeom(iwidth, iband)
-        # reassign to [b] 
-        for i in range(neq):
-            jmax = min(iband, neq - i)
-            for j in range(jmax):
-                b[i][i + j] = x[i][j]
-                b[i + j][i] = x[i][j]
+        b = matrix_full(mtx)
         #ilog.write("@@ eign: raloaded [k] [g] ok  ok \n")
         print("@@ eign: raloaded [k] [g] ok")
     #
-    ibandm = neqmas
-    nsmax = 15
-    _eigv, _x = jacobi(a, b, neq, rtol, nsmax, ibandm, x, neqmas)
-    _eigv, _x = eigsrt(_eigv, _x, neq)
+    ibandm = neq # neqmas
+    #nsmax = 15
+    _eigv, _x = jacobi(a, b, neq, rtol, nsmax, ibandm, x) #, neqmas
+    _eigv, _x = eigsrt(_eigv, _x)
     #
-    #eigv, v = eig(a, b)
-    #print ("{:}".format(eigv))
-    #print ("====")
-    #print ("{:}".format(v))
-    #v1 = v.T
-    #x = np.dot(a,v) - eigv*np.dot(b,v)
-    #x = x.real
-    #eigv = eigv.real
-    #print ("====")
-    #z = np.dot(v.T, np.dot(b, v))
-    #z = np.dot(np.dot(v.T, b), v)
-    #print ("{}".format(z))
-    #print ("====")
-    #x = np.array([v[:,i]/np.sqrt(abs(z[i,i])) for i in range(neq)])
-    #x = x.T
-    #print("{}".format(x))
-    #print  np.divide(v,b)
-    #print [v[:,i]/math.sqrt(abs(b[i,i])) for i in range(neq)]
-    
-    #print"----------"
-    #print eigv
-    
-    #print np.linalg.eigvals(a)
-    #print np.linalg.eigvals(b)
-    
-    # eigv = jacobi(a, b, eigv, d, neq, rtol, nsmax, ibandm, x, neqmas)
-    
-    print("@@ No of sweeps".format(nsmax))
+    print("@@ No of sweeps {:}".format(nsmax))
     #ilog.write("@@ No of sweeps".format(nsmax))
     #
-    #eigv, x = eigsrt(eigv, x)
-    #print"----------"
+    #print("----------")
     #print eigv
-    
     # rewind isnp
     #isnp = open('stadyn.snp','w')
-    #for i in range(neq):
-    #    isnp.write("{: 1.6e} ".format(float(_eigv[i])))
-    #    for j in range(neq):
-    #        isnp.write("{: 1.6e} ".format(float(_x[j][i])))
+    for i in range(neq):
+        print("{: 1.6e} ".format(float(_eigv[i])))
+        #for j in range(neq):
+        #    print("{: 1.6e} ".format(float(_x[j][i])))
     #    isnp.write(" \n") 
-    # L84:
-    #isnp.close()
-    #ilog.close()
+    #
+    eigenp(a, b)
     #
     return _x, _eigv
 #
-def eigsrt(eigv, x, neq):
+def eigsrt(eigv, x):
     """
     Sort the eigenvalues in ascending order
     """
-    #
-    for i in range(neq-1):
+    neq = len(x)
+    for i in range(neq):
         k = i
         p = eigv[i]
         # search for lowest value
-        for j in range(i+1, neq):
+        for j in range(i, neq):
             if abs(eigv[j]) < abs(p) :
                 k = j
                 p = eigv[j]
-        # L11:
         # re-arrange vectors 
         if k != i :
             eigv[k] = eigv[i]
             eigv[i] = p
-            
             for j in range(neq):
                 p = x[j][i]
                 x[j][i] = x[j][k]
                 x[j][k] = p
-            # L12:
-    # L13:
     #
     return eigv, x
 #
+#
+def eigenp(a, b):
+    """ """
+    #file = open( "stfmx.f2u", "rb" )
+    #jbc = pickle.load( file )
+    #a = pickle.load( file )
+    #b =  pickle.load( file )
+    #file.close()
+    #
+    neq = len(a)
+    #
+    import numpy as np
+    from scipy.linalg import eig    
+    #
+    eigv, v = eig(a, b)
+    #print ("{:}".format(eigv))
+    #print ("====")
+    #print ("{:}".format(v))
+    v1 = v.T
+    x = np.dot(a,v) - eigv*np.dot(b,v)
+    x = x.real
+    eigv = eigv.real
+    #
+    print("====")
+    #z = np.dot(v.T, np.dot(b, v))
+    z = np.dot(np.dot(v.T, b), v)
+    #print ("{}".format(z))
+    #print ("====")
+    x = np.array([v[:,i]/np.sqrt(abs(z[i,i])) for i in range(neq)])
+    x = x.T
+    #print("{}".format(x))
+    #print(np.divide(v,b))
+    #print([v[:,i]/np.sqrt(abs(b[i,i])) for i in range(neq)])
+    #
+    print("----------")
+    #print(eigv)
+    #print np.linalg.eigvals(a)
+    #print np.linalg.eigvals(b)
+    #
+    eigv = np.sort(eigv)
+    #
+    for i in range(neq):
+        print("{: 1.6e} ".format(float(eigv[i])))    
+    #
+    return x, eigv
 #
 # --------------------           
 #  transient 
 # --------------------                      
 #
-def trnsient(stf, mass, load, disp, vel, acc, fmag, olddis,
-             wk, damp, jbc, loadin, maxnode):
+def trnsient(stf, mass, jbc, npt,  #load,
+             #disp, vel, acc, fmag, olddis,
+             #wk, loadin, maxnode, # damp,
+             ibandm: int, 
+             deltat:float = 0.1, sigma:float=0.5, alpha:float=0.25,
+             dampkk: float = 0.0, dampmm: float = 0.0, dampcc:float = 0.0):
     """
     Transient  analysis by newmark time integration
+    ibandm : 1-banded matrix
+    dampkk : stiffness damping
+    dampmm : mass damping
+    dampcc : damping 
     """
-    # parameter( sigma=0.5e0, alpha=0.25e0)
-    # Dim loadin(maxnode*3) as double
-    ildin = maxnode*3
     #
-    # get things # ready for _time integration loop
-    # open report.txt for app# end as #1
+    ildin = maxnode*3
+    iprcnt = 'ok'
+    #
+    # get things ready for time integration loop
+    # 
     print (" ")
     print (" --> ")
     # read (*,*) deltat, npt, iprcnt
     if npt > ildin :
-        print("@@ _time steps npt > load size ", npt," > ",ildin)
-        print("@@ _time steps npt > load size ", npt," > ",ildin)
+        print("@@ time steps npt > load size {:} > {:}".format(npt, ildin))
+        #print("@@ _time steps npt > load size ", npt," > ",ildin)
         npt = ildin - 1
     # end if
     print(deltat, npt, iprcnt," ::dt no pts print")
@@ -185,28 +193,44 @@ def trnsient(stf, mass, load, disp, vel, acc, fmag, olddis,
     a7 = sigma*deltat
     #
     # read stiffness, mass & load 
+    #iwidth = iband
+    #rdstff(stf, iwidth)
+    #iwidth = ibandm
+    #rdmass(mass,iwidth)
+    #rdload(fmag)
+    #
+    #file = open( "stfmx.f2u", "rb" )
+    #jbcc = pickle.load( file )
+    #stf = pickle.load( file )
+    #mass =  pickle.load( file )
+    #file.close()
+    #
+    neq = len(stf)
+    iband = len(stf[0])
     iwidth = iband
-    rdstff(stf, iwidth)
-    iwidth = ibandm
-    rdmass(mass,iwidth)
-    rdload(fmag)
+    #
     print("@@ reloaded [k] [m] {p} ok")
-    print("@@ reloaded [k] [m] {p} ok")
+    #print("@@ reloaded [k] [m] {p} ok")
+    #
     #
     print("@@ dammath.ping coeffs: ", dampkk, dampmm)
+    idamp = 0
+    damp = [dampcc for i in range(neq)]
     if dampkk > 0.0 or dampmm > 0.0 : 
         idamp = 1
-    else : 
-        idamp = 0
+        damp = [dampkk * stf[i][0] + dampmm * mass[i][0] + dampcc
+                for i in range(neq)]        
+    #else : 
+    #    idamp = 0
     #
-    if idamp == 1 :
-        for i in range(neq):
-            damp[i] = dampkk * stf[i][1] + dampmm * mass[i][1] + dampcc
-    
+    #if idamp == 1 :
+    #    for i in range(neq):
+    #        damp[i] = dampkk * stf[i][0] + dampmm * mass[i][0] + dampcc
+    #
     # form effective stiffness matrix
     if ibandm == 1 :
         for i in range(neq):
-            stf[i][1] += a0 * mass[i][1]
+            stf[i][0] += a0 * mass[i][0]
     else :
         for i in range(neq):
             for j in range(iband):
@@ -214,21 +238,23 @@ def trnsient(stf, mass, load, disp, vel, acc, fmag, olddis,
     
     if idamp == 1 :
         for i in range(neq):
-            stf[i][1] += a1 * damp[i]
+            stf[i][0] += a1 * damp[i]
     #
     # decompose effective stiffness matrix 
-    ier1 = 0
-    udu(stf, neq, iband, ier1)
-    if ier1 == 0 :
-        print("error: zero diagonal term")
-        #close #1:exit def
-        sys.exit("error: zero diagonal term")
+    #ier1 = 0
+    #UDUt(stf, neq, iband, ier1)
+    stf = UDUt(stf)
     #
-    print("@@ udu: mults & divs",ier1)
-    print("@@ udu: mults & divs",ier1)
+    #if ier1 == 0 :
+    #    print("error: zero diagonal term")
+    #    #close #1:exit def
+    #    sys.exit("error: zero diagonal term")
+    #
+    #print("@@ udu: mults & divs",ier1)
+    #print("@@ udu: mults & divs",ier1)
     #
     # input load history from a file and interpolate
-    getload(npt, deltat, loadin, ildin, ilog)
+    loadin = getload(npt, deltat) # ildin
     #
     print(" ")
     print("choose nodal output: ")
@@ -247,7 +273,7 @@ def trnsient(stf, mass, load, disp, vel, acc, fmag, olddis,
         print (" goto L27")
     nout -= 1
     #
-    # start _time integration loop
+    # start time integration loop
     print("@@ beginning transient analysis")
     print("@@ beginning transient analysis")
     #
@@ -264,21 +290,23 @@ def trnsient(stf, mass, load, disp, vel, acc, fmag, olddis,
     nodeout(_time,forc,disp,vel,acc,neq,nout,inod,idyn)
     kount = 0
     print(" ")
-    # big _time loop
+    # big time loop
     for itime in range(1, npt):
         if mod((itime - 1) ,10) == 0 : 
             print(itime-1)
-        _time = real(itime-1) * deltat
+        _time = (itime-1) * deltat
         kount += 1
         #
         # save displacements
-        for i in range(neq):
-            olddis[i] = disp[i]
+        olddis = copy.copy(disp)
+        #for i in range(neq):
+        #    olddis[i] = disp[i]
         #
         # fmag says where the load is applied
         # done this way in case distributed load applied
-        for i in range(neq):
-            load[i] = loadin[itime] * fmag[i]
+        load = [loadin[itime] * i for i in fmag]
+        #for i in range(neq):
+        #    load[i] = loadin[itime] * fmag[i]
         #
         # form effective load vector
         if idamp == 1 :
@@ -300,7 +328,8 @@ def trnsient(stf, mass, load, disp, vel, acc, fmag, olddis,
         # solve for new displacements : udu al# ready obtained  
         #                             : do back - defstitution
         ier1 = 0
-        bak(stf,load,neq,iband,wk,ier1)
+        #BAK(stf,load,neq,iband,wk,ier1)
+        wk = BAK(stf,load)
         #
         # obtain new velocities, accelerations
         for i in range(neq):
@@ -343,17 +372,17 @@ def abband(matrix, vecin, vecout, neq, iband):
     #
     return vecout
 #
-def getload(npt, dt, loadin, nmax, ilog):
+def getload(t1: list, f1: list, npt: int, dt: float, nmax: int):
     """
     Gets applied load history by interpolation from input
     """
-    iload = 24
+    #iload = 24
     #
     # read data file
     # open report.txt for app# end as #1
-    print(" ")
+    #print(" ")
     # read(*,"(1a40) ") fy12
-    print(fy12," ::filename")
+    #print(fy12," ::filename")
     #
     # open(unit=iload, file = fy12)
     # rewind iload
@@ -386,7 +415,7 @@ def getload(npt, dt, loadin, nmax, ilog):
     #
     #L220:
     print("@@ # of force points # read ", i-1)
-    print("@@ # of force points # read ", i-1)
+    #print("@@ # of force points # read ", i-1)
     #     pad reminder with zeroes
     for i in range(k+1, npt):
         loadin[i] = 0.0
@@ -397,6 +426,7 @@ def getload(npt, dt, loadin, nmax, ilog):
     #
     # L240:
     print("@@ no data in load file")
+    return loadin
 #
-# 
+#
 #

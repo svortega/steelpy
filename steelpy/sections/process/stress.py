@@ -1,9 +1,9 @@
 # 
-# Copyright (c) 2019-2021 steelpy
+# Copyright (c) 2019-2023 steelpy
 #
 # Python stdlib imports
-#from dataclasses import dataclass
-from typing import NamedTuple, ClassVar, List
+from dataclasses import dataclass
+from typing import NamedTuple #, ClassVar, List
 #import sys
 import math
 
@@ -43,36 +43,36 @@ class Stress:
         """
         """ 
         #print('-->')
-        self.sigma_x: ClassVar = sigma_x
-        self.sigma_y: ClassVar = sigma_y
-        self.sigma_z: ClassVar = sigma_z
-        self.tau_x:   ClassVar = tau_x
-        self.tau_y:   ClassVar = tau_y
-        self.tau_z:   ClassVar = tau_z
+        self.sigma_x: list = sigma_x
+        self.sigma_y: list = sigma_y
+        self.sigma_z: list = sigma_z
+        self.tau_x:   list = tau_x
+        self.tau_y:   list = tau_y
+        self.tau_z:   list = tau_z
     
-    def von_mises(self) -> List:
+    def von_mises(self) -> list:
         """
         Returns Von-Mises stress
         """
-        _items = []
+        items = []
         for x in range(len(self.sigma_x)):
-            _items.append((0.50 * ((self.sigma_x[x] - self.sigma_y[x])**2 +
+            items.append((0.50 * ((self.sigma_x[x] - self.sigma_y[x])**2 +
                                    (self.sigma_y[x] - self.sigma_z[x])**2 +
                                    (self.sigma_z[x] - self.sigma_x[x])**2)
                            + 3 * (self.tau_x[x]**2 + self.tau_y[x]**2
                                   + self.tau_z[x]**2))**0.50)
-        return _items
+        return items
     #
-    def sigma(self) -> List:
+    def sigma(self) -> list:
         """
         Cauchy stress tensor
         """
-        _sigma_items = []
+        sigma_items = []
         for x in range(len(self.sigma_x)):
-            _sigma_items.append(Sigma(self.sigma_x[x], self.tau_x[x], self.tau_y[x],
+            sigma_items.append(Sigma(self.sigma_x[x], self.tau_x[x], self.tau_y[x],
                                       self.tau_x[x], self.sigma_y[x], self.tau_z[x],
                                       self.tau_y[x], self.tau_z[x], self.sigma_z[x]))
-        return _sigma_items
+        return sigma_items
     #
     def analyze_stress_state(self, index) -> None:
         """
@@ -160,34 +160,35 @@ def matprint(string, value):
   
 #
 #
+@dataclass()
 class BeamStress:
     """
     beam element stress
     """
-    __slots__ = ['sigma_x', 'sigma_y', 'sigma_z', 
-                 'tau_x', 'tau_y', 'tau_z','x']    
+    #__slots__ = ['sigma_x', 'sigma_y', 'sigma_z',
+    #             'tau_x', 'tau_y', 'tau_z','x']
     
-    def __init__(self, sigma_x, sigma_y, sigma_z,
-                 tau_x, tau_y, tau_z, x=0):
-        """
-        """ 
-        self.sigma_x = sigma_x
-        self.sigma_y = sigma_y
-        self.sigma_z = sigma_z
-        self.tau_x   = tau_x
-        self.tau_y   = tau_y
-        self.tau_z   = tau_z
-        self.x       = x
+    #def __init__(self, sigma_x, sigma_y, sigma_z,
+    #             tau_x, tau_y, tau_z, x):
+    """
+    """
+    sigma_x : list
+    sigma_y : list
+    sigma_z : list
+    tau_x   : list
+    tau_y   : list
+    tau_z   : list
+    stress_point : list|tuple
     
-    def von_mises(self) -> List:
-        """
-        Returns Von-Mises stress
-        """
-        _items = []
-        for x in range(len(self.sigma_x)):
-            _items.append(((self.sigma_x[x] + self.sigma_y[x] + self.sigma_z[x])**2 +
-                           3 * (self.tau_x[x]**2 + self.tau_y[x]**2 + self.tau_z[x]**2))**0.50)
-        return _items
+    #def von_mises(self) -> list:
+    #    """
+    #    Returns Von-Mises stress
+    #    """
+    #    _items = []
+    #    for x in range(len(self.sigma_x)):
+    #        _items.append(((self.sigma_x[x] + self.sigma_y[x] + self.sigma_z[x])**2 +
+    #                       3 * (self.tau_x[x]**2 + self.tau_y[x]**2 + self.tau_z[x]**2))**0.50)
+    #    return _items
 #
 #
 class PlateStress:
@@ -202,14 +203,14 @@ class PlateStress:
         """
         """ 
         #print('-->')
-        self.sigma_x: ClassVar = sigma_x
-        self.sigma_y: ClassVar = sigma_y
-        self.sigma_z: ClassVar = sigma_z
-        self.tau_x:   ClassVar = tau_x
-        self.tau_y:   ClassVar = tau_y
-        self.tau_z:   ClassVar = tau_z
+        self.sigma_x: list = sigma_x
+        self.sigma_y: list = sigma_y
+        self.sigma_z: list = sigma_z
+        self.tau_x:   list = tau_x
+        self.tau_y:   list = tau_y
+        self.tau_z:   list = tau_z
     
-    def von_mises(self) -> List:
+    def von_mises(self) -> list:
         """
         Returns Von-Mises stress
         """
@@ -259,7 +260,7 @@ class PlateStress:
         #
         return [P1, P2, P3, tau_max]
     #
-    def sigma(self) -> List:
+    def sigma(self) -> list:
         """
         Cauchy stress tensor
         """

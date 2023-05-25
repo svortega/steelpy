@@ -1,12 +1,13 @@
+# Copyright (c) 2022 steelpy
 # -----------------------------------------------------------------------
 # vector.py
 # -----------------------------------------------------------------------
-
+from __future__ import annotations
 # Python stdlib imports
 from array import array
 from dataclasses import dataclass
 from math import fsum
-from typing import Dict, List, ClassVar, Tuple, Iterable, Union
+from typing import ClassVar
 
 # -----------------------------------------------------------------------
 #
@@ -36,7 +37,7 @@ class Vector:
     """
     __slots__ = ['_coords']
 
-    def __init__(self, a: List[float]) -> None:
+    def __init__(self, a: list[float]) -> None:
         """Construct a new Vector object with numeric Cartesian coordinates
            given in array a."""
         # Make a defensive copy to ensure immutability.
@@ -47,19 +48,19 @@ class Vector:
         """Return the ith Cartesian coordinate of self."""
         return self._coords[i]
 
-    def __add__(self, other) -> List[float]:
+    def __add__(self, other) -> list[float]:
         """Return the sum of self and Vector object other."""
         if not isinstance(other, Vector):
             raise TypeError("must be a vector class")
         result = [x + y for x, y in zip(self._coords, other)]
         return Vector(result)
     
-    def __iadd__(self, other) -> List[float]:
+    def __iadd__(self, other) -> list[float]:
         """ """
         self._coords = self.__add__(other)
         return self
 
-    def __sub__(self, other) -> List[float]:
+    def __sub__(self, other) -> list[float]:
         """Return the difference of self and Vector object other."""
         result = [x - y for x, y in zip(self._coords, other)]
         return Vector(result)
@@ -75,7 +76,7 @@ class Vector:
         """Return the magnitude, that is, the Euclidean norm, of self."""
         return (self.dot(self))**0.50
 
-    def direction(self) -> List[float]:
+    def direction(self) -> list[float]:
         """Return the unit vector of self."""
         return self.__mul__(1.0 / abs(self))
 
@@ -92,14 +93,14 @@ class Vector:
         """Return the dimension of self."""
         return len(self._coords)
 
-    def __mul__(self, scalar) -> List[float]:
+    def __mul__(self, scalar) -> list[float]:
         """Return the product of self and numeric object alpha."""
         if not isinstance(scalar, (float, int)):
             raise TypeError("must be a scalar")
         result = [x * scalar for x in self._coords]
         return Vector(result)
     
-    def __truediv__(self, scalar) -> List[float]:
+    def __truediv__(self, scalar) -> list[float]:
         """Return the product of self and numeric object alpha."""
         if not isinstance(scalar, (float, int)):
             raise TypeError("must be a scalar")

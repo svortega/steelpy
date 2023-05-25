@@ -1,324 +1,223 @@
 # 
-# Copyright (c) 2009-2021 fem2ufo
-# 
-
+# Copyright (c) 2009-2023 fem2ufo
+#
 # Python stdlib imports
+from __future__ import annotations
 from collections.abc import Mapping
-from typing import Dict, Union, List
 
 
 # package imports
-from steelpy.f2uModel.load.main import LoadingInmemory
-from steelpy.f2uModel.load.operations.operations import (get_beam_line_load, 
-                                                         get_cbeam_point_load)
-
-
-class PointLoad:
-    
-    __slots__ = ["_cls", "_point", "_load_name"]
-    
-    def __init__(self, cls, load_name, point_load_type) -> None:
-        """
-        """
-        self._cls = cls
-        self._point = point_load_type
-        self._load_name = load_name
-    #
-    #
-    def __setitem__(self, load_name:Union[str,int],
-                    load) -> None:
-        """
-        """
-        node_name = self._cls._nodes[-1]
-        load |= {'title':load_name}
-        self._point[node_name] = load
-        #self._point.name = load_name
-        #
-        self._cls._labels.append(load_name)
-        index = len(self._cls._labels) - 1
-        try:
-            self._cls._nodes[index]
-        except IndexError:
-            node = self._cls._nodes[-1]
-            self._cls._nodes.append(node)
-        #
-        self._cls._beams.append(-1)
-        #self._cls._load_case.append(self._load_name)
-        # print('---')
-    def __getitem__(self, load_name:Union[str,int]):
-        """
-        """
-        #print('---')
-        nodes = [ self._cls._nodes[_index] for _index, item in enumerate(self._cls._labels)
-                  if self._cls._labels[_index] == load_name 
-                  and self._cls._load_case[_index] == self._load_name
-                  and self._cls._nodes[_index] != -1]
-        return self._point[nodes[-1]]
-        #return res
-    #
-    def __iter__(self):
-        #print('===')
-        # return self._beam.__iter__()
-        for key, item in self._point.items():
-            yield key, item
-
-class PointLoadConcept:
-    
-    __slots__ = ["_cls", "_load_name"]
-    
-    def __init__(self, cls, load_name) -> None:
-        """
-        """
-        self._cls = cls
-        self._load_name = load_name
-    
-    #
-    @property
-    def load(self):
-        """
-        """
-        point = self._cls._bload.basic[self._load_name]._nodal_load
-        return PointLoad(self._cls, self._load_name, point)
-    #
-    @property
-    def mass(self):
-        """
-        """
-        return PointLoad(self._cls)
-    
+# steelpy.f2uModel.load
+from ..load.process.actions import SelfWeight
+from ..load.process.basic_load import BasicLoadBasic
+#
+from ..load.inmemory.beam import BeamLoadItemIM
+from ..load.inmemory.node import NodeLoadItemIM
+from ..load.inmemory.timehistory import TimeHistory
+from ..load.inmemory.combination import LoadCombination
 
 #
 #
-#
-class BeamLoadSet:
-    
-    __slots__ = ["_cls", "_beam", "_load_name", "_beam_load"]
-    
-    def __init__(self, cls, load_name, beam_load, load_type) -> None:
-        """
-        """
-        self._cls = cls
-        self._beam = beam_load
-        self._load_name = load_name
-        #
-        self._beam_load = get_beam_line_load
-        if "point" in load_type:
-            self._beam_load = get_cbeam_point_load
-    #
-    def __setitem__(self, load_name:Union[str,int],
-                    load) -> None:
-        """
-        """
-        #
-        beam_line = self._beam_load(load)
-        beam_line[-1] = load_name
-        #
-        beam_name = self._cls._beams[-1]
-        self._beam.coordinate_system = self._cls._system_flag
-        self._beam[beam_name] = beam_line
-        #self._beam.name = load_name
-        self._cls._labels.append(load_name)
-        index = len(self._cls._labels) - 1
-        try:
-            self._cls._beams[index]
-        except IndexError:
-            beam = self._cls._beams[-1]
-            self._cls._beams.append(beam)
-        #print('---')
-        self._cls._nodes.append(-1)
-    
-    def __getitem__(self, load_name:Union[str,int]):
-        """
-        """
-        beam = [self._cls._beams[_index] for _index, item in enumerate(self._cls._labels)
-                if self._cls._labels[_index] == load_name 
-                and self._cls._load_case[_index] == self._load_name
-                and self._cls._beams[_index] != -1]
-        return self._beam[beam[-1]]
-        #print('---')
-    #
-    def __iter__(self):
-        #print('===')
-        # return self._beam.__iter__()
-        for key, item in self._beam.items():
-            yield key, item
-
-
-#
-class BeamLoadConcept:
-    
-    __slots__ = ["_cls", "_load_name"]
-    
-    def __init__(self, cls, load_name) -> None:
-        """
-        """
-        self._cls = cls
-        self._load_name = load_name
-    #
-    @property
-    def point_load(self):
-        """
-        """
-        beam_load = self._cls._bload.basic[self._load_name]._beam_point
-        load_type = "point"
-        return BeamLoadSet(self._cls, self._load_name, beam_load, load_type)
-    
-    #
-    #
-    @property
-    def line_load(self):
-        """
-        """
-        beam_load = self._cls._bload.basic[self._load_name]._beam_line
-        load_type = "line"
-        return BeamLoadSet(self._cls, self._load_name, beam_load, load_type)
-    #
-    #
-    @property
-    def coordinate_system(self):
-        if self._cls._system_flag != 0:
-            return "local"
-        return "global"
-    
-    @coordinate_system.setter
-    def coordinate_system(self, system:Union[str,int]):
-        """
-        Coordinate system for load : global or local (member)
-        """
-        self._cls._system_flag = 0
-        if system in ['local', 'member', 1]:
-            self._cls._system_flag = 1
-    #
-    @property
-    def local_system(self):
-        """set load beam local system"""
-        self._cls._system_flag = 1
-        return "local"
-
-    @property
-    def global_system(self):
-        """set load beam global system"""
-        self._cls._system_flag = 0
-        return "global"
-#
-#
-class LoadTypes:
-    """
-    """
-    __slots__ = ["_cls", "name", "title", "number", "_bload"]
-    
-    def __init__(self, cls, basic_load):
-        """
-        """
-        self._cls = cls
-        self._bload = basic_load
-        self.title = basic_load.title
-        self.number = basic_load.number
-        self.name = basic_load.name
-    #
-    #
-    @property
-    def selfweight(self):
-        """
-        The self weight form allows you to specify multipliers to 
-        acceleration due to gravity (g) in the X, Y, and Z axes. 
-        If switched on, the default self weight acts in the Y axis 
-        with a magnitude and sign of -1."""
-        return self._bload._selfweight
-    #
-    @property
-    def point(self):
-        """
-        """
-        return PointLoadConcept(self._cls, self.name)
-    #
-    @point.setter
-    def point(self, coord):
-        """
-        """
-        node_name = f2u_points.get_point_name(coord)
-        self._cls._nodes.append(node_name)
-        self._cls._load_case.append(self.name)
-    #
-    @property
-    def beam(self):
-        """
-        """
-        return BeamLoadConcept(self._cls, self.name)
-    
-    @beam.setter
-    def beam(self, element):
-        """
-        """
-        self._cls._system_flag = 0 
-        self._cls._beams.append(element.name)
-        self._cls._load_case.append(self.name)   
-    
-#
-class ConceptBasicLoad(Mapping):
-    
-    __slots__ = ["_basic", "_load_case", "_system_flag",
-                 "_labels", "_nodes", "_beams", "_bload"]
-    
-    def __init__(self) -> None:
-        """
-        """
-        self._bload = LoadingInmemory()
-        #
-        self._load_case:List = []
-        self._labels:List = []
-        self._nodes:List = []
-        self._beams:List = []
-        # 0-global/ 1-local
-        self._system_flag:int = 0           
-    #
-    def __setitem__(self, load_name:Union[str,int],
-                    load_title:str) -> None:
-        """
-        """
-        self._load_case.append(load_name)
-        self._bload.basic[load_name] = load_title
-    
-    def __getitem__(self, load_name:Union[str,int]):
-        """ """
-        return LoadTypes(self, self._bload.basic[load_name])
-    #
-    def __len__(self) -> float:
-        return len(self._labels)
-
-    def __iter__(self) : #-> Iterator
-        """
-        """
-        return self._bload.basic.__iter__()
-        #for basic in f2u_load.basic:
-        #    basic
-        #return iter(self._labels)
-
-    def __contains__(self, value) -> bool:
-        return value in self._load_case    
 #
 class ConceptLoad:
     
-    __slots__ = ["_basic", "f2u_points", "f2u_concepts"]
+    __slots__ = ["_basic", "_combination", 'th', '_mass']
     
-    def __init__(self, points, concepts) -> None:
+    def __init__(self, points, beams) -> None:
         """
         """
-        global f2u_points, f2u_concepts
-        f2u_points = points
-        f2u_concepts = concepts
-        #
-        self._basic = ConceptBasicLoad()
+        self._basic = BasicLoadConcept(points=points, beams=beams)
+        self.th = TimeHistory()
+        self._combination = LoadCombination(basic_load=self._basic)
+        self._mass = LoadCombination(basic_load=self._basic)
     #
-    @property
+    #@property
     def basic(self):
         """
         """
         return self._basic
     #
     #@property
-    #def combination(self):
+    def combination(self):
+        """
+        """
+        return self._combination
+    #
+    #@property
+    def time_history(self):
+        """
+        """
+        return self.th
+    #
+    def mass(self):
+        """
+        """
+        return self._mass
+    #
+        #
+    def __str__(self) -> str:
+        """ """
+        output = "\n"
+        output += self._basic.__str__()
+        output += self._combination.__str__()
+        return output
+#
+#
+class BasicLoadConcept(BasicLoadBasic):
+    __slots__ = ['_load', '_labels', '_title', '_number',
+                 'f2u_points', 'f2u_beams']
+
+    def __init__(self, points, beams):
+        """
+        """
+        super().__init__()
+        #
+        self._load: dict = {}
+        # FIXME: reduce dependency
+        self.f2u_points = points
+        self.f2u_beams = beams
+    #
+    def __setitem__(self, load_name: int, load_title: str) -> None:
+        """
+        load_name :
+        load_title :
+        """
+        try:
+            self._labels.index(load_name)
+            self._title.index(load_title)
+            raise Warning("Basic Load title {:} already defined".format(load_title))
+        except ValueError:
+            self._labels.append(load_name)
+            self._title.append(load_title)
+            # TODO: fix numbering
+            load_number = len(self._load) + 1
+            self._load[load_name] = LoadTypesConcept(name=load_name,
+                                                     number=load_number,
+                                                     title=load_title,
+                                                     points=self.f2u_points,
+                                                     beams=self.f2u_beams)
+            self._number.append(load_number)
+
+    def __getitem__(self, load_name: str|int):
+        """
+        """
+        try:
+            return self._load[load_name]
+        except KeyError:
+            raise IOError("load case not defined")
+    #
+    #def __contains__(self, value) -> bool:
+    #    return value in self._labels
+
+    #def __len__(self) -> float:
+    #    return len(self._labels)
+
+    #def __iter__(self):
     #    """
     #    """
-    #    return self._combination
-    #    
+    #    items = list(set(self._labels))
+    #    return iter(items)
+    #
+    def __delitem__(self, load_name: str|int):
+        """
+        """
+        del self._load[load_name]
+#
+#
+class LoadTypesConcept:
+    """
+    """
+    __slots__ = ['_node', '_node_id', '_beam', '_beam_id',
+                 '_selfweight', '_line', '_line_id',
+                  'name', 'number', 'title', 'f2u_points', 'f2u_beams']
+
+    def __init__(self, name: str|int, number: int, title: str,
+                 points, beams):
+        """
+        """
+        self.f2u_points = points
+        self.f2u_beams = beams
+        #
+        self.name = name
+        self.number = number
+        self.title = title
+        #
+        self._selfweight = SelfWeight()
+        self._node = NodeLoadItemIM(load_name=name,
+                                    load_title=title, 
+                                    nodes=self.f2u_points)
+        self._beam = BeamLoadItemIM(load_name=name,
+                                    load_title=title,
+                                    beams=self.f2u_beams)
+        
+
+    #
+    @property
+    def gravity(self):
+        """
+        The self weight form allows you to specify multipliers to
+        acceleration due to gravity (g) in the X, Y, and Z axes.
+        If switched on, the default self weight acts in the Y axis
+        with a magnitude and sign of -1."""
+        return self._selfweight
+    
+    @gravity.setter
+    def gravity(self, values):
+        """ """
+        self._selfweight[self.name] = [*values, self.title]
+    #
+    #
+    @property
+    def points(self):
+        """ return all points"""
+        return self._node
+    #
+    @property
+    def point(self):
+        """ return current point"""
+        return self._node[self._node_id]
+
+    @point.setter
+    def point(self, values):
+        """ set point"""
+        # set connectivity
+        try:
+            node_id = self.f2u_points.get_point_name(values)
+        except IOError:
+            node_id = self.f2u_points.get_new_point(values)
+        self._node_id = node_id
+    #
+    #
+    def line(self):
+        """ """
+        return self._line[self._line_id]
+    #
+    def line(self, values):
+        """ """
+        pass
+    #
+    @property
+    def beams(self):
+        """ return all beam"""
+        return self._beam
+    #
+    @property
+    def beam(self):
+        """ return current beam"""
+        return self._beam[self._beam_id]
+
+    @beam.setter
+    def beam(self, values):
+        """ """
+        #if isinstance(values[0], list):
+        #    for value in values:
+        #        self._beam[value[ 0 ] ] = value[ 1: ]
+        #else:
+        #    self._beam[ values[ 0 ] ] = values[ 1: ]
+        self._beam_id = values.name
+#
+#
+#class TimeHistoryConcept(Mapping):
+#    __slots__ = ['_load', '_labels', '_title', '_number', 'f2u_points']
+#
+#
