@@ -1,14 +1,15 @@
-# Copyright (c) 2019-2022 steelpy
+# Copyright (c) 2019-2023 steelpy
 
 # Python stdlib imports
+from __future__ import annotations
 #import datetime
-from typing import NamedTuple, Dict, List, Tuple, Union
+#from typing import NamedTuple, Dict, List, Tuple, Union
 
 # package imports
 from steelpy.codes.api.main import API_design
 from steelpy.process.units.main import Units
-#from steelpy.design.beam.process import BeamDesignParameters
-from steelpy.f2uModel.load.operations.actions import Actions
+##from steelpy.design.beam.process import BeamDesignParameters
+from steelpy.f2uModel.load.process.actions import Actions
 from steelpy.sections.process.stress import BeamStress
 #
 
@@ -36,7 +37,7 @@ class BeamDesign: #(BeamDesignParameters):
         return self._L
     
     @L.setter
-    def L(self, beam_lenght:Union[Units,float]):
+    def L(self, beam_lenght: Units|float):
         """ """
         try:
             self._L = beam_lenght.value
