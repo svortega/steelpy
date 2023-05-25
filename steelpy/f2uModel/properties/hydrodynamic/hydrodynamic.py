@@ -1,20 +1,15 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2023 fem2ufo
 #
-
 # Python stdlib imports
-#from array import array
-#import copy
-#from dataclasses import dataclass
-#import logging
-#from typing import NamedTuple, Tuple, List, Iterator, Dict
-#from collections.abc import Mapping
+from __future__ import annotations
 
+#
 # package imports
-from steelpy.f2uModel.properties.hydrodynamic.marine_growth import MarineGrowth
-from steelpy.f2uModel.properties.hydrodynamic.morison import CdCmCoefficients
-from steelpy.f2uModel.properties.hydrodynamic.hydro_diametre import HydroDiametre
-from steelpy.f2uModel.properties.hydrodynamic.flooding import Flooding
+from .marine_growth import MarineGrowth
+from .morison import CdCmCoefficients
+from .hydro_diametre import HydroDiametre
+from .flooding import Flooding
 
 
 #
@@ -49,7 +44,7 @@ class Hydrodynamic:
         self._air_drag = {}
     #  
     #
-    @property
+    #@property
     def CdCm(self):
         """
         """
@@ -67,7 +62,7 @@ class Hydrodynamic:
         """
         return self.flooding
     #
-    @property
+    #@property
     def marine_growth(self):
         """
         """

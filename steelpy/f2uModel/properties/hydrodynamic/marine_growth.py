@@ -1,17 +1,16 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
-# 
-
-
+# Copyright (c) 2009-2023 fem2ufo
+#
 # Python stdlib imports
+from __future__ import annotations
 import re
 from collections.abc import Mapping
-from numbers import Number
 from typing import NamedTuple, Tuple, List, Union
 
+#
 # package imports
 from steelpy.process.units.main import Units
-from steelpy.f2uModel.properties.operations.operations import BasicProperty
+from steelpy.f2uModel.properties.process.operations import BasicProperty
 
 
 class MarineGrowth(Mapping):
@@ -26,16 +25,16 @@ class MarineGrowth(Mapping):
         global f2u_units #, mg_default
         f2u_units = Units()
         #
-        self._default:Union[bool,str] = None
+        self._default: None|str = None
         self._marine_growth:dict = {}
         self.sea_water_density:float = 1032.0 * f2u_units.kg / f2u_units.m**3
     #
-    def __getitem__(self, mg_name:Union[str,int]):
+    def __getitem__(self, mg_name: str|int):
         """
         """
         return self._marine_growth[mg_name]
     
-    def __setitem__(self, mg_name:Union[str,int], mg_type: str) -> None:
+    def __setitem__(self, mg_name:str|int, mg_type: str) -> None:
         """
         """
         if re.match(r"\b(constant)\b", mg_type, re.IGNORECASE):
@@ -113,11 +112,11 @@ class MGprofile(BasicProperty):
         self.density_factor : float = 1.36
         self.density : Units = 1400.0 * f2u_units.kg / f2u_units.m**3
         #
-        self._label : List[float] = []
-        self._elevation : List[float] = []
-        self._thickness: List[float] = []
-        self._roughness: List[float] = []
-        self._densities: List[float] = []
+        self._label : list[float] = []
+        self._elevation : list[float] = []
+        self._thickness: list[float] = []
+        self._roughness: list[float] = []
+        self._densities: list[float] = []
     #
     #
     #def __getitem__(self, level_name:Union[str,int]):
@@ -214,13 +213,13 @@ class MGtypes:
     
     #
     #
-    def __getitem__(self, level_name:Union[str,int]):
+    def __getitem__(self, level_name:str|int):
         """
         """
         print('--')
     #
-    def __setitem__(self, level_name:Union[str,int], 
-                    data:List) -> None:
+    def __setitem__(self, level_name:str|int,
+                    data:list) -> None:
         """
         """
         self._cls._label.append(level_name)
@@ -252,7 +251,7 @@ class MGtypes:
 #
 #
 #
-def get_list(data, steps:int=6)->List[float]:
+def get_list(data, steps:int=6)->list[float]:
     """ """
     new_data = []
     for x in range(steps):
@@ -265,7 +264,7 @@ def get_list(data, steps:int=6)->List[float]:
             new_data.append(0.0)
     return new_data
 #
-def get_dic(data)->List[float]:
+def get_dic(data)->list[float]:
     """ """
     new_data = [0,0,0,0]
     for key, item in data.items():

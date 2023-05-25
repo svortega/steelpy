@@ -247,8 +247,14 @@ def beam_end_force(elements, basic_load, df_ndisp, df_nload):
                 bltotal = 1 / (len(bload.line) + len(bload.point))
                 # ---------------------------------------------
                 # node force global system
-                gnload = np.concatenate((nload.loc[nodes[0]],
-                                         nload.loc[nodes[1]]), axis=None)                
+                node1 = nload.loc[nodes[0]]
+                node2 = nload.loc[nodes[1]]
+                try:
+                    node1.shape[1]
+                #if len(node1.index) > 1:
+                    gnload = np.concatenate((node1.sum(), node2.sum()), axis=None)
+                except IndexError:
+                    gnload = np.concatenate((node1, node2), axis=None)
                 #
                 nreac0 = gnforce[:6] + gnload[:6]
                 nreac1 = gnforce[6:] + gnload[6:]

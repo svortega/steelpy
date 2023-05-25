@@ -1,8 +1,9 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2023 fem2ufo
 #
 
 # Python stdlib imports
+from __future__ import annotations
 from array import array
 from collections.abc import Mapping
 import re
@@ -10,7 +11,7 @@ from typing import NamedTuple, Tuple, List, Iterator, Dict, ClassVar
 
 
 # package imports
-from steelpy.f2uModel.properties.operations.operations import BasicProperty
+from steelpy.f2uModel.properties.process.operations import BasicProperty
 
 
 #

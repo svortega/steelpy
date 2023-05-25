@@ -1,16 +1,17 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2023 fem2ufo
 #
 
 # Python stdlib imports
+from __future__ import annotations
 #from dataclasses import dataclass
 #from typing import NamedTuple, Tuple, List, Iterator, Dict, Iterable
 
 
 # package imports
 #from steelpy.process.units.main import Units
-from steelpy.f2uModel.properties.codecheck.codecheck import CodeCheck
-from steelpy.f2uModel.properties.hydrodynamic.hydrodynamic import Hydrodynamic
+from .codecheck.codecheck import CodeCheck
+from .hydrodynamic.hydrodynamic import Hydrodynamic
 
 
 #
@@ -32,12 +33,12 @@ class Properties:
     #    """
     #    return self._units    
     #
-    @property
+    #@property
     def hydrodynamic(self):
         """ """
         return self._hydrodynamic
     #
-    @property
+    #@property
     def design_parameters(self):
         """ """
         return self._code_check
