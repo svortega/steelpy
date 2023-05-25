@@ -9,13 +9,13 @@ import math
 from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
+from ..current.main_current import MeanCurrent
+from ..operations.inout import (get_etas, get_kinematic, 
+                               get_surface, get_kinematicX,
+                               get_Height)
 from steelpy.process.units.main import Units
-from steelpy.metocean.regular.current.main_current import MeanCurrent
-from steelpy.metocean.regular.operations.inout import (get_etas, get_kinematic, 
-                                                       get_surface, get_kinematicX,
-                                                       get_Height)
-from steelpy.process.spreadsheet.dataframe import DataFrame, SeriesItem
-
+#from steelpy.process.dataframe.dframe import DataFrame #, SeriesItem
+from steelpy.process.dataframe.tb_deleted.dfmem import DataFrameBasic
 #
 #
 #
@@ -209,7 +209,7 @@ class WaveRegModule:
         return self._current
 #
 #
-class SurfaceResults(DataFrame):
+class SurfaceResults(DataFrameBasic):
     
     def __init__(self, data:Union[None, Dict], 
                  d:float, t:float, finite_depth:bool):
@@ -219,7 +219,7 @@ class SurfaceResults(DataFrame):
         d  : Water depth
         k  : wave number
         """
-        super().__init__(data)    
+        super().__init__(data)
         #eta_kd :List
         #A : List
         #w : List
@@ -308,15 +308,16 @@ class SurfaceResults(DataFrame):
 #    #kd:float
 #    depth_points:int
 #    finite_depth:bool
-#    #
-class KinematicResults(DataFrame):
+#
+# (DataFrameBasic)
+class KinematicResults(DataFrameBasic):
     
     def __init__(self, data:Union[None, Dict], 
                  depth_points:int, finite_depth:bool):
         """
         """
         super().__init__(data)
-        
+
         self.depth_points = depth_points
         self.finite_depth = finite_depth
     
@@ -326,7 +327,7 @@ class KinematicResults(DataFrame):
         #coldata = [item*self.factors[name] for item in self.dataframe[name]]
         items = to_matrix(self._data[name], n=self.depth_points)
         new_data = {step: items[i] for i, step in enumerate(x)}
-        return DataFrame(new_data)
+        return DataFrameBasic(new_data)
         #raise IOError(f'item {name:} not found')
     #
     @property

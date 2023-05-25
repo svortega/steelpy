@@ -56,3 +56,10 @@ class RegularWaves:
         case_name : Wave name
         """
         return self._wave[case_name]
+    #
+    #
+    def df(self, df):
+        """ """
+        1/0
+    #
+    #

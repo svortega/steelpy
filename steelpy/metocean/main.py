@@ -71,9 +71,18 @@ class Metocean:
     #    return self._iregular_wave
     #
     #@property
-    def regular_wave(self):
+    def regular_wave(self, values:None|list=None,
+                     df=None):
         """
         """
+        if values:
+            1/0
+        else:
+            try:
+                df.columns            
+                self._regular_wave.df(df)
+            except AttributeError:
+                pass
         return self._regular_wave
     #
     #@property

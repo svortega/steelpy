@@ -8,8 +8,8 @@ import math
 from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
-#from steelpy.metocean.regular.operations.inout import title_block, get_Height, output
-from steelpy.metocean.regular.operations.waveops import zeros
+from steelpy.metocean.regular.operations.inout import title_block, get_Height, output
+from steelpy.metocean.regular.operations.waveops import WaveRegModule, WaveItem, zeros
 
 # 
 def F(kd:float, H:float, T:float, Current:float, Current_criterion:int,
