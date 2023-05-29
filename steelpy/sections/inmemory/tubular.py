@@ -222,30 +222,27 @@ class TubularBasic(ShapeBasic):
                              J=J, Cw=Cw)
 
     #
-    def _shear_stress(self, stress: str = 'average',
-                      Vz: float = 1.0, Vy: float = 1.0,
-                      alpha: float = 2.0):
+    def shear_stress(self, Vy, Vz,
+                     stress_type:str ='average',
+                     alpha: float = 2.0):
         """
         alpha: Shape factor (section 8.10 roakrs 7ed) 
         """
         # -------------------------------------------------
         #            Shear Stress Calculation
+        prop = self.properties()
+        coord =  self.section_coordinates()
         #
-        # Area of Web
-        # The overall depth times the web thickness
-        self.Aw = self.area
+        tau_z = [Vz / prop.area for item in coord.z]
         #
-        # Area of Flange
-        self.Af = self.area
+        tau_y = [Vy / prop.area for item in coord.y]
         #
-        self.tau_z = Vz / self.Aw
-        self.tau_y = Vy / self.Af
-        #
-        if stress != 'average':
+        if stress_type != 'average':
             # Shape factor (section 8.10 roakrs 7ed)        
-            self.tau_z = self.tau_z * alpha
-            self.tau_y = self.tau_y * alpha
-
+            tau_z = tau_z * alpha
+            tau_y = tau_y * alpha
+        
+        return tau_y, tau_z
     #
     def curved(self, R: float):
         """
@@ -351,12 +348,14 @@ class TubularBasic(ShapeBasic):
         #1 / 0
         # In Plane
         # tau_y = 2*actions.Fy / prop.area
-        tau_y = [2 * actions.Fy / prop.area
-                 for item in coord.y]
+        #tau_y = [2 * actions.Fy / prop.area
+        #         for item in coord.y]
         # Out Plane
         # tau_z = 2*actions.Fy / prop.area
-        tau_z = [2 * actions.Fz / prop.area
-                 for item in coord.z]
+        #tau_z = [2 * actions.Fz / prop.area
+        #         for item in coord.z]
+        tau_y, tau_z = self.shear_stress(Vz=actions.Fz, Vy=actions.Fy, 
+                                         stress_type=stress_type)        
         #
         # ----------------------------------------------
         # torsional/bending stress
@@ -375,14 +374,13 @@ class TubularBasic(ShapeBasic):
         sigma_z = [actions.Mz * item / prop.Zez
                    for item in coord.y]
         #
-        #if isinstance(actions, DBframework):
-        #try:
-        #    actions.columns
-        #    print('stress df')
-        #    1/0
-        #except AttributeError:
-        return BeamStress(sigma_x, sigma_y, sigma_z,
-                          tau_x, tau_y, tau_z, coord)
+        stress_out = BeamStress(sigma_x, sigma_y, sigma_z, 
+                                tau_x, tau_y, tau_z, coord)        
+        #
+        if stress:
+            stress_out = self.add_stress(stress=stress, other=stress_out)
+        #
+        return stress_out
 
     #
     def section_coordinates(self, theta: float = 90, steps: int = 6):
@@ -436,11 +434,7 @@ class TubularBasic(ShapeBasic):
         #    yp2 = yp1
         return xp2, yp2
 
-    #
-    #
-    # def set_default(self):
-    #    """ """
-    #    self._default = self.name    
+    #   
     #
     def _dimension(self) -> str:
         """ Print section dimensions"""
@@ -448,16 +442,6 @@ class TubularBasic(ShapeBasic):
             .format(self.type, self.d, self.t)
 
     #
-    #def get_geometry(self):
-    #    """ """
-    #    try:
-    #        diameter = self.diameter.value
-    #        thickness = self.thickness.value
-    #    except AttributeError:
-    #        diameter = self.diameter
-    #        thickness = self.thickness
-    #    return diameter, thickness
-
     #
     def get_geometry(self):
         """ """

@@ -113,9 +113,10 @@ class SectionSQLite:
                                         height, web_thickness,\
                                         top_flange_width, top_flange_thickness,\
                                         bottom_flange_width, bottom_flange_thickness,\
+                                        fillet_radius,\
                                         SA_inplane, SA_outplane,\
                                         shear_stress, build, compactness)\
-                                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
         cur = conn.cursor()
         cur.execute(sql, project)
         return cur.lastrowid

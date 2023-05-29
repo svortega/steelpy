@@ -6,16 +6,18 @@
 from __future__ import annotations
 from array import array
 from dataclasses import dataclass
+from collections import namedtuple
 import math
 #
 
 # package imports
 from steelpy.sections.process.operations import ShapeProperty
 from .operations import SectionBasic, ShapeBasic
-
+from ..process.stress import BeamStress
 
 #
 #
+points = namedtuple('Points', ['y', 'z'])
 #
 #
 # ----------------------------------------
@@ -129,6 +131,31 @@ class ChannelBasic(ShapeBasic):
         # get section's coordinates
         coord =  self.section_coordinates()
         prop = self.properties()
+        #
+        # ----------------------------------------------
+        # FIXME: torsion
+        tau_x = [actions.Mx * 0
+                 for item in coord.y]
+        #
+        # In Plane
+        tau_y = [actions.Fy / prop.area
+                 for item in coord.y]
+        # Out Plane
+        tau_z = [actions.Fz / prop.area
+                 for item in coord.z]
+        #
+        # get bending stress
+        sigma_x = [actions.Fx / prop.area for item in coord.y]
+        sigma_y = [actions.My * item / prop.Iy for item in coord.z]
+        sigma_z = [actions.Mz * item / prop.Iz for item in coord.y]
+        #
+        stress_out = BeamStress(sigma_x, sigma_y, sigma_z, 
+                                tau_x, tau_y, tau_z, coord)
+        #
+        if stress:
+            stress_out = self.add_stress(stress=stress, other=stress_out)
+        #
+        return stress_out           
     #
     def _properties(self):
         """ """
@@ -203,6 +230,18 @@ class ChannelBasic(ShapeBasic):
                            J=J, Cw=Cw)
 
     #
+    @property
+    def CoG(self):
+        """ """
+        _C = self.b - self.tw
+        _D2 = self.d - 2 * self.tb        
+        # -------------------------------------------------
+        #   Elastic Neutral Centre 
+        Zc = 0
+        Yc = ((2 * self.b ** 2 * self.tb + _D2 * self.tw ** 2) /
+              (2 * self.b * self.d - 2 * _D2 * _C))
+        #
+        return Yc, Zc
     #
     def curved(self, R):
         """
@@ -254,6 +293,44 @@ class ChannelBasic(ShapeBasic):
         # Shear factor (section 8.1 equ 8.1-13)
         #
 
+    #
+    #
+    #
+    def section_coordinates(self):
+        """
+        1      2 3 4
+        +------+-+-+
+                   |       ^ z
+                   + 5     |
+                   |       |
+                   + 6     +--> y
+                   |
+                   + 7
+                   | 
+        +------+-+-+      
+        8     9 10 11
+        """
+        # horizontal
+        
+        CoG = self.CoG
+        #
+        hzt1 = (self.b - CoG[0])
+        hzt2 = 0
+        hzt3 = CoG[0] - self.tw
+        hzt4 = CoG[0] - self.tw * 0.50
+        #
+        coord_y = [-1 * hzt1, hzt2, hzt3, hzt4, # 1,2,3,4
+                   hzt4, hzt4, hzt4, # 5,6,7
+                   -1 * hzt1, hzt2, hzt3, hzt4] # 8,9,10,11
+        # vertical
+        top1 = (self.d * 0.50 - self.tb * 0.50)
+        top2 = (self.d * 0.50 - self.tb)
+        coord_z = [top1, top1, top1, top1, #1-4
+                   top2, 0,  # 5,6
+                   -1 * top2, # 10,11
+                   -1 * top1, -1 * top1, -1 * top1, -1 * top1]
+        
+        return points(coord_y, coord_z)    
     #
     #
     def _dimension(self) -> str:

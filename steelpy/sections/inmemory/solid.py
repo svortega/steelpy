@@ -26,17 +26,13 @@ points = namedtuple('Points', ['y', 'z'])
 @dataclass
 class SolidSection(SectionBasic):
     """ """
-    #__slots__ = ['shear_stress', 'compactness', 'build',
-    #             'FAvy', 'FAvz', 'name', 'number', 'cls',
-    #             '_properties', 'units', 'depth', 'width']
-    
+    #
     def __init__(self):
         """ """
         super().__init__()
         self._d: array = array('f', [])
         self._wb: array = array('f', [])
         self._wt: array = array('f', [])
-    #
     #
     #
     def __setitem__(self, shape_name: int|str, parameters: list) -> None:
@@ -217,35 +213,9 @@ d   |     |   Z
     width:float
     type: str
     #
-    #def __init__(self, name:float|None,
-    #             d:float|None, w:float|None,
-    #             build:str = 'welded',
-    #             shear_stress:str = 'average',
-    #             FAvy:float = 1.0, FAvz:float = 1.0):
-    #    """
-    #    Parameters
-    #    ----------
-    #    name : section name/id
-    #    d    : Height/depth
-    #    w    : Width
-    #    Shear Stress: MAXIMUM / AVERAGE
-    #    """
-    #    #super().__init__()
-    #    self.type = 'rectangular'
-    #    self.name = name
-    #    self.build = build
-    #    self.shear_stress = shear_stress
-    #    # Shear factor
-    #    self.FAvy = FAvy
-    #    self.FAvz = FAvz
-    #    #
-    #    if d:
-    #        self.depth = d
-    #    if w:
-    #        self.width = w
     #
     #
-    def _get_properties(self):
+    def _properties(self):
         """
         """
         #-------------------------------------------------
@@ -265,7 +235,7 @@ d   |     |   Z
         SCy = 0 * self.width
         #-------------------------------------------------
         #   Warping Constant Cw
-        Cw = 0 * self.width
+        Cw = 0
         #-------------------------------------------------
         #               Section Properties
         #-------------------------------------------------
@@ -322,9 +292,9 @@ d   |     |   Z
         #-------------------------------------------------
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
-                           Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
-                           Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
-                           J=J, Cw=Cw)
+                             Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
+                             Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
+                             J=J, Cw=Cw)
     #
     def shear_stress(self, Vz: float=1.0, Vy: float=1.0,
                      stress_type: str='average'):
@@ -339,11 +309,6 @@ d   |     |   Z
         #coord_z = self.section_coordinates.z # vertical
         prop = self.properties()
         # Area of Web
-        # The overall depth times the web thickness
-        #self.Aw = self.area       
-        #
-        # Area of Flange
-        #self.Af = self.area
         #
         tau_z = Vz / prop.area
         tau_y = Vy / prop.area
@@ -463,15 +428,9 @@ d   |     |   Z
         _section.append("    +  w  +\n")
         return _section
     #
-    def _print_section_properties(self):
-        """
-        """
-        file = shape_io.print_header()
-        file.extend(self._shape())
-        file.extend(shape_io.print_properties(self))
-        return file
     # 
-    def _stress(self, actions, stress=None, stress_type: str='average'):
+    def _stress(self, actions, stress=None,
+                stress_type:str = 'average'):
         """
         """
         # get section's coordinates
@@ -483,50 +442,26 @@ d   |     |   Z
         tau_y, tau_z = self.shear_stress(actions.Fz, actions.Fy, 
                                            stress_type=stress_type)
         #
+        a =  self.width
+        b =  self.depth
+        if a < b:
+            b =  self.width
+            a =  self.depth            
+        tau_x = [3 * actions.Mx / (a * b**2 * (1 - 0.63 * b / a + 0.25 * b**2 / a**2))
+                 for _ in coord.y]
+        #
         sigma_x = [actions.Fx / prop.area for _ in coord.y]
         sigma_y = [actions.My * _coord / prop.Iy for _coord in coord.z]
         sigma_z = [actions.Mz * _coord / prop.Iz for _coord in coord.y]
-        tau_x = [actions.Mx for _ in coord.y]
+        #
+        #
+        stress_out = BeamStress(sigma_x, sigma_y, sigma_z, 
+                                tau_x, tau_y, tau_z, coord)        
         #
         if stress:
-            if isinstance(stress.tau_x, list):
-                stress.tau_x = self._combine_stress(tau_x, stress.tau_x)
-                stress.tau_y = self._combine_stress(tau_y, stress.tau_y)
-                stress.tau_z = self._combine_stress(tau_z, stress.tau_z)
-                #
-                stress.sigma_x = self._combine_stress(sigma_x, stress.sigma_x)
-                stress.sigma_y = self._combine_stress(sigma_y, stress.sigma_y)
-                stress.sigma_z = self._combine_stress(sigma_z, stress.sigma_z)
-            else:
-                # Assuming global stress
-                stress.tau_x = self._add_global_stress(tau_x, stress.tau_x)
-                stress.tau_y = self._add_global_stress(tau_y, stress.tau_y)
-                stress.tau_z = self._add_global_stress(tau_z, stress.tau_z)
-                #
-                stress.sigma_x = self._add_global_stress(sigma_x, stress.sigma_x)
-                stress.sigma_y = self._add_global_stress(sigma_y, stress.sigma_y)
-                stress.sigma_z = self._add_global_stress(sigma_z, stress.sigma_z)
-        else:
-            stress = BeamStress(sigma_x, sigma_y, sigma_z, 
-                                tau_x, tau_y, tau_z, coord)
+            stress_out = self.add_stress(stress=stress, other=stress_out)
         #
-        return stress
-    #
-    def _add_global_stress(self, stress_local, stress_global):
-        """
-        """  
-        _new_stress = [ _item + math.copysign(1, _item.value) * abs(stress_global)  
-                        if _item.value != 0  else stress_global 
-                        for _item in stress_local] #aldh6850
-        
-        return _new_stress
-    #
-    def _combine_stress(self, stress_1, stress_2):
-        """
-        """
-        _steps = len(stress_2)
-        _new_stress = [stress_1[x] + stress_2[x] for x in range(_steps)]
-        return _new_stress    
+        return stress_out
     #
     def section_coordinates(self):
         """
@@ -591,7 +526,7 @@ class CircleBasic(ShapeBasic):
     """
     #name: str | int
     d:float
-    type: str = 'tubular'
+    type: str = 'Circular'
     #
     #
     def _properties(self):
@@ -651,28 +586,27 @@ class CircleBasic(ShapeBasic):
                            Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
                            J=J, Cw=Cw)
     #
-    def shear_stress(self, stress='average', Vz=1.0, Vy=1.0):
+    def shear_stress(self, Vy, Vz,
+                     stress_type:str ='average'):
         """
         """
         #-------------------------------------------------        
         #            Shear Stress Calculation
-        #        
-        # Area of Web
-        # The overall depth times the web thickness
-        self.Aw = self.area       
         #
-        # Area of Flange
-        self.Af = self.area
+        prop = self.properties()
+        coord =  self.section_coordinates()
         #
-        self.tau_z = Vz / self.Aw
-        self.tau_y = Vy / self.Af
+        tau_z = [Vz / prop.area for item in coord.z]
         #
-        if stress != 'average':
+        tau_y = [Vy / prop.area for item in coord.y]
+        #
+        if stress_type != 'average':
             # Shape factor (section 8.10 roakrs 7ed)
             _alpha = 4.0 / 3.0            
-            self.tau_z = self.tau_z * _alpha
-            self.tau_y = self.tau_y * _alpha
-        
+            tau_z = tau_z * _alpha
+            tau_y = tau_y * _alpha
+        #
+        return tau_y, tau_z
     #
     def torsional_stress(self, T):
         """
@@ -716,7 +650,68 @@ class CircleBasic(ShapeBasic):
     
         # Modulus of rigidity factor (section 8.10)
         self.F = 4/3
-    #    
+    #
+    def _stress(self, actions, stress=None, stress_type: str='average'):
+        """
+        """
+        radius = self.d * 0.50
+        # get section's coordinates
+        coord =  self.section_coordinates()
+        prop = self.properties()
+        #
+        tau_y, tau_z = self.shear_stress(Vz=actions.Fz, Vy=actions.Fy, 
+                                         stress_type=stress_type)
+        #           
+        tau_x = [2 * actions.Mx / (math.pi * radius ** 3)
+                 for _ in coord.y]
+        #
+        sigma_x = [actions.Fx / prop.area for _ in coord.y]
+        sigma_y = [actions.My * _coord / prop.Iy for _coord in coord.z]
+        sigma_z = [actions.Mz * _coord / prop.Iz for _coord in coord.y]
+        #
+        stress_out = BeamStress(sigma_x, sigma_y, sigma_z, 
+                                tau_x, tau_y, tau_z, coord)        
+        #
+        if stress:
+            stress_out = self.add_stress(stress=stress, other=stress_out)
+        #
+        return stress_out
+    #
+    def section_coordinates(self, theta: float = 90, steps: int = 2):
+        """
+        """
+        # horizontal
+        radius = self.d * 0.50
+        arc_length = radius * math.tau * theta / 360
+        sinc = arc_length / steps
+        r_theta = 360 * sinc / (radius * math.tau)
+        coord_1 = []        
+        #
+        for i in range(steps + 1):
+            rad = math.radians(i * r_theta)
+            _x, _z = self._circunference_line(x=rad, r=radius)
+            coord_1.append(_x)
+            #coord_2.append(_z)
+        #
+        coordx = list(reversed(coord_1))
+        coordx.extend([-item for item in coord_1[1:]])
+        coordx.extend(list(reversed(coordx[1:-1])))
+        #
+        coordz = coord_1.copy()
+        coordz.extend(list(reversed(coord_1[:steps])))
+        coordz.extend([-item for item in coordz[1:-1]])
+        return points(coordx, coordz)   
+    #
+    def _circunference_line(self, x: float, r: float, xp1: float = 0, yp1: float = 0):
+        """
+        Calculating the coordinates of a point on a circles
+        circumference from the radius, an origin and the
+        arc between the points
+        """
+        xp2 = xp1 + r * math.sin(x)
+        yp2 = yp1 - r * (1 - math.cos(x))
+        return xp2, yp2    
+    #
     def _dimension(self) -> str:
         """ """
         return  ("{:9s} {:1.4E}\n"
@@ -1015,24 +1010,7 @@ class Trapeziod(ShapeBasic):
         return ki, k0
 
     #
-    def print_file(self, file_name):
-        """ """
-        check_out = print_header ()
-        check_out.append ( "{:23s} {:>19} {:1.4E}\n"
-                           .format ( self.type, "", self.depth ) )
-        check_out.append ( "{:>64} {:1.4E}\n"
-                           .format ( "", self.a ) )
-        check_out.append ( "{:>64} {:1.4E}\n"
-                           .format ( "", self.width ) )
-        check_out.extend ( print_properties ( self ) )
-        # file_checkout = split_file_name(file_name)
-        # file_checkout = str(file_checkout[0]) +'_check_me.txt'
-        file_checkout = str ( file_name ) + '.txt'
-        add_out = open ( file_checkout, 'w' )
-        add_out.write ( "".join ( check_out ) )
-        add_out.close ()
-        print ( 'ok' )
-        #
+    #
     #
     #
     def _get_section_table(self) -> tuple:

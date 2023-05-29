@@ -154,7 +154,7 @@ def get_mask(df_jbc):
 def update_load(df_nload):
     """ """
     dfnload = (df_nload.groupby(['load_name', 'load_number', 'load_type',
-                                   'load_title','system', 'node_name'])
+                                 'load_title','load_system', 'node_name'])
              [['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']].sum())
     #
     dfnload.reset_index(inplace=True)
@@ -163,7 +163,8 @@ def update_load(df_nload):
 def get_dfdisp(dftemp):
     """ """
     db = DBframework()
-    header = ['load_name', 'load_number', 'load_type', 'load_title', 'system',
+    header = ['load_name', 'load_number', 'load_type',
+              'load_title', 'load_system',
               'node_name', 'x', 'y', 'z', 'rx', 'ry', 'rz']
     return db.DataFrame(data=dftemp, columns=header, index=None)
         

@@ -43,7 +43,7 @@ class BeamSQL(BeamBasic):
     #
     def __setitem__(self, beam_name: int|str, parameters: list) -> None:
         """
-        parameters = ['beam', node1, node2, material, section, roll_angle]
+        parameters = ['beam', node1, node2, material, section, roll_angle, title]
         """
         try:
             self._labels.index(beam_name)
@@ -82,10 +82,13 @@ class BeamSQL(BeamBasic):
         roll_angle = parameters[4]
         #except IndexError:
         #    roll_angle = 0.0
-        #print('-->')
+        #
         #if (title := parameters[5]) == "NULL":
         #    title = None
-        title = None
+        try:
+            title = parameters[5]
+        except IndexError:
+            title = None
         #
         project = (beam_name, title, 'beam', 
                    materials[str(parameters[2])],
@@ -336,7 +339,7 @@ class BeamItemSQL(BeamItemBasic):
         #       .format(self.name, *self.connectivity,
         #               self.material, self.section, self.beta,
         #               self.length, title)
-        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:>12s}"\
+        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}"\
                .format(self.name, *self.connectivity,
                        self.material.name, self.section.name,
                        self.beta, self.L, title)

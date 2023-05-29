@@ -11,7 +11,8 @@ from collections.abc import Mapping
 
 # package imports
 from steelpy.f2uModel.load.inmemory.beam import BeamLoadIM
-from steelpy.f2uModel.load.inmemory.combination import BasicLoad
+from steelpy.f2uModel.load.process.actions import SelfWeight
+#from steelpy.f2uModel.load.inmemory.combination import BasicLoad
 #
 class BeamBasicLoad:
     """
@@ -30,7 +31,7 @@ class BeamBasicLoad:
       :number:  integer internal number
       :name:  string node external name
     """
-    __slots__ = ['_cls', 'gravity',
+    __slots__ = ['_cls',  '_selfweight', #'gravity',
                  '_basic', 'combination']
 
     def __init__(self, beam):
@@ -38,8 +39,9 @@ class BeamBasicLoad:
         """
         self._cls = beam
         #self._system_flag = 1 # local
-        self.gravity = 9.80665  # m/s^2
+        #self.gravity = 9.80665  # m/s^2
         #
+        self._selfweight = SelfWeight()
         self._basic = BeamLoadIM("beam_load", "basic")
         self._basic.local_system()
         self.combination = BeamLoadComb("beam_load")

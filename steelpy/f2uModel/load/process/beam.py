@@ -127,16 +127,16 @@ class LineBeam(NamedTuple):
         # convert load to beam local
         self.local_system()
         #
-        # Axial
+        # Axial [P, blank, blank, u]
         Fx =  BeamAxial(L=L, E=E, A=Area)
-        # Torsion
-        Mx_blank = [0, 0, 0, 0]
+        # Torsion [T, B, psi, phi, Tw]
+        Mx_blank = [0, 0, 0, 0, 0]
         #Mx = BeamTorsion(E=E, L=L, G=G)
         #Mx.torque(T=self.mx, L1=self.L0)        
         #
-        # In plane
+        # In plane [V, M, theta, w]
         in_plane =  BeamBending(L=L, E=E, I=Iy)
-        # Out plane
+        # Out plane [V, M, theta, w]
         out_plane = BeamBending(L=L, E=E, I=Iz)
         #
         # [Fx, Fy, Fz, Mx, My, Mz]
@@ -293,7 +293,7 @@ class PointBeam(NamedTuple):
         """ """
         output  = (f"{str(self.name):12s} "
                    f"{self.L0: 1.3e} {self.fx: 1.3e} "
-                   f"{self.fy: 1.3e} {self.fy: 1.3e} "
+                   f"{self.fy: 1.3e} {self.fz: 1.3e} "
                    f"{self.coordinate_system.upper():6s} "
                    f"{self.load_complex}\n")
         
@@ -321,7 +321,7 @@ class PointBeam(NamedTuple):
     def Fx(self, x:float|list, L: float,
            E:float, G: float, 
            Iy:float, Iz:float,
-           J: float, Cw: float, Area: float):
+           J: float, Cw: float, Area: float) -> list:
         """
         Beam load local system
 
@@ -332,20 +332,24 @@ class PointBeam(NamedTuple):
         Iz : Out plane
         R :
 
-        return:
-        [V, M, w, theta]
+        Return:
+        Fx : [load_name, load_title, load_type, load_system,
+              beam_name, L_step,
+              Axial, Torsion, Bending_inplane, Bending_outplane]
+        
+        Axial, Bending_inplane, Bending_outplane = [V, M, w, theta]
+        Torsion = [T, B, psi, phi, Tw]
         """
         # convert load to beam local
         self.local_system()
         #
-        # Axial
-        # [V, M, theta, w]
+        # Axial [P, blank, blank, u]
         Fx =  BeamAxial(L=L, E=E, A=Area)
-        # Torsion
+        # Torsion [T, B, psi, phi, Tw]
         Mx = BeamTorsion(E=E, L=L, G=G, J=J, Cw=Cw)
-        # In plane
+        # In plane [V, M, theta, w]
         Finplane =  BeamBending(L=L, E=E, I=Iy)
-        # Out plane
+        # Out plane [V, M, theta, w]
         F_outplane = BeamBending(L=L, E=E, I=Iz)
         #
         # [Fx, Fy, Fz, Mx, My, Mz]

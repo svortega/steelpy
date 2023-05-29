@@ -33,11 +33,11 @@ def get_reactions(boundaries, nforce):
     #                      ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']].sum()
     # 
     nreaction = (nrsupp.groupby(['load_name', 'load_number', 'load_type',
-                                  'system', 'load_title', 'node_name'])
+                                  'load_system', 'load_title', 'node_name'])
                  [['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']].sum())
     # reset groupby to create new df
     nreaction = nreaction.reset_index(names=['load_name', 'load_number', 'load_type',
-                                             'system', 'load_title', 'node_name'])
+                                             'load_system', 'load_title', 'node_name'])
     #
     return nreaction
 #
@@ -72,7 +72,8 @@ def get_deflection(nodes, basic_load, load_combination,
                     for x, nname in enumerate(node_name)]
         dftemp.extend(filldata)
     #
-    header = ['load_name','load_number', 'load_title', 'load_type', 'system',
+    header = ['load_name','load_number', 'load_title',
+              'load_type', 'load_system',
               'node_name', 'x', 'y', 'z', 'rx', 'ry', 'rz']    
     dfload = pd.DataFrame(data=dftemp, columns=header, index=None)
     return dfload
@@ -109,7 +110,7 @@ def updape_ndf(dfnode, dfcomb,
             #
             #check = dftemp.groupby(['node_name', 'c']).sum().reset_index()
             comb = dftemp.groupby(['load_name', 'load_number','load_type',
-                                   'load_title', 'system','node_name'],
+                                   'load_title', 'load_system','node_name'],
                                     as_index=False)[values].sum()
             #test
             dfnode = db.concat([dfnode, comb], ignore_index=True)
@@ -141,7 +142,8 @@ def updape_memberdf(dfmemb, dfcomb,
                     dftemp = comb
             #
             comb = dftemp.groupby(['load_name', 'load_number','load_type',
-                                   'load_title', 'system','element_name' ,'node_name'],
+                                   'load_title', 'load_system',
+                                   'element_name' ,'node_name'],
                                     as_index=False)[values].sum()
             #test
             dfmemb = db.concat([dfmemb, comb], ignore_index=True)
@@ -173,7 +175,8 @@ def updape_memberdf2(dfmemb, dfcomb,
                     dftemp = comb
             #
             comb = dftemp.groupby(['load_name', 'load_number','load_type',
-                                   'load_title', 'system','element_name' ,'node_end'],
+                                   'load_title', 'load_system',
+                                   'element_name' ,'node_end'],
                                     as_index=False)[values].sum()
             #test
             dfmemb = db.concat([dfmemb, comb], ignore_index=True)
@@ -198,9 +201,9 @@ def beam_end_force(elements, basic_load, df_ndisp, df_nload):
     #
     #
     dispgrp = df_ndisp.groupby(['load_name', 'load_number', 'load_title',
-                                'load_type', 'system'])
+                                'load_type', 'load_system'])
     nlgrp = df_nload.groupby(['load_name', 'load_number', 'load_title',
-                              'load_type', 'system'])
+                              'load_type', 'load_system'])
     #
     dummyf = np.array([0]*6)
     ntest = []
@@ -267,8 +270,10 @@ def beam_end_force(elements, basic_load, df_ndisp, df_nload):
     #
     # get df 
     db = DBframework()
-    header: list[str] = ['load_name', 'load_number', 'load_title', 'load_type', 'system', 
-                         'element_name', 'node_name', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+    header: list[str] = ['load_name', 'load_number', 'load_title',
+                         'load_type', 'load_system', 
+                         'element_name', 'node_name',
+                         'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
     df_nforce = db.DataFrame(data=ntest, columns=header, index=None)
     return df_nforce
 #
@@ -285,7 +290,7 @@ def beam_force(elements, basic_load,
     nfgrp = df_nforce.groupby(['load_name', 'load_number', 'load_type', 'load_title'])
     #
     Fblank = [0, 0, 0, 0]
-    #Fblank2 = [0, 0, 0, 0]
+    Fblank_t = [0, 0, 0, 0, 0]
     dummyf = np.array([0]*6)
     #
     member_load: list = []
@@ -354,7 +359,7 @@ def beam_force(elements, basic_load,
             R0x = [1 * lnforce0[0], 0, 0, 1 * lndisp0[0]]
             R0y = [1 * lnforce0[1], 1 * lnforce0[5], -1 * lndisp0[5], 1 * lndisp0[1]]
             R0z = [1 * lnforce0[2], 1 * lnforce0[4], -1 * lndisp0[4], 1 * lndisp0[2]]
-            R0t = [1 * lnforce0[3], 0, 0, 1 * lndisp0[3]]
+            R0t = [1 * lnforce0[3], 0, 0, 1 * lndisp0[3], 0]
             #
             #Fblank2[0] = -1 * lnforce0[0]  # axial load
             #Fblank2[1] = -1 * lnforce0[3]  # torsion
@@ -385,7 +390,7 @@ def beam_force(elements, basic_load,
                 Lsteps = linspace(start=0, stop=member.L, num=steps+1, endpoint=True)
                 lbforce = [[None,'local', mname,  xstep,
                             *beam.response(x=xstep, R0=[R0x, R0t, R0y, R0z],
-                                           Fx=[Fblank, Fblank, Fblank, Fblank])]
+                                           Fx=[Fblank, Fblank_t, Fblank, Fblank])]
                            for xstep in Lsteps]
             #
             # Axial   [FP, blank, blank, Fu]
@@ -408,20 +413,23 @@ def beam_force(elements, basic_load,
     # --------------------------------------------
     #
     header = ['load_name', 'load_number', 'load_type', 'load_title',
-              'element_load_name', 'system',
+              'element_load_name', 'load_system',
               'element_name', 'node_end',
               'F_Vx', 'blank1', 'blank2', 'F_wx',  # axial
-              'F_Mx', 'F_B', 'F_psi', 'F_phix',    # torsion
+              'F_Mx', 'F_B', 'F_psi', 'F_phix', 'F_Tw',    # torsion
               'F_Vy', 'F_Mz', 'F_thetaz', 'F_wy',  # bending in plane
               'F_Vz', 'F_My', 'F_thetay', 'F_wz']  # bending out plane
     #
     db = DBframework()
     df_membf = db.DataFrame(data=member_load, columns=header, index=None)
     # reorder columns
-    df_membf = df_membf[['load_name', 'load_number', 'load_type', 'load_title', 'system',
+    df_membf = df_membf[['load_name', 'load_number', 'load_type',
+                         'load_title', 'load_system',
                          'element_name', 'element_load_name', 'node_end',
-                         'F_Vx', 'F_Vy', 'F_Vz', 'F_Mx', 'F_My', 'F_Mz',
-                         'F_wx', 'F_wy', 'F_wz', 'F_phix', 'F_thetay', 'F_thetaz']]
+                         'F_Vx', 'F_Vy', 'F_Vz',
+                         'F_Mx', 'F_My', 'F_Mz',
+                         'F_wx', 'F_wy', 'F_wz',
+                         'F_phix', 'F_thetay', 'F_thetaz']]
     return df_membf
 #
 #

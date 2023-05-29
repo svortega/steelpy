@@ -143,9 +143,11 @@ class LoadTypesConcept:
         self.title = title
         #
         self._selfweight = SelfWeight()
+        
         self._node = NodeLoadItemIM(load_name=name,
                                     load_title=title, 
                                     nodes=self.f2u_points)
+        
         self._beam = BeamLoadItemIM(load_name=name,
                                     load_title=title,
                                     beams=self.f2u_beams)
@@ -214,7 +216,15 @@ class LoadTypesConcept:
         #        self._beam[value[ 0 ] ] = value[ 1: ]
         #else:
         #    self._beam[ values[ 0 ] ] = values[ 1: ]
-        self._beam_id = values.name
+        if isinstance(values, str):
+            try:
+                self.f2u_beams[values]
+                self._beam_id = values
+            except IndexError:
+                raise IOError(f'Beam {values} not found')
+            
+        else:
+            self._beam_id = values.name
 #
 #
 #class TimeHistoryConcept(Mapping):

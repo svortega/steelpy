@@ -6,10 +6,13 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from collections.abc import Mapping
+import math
+import re
 #
 
 # package imports
 #
+from ..process.operations import get_sect_properties,  get_Isection
 from steelpy.process.dataframe.main import DBframework
 import numpy as np
 #
@@ -44,7 +47,9 @@ class ShapeBasic:
                                 'sigma_x', 'sigma_y', 'sigma_z']]
                 stress = self._stress(stress=stress_df)
             except KeyError:
-                actions_df = df[['load_title', 'node_end', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']]
+                actions_df = df[['load_title', 'node_end',
+                                 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                                 'B', 'Tw']]
                 stress = self._stress(actions=actions_df)
                 # -------------------------------------
                 header = ['load_name', 'load_title', 
@@ -81,6 +86,64 @@ class ShapeBasic:
             else:
                 print('--> ??')
                 1 / 0
+    #
+    def add_stress(self, stress, other):
+        """ """
+        if isinstance(stress.tau_x, list):
+            stress.tau_x = self._combine_stress(other.tau_x, stress.tau_x)
+            stress.tau_y = self._combine_stress(other.tau_y, stress.tau_y)
+            stress.tau_z = self._combine_stress(other.tau_z, stress.tau_z)
+            #
+            stress.sigma_x = self._combine_stress(other.sigma_x, stress.sigma_x)
+            stress.sigma_y = self._combine_stress(other.sigma_y, stress.sigma_y)
+            stress.sigma_z = self._combine_stress(other.sigma_z, stress.sigma_z)
+        else:
+            # Assuming global stress
+            stress.tau_x = self._add_global_stress(other.tau_x, stress.tau_x)
+            stress.tau_y = self._add_global_stress(other.tau_y, stress.tau_y)
+            stress.tau_z = self._add_global_stress(other.tau_z, stress.tau_z)
+            #
+            stress.sigma_x = self._add_global_stress(other.sigma_x, stress.sigma_x)
+            stress.sigma_y = self._add_global_stress(other.sigma_y, stress.sigma_y)
+            stress.sigma_z = self._add_global_stress(other.sigma_z, stress.sigma_z)
+        #
+        return stress
+    #
+    def _add_global_stress(self, stress_local, stress_global):
+        """
+        """  
+        # _new_stress = [ _item + math.copysign(1, _item.value) * stress_global  
+        #                 if _item.value != 0  else _item for _item in stress_local] #aldh6850
+        
+        #aldh6850 - update to ensure the "global" stress has the same sign as the "local" stress to be conservative
+        #aldh6850 - update to ensure when the "local" stress is zero the "global" stress is used
+        
+        _new_stress = [ _item + math.copysign(1, _item.value) * abs(stress_global)  
+                        if _item.value != 0  else stress_global for _item in stress_local] #aldh6850
+        
+        
+        return _new_stress
+    #
+    def _combine_stress(self, stress_1, stress_2):
+        """
+        """
+        # change * by +
+        _new_stress = [stress_1[x] + math.copysign(1, stress_1[x].value) * abs(stress_2[x]) 
+                       for x in range(9)]
+        return _new_stress   
+    #
+    #
+    # -------------------------------------
+    #
+    def _print_section_properties(self):
+        """
+        """
+        file = shape_io.print_header()
+        file.extend(self._shape())
+        file.extend(shape_io.print_properties(self))
+        return file    
+    #    
+    # -------------------------------------
     #
     #@property
     def properties(self):
@@ -137,6 +200,83 @@ class SectionBasic(Mapping):
         self._title: list[str] = []
         self._type: list = []
     #
+    def __setitem__(self, shape_name: str | int,
+                    properties: list[float] | dict[str, float] | str) -> None:
+        """
+        """
+        try:
+            self._labels.index(shape_name)
+            raise Exception(f'Section {shape_name} already exist')
+        except ValueError:
+            #
+            shape_type = properties[0]
+            properties = get_sect_properties(properties[1:])
+            #
+            self._labels.append(shape_name)
+            self._type.append(shape_type)
+            #
+            if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b",
+                        shape_type, re.IGNORECASE):
+                # [d, tw, bf, tf, bfb, tfb, r, title]
+                properties =  get_Isection(properties)
+                self._ibeam[shape_name] = properties
+
+            elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
+                self._tee[shape_name] = properties                  
+
+            elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
+                self._tubular[shape_name] = properties
+
+            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b",
+                          shape_type, re.IGNORECASE):
+                self._solid[shape_name] = [shape_type, *properties] 
+
+            elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
+                self._box[shape_name] = properties 
+
+            elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
+                self._channel[shape_name] = properties                 
+
+            elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
+                self._angle[shape_name] = properties               
+
+            else:
+                raise Exception(" section item {:} not recognized".format(shape_type))    
+    #
+    def __getitem__(self, shape_name: int):
+        """
+        node_name : node number
+        """
+        try:
+            index = self._labels.index(shape_name)
+            shape_type = self._type[index]
+        except ValueError:
+            raise KeyError(f'   *** Section {shape_name} does not exist')
+        #
+        if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
+            return self._tubular[shape_name]
+
+        elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
+            return self._solid[shape_name]
+        
+        elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b", shape_type, re.IGNORECASE):
+            return self._ibeam[shape_name]
+        
+        elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
+            return self._box[shape_name]
+        
+        elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
+            return self._channel[shape_name]
+        
+        elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
+            return self._tee[shape_name]
+        
+        elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
+            return self._angle[shape_name]
+        
+        else:
+            raise IOError(f' Section type {shape_type} not recognised')
+    #    
     #
     def __len__(self):
         return len(self._labels)
@@ -181,4 +321,8 @@ class SectionBasic(Mapping):
                   'top_flange_width', 'top_flange_thickness',
                   'bottom_flange_width', 'bottom_flange_thickness']
         1 / 0
-        return db    
+        return db
+#
+#
+#-------------------------------------------------
+#

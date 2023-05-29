@@ -34,7 +34,7 @@ def print_node_deflections(disp_result):
     nditems = ndtype.groupby('load_name')
     # Basic
     for key, wk in nditems:
-        header =  wk[['load_name', 'load_number', 'load_title', 'system']].values
+        header =  wk[['load_name', 'load_number', 'load_title', 'load_system']].values
         print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
               .format(*header[0]))
         print("     node  x-disp     y-disp     z-disp     x-rot      y-rot      z-rot")
@@ -55,7 +55,7 @@ def print_node_deflections(disp_result):
         print('{:}'.format(52 * '-'))
         print("")
         for key, wk in nditems:
-            header =  wk[['load_name', 'load_number', 'load_title', 'system']].values
+            header =  wk[['load_name', 'load_number', 'load_title', 'load_system']].values
             print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
                   .format(*header[0]))
             #
@@ -84,7 +84,7 @@ def print_node_reactions(reactions):
     nrtype = nreacgrp.get_group('basic')
     nritems = nrtype.groupby('load_name')
     for key, wk in nritems:
-        header =  wk[['load_name', 'load_number', 'load_title', 'system']].values
+        header =  wk[['load_name', 'load_number', 'load_title', 'load_system']].values
         print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
               .format(*header[0]))
         #
@@ -100,7 +100,7 @@ def print_node_reactions(reactions):
         print('{:}'.format(52 * '-'))
         print("")
         for key, wk in nritems:
-            header =  wk[['load_name', 'load_number', 'load_title', 'system']].values
+            header =  wk[['load_name', 'load_number', 'load_title', 'load_system']].values
             print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
                   .format(*header[0]))
             #
@@ -168,7 +168,7 @@ def print_member_forces(df_membforce):
     bltype = blgrp.get_group('basic')
     blitems = bltype.groupby('load_name')     
     for key, wk in blitems:
-        header =  wk[['load_name', 'load_number', 'load_title', 'system']].values
+        header =  wk[['load_name', 'load_number', 'load_title', 'load_system']].values
         print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
               .format(*header[0]))
         #
@@ -181,7 +181,7 @@ def print_member_forces(df_membforce):
         blitems = bltype.groupby('load_name')        
         print('{:}'.format(52 * '-'))
         for key, wk in blitems:
-            header =  wk[['load_name', 'load_number', 'load_title', 'system']].values
+            header =  wk[['load_name', 'load_number', 'load_title', 'load_system']].values
             print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
                   .format(*header[0]))
             #

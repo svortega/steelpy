@@ -40,7 +40,7 @@ class Elements(Mapping):
     def __setitem__(self, element_number: int,
                     parameters: list[float]|dict[str, float]) -> None:
         """
-        parameters = ['beam', node1, node2, material, section, roll_angle]
+        parameters = ['beam', node1, node2, material, section, roll_angle, title]
         """
         self._elements[element_number] = parameters
         
@@ -70,7 +70,8 @@ class Elements(Mapping):
         output += "\n"
         output += f"{33*space}ELEMENTS\n"
         output += "\n"
-        output += (f"Element     node1    node2 {4*space} material  section {3*space} beta {3*space} lenght   title")
+        output += (f"Element     Node1    Node2 {4*space} Material  Section {4*space}")
+        output += (f"Beta {3*space} Lenght {2*space} Title")
         output += "\n"
         output += "{:}\n".format(80*".")
         output += "\n"

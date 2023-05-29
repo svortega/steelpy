@@ -45,18 +45,25 @@ class TorsionOpenGE:
         self.Cw = Cw
     #
     def load(self, FT: float, FB: float,
-             Fpsi: float, Fphi: float) -> None:
+             Fpsi: float, Fphi: float, FTw: float) -> None:
         """
-        Load @ x
+        Load at x distance from end 1
+        
+        FT : Twisting moment
+        FB : Bimoment
+        Fpsi : Rate of angle of twist
+        Fphi: Angle of twist
+        Ftw : Warping torque
         """
         self.FT = FT
         self.FB = FB
         self.Fpsi = Fpsi
         self.Fphi = Fphi
-
+        self.FTw =  FTw
     #
     def R0(self, T0: float, B0: float,
-           psi0: float, phi0: float) -> None:
+           psi0: float, phi0: float,
+           Tw0: float) -> None:
         """
         Initial Parameters
         """
@@ -64,7 +71,7 @@ class TorsionOpenGE:
         self.B0 = B0
         self.Psi0 = psi0
         self.Phi0 = phi0
-
+        self.Tw0 = Tw0
     #
     def C(self, J: float, Cw:float):
         """ """
@@ -121,7 +128,13 @@ class TorsionOpenGE:
         """
         x : distance from end 1
 
-        results:
+        Return:
+        FT : Twisting moment
+        FB : Bimoment
+        Fpsi : Rate of angle of twist
+        Fphi: Angle of twist
+        Ftw : Warping torque
+        
         [T, B, Psi, Phi, Tw]
         """
         return [self.T(x),

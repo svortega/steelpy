@@ -15,6 +15,7 @@ import math
 from steelpy.sections.process.stress import BeamStress
 from steelpy.sections.process.operations import ShapeProperty
 from .operations import SectionBasic, ShapeBasic
+import numpy as np
 #
 #
 #
@@ -74,14 +75,15 @@ def radial_shear_factor(D: float, Tw: float, Tft: float,
     print('-----------------------------')
     print('Max Shear (tau) : {: 1.4E}'. format(tau_y))
     return tau_y
-    #
-    #-------------------------------------------------
 #
-# ----------------------------------------
+#-------------------------------------------------
+#
+#-------------------------------------------------
 #
 class Ibeam(SectionBasic):
-    __slots__ = ['_labels', '_number', '_title', '_d', '_tw',
-                 '_bf', '_tf', '_bfb', '_tfb']
+    __slots__ = ['_labels', '_number', '_title', '_type', '_default', 
+                 '_d', '_tw', '_bf', '_tf', '_bfb', '_tfb',
+                 '_r']
     def __init__(self):
         """ """
         super().__init__()
@@ -91,6 +93,7 @@ class Ibeam(SectionBasic):
         self._tf: array = array('f', [])
         self._bfb: array = array('f', [])
         self._tfb: array = array('f', [])
+        self._r: array = array('f', [])   # fillet radius
     #
     #
     def __setitem__(self, shape_name: int|str, parameters: list) -> None:
@@ -102,7 +105,6 @@ class Ibeam(SectionBasic):
             raise Exception('Section {:} already exist'.format(shape_name))
         except ValueError:
             self._labels.append(shape_name)
-            self._title.append('NULL')
             mnumber = next(self.get_number())
             self._number.append(mnumber)
             #
@@ -110,16 +112,11 @@ class Ibeam(SectionBasic):
             self._tw.append(parameters[1])
             self._bf.append(parameters[2])
             self._tf.append(parameters[3])
-            #
-            try:
-                self._bfb.append(parameters[4])
-            except TypeError:
-                self._bfb.append(parameters[2])
-            #
-            try:
-                self._tfb.append(parameters[5])
-            except TypeError:
-                self._tfb.append(parameters[3])
+            self._bfb.append(parameters[4])
+            self._tfb.append(parameters[5])
+            self._r.append(parameters[6])
+            self._title.append(parameters[7])
+            #            
     #
     def __getitem__(self, shape_name: str | int):
         """
@@ -129,16 +126,11 @@ class Ibeam(SectionBasic):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        #if not (bfb := self._bfb[index]):
-        #    bfb = self._bf[index]
-        #
-        #if not (tfb := self._tfb[index]):
-        #    tfb = self._tf[index]
-        #
         return IbeamBasic(name=self._labels[index], 
                           d=self._d[index], tw=self._tw[index],
                           bft=self._bf[index], tft=self._tf[index],
-                          bfb=self._bfb[index], tfb=self._tfb[index])
+                          bfb=self._bfb[index], tfb=self._tfb[index], 
+                          root_radius=self._r[index])
 #
 #
 @dataclass
@@ -214,6 +206,8 @@ class IbeamBasic(ShapeBasic):
         Vz : vertical force
         stress_type: average/true
         -------------------------
+        
+        Return:
         tau_y : stress horizontal
         tau_z : stress vertical
         """
@@ -221,59 +215,46 @@ class IbeamBasic(ShapeBasic):
         #-------------------------------------------------        
         #            Shear Stress Calculation
         # vertical section coordinates
-        #coord_z = self.section_coordinates.z
         coord =  self.section_coordinates()
         prop = self.properties()
         #        
         if 'average' in stress_type.lower():
             # Area of Web
             # The overall depth times the web thickness
-            self.Aw = self.d * self.tw
+            Aw = self.d * self.tw
+            index = [0, 2, 6, 8]
+            tau_z = [0 if z in index else 1
+                     for z, item in enumerate(coord.z)]
+            tau_z = [item * Vz / Aw for item in tau_z] # vertical
+            #
             # Area of Flange
-            self.Af = (self.bfb * self.tfb + self.bft * self.tft)
-            #
-            tau_z = [Vz / self.Aw for _ in coord.z] # vertical
-            _index = [0, 2, 6, 8]
-            for x in _index:
-                tau_z[x] *= 0
-            #
-            tau_y = [Vy / self.Af for _ in coord.z] # horizontal
-            _index = [4] # [0, 2, 4, 6, 8]
-            for x in _index:
-                tau_y[x] *= 0
+            Af = (self.bfb * self.tfb + self.bft * self.tft)
+            index = [4]
+            tau_y = [0 if y in index else 1
+                     for y, item in enumerate(coord.y)]
+            tau_y = [item * Vy / Af for item in tau_y] # horizontal
+        
         else:
             # True Shear Stress
-            _Zcb = self.d - self.Zc
-            # q5a = (((self.Zc - self.tft) / 2.0) * (self.tw * (self.Zc - self.tft/ 2.0))) #aldh6850
-            # q5b = (((_Zcb - self.tfb) / 2.0) * (self.tw * (_Zcb - self.tfb/ 2.0))) #aldh6850
-            q5a = (((self.Zc - self.tft) / 2.0) * (self.tw * (self.Zc - self.tft))) #aldh6850 - centroid of top half of web from Neutral-Axis times area of top half of web
-            q5b = (((_Zcb - self.tfb) / 2.0) * (self.tw * (_Zcb - self.tfb))) #aldh6850 - centroid of bottom half of web from Neutral-Axis times area of bottom half of web
+            Zcb = self.d - prop.Zc
+            # Centroid of top half of web from Neutral-Axis times area of top half of web
+            q5a = (prop.Zc - self.tft) / 2.0 * self.tw * (prop.Zc - self.tft)
+            # Centroid of bottom half of web from Neutral-Axis times area of bottom half of web
+            q5b = (Zcb - self.tfb) / 2.0 * self.tw * (Zcb - self.tfb)
             #
-            # q = [0 * self.Zc,  (self.Zc - self.tft/2.0) * self.tft * self.bft / 2.0, #aldh6850
-            #      0 * self.Zc,  (self.Zc - self.tft/2.0) * self.tft * self.bft, #aldh6850
-            #      None, (_Zcb - self.tfb/2.0) * self.tfb * self.bfb, 0 * self.bfb, #aldh6850
-            #      (_Zcb - self.tfb/2.0) * self.tfb * self.bfb / 2.0, 0 * self.bfb] #aldh6850
-            #
-            # aldh6850 - section points 2 and 8 are on the extreme edges of the flange
+            # Section points 2 and 8 are on the extreme edges of the flange
             # where there is no shear stress
-            q = [0 * (self.Zc)**3,  0 * (self.Zc)**3,
-                 0 * (self.Zc)**3,  (self.Zc - self.tft/2.0) * self.tft * self.bft,
-                 None, (_Zcb - self.tfb/2.0) * self.tfb * self.bfb, 0 * (_Zcb)**3,
-                 0 * (_Zcb)**3, 0 * (_Zcb)**3]
-            #aldh6850 ---------------------------------------------------------------------
+            q = [0 , 0 , 0 ,  
+                 (prop.Zc - self.tft / 2.0) * self.tft * self.bft,
+                 0,
+                 (Zcb - self.tfb / 2.0) * self.tfb * self.bfb,
+                 0 , 0 , 0]
+            #---------------------------------------------------------------------
             #
             q[4] = max(q5a + q[3], q5b + q[5])
             q = [_q * Vz / prop.Iy for _q in q]
             # vertical
-            # tau_z = [Vz / (2*self.Iy) * (self.d**2 / 4.0 - coord_z[0]**2), #aldh6850
-            #          q[1]/self.bft,  #aldh6850
-            #          Vz / (2*self.Iy) * (self.d**2 / 4.0 - coord_z[2]**2), #aldh6850
-            #          q[3]/self.tw, q[4]/self.tw,  #aldh6850
-            #          q[5]/self.tw, #aldh6850
-            #          Vz / (2*self.Iy) * (self.d**2 / 4.0 - coord_z[6]**2), #aldh6850
-            #          q[7]/self.bfb, #aldh6850
-            #          Vz / (2*self.Iy) * (self.d**2 /4.0 - coord_z[8]**2)] #aldh6850
-            #aldh6850 ---------------------------------------------------------------------
+            #---------------------------------------------------------------------
             tau_z = [q[0]/self.bft,
                      q[1]/self.bft, 
                      q[2]/self.bft,
@@ -283,13 +264,13 @@ class IbeamBasic(ShapeBasic):
                      q[6]/self.bfb,
                      q[7]/self.bfb,
                      q[8]/self.bfb]
-            #aldh6850 ---------------------------------------------------------------------
+            #---------------------------------------------------------------------
             # get load proportion
-            Vtop = Vy * (_Zcb / self.d)
-            Vbot = Vy * (self.Zc / self.d)
+            Vtop = Vy * Zcb / self.d
+            Vbot = Vy * prop.Zc / self.d
             # get area flange
-            bft = (2 * self.bft * self.tft)
-            bfb = (2 * self.bfb * self.tfb)
+            bft = 2 * self.bft * self.tft
+            bfb = 2 * self.bfb * self.tfb
             # horizontal
             tau_y = [0 * Vtop / bft,
                      3.0 * Vtop / bft, 
@@ -303,47 +284,49 @@ class IbeamBasic(ShapeBasic):
         # 
         return tau_y, tau_z
     #
-    def torsional_stress(self, theta):
+    def _torsional_stress2(self, theta, E: float, G: float):
         """
         Roark's Torsion chapter
         """
         #if not G:
-        G = self._material.E / (2 * (1.0 + self._material.poisson))
+        #G = self._material.E / (2 * (1.0 + self._material.poisson))
         #
         #if not theta:
         #    theta = self._get_rotation(To, E, G, l)
         #
+        _hw = (self.d - self.tft - self.tfb) # - 2 * self.root_radius
+        _ho = (self.d - 0.5 * self.tft - 0.5 * self.tfb)        
         #
         if 'symmetrical' in self.type.lower():
-            tau_1 = self.tf * G * theta[0]
-            tau_2 = - self.ho * self.bf**2 * E * theta[2] / 16.0
+            tau_1 = self.tft * G * theta[0]
+            tau_2 = - _ho * self.bft**2 * E * theta[2] / 16.0
             # bending
-            sigma_y = self.ho * self.bf * E * theta[1] / 4.0
+            sigma_y = _ho * self.bft * E * theta[1] / 4.0
         else:
             # shear
             tau_1 = max(self.tw, self.tft, self.tfb) * G * theta[0]
             #
             if self.tfb * self.bfb > self.tft * self.bft:
-                tau_2 = ((self.ho * self.tfb * self.bfb**3 * self.bft**2)
+                tau_2 = ((_ho * self.tfb * self.bfb**3 * self.bft**2)
                          / (8 * self.tft * self.bft**3 + self.tfb * self.bfb**3))
             else:
-                tau_2 = ((self.ho * self.tft * self.bft**3 * self.bfb**2)
+                tau_2 = ((_ho * self.tft * self.bft**3 * self.bfb**2)
                          / (8 * self.tft * self.bft**3 + self.tfb * self.bfb**3))                
             #
             tau_2 *= E * theta[2]
             #
             # bending 
             #
-            e = (self.tft * self.bft**3 * self.ho
+            e = (self.tft * self.bft**3 * _ho
                  / (self.tft * self.bft**3 + self.tfb * self.bfb**3))
             #
             if self.tfb * self.bfb**2 > self.tft * self.bft**2:
-                sigma_y = ((self.ho * self.bft / 2.0) 
+                sigma_y = ((_ho * self.bft / 2.0) 
                            * self.tfb * self.bfb**3 
                            / (self.tft * self.bft**3 
                               + self.tfb * self.bfb**3))
             else:
-                sigma_y = ((self.ho * self.bfb / 2.0) 
+                sigma_y = ((_ho * self.bfb / 2.0) 
                            * self.tft * self.bft**3 
                            / (self.tft * self.bft**3 
                               + self.tfb * self.bfb**3))
@@ -351,15 +334,50 @@ class IbeamBasic(ShapeBasic):
             sigma_y *= E * theta[1]
         #
         # bending stress
-        self.sigma_y = [_sigma + math.copysign(sigma_y, _sigma)
-                        if _sigma != 0 else 0 for _sigma in self.sigma_y]
+        sigma_y = [_sigma + math.copysign(sigma_y, _sigma)
+                        if _sigma != 0 else 0
+                        for _sigma in sigma_y]
         #
         # shear stress
-        self.tau_z = [_tau + math.copysign(tau_1, _tau) - math.copysign(tau_2, _tau)
-                      if _tau != 0 else 0 for _tau in self.tau_z ]
+        tau_z = [_tau + math.copysign(tau_1, _tau) - math.copysign(tau_2, _tau)
+                      if _tau != 0 else 0
+                      for _tau in tau_z]
         #
         #print('ok')
+        return sigma_y, tau_z
     #
+    def torsional_stress(self, Tw, B):
+        """
+        Pilkey Formulas
+        Chapter 14.
+        """
+        coord =  self.section_coordinates()
+        ho = (self.d - 0.5 * self.tft - 0.5 * self.tfb)
+        #
+        Cw, J, K, w, Qw = self.warping_properties()
+        # Normal warping stress
+        #index = [0, 2, 6, 8]
+        #sigma_w = [0 if y in index else 1
+        #           for y, item in enumerate(coord.y)]
+        #sigma_w = [item for item in sigma_w]
+        sigma_wt = w[0] / Cw
+        sigma_wb = w[1] / Cw
+        sigma_w = [0, 0, 0, # 1,2,3
+                   sigma_wt,      #4
+                   0,              #5
+                   -1 * sigma_wb, #6
+                   0, 0, 0] # 7,8,9
+        sigma_w =  [item * B for item in sigma_w]
+        # Shear warping stress
+        tau_wt = Qw[0] / (Cw * self.tft)
+        tau_wb = Qw[1] / (Cw * self.tfb)
+        tau_w = [tau_wt, 0, -1 * tau_wt, # 1,2,3
+                 0, 0, 0,                #4,5,6
+                 tau_wb, 0, -1 * tau_wb] # 7,8,9
+        tau_w = [item * Tw for item in tau_w]
+        #1 / 0
+        return sigma_w,  tau_w
+        
     #
     def curved(self, R:float):
         """
@@ -499,26 +517,6 @@ class IbeamBasic(ShapeBasic):
         #
         #
     #
-    def print_file(self, file_name):
-        """
-        """
-        check_out = print_header()       
-
-        check_out.append("{:23s} {:>19} {:1.4E} {:1.4E} {:1.4E} {:1.4E}\n"
-                         .format(self.type, "", self.d, self.tw, self.bft, self.tft))
-        
-        check_out.append("{:>65} {:1.4E} {:1.4E}\n"
-                         .format("", self.bfb, self.tfb))        
-
-        check_out.extend(print_properties(self))
-
-        #file_checkout = split_file_name(file_name)
-        #file_checkout = str(file_checkout[0]) +'_check_me.txt'
-        file_checkout = str(file_name) + '.txt'
-        add_out = open(file_checkout,'w')
-        add_out.write("".join(check_out))
-        add_out.close()
-        print('ok')
     #
     def get_compactness(self, material: str):
         """
@@ -527,7 +525,7 @@ class IbeamBasic(ShapeBasic):
     
         return _class_B41a, _class_B41b
     #
-    #@property
+    #
     def _properties(self):
         """
         """
@@ -557,45 +555,38 @@ class IbeamBasic(ShapeBasic):
         #
         _hw = (self.d - self.tft - self.tfb) # - 2 * self.root_radius
         _ho = (self.d - 0.5 * self.tft - 0.5 * self.tfb)
-        self.ho = _ho
-        self.hw = _hw
         #-------------------------------------------------
         #   Cross-Sectional Area
         area = (self.bft*self.tft
-                     + self.bfb*self.tfb 
-                     + _hw*self.tw)
+                + self.bfb*self.tfb 
+                + _hw*self.tw)
         #-------------------------------------------------
         #   Elastic Neutral Centre 
         Zc = ((self.bft * self.tft**2 / 2.0
-                    + self.bfb * self.tfb 
-                    * (_hw + self.tft + self.tfb / 2.0) 
-                    + _hw * self.tw * (_hw / 2.0 + self.tft)) 
-                   / (self.bft * self.tft 
-                    + _hw*self.tw 
-                    + self.bfb * self.tfb))
-        self.Zc = Zc
+               + self.bfb * self.tfb 
+               * (_hw + self.tft + self.tfb / 2.0) 
+               + _hw * self.tw * (_hw / 2.0 + self.tft)) 
+              / (self.bft * self.tft 
+               + _hw*self.tw 
+               + self.bfb * self.tfb))
         Yc = 0 * Zc
-        #   Plastic Neutral Centre    # @hami2230 - added
-        if (self.bfb * self.tfb >
-                (self.bft * self.tft
-                + self.hw * self.tw)):
+        #   Plastic Neutral Centre 
+        if (self.bfb * self.tfb > (self.bft * self.tft + _hw * self.tw)):
             Zp = (self.d
-                       - (0.5 * area / self.bfb)
-                       - self.tft)
-        elif (self.bft * self.tft > 
-                 (self.bfb * self.tfb 
-                 + self.hw * self.tw)):
+                  - (0.5 * area / self.bfb)
+                  - self.tft)
+        elif (self.bft * self.tft > (self.bfb * self.tfb + _hw * self.tw)):
             Zp = (self.d -
-                      (self.tfb + self.hw 
-                      + ((0.5 * area - self.bfb
-                      * self.tfb - self.hw * self.tw)
-                      / self.bft)) - self.tft) 
+                  (self.tfb + _hw 
+                  + ((0.5 * area - self.bfb
+                  * self.tfb - _hw * self.tw)
+                  / self.bft)) - self.tft) 
         else:
             Zp = (self.d -
-                      ((0.5 * area - self.bfb
-                      * self.tfb)
-                      / self.tw + self.tfb) 
-                      - self.tft)
+                  ((0.5 * area - self.bfb
+                  * self.tfb)
+                  / self.tw + self.tfb) 
+                  - self.tft)
         # Warping Constant Cw
         # Picard and Beaulieu 1991
         d = self.d - (self.tft + self.tfb) / 2.0
@@ -611,36 +602,36 @@ class IbeamBasic(ShapeBasic):
                       + (self.d * self.tw**3 / 3.0))
             #
             K = ((2 * self.tft**3 * self.bft +
-                       self.tw**3 * self.ho) / 3.0)
+                  self.tw**3 * _ho) / 3.0)
         else:
             J = ((self.bft * self.tft**3
-                       + self.bfb * self.tfb**3 
-                       + d * self.tw**3) / 3.0)
+                  + self.bfb * self.tfb**3 
+                  + d * self.tw**3) / 3.0)
             #
             K = (self.tft**3 * self.bft + self.tfb**3 * self.bfb
-                      + self.tw**3 * self.ho)            
+                 + self.tw**3 * _ho)            
         #
         #-------------------------------------------------
         #   Shear Centre
         SCz = (((self.d - self.tft / 2.0 - self.tfb / 2.0)
-                     * self.tft * self.bft**3) 
-                    / (self.tft * self.bft**3 
-                       + self.tfb * self.bfb**3))
+                * self.tft * self.bft**3) 
+               / (self.tft * self.bft**3 
+                  + self.tfb * self.bfb**3))
         SCy = 0 * SCz
         #-------------------------------------------------
         #               Section Properties
         #-------------------------------------------------
         #   Second Moment of Area about Mayor Axis
         Iy = (self.bft * self.tft**3 / 12.0
-                   + (self.bft * self.tft 
-                      * (Zc - self.tft / 2.0)**2 )
-                   + self.bfb * self.tfb**3 / 12.0 
-                   + (self.bfb * self.tfb 
-                      * (_hw + self.tfb / 2.0 + self.tft - Zc)**2)
-                   + self.tw * _hw**3 / 12.0 
-                   + self.tw * _hw * (_hw / 2.0 + self.tft - Zc)**2)
+              + (self.bft * self.tft 
+                 * (Zc - self.tft / 2.0)**2 )
+              + self.bfb * self.tfb**3 / 12.0 
+              + (self.bfb * self.tfb 
+                 * (_hw + self.tfb / 2.0 + self.tft - Zc)**2)
+              + self.tw * _hw**3 / 12.0 
+              + self.tw * _hw * (_hw / 2.0 + self.tft - Zc)**2)
         #   Second Moment of Area of Compression Flange about Mayor Axis
-        _Iy_ft = (self.bft * self.tft**3 / 12.0 + # @hami2230 - added
+        _Iy_ft = (self.bft * self.tft**3 / 12.0 + 
                   (self.bft * self.tft
                    * (Zc - self.tft / 2.0)**2 ))
         #   Elastic Modulus about Mayor Axis
@@ -650,27 +641,27 @@ class IbeamBasic(ShapeBasic):
             Zey = Iy / (self.d - Zc)
         #   Plastic Modulus about Mayor Axis
         Zpy = ((self.tw * _hw**2 / 4.0)
-                    + (self.bft * self.tft 
-                       * (Zc - self.tft / 2.0))
-                    + (self.bfb * self.tfb 
-                       * (self.d - Zc - self.tfb / 2.0)))
+               + (self.bft * self.tft 
+                  * (Zc - self.tft / 2.0))
+               + (self.bfb * self.tfb 
+                  * (self.d - Zc - self.tfb / 2.0)))
         #   Radius of gyration about Mayor Axis
         ry = (Iy / area)**0.5
         SFy = Zpy / Zey
-        # Elastic modulus of compression flange about major axis    # @hami2230 - Sxc and Sxt added
+        # Elastic modulus of compression flange about major axis
         Sxc = (self.bft * self.tft**3 / 12.0
-                   + (self.bft * self.tft 
-                      * (Zc - self.tft / 2.0)**2 )) / Zc
+               + (self.bft * self.tft 
+                  * (Zc - self.tft / 2.0)**2 )) / Zc
         # Elastic modulus of tension flange about major axis
         Sxt = (self.bfb * self.tfb**3 / 12.0
-                   + (self.bfb * self.tfb 
-                      * ((self.d-Zc) - self.tfb / 2.0)**2 )) / (self.d-Zc)
+               + (self.bfb * self.tfb 
+                  * ((self.d-Zc) - self.tfb / 2.0)**2 )) / (self.d-Zc)
         #
         #-------------------------------------------------
         #   Second Moment of Area about Minor Axis
         Iz = (self.bft**3 * self.tft / 12.0 +
-                   self.bfb**3 * self.tfb / 12.0 +
-                   self.tw**3 * _hw / 12.0)
+              self.bfb**3 * self.tfb / 12.0 +
+              self.tw**3 * _hw / 12.0)
         #   Elastic Modulus about Minor Axis
         if self.bft >= self.bfb:
             Zez = 2 * Iz / self.bft
@@ -678,8 +669,8 @@ class IbeamBasic(ShapeBasic):
             Zez = 2 * Iz / self.bfb
         #   Plastic Modulus about Minor Axis  
         Zpz = ((self.tft * self.bft**2
-                     + self.tfb * self.bfb**2 
-                     + _hw * self.tw**2) / 4.0)
+                + self.tfb * self.bfb**2 
+                + _hw * self.tw**2) / 4.0)
         #   Radius of gyration about Minor Axis  
         rz = (Iz / area)**0.5
         
@@ -691,97 +682,121 @@ class IbeamBasic(ShapeBasic):
         rp = (Jx / area)**0.50
         
         # warping statical moment at point s on cross-section
-        #self.Sws = self.ho * self.bf**2 * self.tw / 16.0
-        Sws = self.ho * self.bft**2 * self.tft / 16.0 #aldh6850
+        Sws = _ho * self.bft**2 * self.tft / 16.0
         # normalized warping function at point s on cross-section
-        Wns = self.ho * self.bft / 4.0
+        Wns = _ho * self.bft / 4.0
         #
         #-------------------------------------------------
-        #self._get_section_coordinates()
         #
-        #file = shape_io.print_header()
-        #file.extend(self._shape())
-        #file.extend(shape_io.print_properties(self))
-        #for row in file:
-        #    print(row.rstrip())
-        #print('ok')
-        #file_control = 'testXXX.txt'
-        #_control = open(file_control, 'w+')
-        #_control.write("".join(file))
-        #_control.close()
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
                              Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
                              J=J, Cw=Cw )
     #
-    #
-    def _shape(self):
+    def warping_properties(self):
         """
+        Returns:
+        Cw, J, K, w, Qw
         """
-        _section = []
-        if 'symmetrical' in self.type.lower():
-            _section.append("{:2s}+   bf    +{:33s}{:1.3E} {:1.3E}  {:1.3E} {:1.3E}\n"
-                            .format("", "", 
-                                    self.d.convert('millimetre').value, 
-                                    self.tw.convert('millimetre').value, 
-                                    self.bf.convert('millimetre').value, 
-                                    self.tf.convert('millimetre').value))
-            _section.append("+ +====+====+ tf\n")
-            _section.append("{:}| tw\n".format(7*" ")) 
-            _section.append("d{:6s}|{:6s}Z\n".format("", ""))
-            _section.append("{:7s}|{:6s}^\n".format("", ""))
-            _section.append("+ +====+====+ + > Y\n")
-            _section.append("{:2s}+   bf    +\n".format(""))            
-        else:
-            _section.append("{:4s}+ bft +{:34s}{:1.3E} {:1.3E}  {:1.3E} {:1.3E}\n"
-                            .format("","", 
-                                    self.d.convert('millimetre').value, 
-                                    self.tw.convert('millimetre').value, 
-                                    self.bft.convert('millimetre').value, 
-                                    self.tft.convert('millimetre').value))
-            _section.append("+   +==+==+{:55s}{:1.3E} {:1.3E}\n"
-                            .format("", 
-                                    self.bfb.convert('millimetre').value, 
-                                    self.tfb.convert('millimetre').value))
-            _section.append("{:7s}|\n".format("")) 
-            _section.append("d{:6s}|{:6s}Z\n".format("", ""))
-            _section.append("{:7s}|{:6s}^\n".format("", ""))
-            _section.append("+ +====+====+ + > Y\n")
-            _section.append("{:2s}+   bfb   +\n".format(""))
+        #hw = (self.d - self.tft - self.tfb) # - 2 * self.root_radius
+        ho = (self.d - 0.5 * self.tft - 0.5 * self.tfb)
+        #
+        # Warping Constant Cw
+        # Picard and Beaulieu 1991
+        d = self.d - (self.tft + self.tfb) / 2.0
         
-        return _section
+        _alpha = (1.0 / (1 + (self.bft / self.bfb)**3 
+                         * (self.tft / self.tfb)))
+        
+        Cw = (d**2 * self.bft**3 * self.tft * _alpha) / 12.0        
+        #-------------------------------------------------
+        #   J : Torsional Constant         (lenght^4)
+        #   K : Torsional stiffness factor (lenght^4)
+        if self.bft == self.bfb and self.tft == self.tfb :
+            J = ((2 * self.bft * self.tft**3 / 3.0)
+                 + (self.d * self.tw**3 / 3.0))
+            #
+            K = ((2 * self.tft**3 * self.bft +
+                  self.tw**3 * ho) / 3.0)
+        else:
+            J = ((self.bft * self.tft**3
+                  + self.bfb * self.tfb**3 
+                  + d * self.tw**3) / 3.0)
+            #
+            K = (self.tft**3 * self.bft + self.tfb**3 * self.bfb
+                 + self.tw**3 * ho)
+        #
+        # warping statical moment at point s on cross-section
+        Sws = ho * self.bft**2 * self.tft / 16.0
+        # normalized warping function at point s on cross-section
+        Wns = ho * self.bft / 4.0
+        #
+        #-------------------------------------------------
+        # omega : Sectorial coordinate
+        #
+        w1 = (self.bft * ho
+              / (2.0 * (1.0 + (self.bft / self.bfb)**3
+                        * (self.tft / self.tfb))))
+        
+        w2 = (self.bfb * ho
+              / (2.0 * (1.0 + (self.bfb / self.bft)**3
+                        * (self.tfb / self.tft))))        
+        #
+        Qw1 = self.bft * self.tft * w1 / 4.0
+        Qw2 = self.bfb * self.tfb * w2 / 4.0
+        #
+        return Cw, J, K, (w1, w2), (Qw1, Qw2)
     #
-    def _print_section_properties(self):
-        """
-        """
-        file = shape_io.print_header()
-        file.extend(self._shape())
-        file.extend(shape_io.print_properties(self))
-        return file
+    @property
+    def CoG(self):
+        """ """
+        _hw = (self.d - self.tft - self.tfb)
+        #-------------------------------------------------
+        Yc = 0
+        #   Elastic Neutral Centre 
+        Zc = ((self.bft * self.tft**2 / 2.0
+                    + self.bfb * self.tfb 
+                    * (_hw + self.tft + self.tfb / 2.0) 
+                    + _hw * self.tw * (_hw / 2.0 + self.tft)) 
+                   / (self.bft * self.tft 
+                    + _hw*self.tw 
+                    + self.bfb * self.tfb))
+        #
+        return Yc, Zc
     #
-    def _stress(self, actions, stress=None, stress_type: str='average'):
+    #
+    def _stress(self, actions, stress=None,
+                stress_type: str='average'):
         """
         stress points = [1 2 3 4 5 6 7 8 9]
         """
         prop = self.properties()
         # get section's coordinates
-        #coord_y = self.section_coordinates.y # lateral
-        #coord_z = self.section_coordinates.z # vertical
         coord =  self.section_coordinates()
         # get shear stress
         tau_y, tau_z = self.shear_stress(actions.Fy, actions.Fz, 
                                          stress_type=stress_type)
         # FIXME: don't know what to do here
-        tau_x = [tau_y[x] * 0 for x in range(len(tau_y))]
+        sigma_w, tau_w = self.torsional_stress(Tw=actions.Tw, B=actions.B)
+        tau_x = [actions.Mx * 0 for _ in coord.z]
+        #
+        #
         # get bending stress
         sigma_x = [actions.Fx / prop.area for item in coord.y]
         sigma_y = [actions.My * item / prop.Iy for item in coord.z]
         sigma_z = [actions.Mz * item / prop.Iz for item in coord.y]
         #
+        # bending + torsion
+        #try:
+        tau_y = [tau_w[x] + item
+                 for x, item in enumerate(tau_y)]
+        #
+        sigma_z = [sigma_w[x] + item
+                   for x, item in enumerate(sigma_z)]
+        #
         if stress:
             if isinstance(stress.tau_x, list):
                 # assuming section stress already calculated
-                #print('---> list')
                 stress.tau_x = self._combine_stress(tau_x, stress.tau_x)
                 stress.tau_y = self._combine_stress(tau_y, stress.tau_y)
                 stress.tau_z = self._combine_stress(tau_z, stress.tau_z)
@@ -816,41 +831,13 @@ class IbeamBasic(ShapeBasic):
                 _factor_y = [1, 0, -1, 0, 0, 0, 1, 0, -1]
                 stress_sigma_z = [stress.sigma_z * _coord  for _coord in _factor_y]
                 stress.sigma_z = self._combine_stress(sigma_z, stress_sigma_z)
-                
-                # print(stress.sigma_x[x].convert('megapascal').value) #aldh6850
-                # print(stress.sigma_y[x].convert('megapascal').value) #aldh6850
-                # print(stress.sigma_z[x].convert('megapascal').value) #aldh6850
-                # print(stress.tau_x[x].convert('megapascal').value) #aldh6850
-                # print(stress.tau_y[x].convert('megapascal').value) #aldh6850
-                # print(stress.tau_z[x].convert('megapascal').value) #aldh6850
+        
         else:
             stress = BeamStress(sigma_x, sigma_y, sigma_z, 
                                 tau_x, tau_y, tau_z, coord)
         #
         return stress
     #
-    def _add_global_stress(self, stress_local, stress_global):
-        """
-        """  
-        # _new_stress = [ _item + math.copysign(1, _item.value) * stress_global  
-        #                 if _item.value != 0  else _item for _item in stress_local] #aldh6850
-        
-        #aldh6850 - update to ensure the "global" stress has the same sign as the "local" stress to be conservative
-        #aldh6850 - update to ensure when the "local" stress is zero the "global" stress is used
-        
-        _new_stress = [ _item + math.copysign(1, _item.value) * abs(stress_global)  
-                        if _item.value != 0  else stress_global for _item in stress_local] #aldh6850
-        
-        
-        return _new_stress
-    #
-    def _combine_stress(self, stress_1, stress_2):
-        """
-        """
-        # change * by +
-        _new_stress = [stress_1[x] + math.copysign(1, stress_1[x].value) * abs(stress_2[x]) 
-                       for x in range(9)]
-        return _new_stress
     #
     def section_coordinates(self):
         """
@@ -865,26 +852,19 @@ class IbeamBasic(ShapeBasic):
         +----+-----+      
         7    8     9
         """
+        CoG = self.CoG
         # horizontal
-        coord_y = [-1 * self.bft/2.0, 0 * self.bft, self.bft/2.0, 
-                   0 * self.bft, 0 * self.bft, 0 * self.bfb, 
-                   -1 * self.bfb/2.0, 0 * self.bfb, self.bfb/2.0]
+        coord_y = [-1 * self.bft * 0.50, 0, self.bft * 0.50, 
+                   0, 0, 0, 
+                   -1 * self.bfb * 0.50, 0, self.bfb * 0.50]
         # vertical
-        _Zcb = self.Zc - self.d
-        coord_z = [self.Zc, self.Zc, self.Zc, 
-                   self.Zc - self.tft, 0 * _Zcb , _Zcb + self.tfb,
+        Zc = CoG[0]
+        _Zcb = Zc - self.d
+        coord_z = [Zc, Zc, Zc, 
+                   Zc - self.tft, 0 * _Zcb , _Zcb + self.tfb,
                    _Zcb, _Zcb, _Zcb]
-        
-        #self.section_coordinates = points(coord_y, coord_z)
-        #print('ok')
+        #
         return points(coord_y, coord_z)
-    #
-    def _dimension(self) -> str:
-        """ """
-        out = "{:32s}{:1.4E} {:1.4E} {:1.4E}\n".format(self.type, self.d, self.bft, self.bfb)
-        out += "{:48s}{:1.4E} {:1.4E} {:1.4E}\n".format("", self.tw, self.tft, self.tfb)
-        out += "{:70s}{:1.4E}\n".format("", self.r)
-        return  out
     #
     #def set_default(self):
     #    """ """
@@ -893,6 +873,75 @@ class IbeamBasic(ShapeBasic):
     #    """ """
     #    self.properties
     #
+    # --------------------------------------------
+    #
+    def _dimension(self) -> str:
+        """ """
+        out = "{:32s}{:1.4E} {:1.4E} {:1.4E}\n".format(self.type, self.d, self.bft, self.bfb)
+        out += "{:48s}{:1.4E} {:1.4E} {:1.4E}\n".format("", self.tw, self.tft, self.tfb)
+        out += "{:70s}{:1.4E}\n".format("", self.r)
+        return  out
+    #    
+    #
+    def _shape(self):
+        """
+        """
+        _section = []
+        if 'symmetrical' in self.type.lower():
+            _section.append("{:2s}+   bf    +{:33s}{:1.3E} {:1.3E}  {:1.3E} {:1.3E}\n"
+                            .format("", "", 
+                                    self.d, 
+                                    self.tw, 
+                                    self.bft, 
+                                    self.tft))
+            _section.append("+ +====+====+ tf\n")
+            _section.append("{:}| tw\n".format(7*" ")) 
+            _section.append("d{:6s}|{:6s}Z\n".format("", ""))
+            _section.append("{:7s}|{:6s}^\n".format("", ""))
+            _section.append("+ +====+====+ + > Y\n")
+            _section.append("{:2s}+   bf    +\n".format(""))            
+        else:
+            _section.append("{:4s}+ bft +{:34s}{:1.3E} {:1.3E}  {:1.3E} {:1.3E}\n"
+                            .format("","", 
+                                    self.d, 
+                                    self.tw, 
+                                    self.bft, 
+                                    self.tft))
+            _section.append("+   +==+==+{:55s}{:1.3E} {:1.3E}\n"
+                            .format("", 
+                                    self.bfb, 
+                                    self.tfb))
+            _section.append("{:7s}|\n".format("")) 
+            _section.append("d{:6s}|{:6s}Z\n".format("", ""))
+            _section.append("{:7s}|{:6s}^\n".format("", ""))
+            _section.append("+ +====+====+ + > Y\n")
+            _section.append("{:2s}+   bfb   +\n".format(""))
+        
+        return _section
+    #
+    #
+    def print_file(self, file_name):
+        """
+        """
+        check_out = print_header()       
+
+        check_out.append("{:23s} {:>19} {:1.4E} {:1.4E} {:1.4E} {:1.4E}\n"
+                         .format(self.type, "", self.d, self.tw, self.bft, self.tft))
+        
+        check_out.append("{:>65} {:1.4E} {:1.4E}\n"
+                         .format("", self.bfb, self.tfb))        
+
+        check_out.extend(print_properties(self))
+
+        #file_checkout = split_file_name(file_name)
+        #file_checkout = str(file_checkout[0]) +'_check_me.txt'
+        file_checkout = str(file_name) + '.txt'
+        add_out = open(file_checkout,'w')
+        add_out.write("".join(check_out))
+        add_out.close()
+        print('ok')    
+    #
+    # --------------------------------------------
     #
     @property
     def r(self):
@@ -954,3 +1003,5 @@ class IbeamBasic(ShapeBasic):
     #
     #
 #
+#
+

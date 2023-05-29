@@ -101,13 +101,14 @@ class BTOpenSupports:
     def __call__(self, F_bar:list[float]):
         """
         I : moment of inertia [m^4]
-        F_bar : [FV_bar, FM_bar, Ftheta_bar, Fw_bar]
+        F_bar : [FV_bar, FM_bar, Ftheta_bar, Fw_bar, FTw_bar]
 
         return :
         Initial Parameters x = 0 (support 1)
         [T0, B0, Psi0, Phi0]
         """
-        return self._support0.initial_parameters(J=self.J, Cw=self.Cw, F_bar=F_bar)
+        return self._support0.initial_parameters(J=self.J, Cw=self.Cw,
+                                                 F_bar=F_bar)
 #
 #
 # ---------------------------------------------------------------
@@ -122,7 +123,8 @@ class BTOpenSupports:
 @dataclass
 class ArbitrarySupport:
     __slots__ = ['L', 'E', 'G', 'J', 'Cw', 'C', 
-                 'FT_bar', 'FB_bar', 'Fpsi_bar', 'Fphi_bar']
+                 'FT_bar', 'FB_bar', 'Fpsi_bar',
+                 'Fphi_bar', 'FTw_bar']
 
     def __init__(self, L:float, E: float, G: float) -> None:
         """
@@ -155,18 +157,24 @@ class ArbitrarySupport:
         """ Angle of twist """
         return 0
     #
+    @property
+    def Tw0(self) -> float:
+        """ Warping torque """
+        return 0    
     #
     def Tbar(self, FT_bar:float, FB_bar:float, 
-             Fpsi_bar:float, Fphi_bar:float):
+             Fpsi_bar:float, Fphi_bar:float,
+             FTw_bar: float):
         """ """
         self.FT_bar = FT_bar
         self.FB_bar = FB_bar
         self.Fpsi_bar = Fpsi_bar
         self.Fphi_bar = Fphi_bar
+        self.FTw_bar = FTw_bar
     #
     def initial_parameters(self, J: float, Cw:float, F_bar:list[float]):
         """
-        F_bar : [T0, B0, Psi0, Phi0]
+        F_bar : [T0, B0, Psi0, Phi0, Tw0]
         """
         self.J = J
         self.Cw = Cw
@@ -176,7 +184,7 @@ class ArbitrarySupport:
         #    self.C = 0
         # [FT,FB,Fpsi,Fphi]
         self.Tbar(*F_bar)
-        return [self.T0, self.B0, self.Psi0, self.Phi0]
+        return [self.T0, self.B0, self.Psi0, self.Phi0, self.Tw0]
 #
 #
 #

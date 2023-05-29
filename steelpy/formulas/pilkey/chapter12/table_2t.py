@@ -4,7 +4,7 @@
 # Python stdlib imports
 from __future__ import annotations
 from dataclasses import dataclass
-from math import sinh, cosh, sqrt
+#from math import sinh, cosh, sqrt
 #from typing import NamedTuple
 import re
 #
@@ -43,16 +43,18 @@ class TorsionBarGE:
         #self.Cw = Cw
     #
     def load(self, FT: float, FB: float,
-             Fpsi: float, Fphi: float) -> None:
+             Fpsi: float, Fphi: float,
+             FTw: float) -> None:
         """
         Load @ x
         """
         self.FT = FT
         self.FB = FB
-        self.Fphi = Fphi    
+        self.Fphi = Fphi
     #
     def R0(self, T0: float, B0: float,
-           psi0: float, phi0: float) -> None:
+           psi0: float, phi0: float,
+           Tw0: float) -> None:
         """
         Initial Parameters
         """
@@ -117,11 +119,22 @@ class ArbitraryLoading:
     def Fphi(self, x: float, E: float, G: float, J: float) -> float:
         """ """
         return 0
+    
+    def Fpsi(self, x: float, E: float, G: float, J: float) -> float:
+        """ """
+        return 0    
 
     def FT(self, x: float, E: float, G: float, J: float) -> float:
         """ """
         return 0
+    
+    def FB(self, x: float, E: float, G: float, J: float) -> float:
+        """ """
+        return 0    
 
+    def Tw(self, x: float, E: float, G: float, J: float) -> float:
+        """ """
+        return 0 
     #
     def function_n(self, step: float, n: int) -> float:
         """ <x-L>^n """
@@ -138,11 +151,13 @@ class ArbitraryLoading:
     def __call__(self, x: float, E: float, G: float, J: float):
         """
         Formulas positive (+) is downwards 
-        return: [FT, FB, Fpsi, Fphi]
+        return: [FT, FB, Fpsi, Fphi, Tw]
         """
         return [1 * self.FT(x, E, G, J),
-                0, 0,
-                1 * self.Fphi(x, E, G, J)]
+                self.FB(x, E, G, J),
+                self.Fphi(x, E, G, J),
+                1 * self.Fphi(x, E, G, J),
+                self.Tw(x, E, G, J)]
 
 #
 #

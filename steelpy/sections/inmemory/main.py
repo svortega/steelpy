@@ -5,7 +5,6 @@
 # Python stdlib imports
 from __future__ import annotations
 #from collections.abc import Mapping
-import re
 #
 
 # package imports
@@ -16,7 +15,7 @@ from .channel import Channel
 from .box import Box
 from .ibeam import Ibeam
 from .solid import SolidSection
-from ..process.operations import get_sect_properties
+#from ..process.operations import get_sect_properties
 from .operations import SectionBasic
 
 # ---------------------------------
@@ -45,81 +44,10 @@ class SectionIM(SectionBasic):
                     properties: list[float] | dict[str, float] | str) -> None:
         """
         """
-        try:
-            self._labels.index(shape_name)
-            raise Exception(f'Section {shape_name} already exist')
-        except ValueError:
-            #
-            shape_type = properties[0]
-            properties = get_sect_properties(properties[1:])
-            #
-            mnumber = next(self.get_number())
-            self._labels.append(shape_name)
-            self._title.append('NULL')
-            self._number.append(mnumber)
-            self._type.append(shape_type)
-            #
-            if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b",
-                        shape_type, re.IGNORECASE):
-                self._ibeam[shape_name] = properties
-
-            elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-                self._tee[shape_name] = properties
-
-            elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
-                self._tubular[shape_name] = properties
-
-            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b",
-                          shape_type, re.IGNORECASE):
-                self._solid[shape_name] = [shape_type, *properties]
-
-            elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-                self._box[shape_name] = properties
-            
-            elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-                self._channel[shape_name] = properties
-
-            elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-                self._angle[shape_name] = properties
-
-            else:
-                raise Exception(" section item {:} not recognized".format(shape_type))
-            #
-            self._default = shape_name
-    #
-    def __getitem__(self, shape_name: int):
-        """
-        node_name : node number
-        """
-        try:
-            index = self._labels.index(shape_name)
-            shape_type = self._type[index]
-        except ValueError:
-            raise KeyError(f'   *** Section {shape_name} does not exist')
-        #
-        if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
-            return self._tubular[shape_name]
-
-        elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
-            return self._solid[shape_name]
-        
-        elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b", shape_type, re.IGNORECASE):
-            return self._ibeam[shape_name]
-        
-        elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-            return self._box[shape_name]
-        
-        elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-            return self._channel[shape_name]
-        
-        elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-            return self._tee[shape_name]
-        
-        elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-            return self._angle[shape_name]
-        
-        else:
-            raise IOError(f' Section type {shape_type} not recognised')
+        super().__setitem__(shape_name, properties)
+        mnumber = next(self.get_number())
+        self._number.append(mnumber)
+        self._title.append('NULL')
     #
     #
     # def get_properties(self):

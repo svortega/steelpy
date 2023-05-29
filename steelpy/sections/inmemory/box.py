@@ -5,17 +5,20 @@
 # Python stdlib imports
 from __future__ import annotations
 from array import array
+from collections import namedtuple
 from dataclasses import dataclass
 import math
+
 #
 
 # package imports
 from steelpy.sections.process.operations import ShapeProperty
 from .operations import SectionBasic, ShapeBasic
-
+from ..process.stress import BeamStress
 
 #
 #
+points = namedtuple('Points', ['y', 'z'])
 #
 #
 # ----------------------------------------
@@ -131,7 +134,32 @@ class BoxBasic(ShapeBasic):
         # get section's coordinates
         coord =  self.section_coordinates()
         prop = self.properties()
-        1 / 0
+        #
+        # ----------------------------------------------
+        # Torsion
+        ta = (self.tw + self.tb) * 0.50
+        tau_x = [actions.Mx / (2 * ta * (self.b - self.tw) * (self.d - self.tb))
+                 for item in coord.y]
+        #
+        # In Plane
+        tau_y = [actions.Fy / prop.area
+                 for item in coord.y]
+        # Out Plane
+        tau_z = [actions.Fz / prop.area
+                 for item in coord.z]
+        #
+        # get bending stress
+        sigma_x = [actions.Fx / prop.area for item in coord.y]
+        sigma_y = [actions.My * item / prop.Iy for item in coord.z]
+        sigma_z = [actions.Mz * item / prop.Iz for item in coord.y]
+        #
+        stress_out = BeamStress(sigma_x, sigma_y, sigma_z, 
+                                tau_x, tau_y, tau_z, coord)
+        #
+        if stress:
+            stress_out = self.add_stress(stress=stress, other=stress_out)
+        #
+        return stress_out        
     #
     #
     def _properties(self):
@@ -278,4 +306,45 @@ class BoxBasic(ShapeBasic):
             .format("", self.tw, self.tb, self.tb)
         return out
     #
+    #
+    def section_coordinates(self):
+        """
+        1 2  3   4 5
+        +-+--+---+-+
+        |    :     |       ^ z
+      6 +    :     + 7     |
+        |    :     |       |
+      8 +    :     + 9     +--> y
+        |    :     |
+     10 +    :     + 11
+        |    :     | 
+        +-+--+---+-+      
+       12 13 14 15 16
+        """
+        # horizontal
+        coord_y = [-1 * (self.b - self.tw * 0.50), #1
+                   -1 * (self.b - self.tw), 0,     #2, 3
+                   (self.b - self.tw),            #4
+                   (self.b - self.tw * 0.50),     #5
+                   -1 * (self.b - self.tw * 0.50), #6
+                   (self.b - self.tw * 0.50),     #7
+                   -1 * (self.b - self.tw * 0.50), #8
+                   (self.b - self.tw * 0.50),     #9
+                   -1 * (self.b - self.tw * 0.50), #10
+                   (self.b - self.tw * 0.50),     #11
+                   -1 * (self.b - self.tw * 0.50), #12
+                   -1 * (self.b - self.tw), 0,     #13, 14
+                   (self.b - self.tw), #15
+                   (self.b - self.tw * 0.50)] #16
+        # vertical
+        top1 = (self.d - self.tb * 0.50)
+        top2 = (self.d - self.tb)
+        coord_z = [top1, top1, top1, top1, top1, #1-5
+                   top2, top2,  #6,7
+                   0, 0,        # 8,9
+                   -1 * top2, -1 * top2, # 10,11
+                   -1 * top1, -1 * top1, -1 * top1,
+                   -1 * top1, -1 * top1]
+        
+        return points(coord_y, coord_z)
     #

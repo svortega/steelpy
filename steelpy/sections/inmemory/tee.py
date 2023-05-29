@@ -5,6 +5,7 @@
 # Python stdlib imports
 from __future__ import annotations
 from array import array
+from collections import namedtuple
 from dataclasses import dataclass
 import math
 #import re
@@ -13,10 +14,12 @@ import math
 # package imports
 from steelpy.sections.process.operations import ShapeProperty
 from .operations import SectionBasic, ShapeBasic
+from ..process.stress import BeamStress
+
 #
 #
 #
-#
+points = namedtuple('Points', ['y', 'z'])
 #
 # ----------------------------------------
 #      Standard Sections Profiles
@@ -128,18 +131,36 @@ class TeeBasic(ShapeBasic):
         # get section's coordinates
         coord =  self.section_coordinates()
         prop = self.properties()
+        #
+        # ----------------------------------------------
+        # FIXME: torsion
+        tau_x = [actions.Mx * 0
+                 for item in coord.y]
+        #
+        # In Plane
+        tau_y = [actions.Fy / prop.area
+                 for item in coord.y]
+        # Out Plane
+        tau_z = [actions.Fz / prop.area
+                 for item in coord.z]
+        #
+        # get bending stress
+        sigma_x = [actions.Fx / prop.area for item in coord.y]
+        sigma_y = [actions.My * item / prop.Iy for item in coord.z]
+        sigma_z = [actions.Mz * item / prop.Iz for item in coord.y]
+        #
+        stress_out = BeamStress(sigma_x, sigma_y, sigma_z, 
+                                tau_x, tau_y, tau_z, coord)
+        #
+        if stress:
+            stress_out = self.add_stress(stress=stress, other=stress_out)
+        #
+        return stress_out         
     #  
     #
     def _properties(self):
         """
         """
-        #
-        #self.d *= factors[0]
-        #self.tw *= factors[0]
-        #self.a *= factors[0]
-        #self.ta *= factors[0]
-        #self.b *= factors[0]
-        #self.tb *= factors[0]
         #
         _C = self.b - self.tw
         _h = self.d - self.tb / 2.0
@@ -206,6 +227,18 @@ class TeeBasic(ShapeBasic):
                              Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
                              J=J, Cw=Cw)
     #
+    @property
+    def CoG(self):
+        """ """
+        _C = self.b - self.tw
+        _D2 = self.d - self.tb        
+        #-------------------------------------------------
+        #   Elastic Neutral Centre 
+        Zc = (((self.d**2 * self.tw) + (_C * self.tb**2)) /
+                   (2 * (self.b*self.tb + _D2*self.tw)))
+        Yc = 0
+        #
+        return Yc, Zc
     #
     def curved(self, R):
         """
@@ -265,6 +298,26 @@ class TeeBasic(ShapeBasic):
                .format("", self.tw, self.tb)         
         return out
     #
-    #
+    def section_coordinates(self):
+        """
+        1    2     3
+        +----+-----+
+        |____+_____| 4    ^ z
+             |            |
+             + 5          +--> y
+             |
+             +  6
+        """
+        CoG = self.CoG
+        # horizontal
+        coord_y = [-1 * self.b * 0.50, 0, self.b * 0.50, 
+                   0, 0, 0]
+        # vertical
+        Zc = CoG[0]
+        _Zcb = Zc - self.d
+        coord_z = [Zc, Zc, Zc, 
+                   Zc - self.tb, 0 , _Zcb + self.tb]
+        #
+        return points(coord_y, coord_z)    
     #
 #

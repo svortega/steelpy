@@ -102,12 +102,15 @@ class SectionProperty(NamedTuple):
 #
 def get_sect_properties(properties:list[float], steps:int=10):
     """ """
-    sect_prop = [None for _ in range(steps)]
+    #sect_prop = [None for _ in range(steps)]
+    sect_prop = []
     for x, item in enumerate(properties):
         try:
-            sect_prop[x] = item.value
+            #sect_prop[x] = item.value
+            sect_prop.append(item.value)
         except AttributeError:
-            sect_prop[x] = item
+            #sect_prop[x] = item
+            sect_prop.append(item)
     return sect_prop
 #
 #
@@ -122,4 +125,37 @@ def get_sect_prop_df(df):
     return df   
 #
 #
+#
+def get_Isection(parameters: list):
+    """ [d, tw, bf, tf, bfb, tfb, r, title] """
+    # basic information
+    section = parameters[:4] # d, tw, bf, tf
+    # check if str title at the end
+    if isinstance(parameters[-1], str):
+        title = parameters.pop()
+    else:
+        title = 'NULL'
+    #
+    # check if root radius
+    if len(parameters) == 4:
+        section.append(parameters[2]) # bfb
+        section.append(parameters[3]) # tfb
+        section.append(0)             # root radius
+        
+    elif len(parameters) == 5:
+        r = parameters.pop()
+        section.append(parameters[2]) # bfb
+        section.append(parameters[3]) # tfb
+        section.append(r)
+        
+    elif len(parameters) == 6:
+        section.append(0)
+        
+    else:
+        if len(parameters) != 7:
+            raise IOError('Error Ibeam input data ')
+    #
+    section.append(title)
+    #  
+    return section
 

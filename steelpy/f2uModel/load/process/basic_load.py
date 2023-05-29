@@ -223,7 +223,7 @@ class BasicLoadBasic(Mapping):
             #
         #
         dftemp = dftemp.reindex(columns=['load_name', 'load_number', 'load_type',
-                                         'load_title', 'load_comment', 'system',
+                                         'load_title', 'load_comment', 'load_system',
                                          'element_name', 'node_name',
                                          'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
         #print('-->??')

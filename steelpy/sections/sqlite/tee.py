@@ -78,6 +78,7 @@ class TeeSQLite(SectionSQLite):
                        d, tw,      # height, web_thickness
                        b, tb,      # top_flange_width, top_flange_thickness
                        None, None,      # bottom_flange_width, bottom_flange_thickness
+                       None,       # root radius
                        FAvy, FAvz,
                        shear_stress, build,
                        compactness,)

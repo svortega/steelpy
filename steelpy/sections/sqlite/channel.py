@@ -80,6 +80,7 @@ class ChannelSQLite(SectionSQLite):
                        d, tw,      # height, web_thickness
                        b, tb,      # top_flange_width, top_flange_thickness
                        b, tb,      # bottom_flange_width, bottom_flange_thickness
+                       None,       # root radius
                        FAvy, FAvz,
                        shear_stress, build,
                        compactness,)

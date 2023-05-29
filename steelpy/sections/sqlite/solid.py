@@ -71,6 +71,7 @@ class SolidSectionSQL(SectionSQLite):
                            None, None, # height, web_thickness
                            None, None, # top_flange_width, top_flange_thickness
                            None, None, # bottom_flange_width, bottom_flange_thickness
+                           None,       # root radius
                            FAvy, FAvz,
                            shear_stress, build,
                            compactness,)               
@@ -88,6 +89,7 @@ class SolidSectionSQL(SectionSQLite):
                            d, None,       # height, web_thickness
                            w, None,       # top_flange_width, top_flange_thickness
                            w, None,       # bottom_flange_width, bottom_flange_thickness
+                           None,       # root radius
                            FAvy, FAvz,
                            shear_stress, build,
                            compactness,)                 
@@ -105,6 +107,7 @@ class SolidSectionSQL(SectionSQLite):
                            d, None,       # height, web_thickness
                            wb, None,       # top_flange_width, top_flange_thickness
                            wt, None,       # bottom_flange_width, bottom_flange_thickness
+                           None,       # root radius
                            FAvy, FAvz,
                            shear_stress, build,
                            compactness,)                 

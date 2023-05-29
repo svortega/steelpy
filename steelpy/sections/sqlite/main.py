@@ -56,102 +56,7 @@ class SectionSQL(SectionBasic):
         self._angle = AngleSQLite(db_file=db_file)
 
     #
-    def __setitem__(self, shape_name: str | int,
-                    properties: list[float] | dict[str, float] | str) -> None:
-        """
-        """
-        try:
-            self._labels.index(shape_name)
-            raise Exception(f'Section {shape_name} already exist')
-        except ValueError:
-            #
-            shape_type = properties[0]
-            properties = get_sect_properties(properties[1:])
-            #
-            self._labels.append(shape_name)
-            self._type.append(shape_type)
-            #
-            if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b",
-                        shape_type, re.IGNORECASE):
-                self._ibeam[shape_name] = properties
-                #self._ibeam.push_property(shape_name)
-
-            elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-                self._tee[shape_name] = properties                  
-
-            elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
-                self._tubular[shape_name] = properties
-            
-            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b",
-                          shape_type, re.IGNORECASE):
-                self._solid[shape_name] = [shape_type, *properties] 
-
-            elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-                self._box[shape_name] = properties 
-
-            elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-                self._channel[shape_name] = properties                 
-            
-            elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-                self._angle[shape_name] = properties               
-
-            else:
-                raise Exception(" section item {:} not recognized".format(shape_type))
-            #
-            # self._sections[shape_name].name = shape_name
-            #
-            # if properties:
-            #    self._sections[shape_name].geometry(*properties)
-            #    conn = create_connection(self.db_file)
-            #    with conn:
-            #        sect_number = self._push_section_table(conn, self._sections[shape_name])
-            #        self._sections[shape_name].number = sect_number
-            #        self._push_property_table(conn, self._sections[shape_name])
-            #        conn.commit()
-            #        #self._number.append(sect_number)
-            #
-            #self._sections[shape_name].push_property()
-            #
-            # conn = create_connection(self.db_file)
-            # with conn:
-            #    self._push_property_table(conn, self._sections[shape_name])
-            # print('-->')
-    #
-    def __getitem__(self, shape_name: int):
-        """
-        node_name : node number
-        """
-        try:
-            index = self._labels.index(shape_name)
-            shape_type = self._type[index]
-        except ValueError:
-            raise KeyError(f'   *** Section {shape_name} does not exist')
-        #
-        if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
-            return self._tubular[shape_name]
-
-        elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
-            return self._solid[shape_name]
-        
-        elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b", shape_type, re.IGNORECASE):
-            return self._ibeam[shape_name]
-        
-        elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-            return self._box[shape_name]
-        
-        elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-            return self._channel[shape_name]
-        
-        elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-            return self._tee[shape_name]
-        
-        elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-            return self._angle[shape_name]
-        
-        else:
-            raise IOError(f' Section type {shape_type} not recognised')
-    #
-    #    
+    # 
     #
     # def push_sections(self):
     #    """
@@ -203,6 +108,7 @@ class SectionSQL(SectionBasic):
                             top_flange_thickness DECIMAL,\
                             bottom_flange_width DECIMAL,\
                             bottom_flange_thickness DECIMAL,\
+                            fillet_radius DECIMAL, \
                             SA_inplane DECIMAL, \
                             SA_outplane DECIMAL,\
                             shear_stress TEXT, \

@@ -425,10 +425,11 @@ class NodeLoadSQL(NodeLoadBasic):
         rows = cur.fetchall()
         #
         cols = ['load_name', 'load_type', 'node_name',
-                'load_comment', 'system', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+                'load_comment', 'load_system',
+                'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
         df = db.DataFrame(data=rows, columns=cols)
         #df = db.read_sql_query("SELECT * FROM tb_LoadNode", conn)
-        df = df[['load_name', 'load_type', 'load_comment', 'system',
+        df = df[['load_name', 'load_type', 'load_comment', 'load_system',
                  'node_name', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']]
         return df
         

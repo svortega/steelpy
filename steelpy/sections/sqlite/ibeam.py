@@ -16,19 +16,10 @@ from steelpy.sections.process.operations import get_sect_properties
 #
 
 class IbeamSQLite(SectionSQLite):
-    __slots__ = ['name', '_properties', 'db_file']
+    __slots__ = ['_labels', '_number', '_title', '_type', '_default', 
+                 'db_file']
 
     def __init__(self, db_file:str):
-                 #name:str|int,
-                 #d: float, tw: float,
-                 #bf: float, tf: float,
-                 #db_file:str,
-                 #bfb: float|None =None,
-                 #tfb: float|None=None,
-                 #build:str = 'welded',
-                 #shear_stress:str = 'maximum',
-                 #FAvy:float = 1.0, FAvz:float = 1.0,
-                 #root_radius: float = 0):
         """ 
         Parameters
         ----------
@@ -38,17 +29,9 @@ class IbeamSQLite(SectionSQLite):
         tf  : flange thickness (top)
         bfb : Bottom flange base   
         tfb : Bottom flange thickness
+        r   : root radius
         """
-        #IbeamBasic.__init__(d, tw, bft, tft, bfb, tfb)
-        #self.name = name
-        #self._properties = None
         self.db_file = db_file
-        #
-        #if not bfb: bfb = bf
-        #if not tfb: tfb = tf
-        #
-        # push data to sqlite table
-        #SectionSQLite.__init__(self, db_file=self.db_file, section=section)
         super().__init__(db_file=self.db_file)
     #
     #
@@ -67,24 +50,23 @@ class IbeamSQLite(SectionSQLite):
             tw = parameters[1]
             bf = parameters[2]
             tf = parameters[3]
-            if not (bfb := parameters[4]):
-                bfb = bf
-            if not (tfb := parameters[5]):
-                tfb = tf
-            #if not (tfb := parameters[5]):
-            #    tfb = tf
+            bfb = parameters[4]
+            tfb = parameters[5]
+            r = parameters[6]
+            title = parameters[7]
+            #
             FAvy = 1
             FAvz = 1
             shear_stress:str = 'maximum'
             build:str = 'welded'
             compactness = None
-            section = (shape_name,
-                       None,  # title
+            section = (shape_name, title, 
                        "I section",   # shape type
                        None, None,    # diameter, wall_thickess
                        d, tw,         # height, web_thickness
                        bf, tf,        # top_flange_width, top_flange_thickness
                        bfb, tfb,      # bottom_flange_width, bottom_flange_thickness
+                       r,             # fillet_radius
                        FAvy, FAvz,
                        shear_stress, build,
                        compactness,)
@@ -105,7 +87,8 @@ class IbeamSQLite(SectionSQLite):
         return IbeamBasic(name=row[0], 
                           d=row[5], tw=row[6],
                           bft=row[7], tft=row[8],
-                          bfb=row[9], tfb=row[10])
+                          bfb=row[9], tfb=row[10],
+                          root_radius=row[11])
     #
     #
     @property

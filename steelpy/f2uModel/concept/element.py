@@ -8,10 +8,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 #from typing import Dict, List, ClassVar, Tuple, Iterable, Union
 import re
+from operator import sub, add
 
 # package imports
 from steelpy.process.units.main import Units
 #import steelpy.process.io_module.text as common
+from steelpy.f2uModel.mesh.process.Kmatrix.stiffness import Rmatrix
 #
 #
 #
@@ -391,17 +393,29 @@ class Beam(Element):
     def unit_vector(self) -> list[float]:
         """
         """
-        _node1, _node2 = self.connectivity
-        dx = _node2.x.value - _node1.x.value
-        dy = _node2.y.value - _node1.y.value
-        dz = _node2.z.value - _node1.z.value
+        node1, node2 = self.connectivity
+        #dx = _node2.x.value - _node1.x.value
+        #dy = _node2.y.value - _node1.y.value
+        #dz = _node2.z.value - _node1.z.value
         # direction cosines
-        L = math.dist([_node1.x.value, _node1.y.value, _node1.z.value], 
-                      [_node2.x.value, _node2.y.value, _node2.z.value])
-        l = dx / L
-        m = dy / L
-        n = dz / L
-        return [l, m, n]  
+        #L = math.dist([_node1.x.value, _node1.y.value, _node1.z.value], 
+        #              [_node2.x.value, _node2.y.value, _node2.z.value])
+        #l = dx / L
+        #m = dy / L
+        #n = dz / L
+        #return [l, m, n]
+        L = math.dist(node1[:3], node2[:3])
+        #
+        uv = list(map(sub, node2[:3], node1[:3]))
+        return [item / L for item in uv]        
+    #
+    @property
+    def T(self):
+        """
+        Returns the transformation matrix for the member
+        """
+        #if self.type in ['beam', 'truss']:
+        return Rmatrix(*self.unit_vector, self.beta)    
 #
 #
 class ConceptElements(Mapping):

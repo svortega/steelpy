@@ -46,6 +46,10 @@ class ArbitraryLoading:
     def FB(self, x: float, E: float, G: float, J: float, Cw:float) -> float:
         """ """
         return 0
+    
+    def FTw(self, x: float, E: float, G: float, J: float, Cw:float) -> float:
+        """ """
+        return 0    
 
     #
     def C(self, E: float, G: float, J: float, Cw:float):
@@ -69,13 +73,22 @@ class ArbitraryLoading:
     #
     def __call__(self, x: float, E: float, G: float, J: float, Cw:float):
         """
-        Formulas positive (+) is downwards 
-        return: [FT, FB, Fpsi, Fphi]
+        Formulas positive (+) is downwards
+        
+        Return:
+        FT : Twisting moment
+        FB : Bimoment
+        Fpsi : Rate of angle of twist
+        Fphi: Angle of twist
+        Ftw : Warping torque
+        
+        [FT, FB, Fpsi, Fphi, Tw]
         """
         return [1 * self.FT(x, E, G, J, Cw),
                 1 * self.FB(x, E, G, J, Cw), 
                 1 * self.Fpsi(x, E, G, J, Cw),
-                1 * self.Fphi(x, E, G, J, Cw)]
+                1 * self.Fphi(x, E, G, J, Cw),
+                1 * self.FTw(x, E, G, J, Cw)]
 
 #
 #

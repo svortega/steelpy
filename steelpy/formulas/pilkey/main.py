@@ -76,6 +76,7 @@ class BeamBasic:
     # ----------------------------------------------
     #
     def supports(self, end1: str|list, end2: str|list,
+                 torsion1: str|list|None  = None, torsion2: str|list|None  = None,
                  k1: float | None = None, k2: float | None = None):
         """
         end1 : beam end 1 [fix, free, pinned, guide, spring]
@@ -84,9 +85,14 @@ class BeamBasic:
         # FIXME supports one plane
         self._support0 = get_support(end1)
         self._support1 = get_support(end2)
-        # 
-        self._torsion.supports(end1=self._support0[0],
-                               end2=self._support1[0])
+        #
+        if not torsion1:
+            torsion1 = end1
+            
+        if not torsion2:
+            torsion2 = end2
+        
+        self._torsion.supports(end1=torsion1, end2=torsion2)
         #
         self._axial.supports(end1=self._support0[0],
                              end2=self._support1[0])
@@ -101,9 +107,20 @@ class BeamBasic:
     # Beam Formulas
     #
     def _reaction(self, load):
-        """beam end reactions in local system"""
+        """beam end reactions in local system
+        
+        Return:
+        R0 [Fa, T, Ry, Rz]
+        R1 [Fa, T, Ry, Rz]
+        """
         # get initial condition beam local system
-        # [Fx, Fy, Fz, Mx, My, Mz]
+        #
+        #Fx = [load_name, load_title, load_type, load_system,
+        #      beam_name, L_step,
+        #      Axial, Torsion, BM_inplane, BM_outplane]
+        #
+        #Axial, BM_inplane, BM_outplane = [V, M, w, theta]
+        #Torsion = [T, B, psi, phi, Tw]
         #
         (lname, ltitle, ltype, lsystem, bnumber, x,
          Fx_bar, Mx_bar, Fy_bar, Fz_bar) = load.Fx(x=self.L, L=self.L,
@@ -112,26 +129,37 @@ class BeamBasic:
                                                    J=self.J, Cw=self.Cw,
                                                    Area=self.area)
         #
-        # [torsion, in_plane, out_plane]
+        # [Axial, Torsion, BM_inplane, BM_outplane]
         R0 = self.R0(load=load)
         #
-        # Axial
+        # Axial [P, blank, blank, u]
         Fa = self._axial.response(x=self.L, R0=R0[0], Fx=Fx_bar)
-        # Torsion
+        # Torsion [T, B, Psi, Phi, Tw]
         T1x = self._torsion.response(x=self.L, R0=R0[1], Fx=Mx_bar)
-        # In plane
+        # Bending in plane [V, M, theta, w]
         R1y = self._bminplane.response(x=self.L, R0=R0[2], Fx=Fy_bar)
-        # Out plane
+        # Bending out plane [V, M, theta, w]
         R1z = self._bmoutplane.response(x=self.L, R0=R0[3], Fx=Fz_bar)
         #
-        R1 = [Fa, T1x[:4], R1y, R1z]
+        R1 = [Fa, T1x, R1y, R1z]
         #
         return R0, R1
 
     #
     def R0(self, load):
-        """Reaction end 0 local system"""
-        #Faxial = load.Fa(L=self.L,)
+        """Reaction end 0 local system
+        
+        Return: 
+        R0 [Fa, T, Ry, Rz]
+        """
+        #
+        #Fx = [load_name, load_title, load_type, load_system,
+        #      beam_name, L_step,
+        #      Axial, Torsion, BM_inplane, BM_outplane]
+        #
+        #Axial, BM_inplane, BM_outplane = [V, M, w, theta]
+        #Torsion = [T, B, psi, phi, Tw]        
+        #
         (lname, ltitle, ltype, lsystem, bnumber, x,
          Fx_bar, Mx_bar, Fy_bar, Fz_bar) = load.Fx(x=self.L, L=self.L,
                                                    E=self.E, G=self.G, 
@@ -139,13 +167,13 @@ class BeamBasic:
                                                    J=self.J, Cw=self.Cw,
                                                    Area=self.area)
         #
-        # Axial
+        # Axial [P, blank, blank, u]
         suppx = self._axial.R0(Fbar=Fx_bar)
-        # Torsion
+        # Torsion [T, B, Psi, Phi, Tw]
         suppt = self._torsion.R0(Fbar=Mx_bar)
-        # Bending in plane
+        # Bending in plane [V, M, theta, w]
         suppy = self._bminplane.R0(Fbar=Fy_bar)
-        # Bending out plane
+        # Bending out plane [V, M, theta, w]
         suppz =  self._bmoutplane.R0(Fbar=Fz_bar)
         #
         return suppx, suppt, suppy, suppz
@@ -157,43 +185,55 @@ class BeamBasic:
         I : Moment of inertia [m^4]
         load_list : list of load to be included in calculation (default use all)
 
-        return:
-        [V1, M1, theta1, w1], [V2, M2, theta2, w2]
-
+        Return:
+        Fx = [Axial, Torsion, BM_inplane, BM_outplane]
+        
+        ----------------------------- 
+        Axial, BM_inplane, BM_outplane = [V, M, w, theta]
         V : Shear force
         M : Bending moment
         theta : Slope
         w : Deflection
+        
+        -----------------------------
+        Torsion = [T, B, psi, phi, Tw]
+        T : Twisting moment
+        B : Bimoment
+        psi : Rate of angle of twist
+        phi: Angle of twist
+        Tw : Warping torque
         """
         # calculate load at x
         Fax, Ftx, Fyx, Fzx = Fx
         R0x, R0t, R0y, R0z = R0
         #
-        # Axial
+        # Axial [P, blank, blank, u]
         R1x = self._axial.response(x=x, R0=R0x, Fx=Fax)
-        # Torsion
+        # Torsion [T, B, Psi, Phi, Tw]
         R1t = self._torsion.response(x=x, R0=R0t, Fx=Ftx)       
-        # In plane
+        # Bending in plane [V, M, theta, w]
         R1y = self._bminplane.response(x=x, R0=R0y, Fx=Fyx)
-        # Out plane
+        # Bending out plane [V, M, theta, w]
         R1z = self._bmoutplane.response(x=x, R0=R0z, Fx=Fzx)
         #
-        return R1x, R1t[:4], R1y, R1z
+        return R1x, R1t, R1y, R1z
     #
     # ----------------------------------------------
     # Beam Calculations
     #
-    def reactions(self, bloads):
+    def reactions(self, bloads) -> dict:
         """Calculate reactions
         
-        Return
-        [Fx, Mx, Fy, Fz]
+        Return : 
+        load_name : [load_title, load_type,
+                     load_system, beam_name,
+                     R0[Fa, Tx, Ry, Rz],
+                     R1[Fa, Tx, Ry, Rz]]
         """
         #
         # -----------------------------------------------------
         # loop basic load
         #
-        #reac = []
         reac = defaultdict(list)
         for item in bloads: 
             reac[item.load_name].append([item.title, 'basic',
@@ -203,20 +243,51 @@ class BeamBasic:
         #
         return reac
     #
-    def solve(self, bloads, steps:int=10):
-        """ return beam forces """
+    def solve(self, bloads, steps:int=10) -> list[list]:
+        """
+        
+        Return:
+        Beam Forces 
+        [load_title, load_type, load_system,
+         beam_name, L_steps,
+         Axial, Torsion, BM_inplane, BM_outplane]
+        
+        ----------------------------- 
+        Axial, BM_inplane, BM_outplane = [V, M, w, theta]
+        V : Shear force
+        M : Bending moment
+        theta : Slope
+        w : Deflection
+        
+        -----------------------------
+        Torsion = [T, B, psi, phi, Tw]
+        T : Twisting moment
+        B : Bimoment
+        psi : Rate of angle of twist
+        phi: Angle of twist
+        Tw : Warping torque
+        """
         # 
         header =  ['load_name', 'load_title','load_type',
-                   'system', 'element_name'] 
+                   'load_system', 'element_name'] 
         #
         #        
         # -----------------------------------------------------
-        #        
+        #
+        # {load_name : [load_title, load_type,
+        #               load_system, beam_name,
+        #               R0[Fa, Tx, Ry, Rz],
+        #               R1[Fa, Tx, Ry, Rz]] }     
+        #
         reactions = self.reactions(bloads)
         #reac_df = self.support
         #grpsupp = reac_df.groupby(header)
         #
-        #beamfun = beam.load_function(bloads, steps)
+        #
+        #Load function 
+        # df [load_name, load_title, load_type, load_system,
+        #     beam_name, x, Fx, Mx, Fy, Fz]        
+        #
         bfunc_df = self.load_function(bloads, steps)
         beamfun = bfunc_df.groupby(header)        
         #
@@ -240,37 +311,62 @@ class BeamBasic:
         return lbforce
     #
     def forces(self, bloads, steps:int=10):
-        """return member forces"""
+        """
+        Return: 
+        Beam force  
+        Dataframe [load_name, load_title, load_type, load_system,
+                   element_name, node_end,
+                   Fx, Fy, Fz, Mx, My, Mz,
+                   delta_x, delta_y, delta_z,
+                   phi_x, theta_y, theta_z,
+                   B(bimoment), Tw(Warping torque)]
+        """
+        # solve = [load_title, load_type, load_system,
+        #          beam_name, L_steps,
+        #          Axial, Torsion, BM_inplane, BM_outplane]
+        #
+        # Axial, BM_inplane, BM_outplane = [V, M, w, theta]
+        # Torsion = [T, B, psi, phi, Tw]
         lbforce = self.solve(bloads, steps)
         lbforce =[[*lbf[:6], *lbf[6], *lbf[7], *lbf[8], *lbf[9]]
                   for lbf in lbforce]
         #
         # Member
-        # [Fx, Fy, Fz, Mx, My, Mz]
-        # [V, M, theta, w]
-        header = ['load_name', 'load_title', 'load_type', 'system',
+        #
+        header = ['load_name', 'load_title', 'load_type', 'load_system',
                   'element_name', 'node_end',
                   'Fx', 'blank1', 'blank2', 'delta_x',
-                  'Mx', 'T', 'psi_t', 'phi_x',
+                  'Mx', 'B', 'psi_t', 'phi_x', 'Tw', 
                   'Fy', 'Mz', 'theta_z', 'delta_y',
                   'Fz', 'My', 'theta_y', 'delta_z']
         #
         db = DBframework()
         df_mload = db.DataFrame(data=lbforce, columns=header, index=None)
-        df_mload = df_mload[['load_name', 'load_title', 'load_type', 'system',
+        df_mload = df_mload[['load_name', 'load_title', 'load_type', 'load_system',
                              'element_name', 'node_end',
                              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                              'delta_x', 'delta_y', 'delta_z',
-                             'phi_x', 'theta_y', 'theta_z']]
+                             'phi_x', 'theta_y', 'theta_z', 'B', 'Tw']]
         return df_mload
     #
     def load_function(self, bloads, steps:int=10):
-        """ """
+        """
+        Return:
+        Load function 
+        Dataframe [load_name, load_title, load_type, load_system,
+                   element_name, x, Fx, Mx, Fy, Fz]
+        """
         Lsteps = linspace(start=0, stop=self.L, num=steps+1, endpoint=True)        
         #
         # -----------------------------------------------------
         #
-        #beamfun = defaultdict(list)
+        #Fx = [load_name, load_title, load_type, load_system,
+        #      beam_name, L_step,
+        #      Axial, Torsion, BM_inplane, BM_outplane]
+        #
+        #Axial, BM_inplane, BM_outplane = [V, M, w, theta]
+        #Torsion = [T, B, psi, phi, Tw]        
+        #
         beamfun = []
         for idx, item in enumerate(bloads):
             lout = item.Fx(x=Lsteps, L=self.L,
@@ -280,14 +376,12 @@ class BeamBasic:
             #beamfun[item.load_name].extend(lout)
             beamfun.extend(lout)
         #
-        header = ['load_name', 'load_title', 'load_type', 'system',
+        header = ['load_name', 'load_title', 'load_type', 'load_system',
                   'element_name', 'x', 'Fx', 'Mx', 'Fy', 'Fz']
         db = DBframework()
         df_func = db.DataFrame(data=beamfun, columns=header, index=None)
         return df_func
         #return beamfun
-    #
-    #
 #
 #
 @dataclass
@@ -401,12 +495,6 @@ class BeamTorsion:
         """
         Torque
         """
-        #self.T1 = T
-        #self.L = L
-        #self.L1 = L1
-        #
-        #self.T2 = T2
-        #self.L2 = L2
         #
         if T2:
             # distributed
@@ -440,7 +528,10 @@ class BeamTorsion:
     #
     #
     def response(self, x: float, R0: list, Fx:list):
-        """ General reponse """
+        """ General reponse
+        
+        [T, B, Psi, Phi, Tw]
+        """
         try:
             # open section
             1 / self.Cw
@@ -504,7 +595,11 @@ class BeamAxial:
     #    return self._bar(x=x, E=self.E, A=self.A)
     #
     def response(self, x: float, R0: list, Fx:list):
-        """ General reponse """
+        """ General reponse
+        
+        Results:
+        [P, blank, blank, u]
+        """
         res =  AxialBarGE(E = self.E, A=self.A)
         res.R0(*R0)
         res.load(*Fx)

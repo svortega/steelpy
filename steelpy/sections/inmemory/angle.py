@@ -5,6 +5,7 @@
 # Python stdlib imports
 from __future__ import annotations
 from array import array
+from collections import namedtuple
 from dataclasses import dataclass
 import math
 #
@@ -16,6 +17,7 @@ from .operations import SectionBasic, ShapeBasic
 
 #
 #
+points = namedtuple('Points', ['y', 'z'])
 #
 # ----------------------------------------
 #      Standard Sections Profiles
@@ -375,35 +377,34 @@ class AngleBasic(ShapeBasic):
         """
         """
         #
-        #coord_y = self.section_coordinates.y  # lateral
-        #coord_z = self.section_coordinates.z  # vertical
-        #
+        # get section's coordinates
         coord =  self.section_coordinates()
-        #
-        #D, t = self.get_geometry()
         prop = self.properties()
         #
-        # sigma_x = actions.Fx / prop.area
-        # In Plane
-        # tau_y = 2*actions.Fy / prop.area
-        tau_y = [2 * actions.Fy / prop.area for _ in coord.y]
-        # Out Plane
-        # tau_z = 2*actions.Fy / prop.area
-        tau_z = [2 * actions.Fz / prop.area for _ in coord.z]
+        # ----------------------------------------------
+        # FIXME: torsion
+        tau_x = [actions.Mx * 0
+                 for item in coord.y]
         #
-        # FIXME: what is Ip?
-        # tau_x = 0 # actions.Mx * D / (2 * prop.Ip)
-        tau_x = [0 for _ in coord.y]
-        # sigma_z = actions.My/ prop.Zey
-        # sigma_y = actions.Mz / prop.Zez
+        # In Plane
+        tau_y = [actions.Fy / prop.area
+                 for item in coord.y]
+        # Out Plane
+        tau_z = [actions.Fz / prop.area
+                 for item in coord.z]
         #
         # get bending stress
-        sigma_x = [(actions.Fx / prop.area) for _ in coord.y]
-        sigma_y = [(actions.My * _coord / prop.Zey) for _coord in coord.z]
-        sigma_z = [(actions.Mz * _coord / prop.Zez) for _coord in coord.y]
+        sigma_x = [actions.Fx / prop.area for item in coord.y]
+        sigma_y = [actions.My * item / prop.Iy for item in coord.z]
+        sigma_z = [actions.Mz * item / prop.Iz for item in coord.y]
         #
-        return BeamStress(sigma_x, sigma_y, sigma_z,
-                          tau_x, tau_y, tau_z, coord)
+        stress_out = BeamStress(sigma_x, sigma_y, sigma_z, 
+                                tau_x, tau_y, tau_z, coord)
+        #
+        if stress:
+            stress_out = self.add_stress(stress=stress, other=stress_out)
+        #
+        return stress_out 
 
     #
     #
@@ -431,4 +432,60 @@ class AngleBasic(ShapeBasic):
 
     #
     #
+    @property
+    def CoG(self):
+        """ """
+        # Simmetric angle
+        if math.isclose(self.d, self.b):
+            # Distance v1 of elastic centroid from heel (A.2)
+            v1 = (((6 * math.sqrt(2)) * (((50 / 3.0 - 5 * math.pi) * self.r ** 3)
+                                          - ((2 - math.pi / 2.0) * (self.d - 3 * self.tw) * self.r ** 2)
+                                          + ((self.d ** 2 + self.d * self.tw - self.tw * 2) * self.tw))) /
+                   (((24 - 6 * math.pi) * self.r ** 2) + (24 * self.d * self.tw) - (12 * self.tw ** 2)))            
+            # Distance e (A.9)
+            Yc = v1 / math.sqrt(2)
+            Zc = Yc
+        else:
+            _b1 = self.b - self.tw
+            _h1 = self.d - self.tw            
+            # -------------------------------------------------
+            #   Elastic Neutral Centre
+            Zc = (self.d ** 2 + _b1 * self.tw) / (2 * (self.d + _b1))
+            Yc = (self.b ** 2 + _h1 * self.tw) / (2 * (self.b + _h1))
+        #
+        #
+        return Yc, Zc        
+    #
+    def section_coordinates(self):
+        """
+                     1 
+                   +
+                   |       ^ z
+                   + 2     |
+                   |       |
+                   + 3     +--> y
+                   |
+                   + 4
+                   | 
+        +-+----+-+-+      
+        5 6    7 8 9
+        """
+        # horizontal
+        
+        CoG = self.CoG
+        #
+        hzt1 = CoG[0] - self.tw * 0.50
+        hzt2 = -1 * (self.b - CoG[0])
+        hzt3 = CoG[0] - self.tw
+        coord_y = [hzt1, hzt1, hzt1, hzt1, # 1,2,3,4
+                   hzt2, hzt2 + self.tw, 0, hzt3, hzt1]    # 5,6,7,8
+        # vertical
+        top1 = CoG[1]
+        top2 = CoG[1] - self.tw
+        top3 = -1 * (self.d - CoG[1] - self.tw)
+        top4 = -1 * (self.d - CoG[1] - self.tw * 0.50)
+        coord_z = [top1, top2, 0, top3, #1-4
+                   top4, top4, top4, top4, top4]  # 5-9
+        
+        return points(coord_y, coord_z)      
     #
