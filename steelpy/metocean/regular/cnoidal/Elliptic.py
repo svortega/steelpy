@@ -1,16 +1,18 @@
 #
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
+#
+from __future__ import annotations
 #
 # Python stdlib imports
 from array import array
 from dataclasses import dataclass
-import cmath
-import math
-from typing import NamedTuple, Tuple, Union, List, Dict
+#import cmath
+#import math
+#from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
-from steelpy.metocean.regular.fourier.Subroutines import zeros
-
+#from steelpy.metocean.regular.fourier.Subroutines import zeros
+import numpy as np
 
 #
 #

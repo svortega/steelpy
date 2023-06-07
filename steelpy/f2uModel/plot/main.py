@@ -63,68 +63,18 @@ class C:
 class PlotModel:
     __slots__ = ['_mesh', '_load', '_concept']
     
-    def __init__(self):
+    def __init__(self, mesh):
         """
         """
-        pass
+        self._mesh = mesh
 
     #
-    #@property
-    #def mesh(self):
-    #    """"""
-    #    return self._mesh
-    #
-    #@mesh.setter
-    #def mesh(self, value):
-    #    """"""
-    #    self._mesh = value
-    ##
-    ##
-    #@property
-    #def load(self):
-    #    """"""
-    #    return self._load
-    #
-    #@load.setter
-    #def load(self, value):
-    #    """"""
-    #    self._load = value    
     #
     #
-    #def plot_model(self, scale:float=1,
-    #               offset:List[float]=[0,0,0]):
-    #    """
-    #    """
-    #    nodes = self._mesh.nodes
-    #    max_coord, min_coord = nodes._get_maxmin
-    #    centre_x = (max_coord[0] - min_coord[0]) / 2 + min_coord[0] + - offset[0]
-    #    centre_y = (max_coord[1] - min_coord[1]) / 2 + min_coord[1] + - offset[1]
-    #    centre_z = (max_coord[2] - min_coord[2]) / 2 + min_coord[2] + - offset[2]
-    #    max_plot_range = max(max_coord)
-    #    max_plot_range
-    ##
-    ##
-    #def plot_nodes(self):
+    #def __call__(self, verbosity:bool=False, show=True):
     #    """ """
-    #    fig = plt.figure()
-    #    ax = fig.add_subplot(projection='3d')
-    #    #
-    #    m = 'o'
-    #    nodes = self._mesh.nodes._nodes
-    #    ax.scatter(nodes._x, nodes._y, nodes._z,
-    #               marker=m) # , zdir="y"
-    #    #
-    #    ax.set_xlabel('X Label')
-    #    ax.set_ylabel('Y Label')
-    #    ax.set_zlabel('Z Label')
-    #    #
-    #    plt.show()
-    #
-    #
-    def __call__(self, verbosity:bool=False, show=True):
-        """ """
-        self.concept()
-        print('here')
+    #    self.concept()
+    #    print('here')
     #
     def concept(self, verbosity:bool=False, show=True):
         """ """
@@ -147,11 +97,11 @@ class PlotModel:
         else:
             return ax        
     #
-    def plot_mesh(self, verbosity:bool=False , show=True):
+    def mesh(self, verbosity:bool=False , show=True):
         """ """
-        #file_list = []
         plot_num = 2
-        lims = self._mesh.nodes.get_maxmin()
+        nodes = self._mesh._nodes
+        lims = nodes.get_maxmin()
         ax = init_3D_plot([lims[0][0], lims[1][0]],
                           [lims[0][1], lims[1][1]],
                           [lims[0][2], lims[1][2]])
@@ -162,19 +112,20 @@ class PlotModel:
         #
         #rfiles.set('plots', file_list)
         if show:
-            #plt.draw()
             plt.show()
-            #plt.close('all')
         else:
             return ax
     #
     def basic_load(self, name, verbosity:bool=False):
         """ """
-        ax = self.plot_mesh(verbosity, show=False)
-        basic = self._load.basic[name]
-        nodes = self._mesh.nodes
-        elements =  self._mesh.elements
-        add_mesh_load(ax, elements, nodes, basic)
+        ax = self.mesh(verbosity, show=False)
+        load = self._mesh._load
+        basic = load._basic[name]
+        nodes = self._mesh._nodes
+        #
+        elements =  self._mesh.elements()
+        beams = elements._elements
+        add_mesh_load(ax, beams, nodes, basic)
         plt.show()
     #
     #
@@ -246,17 +197,17 @@ def add_concept_load(ax, elements, nodes, basic):
                  beamload=basic.beams)
 #
 #
-def add_mesh_load(ax, elements, nodes, basic):
+def add_mesh_load(ax, beams, nodes, basic):
     """ """
     # nodal load
     nodeload(ax, nodes, 
-             nload=basic.point_node)
+             nload=basic._node)
     # beam point load
-    beampointload(ax, elements, nodes, 
-                  pointload=basic.point_beam)
+    beampointload(ax, beams, nodes, 
+                  pointload=basic._beam._load._point)
     # beam line load
-    beamlineload(ax, elements, nodes, 
-                 lineload=basic.line_beam)
+    beamlineload(ax, beams, nodes, 
+                 lineload=basic._beam._load._line)
 #
 def nodeload(ax, nodes, nload):
     """ """
@@ -264,34 +215,31 @@ def nodeload(ax, nodes, nload):
     for lname, nloads in nload.items():
         node = nodes[lname]
         x, y, z = node[:3]
-        for nload in nloads:
-            # nodal force
-            force = [ item * scale for item in nload[:6]]
-            if any(force[:3]):
-                Fx, Fy, Fz = force[:3]
-                ax.quiver(x, y, z, Fx, Fy, Fz, color='r')
-            # nodal moment
-            if any(force[3:6]):
-                Mx, My, Mz = [item*100 for item in force[3:6]]
-                plot_circle(ax, [Mx, My, Mz], [x, y, z])    
+        for key, item in nloads._load.items():
+            for nload in item:
+                # nodal force
+                force = [ item * scale for item in nload[:6]]
+                if any(force[:3]):
+                    Fx, Fy, Fz = force[:3]
+                    ax.quiver(x, y, z, Fx, Fy, Fz, color='r')
+                # nodal moment
+                if any(force[3:6]):
+                    Mx, My, Mz = [item*100 for item in force[3:6]]
+                    plot_circle(ax, [Mx, My, Mz], [x, y, z])    
 #
-def beamlineload(ax, elements, nodes, beamload):
+def beamlineload(ax, beams, nodes, lineload,
+                 scale:float=1.0):
     """ """
-    for bname, load in beamload.items():
+    for bname, line in lineload.items():
         try:
-            beam = elements[bname]
+            beam = beams[bname]
         except IndexError:
             continue
-        conn = beam.connectivity
-        try:
-            n1 = nodes[ conn[ 0 ] ]
-            n2 = nodes[ conn[ 1 ] ]
-        except AttributeError:
-            n1, n2 = conn
+        n1, n2 = beam.nodes
         normalized = get_vnorm(n1, n2)
         #
-        for lload in load.line:
-            force = [ item * 0.001 for item in lload[:6]]
+        for lload in line:
+            force = [item * scale for item in lload[:6]]
             L0 = lload.L0
             L1 = lload.L1
             # qy
@@ -305,24 +253,22 @@ def beamlineload(ax, elements, nodes, beamload):
                 x, y, z = get_line_coord('z', n1, n2, q0, q1, L0, L1, normalized)
                 plot_lload(ax, x,y,z)    
 #
-def beampointload(ax, elements, nodes, beamload,
+def beampointload(ax, beams, nodes, pointload,
                   scale:float=1.0):
     """ """
-    for bname, load in beamload.items():
-        beam = elements[bname]
-        conn = beam.connectivity
+    for bname, point in pointload.items():
         try:
-            n1 = nodes[ conn[ 0 ] ]
-            n2 = nodes[ conn[ 1 ] ]
-        except AttributeError:
-            n1, n2 = conn
+            beam = beams[bname]
+        except IndexError:
+            continue        
+        n1, n2 = beam.nodes
         normalized = get_vnorm(n1, n2)
         #
-        for pload in load.point:
+        for pload in point:
             force = [ item * scale for item in pload[:6]]
-            x = n1.x + normalized[ 0 ] * pload.distance
-            y = n1.y + normalized[ 1 ] * pload.distance
-            z = n1.z + normalized[ 2 ] * pload.distance
+            x = n1.x + normalized[ 0 ] * pload.L0
+            y = n1.y + normalized[ 1 ] * pload.L0
+            z = n1.z + normalized[ 2 ] * pload.L0
             # point force
             if any(force[:3]):
                 Fx, Fy, Fz = force[:3]
@@ -435,15 +381,11 @@ def plot_lload(ax, x, y, z):
 def add_items_per_beam(m, ax, plot_num, 
                        verbosity:bool=False):
     """ """
-    #ps = m.get('post_proc').get('plot_settings', {})
-    #to_show = m.get('post_proc').get('plot')[plot_num]
-    #abm = m.results.get('mesh').get('abm')
-    #marker = 'o' if 'nodes' in to_show else None
-    nodes = m.nodes
-    #conns = m.elements.get_connectivities
-    #xyz = [[nodes[item][:3] for item in items] for items in conns]
+    nodes = m._nodes
+    beams = m._elements.beams()
+    #
     named_nodes = []
-    for key, beam in m.elements.items():
+    for key, beam in beams.items():
         conn = beam.connectivity
         n1 = nodes[conn[0]]
         n2 = nodes[conn[1]]
@@ -497,11 +439,6 @@ def add_items_per_beam(m, ax, plot_num,
         if verbosity:
             coord = [0,0,0]
             mid_length = beam.length * 0.50
-            #
-            #A = Point3(*n1[:3])
-            #B = Point3(*n2[:3])
-            #vector = B - A
-            #normalized = vector.normalized()
             normalized = get_vnorm(n1, n2)
             #
             coord[0] = n1.x + normalized[0] * mid_length
@@ -634,23 +571,12 @@ def add_global_axes(ax, plot_num):
 #
 #
 def add_boundary_conditions(m, ax, plot_num, verbosity:bool=False):
-    #to_show = m.get('post_proc').get('plot')[plot_num]
-    #if PlotItems.bc.value not in to_show:
-    #    return
-
-    #r = m.results
-    #abm = m.results.get('mesh').get('abm')
-    mbc = m.boundaries
-    nodes = m.nodes
-    #deform = r.get('tensors').get('comp:U')
-    #ux = deform['ux']
-    #uy = deform['uy']
-    #uz = deform['uz']
-
-    # Fixed
-    #for fix in mbc.iter('fix'):
-    for key, bc in mbc.node.items():
-        #uid = fix['node']
+    """ """
+    mbc = m.boundaries()
+    supports = mbc.supports()
+    nodes = m.nodes()
+    #
+    for key, bc in supports.items():
         node = nodes[key]
         xyz = node[:3]
         bcn = bc[:6]
@@ -660,30 +586,12 @@ def add_boundary_conditions(m, ax, plot_num, verbosity:bool=False):
             marker ='s'
         else:
             marker ='^'
-        #[1,1,1,1,1,1]
+        #
         ax.scatter(*xyz, **args_scatter(color='m', marker=marker))
         if verbosity:
-            #bc_id = get_bc_id(fix['fix'])
             bc_id = [int(item) for item in bcn]
             ax.text(*xyz, f'{bc_id}', **args_text(f_size=8, c_txt='m', c_box='b'))
-
-    #ps = m.get('post_proc').get('plot_settings', {})
-    #
-    #for con in mbc.iter('connect'):
-    #    uid1 = con['node1']
-    #    uid2 = con['node2']
-    #    scale = ps.get('scale_deformation', 1)
-    #    X1 = abm.get_point_by_uid(uid=uid1)
-    #    X2 = abm.get_point_by_uid(uid=uid2)
-    #    ux1, uy1, uz1 = abm.gnv(ux, uid1), abm.gnv(uy, uid1), abm.gnv(uz, uid1)
-    #    ux2, uy2, uz2 = abm.gnv(ux, uid2), abm.gnv(uy, uid2), abm.gnv(uz, uid2)
-    #    x1 = X1 + scale*np.asarray([ux1, uy1, uz1])
-    #    x2 = X2 + scale*np.asarray([ux2, uy2, uz2])
-    #    ax.plot(*zip(x1, x2), **args_plot(m, color=C.BOX_BC))
-    #    if PlotItems.bc_id.value in to_show:
-    #        bc_id = get_bc_id(con['fix'])
-    #        ax.text(*(x1+x2)/2, f'c{bc_id}', **args_text(m, c_txt=C.TXT_BC, c_box=C.BOX_BC))
-
+#
 #
 
 

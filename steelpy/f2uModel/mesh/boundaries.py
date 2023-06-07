@@ -78,7 +78,7 @@ class Boundaries:
                 node_name = value[0]
                 boundary_type = "support"
                 b_number = self._set_item(b_name=node_name, 
-                                  b_type=boundary_type)
+                                          b_type=boundary_type)
                 #
                 self._nodes[node_name] = value[1:]
         #

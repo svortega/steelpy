@@ -1,24 +1,28 @@
 #
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
+#
+from __future__ import annotations
 #
 # Python stdlib imports
 from array import array
-from dataclasses import dataclass
-import math
-from typing import NamedTuple, Tuple, Union, List, Dict
+#from dataclasses import dataclass
+#import math
+#from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
 from steelpy.metocean.regular.fourier.Dpythag import dpythag
-from steelpy.metocean.regular.operations.waveops import zeros
+#from steelpy.metocean.regular.operations.waveops import zeros
+
+import numpy as np
 
 
 def dsvdcmp(a: array, m: int, n: int, NP: int):
     """
     decomposition
     """
-    w = zeros(NP + 1)
-    v = zeros(NP + 1, NP + 1)
-    rv1 = zeros(n + 1)
+    w = np.zeros(NP + 1)
+    v = np.zeros((NP + 1, NP + 1))
+    rv1 = np.zeros(n + 1)
     # rv2 = [0]
     anorm = 0.0
     scale = 0.0
@@ -31,14 +35,14 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
         s = 0.0
         g = 0.0
         if i <= m:
-            scale = sum([abs(a[k][i]) for k in range(i, m + 1)])
+            scale = np.sum([abs(a[k][i]) for k in range(i, m + 1)])
             if scale != 0:
                 for k in range(i, m + 1):
                     a[k][i] /= scale
                     s += a[k][i] * a[k][i]
                 # ss = sum([a[k][i] * a[k][i] for k in range(i, m+1)])
                 f = a[i][i]
-                g = math.copysign(math.sqrt(s), f) * -1.0
+                g = np.copysign(np.sqrt(s), f) * -1.0
                 h = f * g - s
                 a[i][i] = f - g
 
@@ -64,7 +68,7 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
                     s += a[i][k] * a[i][k]
                 #
                 f = a[i][l]
-                g = math.copysign(math.sqrt(s), f) * -1.0
+                g = np.copysign(np.sqrt(s), f) * -1.0
                 h = f * g - s
                 a[i][l] = f - g
 
@@ -78,8 +82,8 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
                 #           if h != 0.0]
                 #
                 for j in range(l, m + 1):
-                    s = sum([a[j][k] * a[i][k]
-                             for k in range(l, n + 1)])
+                    s = np.sum([a[j][k] * a[i][k]
+                                for k in range(l, n + 1)])
 
                     for k in range(l, n + 1):
                         a[j][k] += s * rv1[k]
@@ -122,8 +126,8 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
         if g != 0:
             g = 1.0 / g
             for j in range(l, n + 1):
-                s = sum([a[k][i] * a[k][j]
-                         for k in range(l, m + 1)])
+                s = np.sum([a[k][i] * a[k][j]
+                            for k in range(l, m + 1)])
                 f = (s / a[i][i]) * g
 
                 for k in range(i, m + 1):
@@ -191,7 +195,7 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
             g = dpythag(f, 1.0)
             # 
             f = (((x - z) * (x + z)
-                  + h * ((y / (f + math.copysign(g, f))) - h)) / x)
+                  + h * ((y / (f + np.copysign(g, f))) - h)) / x)
             s = 1.0
             c = s
             for j in range(l, nm + 1):

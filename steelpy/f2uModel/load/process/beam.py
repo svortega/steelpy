@@ -26,8 +26,6 @@ from ....f2uModel.load.process.operations import(check_list_units,
                                                  get_beam_udl_load)
 #
 # steelpy.
-#from steelpy.formulas.pilkey.chapter11.table2B import Trapezoidal, Point, Moment
-#from steelpy.formulas.pilkey.chapter14.table_B import TOpenConcentrated, TOpenDistributed
 from steelpy.formulas.pilkey.main import BeamTorsion, BeamAxial, BeamBending
 #
 #

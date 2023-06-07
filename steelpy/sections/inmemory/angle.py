@@ -126,43 +126,6 @@ class AngleBasic(ShapeBasic):
     b:float
     r:float
     type:str = 'Angle'
-    #build:str = 'welded'
-    #
-    #def __init__(self, name:str|int,
-    #             d:float, tw:float,
-    #             b:float|None, r:float|None,
-    #             build:str = 'welded',
-    #             shear_stress:str = 'average',
-    #             FAvy:float = 1.0, FAvz:float = 1.0):
-    #    """ """
-    #    super().__init__()
-    #    self.type = 'Angle'
-    #    self.name = name
-    #    self.build = build
-    #    self.shear_stress = shear_stress
-    #    # Shear factor
-    #    self.FAvy = FAvy
-    #    self.FAvz = FAvz
-    #    #
-    #    # check data
-    #    if d:
-    #        self.d = d
-    #
-    #    if tw:
-    #        self.tw = tw
-    #
-    #    if b:
-    #        self.b = b
-    #    #
-    #    self.r = 0.50 * (self.tw / math.sqrt(2.0))
-    #    if r:
-    #        self.r = 0.50 * r
-    #    #
-    #    # Simmetric angle
-    #    self.type = 'Asymmetrical Angle Section'
-    #
-    #    if self.d == self.b:
-    #        self.type = 'Symmetrical Angle Section'
     #
     #    
     def _properties(self):

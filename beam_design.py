@@ -8,14 +8,6 @@ units = Units()
 #
 #
 #
-#
-#test = SimpleBeam(L=5, E=Emat)
-#test.supports(end1="pinned", end2="pinned")
-#test.load['test'] = ['point', -1000, 2.5]
-#R = test.reactions
-#resy = test.response(x=2.5, I=Iy, load_list=['test'])
-#
-#
 # beam class
 beam = Beam(name='beam_test')
 beam.L = 4*units.m
@@ -33,7 +25,6 @@ beam.section = ['ub', 254.10*units.mm, 8.6*units.mm, 254.6*units.mm, 14.20*units
 #print(beam.section)
 #
 #
-#beam.material = material['beam']
 beam.material = ['elastic', 275.0 * units.MPa]
 print(beam.material)
 #

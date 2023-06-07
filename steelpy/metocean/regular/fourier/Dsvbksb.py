@@ -1,5 +1,7 @@
 #
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
+#
+from __future__ import annotations
 #
 # Python stdlib imports
 from array import array
@@ -9,18 +11,19 @@ from array import array
 
 
 # package imports
+import numpy as np
 
 #
 #
 def dsvbksb(u: array, w: array, v: array, m: int, n: int, b: array):
     """
     """
-    tmp = [sum([u[i][j] * b[i] for i in range(1, m + 1)]) / w[j]
+    tmp = [np.sum([u[i][j] * b[i] for i in range(1, m + 1)]) / w[j]
            if w[j] != 0 else 0 for j in range(n + 1)]
 
-    x = [sum([v[j][jj] * tmp[jj] for jj in range(n + 1)])
+    x = [np.sum([v[j][jj] * tmp[jj] for jj in range(n + 1)])
          for j in range(n + 1)]
-    return x
+    return np.array(x)
 #
 #
 #

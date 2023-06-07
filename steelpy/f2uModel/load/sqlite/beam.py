@@ -137,46 +137,6 @@ class BeamLoadSQL(BeamLoad):
         return self    
     #
     #
-    #def end_reactions(self):
-    #    """ push global fixed end reactions """
-    #    self._line.fer()
-    #
-    #def fer(self, elements, boundaries):
-    #    """ """
-    #    #
-    #    ename = self._beam_id
-    #    element = elements[ename]
-    #    end_nodes = element.connectivity
-    #    #
-    #    # get beam supports
-    #    bdnodes = boundaries.supports()
-    #    support = []
-    #    for node in end_nodes:
-    #        if (fixity := bdnodes[node]):
-    #            support.append(fixity[:6])
-    #        else:
-    #            support.append([1, 1, 1, 1, 1, 1])
-    #    #
-    #    # beam class to get end node reactions
-    #    beam = element.beam()
-    #    beam.supports(end1=support[0], end2=support[1])
-    #    # get beam end node load in beam's local system
-    #    bnload = self.nodal_equivalent(beam=beam)
-    #    # convert beam end node load to nodal load global system
-    #    gnload = beam.transformation(vector=bnload)
-    #    #
-    #    #nodal_load[nidx0] = list(map(add, gnload[:6], nodal_load[nidx0]))
-    #    #
-    #    #nodal_load[nidx1] = list(map(add, gnload[6:], nodal_load[nidx1]))
-    #    #
-    #    self._node_eq[ename] = [[end_nodes[0], *gnload[:6], self._load_title],
-    #                            [end_nodes[1], *gnload[6:], self._load_title]]
-    #    #
-    #    #blnode.append([lname, lcase.number, 'basic', lcase.title, 'global',
-    #    #                ename, end_nodes[0], *gnload[:6]])
-    #    #blnode.append([lname, lcase.number, 'basic', lcase.title, 'global',
-    #    #                ename, end_nodes[1], *gnload[6:]])
-    #    #return self._node_eq
 #
 #    
 #
@@ -346,14 +306,6 @@ class BeamDistributedSQL(BeamDistMaster):
         return beam_line
     #
     #
-    #
-    def fer(self) -> list:
-        """
-        """
-        print('-----')
-        #items = line2node(self, elements, materials, sections)
-        items = 1/0
-        return items
 #
 #
 class BeamPointSQL(NodeLoadBasic):

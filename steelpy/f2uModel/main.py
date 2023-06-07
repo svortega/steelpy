@@ -118,12 +118,9 @@ class f2uModel:
         #self._material_default: bool = None
         #self._section_default: bool = None
         #self._set_dafault: bool = None
-        self._plot = PlotModel()
-        #self._plot._mesh = self._mesh
-        #self._plot._load = self._mesh._load
+        self._plot = PlotModel(mesh=self._mesh)
         #self._plot._concept = self._concept
     #
-    #@property
     def materials(self, values:None|list=None,
                   df=None):
         """
@@ -154,7 +151,6 @@ class f2uModel:
         return self._materials   
 
     #
-    #@property
     def sections(self, values:None|list=None,
                  df=None):
         """
@@ -177,13 +173,11 @@ class f2uModel:
         return self._sections
 
     #
-    #@property
     def properties(self):
         """
         """
         return self._properties
     #
-    #@property
     def concept(self):
         """
         """
@@ -195,7 +189,6 @@ class f2uModel:
         return self._concept
 
     #
-    #@property
     def groups(self):
         """ """
         return self.sets
@@ -208,28 +201,12 @@ class f2uModel:
         #                  db_file=self.db_file)
         return self._mesh
     #
-    #@property
-    #def load(self) -> ClassVar:
-    #    """
-    #    """
-    #    return self._load
     #
     #
     def build(self) -> None:
         """
         """
         #
-        #def bd_condition(nodes, boundaries):
-        #    """
-        #    set boundary conditions
-        #    bcs: set default = 0 free (1 fix)
-        #    """
-        #    supports = boundaries.supports()
-        #    for node_name, bd in supports.items():
-        #        nodes.jbc.update_data(bd)
-        #
-        #
-        #print('---')
         #
         #
         self._sections.get_properties()
@@ -246,21 +223,13 @@ class f2uModel:
         # TODO : remove second _load for simplification
         self._mesh._load._basic.FER()        
         #
-        #_sql.write_geometry(self.mesh)
-        #_sql.write_load(self._load)
-        #self._sql = _sql
-        #
-        #bd_condition(nodes=self._mesh._nodes,
-        #             boundaries=self._mesh._boundaries)
         #
         print('end meshing')
         return self._mesh
     #
-    @property
+    #@property
     def plot(self):
         """ """
-        #self._plot.mesh = self.mesh
-        #self._plot.load = self._load
         return self._plot
 #
 #

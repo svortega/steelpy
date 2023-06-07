@@ -1,14 +1,16 @@
 #
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
+#
+from __future__ import annotations
 #
 # Python stdlib imports
 from array import array
 from dataclasses import dataclass
 import math
-from typing import NamedTuple, Tuple, Union, List, Dict
+from typing import NamedTuple
 
 # package imports
-from steelpy.metocean.regular.operations.waveops import WaveRegModule, WaveItem, get_wave_data
+from steelpy.metocean.regular.process.waveops import WaveRegModule, WaveItem, get_wave_data
 from steelpy.metocean.regular.cnoidal.Solution import (Solve, hoverd, Ubar_h, eta_h, u_h, v_h,
                                                        Alpha, Q_h, lambda_d, R_h)
 
@@ -20,7 +22,8 @@ from steelpy.metocean.regular.cnoidal.Solution import (Solve, hoverd, Ubar_h, et
 class WaveCnoidal(WaveItem):
 
     def __init__(self, H: float, d: float, title: str,
-                 T: Union[float, None] = None, Lw: Union[float, None] = None,
+                 T: float|None = None,
+                 Lw: float|None = None,
                  infinite_depth: bool = False,
                  current: float = 0.0, c_type: int = 1,
                  order: int = 5, nstep: int = 2,
@@ -118,7 +121,8 @@ class CnoidalModule(WaveRegModule):
 #                order: int = 5, nstep: int = 2, number: int = 40, 
 #                accuracy: float = 1e-6):
 def CnoidalMain(MaxH: float, case: str,
-                T: Union[float, None], L: Union[float, None],
+                T: float|None,
+                L: float|None,
                 c_type: int, current: float,
                 norder: int, nstep: int,
                 niter: int, accuracy: float,

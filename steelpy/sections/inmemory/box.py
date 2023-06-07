@@ -125,7 +125,6 @@ class BoxBasic(ShapeBasic):
     b: float
     tb: float
     type:str = 'box'
-    #build: str = 'welded'
     #
     #
     def _stress(self, actions, stress=None, stress_type: str='average'):

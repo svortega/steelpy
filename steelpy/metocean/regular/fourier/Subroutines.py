@@ -1,15 +1,18 @@
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
+#
+from __future__ import annotations
 #
 # Python stdlib imports
 from array import array
 from dataclasses import dataclass
 import cmath
-import math
-from typing import NamedTuple, Tuple, Union, List, Dict
+#import math
+#from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
 from steelpy.metocean.regular.fourier.solve import solver
-from steelpy.metocean.regular.operations.waveops import zeros
+#from steelpy.metocean.regular.operations.waveops import zeros
+import numpy as np
 
 #
 # SUBROUTINES FOR FOURIER APPROXIMATION METHOD
@@ -24,17 +27,17 @@ def initial(height: float, Hoverd: float,
             current: float, current_criterion: int,
             num: int, n: int, is_finite: bool, case: str):
     """ """
-    pi = math.pi
-    sol = zeros(num + 1, 2 + 1)
-    z = zeros(num + 1)
-    cosa = zeros(2 * n + 1)
-    sina = zeros(2 * n + 1)
+    pi = np.pi
+    sol = np.zeros((num + 1, 2 + 1))
+    z = np.zeros(num + 1)
+    cosa = np.zeros(2 * n + 1)
+    sina = np.zeros(2 * n + 1)
     case = case.lower()
     if is_finite:
         if case == "period":
-            sigma = 2. * pi * math.sqrt(height / Hoverd)
+            sigma = 2. * pi * np.sqrt(height / Hoverd)
             # Fenton and McKee (1990) used in 2018
-            z[1] = sigma * sigma / pow(math.tanh(pow(sigma, 1.5)), 2. / 3.)
+            z[1] = sigma * sigma / np.power(np.tanh(np.power(sigma, 1.5)), 2. / 3.)
             # That is simpler and replaces the procedure used since Fenton (1988), p360 & 365, based on Eckart's
             # solution plus a single pass of Newton's method, which is slightly more accurate than Fenton & McKee
             # for a small wave and zero Eulerian current. However usually we have finite wave height and a
@@ -50,7 +53,7 @@ def initial(height: float, Hoverd: float,
             z[1] = 2. * pi * height / Hoverd
 
         z[2] = z[1] * Hoverd
-        z[4] = math.sqrt(math.tanh(z[1]))
+        z[4] = np.sqrt(np.tanh(z[1]))
         z[3] = 2. * pi / z[4]
 
     else:  # Is_deep
@@ -64,10 +67,10 @@ def initial(height: float, Hoverd: float,
 
     if is_finite:
         if current_criterion == 1:
-            z[5] = current * math.sqrt(z[2])
+            z[5] = current * np.sqrt(z[2])
             z[6] = 0.
         else:
-            z[6] = current * math.sqrt(z[2])
+            z[6] = current * np.sqrt(z[2])
             z[5] = 0.
     else:  # Is_deep -- Much easier than four different cases
         z[5] = 0.
@@ -81,10 +84,10 @@ def initial(height: float, Hoverd: float,
     z[10] = 0.5 * z[2]
 
     for i in range(1, n + 1):
-        cosa[i] = math.cos(i * pi / n)
-        cosa[i + n] = math.cos((i + n) * pi / n)
-        sina[i] = math.sin(i * pi / n)
-        sina[i + n] = math.sin((i + n) * pi / n)
+        cosa[i] = np.cos(i * pi / n)
+        cosa[i + n] = np.cos((i + n) * pi / n)
+        sina[i] = np.sin(i * pi / n)
+        sina[i + n] = np.sin((i + n) * pi / n)
         z[n + i + 10] = 0.
         z[i + 10] = 0.5 * z[2] * cosa[i]
     #
@@ -113,10 +116,10 @@ def eqns(height: float, Hoverd: float,
     """
     EVALUATION OF EQUATIONS
     """
-    rhs = zeros(num + 1)
-    coeff = zeros(n + 1)
-    Tanh = zeros(n + 1)
-    pi = math.pi
+    rhs = np.zeros(num + 1)
+    coeff = np.zeros(n + 1)
+    Tanh = np.zeros(n + 1)
+    pi = np.pi
     case = case.lower()
     rhs[1] = 0.
     if is_finite:
@@ -136,7 +139,7 @@ def eqns(height: float, Hoverd: float,
     for i in range(1, n + 1):
         coeff[i] = z[n + i + 10]
         if is_finite:
-            Tanh[i] = math.tanh(i * z[1])
+            Tanh[i] = np.tanh(i * z[1])
     #
     # Correction made 20.5.2013, z[2] changed to z[1]
     if is_finite:
@@ -161,14 +164,14 @@ def eqns(height: float, Hoverd: float,
         for j in range(1, n + 1):
             nm = (m * j) % (n + n)
             if is_finite:
-                e = math.exp(j * (z[10 + m]))
+                e = np.exp(j * (z[10 + m]))
                 s = 0.5 * (e - 1. / e)
                 c = 0.5 * (e + 1. / e)
                 psi = psi + coeff[j] * (s + c * Tanh[j]) * cosa[nm]
                 u = u + j * coeff[j] * (c + s * Tanh[j]) * cosa[nm]
                 v = v + j * coeff[j] * (s + c * Tanh[j]) * sina[nm]
             else:  # Is_deep
-                e = math.exp(j * (z[10 + m]))
+                e = np.exp(j * (z[10 + m]))
                 psi = psi + coeff[j] * e * cosa[nm]
                 u = u + j * coeff[j] * e * cosa[nm]
                 v = v + j * coeff[j] * e * sina[nm]
@@ -195,8 +198,8 @@ def Newton(height, Hoverd, z, cosa, sina, num, n, current,
     s, rhs1, Tanh = eqns(height, Hoverd, z, cosa, sina, num, n, current,
                          current_criterion, is_finite, case)
 
-    rhs = zeros(num + 1)
-    a = zeros(num + 1, num + 1)
+    rhs = np.zeros(num + 1)
+    a = np.zeros((num + 1, num + 1))
 
     for i in range(1, num + 1):
         h = 0.01 * z[i]
@@ -221,6 +224,6 @@ def Newton(height, Hoverd, z, cosa, sina, num, n, current,
     for i in range(1, num + 1):
         z[i] += x[i]
     #
-    _sum = sum([abs(x[i]) for i in range(10, n + 10 + 1)]) / n
+    _sum = np.sum([abs(x[i]) for i in range(10, n + 10 + 1)]) / n
     return z, _sum, Tanh
 #

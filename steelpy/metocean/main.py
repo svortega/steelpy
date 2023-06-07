@@ -1,19 +1,21 @@
 # 
-# Copyright (c) 2019-2021 steelpy
+# Copyright (c) 2019-2023 steelpy
 #
+from __future__ import annotations
 # 
 # Python stdlib imports
-from typing import Union, Dict
+#from typing import Union, Dict
 
 # package imports
 #from steelpy.metocean.irregular.main import WaveIrregular
 from steelpy.metocean.regular.main import RegularWaves
 #from steelpy.metocean.irregular.spectrum import Sprectrum
-#from steelpy.process.units.units import Units
+from steelpy.process.units.main import Units
 #from steelpy.metocean.interface.wave import RegularWaves, IregularWaves
 #from steelpy.metocean.interface.wind import Winds
 #from steelpy.metocean.interface.current import Currents
 #from steelpy.f2uModel.load.combination import MetoceanCombination
+from steelpy.metocean.regular.process.bsotm import BSOTM
 #
 #
 class Metocean:
@@ -84,18 +86,7 @@ class Metocean:
             except AttributeError:
                 pass
         return self._regular_wave
-    #
-    #@property
-    #def linear_wave(self):
-    #    """
-    #    """
-    #    return self.regular_waves
-    #
-    #@property
-    #def deterministic_wave(self):
-    #    """
-    #    """
-    #    return self.regular_waves     
+    #  
     ##
     #@property
     #def wind(self):
@@ -113,7 +104,46 @@ class Metocean:
     #def combination(self):
     #    """
     #    """
-    #    return self._combination    
+    #    return self._combination
+    #
+    #
+    #
+    def get_load(self, mesh, kinematic,
+                 condition:int = 1,
+                 rho:float = 1025):
+        """ """
+        wforce = BSOTM(kinematic, condition, rho)
+        wforce.wave_force(mesh=mesh)
+        print('-->')
+    #
+    #
+    def pile_response(self, D:float|Units,
+                      L:float|Units,
+                      kinematic,
+                      condition: int = 1,
+                      rho:float = 1025):
+        """
+        D : Pile diametre
+        L : Pile length
+        kinematics : kinematic dataframe
+        condtion :
+            1 - Linear wave (dafault)
+            2 - Non-linear wave
+        """
+        Dp = D.convert('metre').value
+        Lp = L.convert('metre').value
+        #
+        #if kinematic._type == 'regular':
+        #bs, ovtm = bsotm_reg(kinematic, D_pile, condition)
+        #else:
+        #    #bs, ovtm = bsvtm(kinematic, D_pile, condition)
+        #    raise NotImplemented
+        #
+        bsotm = BSOTM(kinematic, condition, rho)
+        bs, otm = bsotm.solve(D=Dp, L=Lp)
+        #
+        return bs, otm 
+        #return surface    
 #
 #
 # HYDRODYNAMICS Section

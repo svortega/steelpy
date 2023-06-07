@@ -113,7 +113,7 @@ class Nodes(Mapping):
     #
     def get_maxmin(self):
         """get """
-        return self._nodes._get_maxmin
+        return self._nodes._get_maxmin()
     #
     #@property
     def jbc(self, supports):

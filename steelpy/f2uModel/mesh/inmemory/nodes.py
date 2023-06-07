@@ -169,7 +169,7 @@ class NodesIM(NodeBasic):
         #print('---')
     #
     #
-    @property
+    #@property
     def _get_maxmin(self):
         """
         """

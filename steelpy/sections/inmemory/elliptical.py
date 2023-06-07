@@ -70,38 +70,17 @@ class HollowSemiellipse(SectionBasic):
         self.type = 'Hollow Semiellipse'
     #
     # 
-    def get_property(self):
-        
+    def _property(self):
+        """ """
         #
-        if self.units_in[0]:
-            _units_input = self.units_in
-            
-        else:
-            print('  **  error input units not provided')
-            print('      process terminated')
-            sys.exit()            
         
-        
-        # units          
-        try:
-            _units_output = self.units_out
-        
-        except AttributeError:
-            _units_output = self.units_in
-            self.units_out = self.units_in
-        
-        factors = units.get_length_mass(_units_input, 
-                                        _units_output)
-        
-        self.units_in = _units_output
-        
-        self.d *= factors[0]
+        #self.d *= factors[0]
         #self.tw *= factors[0]
         
         #self.a *= factors[0]
         #self.ta *= factors[0]
         
-        self.b *= factors[0]
+        #self.b *= factors[0]
         #self.tb *= factors[0]
         #
         _a = self.d - 0.50 * self.tw
@@ -298,36 +277,10 @@ class EllipticalSegment(SectionBasic):
         self.p = 0
         self.q = 0
         self.type = 'Elliptical Segment'
-    def get_property(self):
-        
+    
+    def _property(self):
+        """ """
         #
-        if self.units_in[0]:
-            _units_input = self.units_in
-        else:
-            print('  **  error input units not provided')
-            print('      process terminated')
-            sys.exit()            
-
-        # units          
-        try:
-            _units_output = self.units_out
-        
-        except AttributeError:
-            _units_output = self.units_in
-            self.units_out = self.units_in
-        
-        factors = units.get_length_mass(_units_input, 
-                                        _units_output)
-        
-        self.units_in = _units_output
-        
-        self.a *= factors[0]
-        self.b *= factors[0]
-        
-        self.p *= factors[0]
-        self.q *= factors[0]
-        
-        
         _thetaG = math.radians(self.theta)
         _thetaG = min(abs(_thetaG), 0.50 * math.pi)
         
@@ -438,37 +391,9 @@ class EllipticalSector(SectionBasic):
         self.q = 0
         self.type = 'Elliptical Sector'
     #
-    def get_property(self):
+    def _property(self):
         """
         """
-        if self.units_in[0]:
-            _units_input = self.units_in
-            
-        else:
-            print('  **  error input units not provided')
-            print('      process terminated')
-            sys.exit()            
-        
-        
-        # units          
-        try:
-            _units_output = self.units_out
-        
-        except AttributeError:
-            _units_output = self.units_in
-            self.units_out = self.units_in
-        
-        factors = units.get_length_mass(_units_input, 
-                                        _units_output)
-        
-        self.units_in = _units_output
-        
-        self.a *= factors[0]
-        self.b *= factors[0]
-        
-        self.p *= factors[0]
-        self.q *= factors[0]
-        
         _thetaG = math.radians(self.theta)
         _thetaG = min(_thetaG, 0.50 * math.pi)
         
@@ -577,37 +502,10 @@ class SuperEllipse(SectionBasic):
         self.q = float(q)
         self.type = 'Super Ellipse'
     #
-    def get_property(self):
+    def _property(self):
         """
         :return:
         """
-        if self.units_in[0]:
-            _units_input = self.units_in
-            
-        else:
-            print('  **  error input units not provided')
-            print('      process terminated')
-            sys.exit()            
-        
-        
-        # units          
-        try:
-            _units_output = self.units_out
-        
-        except AttributeError:
-            _units_output = self.units_in
-            self.units_out = self.units_in
-        
-        factors = units.get_length_mass(_units_input, 
-                                        _units_output)
-        
-        self.units_in = _units_output
-        
-        self.a *= factors[0]
-        self.b *= factors[0]
-        
-        self.p *= factors[0]
-        self.q *= factors[0]
         
         if self.p <= 0 or self.q <= 0:
             sys.exit("error p & q > 0")

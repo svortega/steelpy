@@ -1,16 +1,20 @@
 #
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
+#
+from __future__ import annotations
 #
 # Python stdlib imports
-from array import array
+#from array import array
 from dataclasses import dataclass
-import math
-from typing import NamedTuple, Tuple, Union, List, Dict
+#import math
+#from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
 from steelpy.metocean.regular.fourier.Subroutines import Newton, initial
-from steelpy.metocean.regular.operations.inout import title_block, output
-from steelpy.metocean.regular.operations.waveops import WaveRegModule, WaveItem, zeros, get_wave_data
+from steelpy.metocean.regular.process.inout import title_block, output
+from steelpy.metocean.regular.process.waveops import WaveRegModule, WaveItem, get_wave_data
+
+import numpy as np
 
 #
 #
@@ -18,7 +22,8 @@ from steelpy.metocean.regular.operations.waveops import WaveRegModule, WaveItem,
 class WaveFourier(WaveItem):
     
     def __init__(self, H:float, d:float, title:str, 
-                 T:Union[float,None]=None, Lw:Union[float,None] = None, 
+                 T:float|None=None,
+                 Lw:float|None = None, 
                  infinite_depth:bool=False,
                  current:float = 0.0, c_type:int = 1,
                  order:int=5, nstep:int=2,
@@ -43,7 +48,7 @@ class WaveFourier(WaveItem):
             self._Y = Y
             self._B = B
             self._Tanh = Tanh
-            self._wave_length = 2 * math.pi / z[ 1 ]
+            self._wave_length = 2 * np.pi / z[ 1 ]
         #self._Highest = Highest         
         #return z, Y, B, Tanh
 
@@ -65,7 +70,7 @@ class FourierModule(WaveRegModule):
                          number=number, accuracy=accuracy)
     #
     def __setitem__(self, case_name: int,
-                    case_data: Union[List[float], Dict[str, float]]) -> None:
+                    case_data: list[float]|dict[str, float]) -> None:
         """
         case_name : Wave name
          H : Wave height [unit length]
@@ -102,7 +107,8 @@ class FourierModule(WaveRegModule):
 #                current:float, c_type:int=1,
 #                n:int=20, nstep:int=2, number:int=40, accuracy:float=1e-5):
 def FourierMain(MaxH:float, case:str,
-                T:Union[float,None], L:Union[float,None], 
+                T:float|None,
+                L:float|None, 
                 c_type:int, current:float, 
                 norder:int,   nstep:int,
                 niter:int, accuracy:float,
@@ -132,7 +138,7 @@ def FourierMain(MaxH:float, case:str,
     """
     #current=0.31
     crit = accuracy
-    pi = math.pi
+    pi = np.pi
     g = 9.80665  # m/s^2
     #
     print("# Solution by {:}-term Fourier series".format(norder))
@@ -141,13 +147,13 @@ def FourierMain(MaxH:float, case:str,
     dhe = Height / nstep
     dho = MaxH / nstep
 
-    CC = zeros(num+1, num+1)
+    CC = np.zeros((num+1, num+1))
     for j in range(1, num+1):
         CC[j][j] = 1.0
     #
-    Y = zeros(num+1)
-    sol = zeros(num+1, 2+1)
-    B = zeros(norder+1)
+    Y = np.zeros(num+1)
+    sol = np.zeros((num+1, 2+1))
+    B = np.zeros(norder+1)
     # Commence stepping through steps in wave height
     for ns in range(1, nstep+1):
         height = ns * dhe
@@ -158,7 +164,8 @@ def FourierMain(MaxH:float, case:str,
             #sol, z, cosa, sina = initial(height, hoverd, current,
             #                             c_type, num, n)
             sol, z, cosa, sina = initial(height, hoverd, current, 
-                                         c_type, num, norder, is_finite, case)            
+                                         c_type, num, norder,
+                                         is_finite, case)            
         else:
             # Or, extrapolate for next wave height, if necessary
             z = [2.0 * sol[i][2] - sol[i][1] for i in range(num+1)]
@@ -169,7 +176,8 @@ def FourierMain(MaxH:float, case:str,
             # Calculate right sides of equations and differentiate numerically
             # to obtain Jacobian matrix, : solve matrix equation
             z, error, Tanh = Newton(height, hoverd, z, cosa, sina,
-                                    num, norder, current, c_type, is_finite, case)
+                                    num, norder, current, c_type,
+                                    is_finite, case)
             # Convergence criterion satisfied?
             print("# Mean of corrections to free surface: {: 1.4e}".format(error))
             
@@ -195,8 +203,8 @@ def FourierMain(MaxH:float, case:str,
         Y[0] = 0.0
         for j in range(1, norder+1):
             B[j] = z[j + norder + 10]
-            _sum = 0.5 * (z[10] + z[norder + 10] * pow(-1.0, float(j)))
-            _sum += sum([z[10 + m] * cosa[(m * j) % (norder + norder)]
+            _sum = 0.5 * (z[10] + z[norder + 10] * np.power(-1.0, float(j)))
+            _sum += np.sum([z[10 + m] * cosa[(m * j) % (norder + norder)]
                          for m in range(1, norder)])
             Y[j] = 2.0 * _sum / norder
     #

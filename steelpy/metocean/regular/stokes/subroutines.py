@@ -1,27 +1,29 @@
 #
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
+#
+from __future__ import annotations
 #
 # Python stdlib imports
 from array import array
 from dataclasses import dataclass
-import math
-from typing import NamedTuple, Tuple, Union, List, Dict
+#import math
+from typing import NamedTuple
 
 # package imports
-from steelpy.metocean.regular.operations.inout import title_block, get_Height, output
-from steelpy.metocean.regular.operations.waveops import WaveRegModule, WaveItem, zeros
+import numpy as np
 
 # 
-def F(kd:float, H:float, T:float, Current:float, Current_criterion:int,
+def F(kd:float, H:float, T:float,
+      Current:float, Current_criterion:int,
       C:array, n:int, D:array):
     """
     Evaluates dispersion relation - used in iterative solution for wavelength
     """
-    pi = math.pi
+    pi = np.pi
     kH = kd * H
     e2 = 0.5 * kH * 0.5 * kH
-    rhs = Current * math.sqrt(kd) - 2.0 * pi / T / math.sqrt(kd)
-    CC = zeros(3)
+    rhs = Current * np.sqrt(kd) - 2.0 * pi / T / np.sqrt(kd)
+    CC = np.zeros(3)
     CC[0] = C[0]
     CC[2] = 0.0
     CC[1] = CC[2]
@@ -45,14 +47,15 @@ def F(kd:float, H:float, T:float, Current:float, Current_criterion:int,
 
 
 #
+#
 def CDE(kd:float):
     """
     Calculate coefficient arrays C[], D[] and E[]
     """
-    skd = math.sinh(kd)
-    ckd = 1.0 / math.tanh(kd)
-    tkd = math.tanh(kd)
-    S = 1.0 / math.cosh(2.0 * kd)
+    skd = np.sinh(kd)
+    ckd = 1.0 / np.tanh(kd)
+    tkd = np.tanh(kd)
+    S = 1.0 / np.cosh(2.0 * kd)
     ss = [0, S]
     for i in range(2, 8 + 1):
         ss.append(ss[i - 1] * S)
@@ -61,28 +64,28 @@ def CDE(kd:float):
     for i in range(2, 8 + 1):
         t.append(t[i - 1] * (1.0 - S))
     #
-    C = zeros(5)
-    D = zeros(5)
-    E = zeros(5)
-    C[0] = pow(tkd, 0.5)
-    C[2] = pow(tkd, 0.5) * (2 + 7 * ss[2]) / (4 * t[2])
-    C[4] = pow(tkd, 0.5) * (4 + 32 * ss[1] - 116 * ss[2] - 400 * ss[3] - 71 * ss[4] + 146 * ss[5]) / (32 * t[5])
-    D[2] = -pow(ckd, 0.5) / 2
-    D[4] = pow(ckd, 0.5) * (2 + 4 * ss[1] + ss[2] + 2 * ss[3]) / (8 * t[3])
+    C = np.zeros(5)
+    D = np.zeros(5)
+    E = np.zeros(5)
+    C[0] = np.power(tkd, 0.5)
+    C[2] = np.power(tkd, 0.5) * (2 + 7 * ss[2]) / (4 * t[2])
+    C[4] = np.power(tkd, 0.5) * (4 + 32 * ss[1] - 116 * ss[2] - 400 * ss[3] - 71 * ss[4] + 146 * ss[5]) / (32 * t[5])
+    D[2] = -np.power(ckd, 0.5) / 2
+    D[4] = np.power(ckd, 0.5) * (2 + 4 * ss[1] + ss[2] + 2 * ss[3]) / (8 * t[3])
     E[2] = tkd * (2 + 2 * ss[1] + 5 * ss[2]) / (4 * t[2])
     E[4] = tkd * (8 + 12 * ss[1] - 152 * ss[2] - 308 * ss[3] - 42 * ss[4] + 77 * ss[5]) / (32 * t[5])
     return ckd, skd, ss, t, C, D, E
 #
 # 
-def AB(skd:float, ss:List, t:List, n:int,
+def AB(skd:float, ss:list, t:list, n:int,
        z:array, e:array, C:array, kd:float, ckd:float):
     """
     Calculate coefficient arrays A[] and B[] and Fourier coefficients
     """
-    BB = zeros(n + 1, n + 1)
-    A = zeros(n + 1, n + 1)
-    B = zeros(n + 1)
-    Y = zeros(n + 1)
+    BB = np.zeros((n + 1, n + 1))
+    A = np.zeros((n + 1, n + 1))
+    B = np.zeros(n + 1)
+    Y = np.zeros(n + 1)
     #
     A[1][1] = 1 / skd
     A[2][2] = 3*ss[2] / (2*t[2])
@@ -104,7 +107,7 @@ def AB(skd:float, ss:List, t:List, n:int,
         for j in range(jj, n, 2):
             z[n + 10 + i] += A[j][i] * e[j]
         #
-        z[n + 10 + i] *= C[0] * math.cosh(i * kd)
+        z[n + 10 + i] *= C[0] * np.cosh(i * kd)
         # Fourier coefficients
         B[i] = z[n + 10 + i]
     #

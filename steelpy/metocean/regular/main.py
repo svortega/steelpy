@@ -1,14 +1,16 @@
 #
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
+#
+from __future__ import annotations
 #
 # Python stdlib imports
-from typing import NamedTuple, Tuple, Union, List, Dict
+#from typing import NamedTuple
 
 # package imports
 #from steelpy.metocean.regular.current.main_current import MeanCurrent
 from steelpy.metocean.regular.stokes.Stokes import StokesModule
 from steelpy.metocean.regular.fourier.Fourier import FourierModule
-#from steelpy.metocean.regular.cnoidal.Cnoidal import CnoidalModule
+from steelpy.metocean.regular.cnoidal.Cnoidal import CnoidalModule
 
 class RegularWaves:
     __slots__ = ['_wave']
@@ -23,10 +25,10 @@ class RegularWaves:
         """ """
         return StokesModule
     #
-    #@property
-    #def Cnoidal(self):
-    #    """ """
-    #    return CnoidalModule
+    @property
+    def Cnoidal(self):
+        """ """
+        return CnoidalModule
     #
     @property
     def Fourier(self):
@@ -38,7 +40,7 @@ class RegularWaves:
     #    return self._current
     #
     def __setitem__(self, case_name: int,
-                    case_data: Union[List[float], Dict[str, float]]) -> None:
+                    case_data: list[float]|dict[str, float]) -> None:
         """
         case_name : Wave name
          H : Wave height [unit length]
@@ -51,7 +53,7 @@ class RegularWaves:
         self._wave[case_name] = case_data
     #
     #
-    def __getitem__(self, case_name: Union[int, str]) -> Tuple:
+    def __getitem__(self, case_name: int|str) -> tuple:
         """
         case_name : Wave name
         """

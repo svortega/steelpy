@@ -83,12 +83,6 @@ class NodeSQL(NodeBasic):
             self._labels.index(node_name)
             conn = create_connection(self.db_file)
             node = get_node(conn, node_name)
-            #system = get_coordinate_system(data[2])
-            # FIXME : include rest system
-            #number = data[0] - 1
-            #return system(x=data[3], y=data[4], z=data[5],
-            #              name=node_name, number=data[0], 
-            #              index=data[0]-1)
             return node
         except ValueError:
             raise IndexError('   *** node {:} does not exist'.format(node_name))    
@@ -209,6 +203,29 @@ class NodeSQL(NodeBasic):
     #        update_table(conn, nodes)
     #        conn.commit()
     #
+    def _get_maxmin(self):
+        """
+        """
+        #
+        def maxmin(head: str, col: str):
+            #
+            sql = 'SELECT {:}({:}) FROM tb_Nodes'.format(head.upper(), col)
+            cur = conn.cursor()
+            cur.execute(sql)
+            record = cur.fetchone()
+            return record[0]
+        #
+        conn = create_connection(self.db_file)
+        with conn:
+            max_x = maxmin(head='max', col='x')
+            min_x = maxmin(head='min', col='x')
+            #
+            max_y = maxmin(head='max', col='y')
+            min_y = maxmin(head='min', col='y')
+            #
+            max_z = maxmin(head='max', col='z')
+            min_z = maxmin(head='min', col='z')
+        return [max_x, max_y, max_z], [min_x, min_y, min_z]    
 #
 #
 #

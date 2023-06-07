@@ -1,24 +1,26 @@
 #
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
 #
+from __future__ import annotations
 # Python stdlib imports
-from array import array
-from dataclasses import dataclass
-import math
-from typing import NamedTuple, Tuple, Union, List, Dict
+#from array import array
+#from dataclasses import dataclass
+#import math
+#from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
 from steelpy.metocean.regular.stokes.subroutines import F, CDE, AB
-from steelpy.metocean.regular.operations.inout import title_block, get_Height, output
-from steelpy.metocean.regular.operations.waveops import WaveRegModule, WaveItem, zeros, get_wave_data
-
+from steelpy.metocean.regular.process.inout import title_block, output
+from steelpy.metocean.regular.process.waveops import WaveRegModule, WaveItem, get_wave_data
+import numpy as np
 #
 #
 #@dataclass
 class WaveStokes(WaveItem):
     
     def __init__(self, H:float, d:float, title:str, 
-                 T:Union[float,None]=None, Lw:Union[float,None] = None, 
+                 T:float|None=None,
+                 Lw:float|None=None,
                  infinite_depth:bool=False,
                  current:float = 0.0, c_type:int = 1,
                  order:int=5, nstep:int=2,
@@ -30,8 +32,8 @@ class WaveStokes(WaveItem):
                          accuracy=accuracy, 
                          current=current, c_type=c_type,
                          infinite_depth=infinite_depth)
-        #
-    
+    #
+    #
     def __call__(self):
         """ Solver """
         try:
@@ -46,9 +48,9 @@ class WaveStokes(WaveItem):
             self._Y = Y
             self._B = B
             self._Tanh = Tanh
-            self._wave_length = 2 * math.pi / z[ 1 ]
+            self._wave_length = 2 * np.pi / z[ 1 ]
             #self._Highest = Highest        
-        #return z, Y, B, Tanh, L, Highest
+        #
 #
 #
 class StokesModule(WaveRegModule):
@@ -67,7 +69,7 @@ class StokesModule(WaveRegModule):
                          number=number, accuracy=accuracy)
     #
     def __setitem__(self, case_name: int,
-                    case_data: Union[List[float], Dict[str, float]]) -> None:
+                    case_data: list[float]|dict[str, float]) -> None:
         """
         case_name : Wave name
          H : Wave height [unit length]
@@ -106,7 +108,8 @@ class StokesModule(WaveRegModule):
 #               current:float, c_type:int=1,
 #               n:int=5, nstep:int=2, number:int=40, accuracy:float=1e-6):
 def StokesMain(MaxH:float, case:str,
-               T:Union[float,None], L:Union[float,None], 
+               T:float|None,
+               L:float|None, 
                c_type:int, current:float, 
                norder:int,   nstep:int,
                niter:int, accuracy:float,
@@ -136,17 +139,14 @@ def StokesMain(MaxH:float, case:str,
     Tanh : 
     """
     #
-    #current=0.31
-    #c_type=2
-    #
     # inital values
     g = 9.80665  # m/s^2
     #
-    z = zeros( 2 * norder+ 10 + 1 )
-    e = zeros( norder+ 1 )
+    z = np.zeros( 2 * norder+ 10 + 1 )
+    e = np.zeros( norder+ 1 )
     #
     H = MaxH
-    pi = math.pi
+    pi = np.pi
     #
     if norder> 5:
         norder= 5
@@ -162,12 +162,11 @@ def StokesMain(MaxH:float, case:str,
         #
         kd = 2.0 * pi / L
         kH = kd * H
-        ckd, skd, ss, t, C, D, E = CDE ( kd )        
+        ckd, skd, ss, t, C, D, E = CDE( kd )        
     else: # Period
         if T > 10:
             print(f'The dimensionless period [{T:1.2f}] is greater than 10')
             raise IOError("Stokes theory should not be applied")
-        #
         #
         # if period is specified, solve dispersion relation using secant method
         # Until February 2015 the bisection method was used for this.
@@ -178,8 +177,9 @@ def StokesMain(MaxH:float, case:str,
         print ( "# Printing to check convergence:" )
         omega = 2 * pi / T
         # Fenton & McKee for initial estimate
-        kFM = (omega * omega * pow(1 / math.tanh(pow(omega, 1.5)),
-                                   (2.0 / 3.0)))
+        kFM = (omega * omega
+               * np.power(1.0 / np.tanh(np.power(omega, 1.5)),
+                          (2.0 / 3.0)))
         kd1 = kFM
         kd2 = kFM * 1.01
         ckd, skd, ss, t, C, D, E = CDE( kd2 )
@@ -205,7 +205,7 @@ def StokesMain(MaxH:float, case:str,
     #
     z[ 1 ] = kd
     z[ 2 ] = kH
-    SU = 0.5 * kH / pow(kd, 3)
+    SU = 0.5 * kH / np.power(kd, 3)
     print( "# Stokes-Ursell number (SU) :{: 7.4f}".format(SU))
     if SU > 0.5:
         raise Warning("SU > 1/2. Results are unreliable")
@@ -223,36 +223,23 @@ def StokesMain(MaxH:float, case:str,
     z[ 9 ] = 0.5 * C[ 0 ] * C[ 0 ] + e[ 2 ] * E[ 2 ] + e[ 4 ] * E[ 4 ]
 
     if c_type == 1:
-        z[ 5 ] = current * math.sqrt( kd )
+        z[ 5 ] = current * np.sqrt( kd )
         z[ 4 ] = z[ 7 ] + z[ 5 ]
         z[ 6 ] = z[ 4 ] + z[ 8 ] / kd - z[ 7 ]
     else:
-    #elif c_type == 2:
-        z[ 6 ] = current * math.sqrt( kd )
+        z[ 6 ] = current * np.sqrt( kd )
         z[ 4 ] = z[ 6 ] - z[ 8 ] / kd + z[ 7 ]
         z[ 5 ] = z[ 4 ] - z[ 7 ]
     #
     if case == 'wavelength':
         z[ 3 ] = 2 * pi / z[ 4 ]
     else: #elif Case == 'Period':
-        z[ 3 ] = T * math.sqrt ( kd )
+        z[ 3 ] = T * np.sqrt ( kd )
     #
     #
     #  Highest wave - eqn (32) of Fenton (1990)
     #
-    #L = 2 * pi / z[1]
-    #Highest = ((0.0077829 * L * L * L + 0.0095721 * L * L + 0.141063 * L)
-    #           / (0.0093407 * L * L * L + 0.0317567 * L * L + 0.078834 * L + 1))     
-    #
-    #method = "Stokes method order {:}".format(n)
-    #print_output(n, z, Y, B, L, current)
-    #print_output(n, z, Y, B, c_type, current, method, L, Highest)
-    #
-    # Tanh = zeros(n + 1)
-    # for i in range(1,norder+ 1):
-    #    Tanh[i] = math.tanh(i * z[1])
-    #
-    Tanh = [ math.tanh(i * z[1]) for i in range(norder + 1)]
+    Tanh = np.array([np.tanh(i * z[1]) for i in range(norder + 1)])
     #
     title_block(is_finite, c_type, current, z)
     output(norder, z, Y, B, Tanh, is_finite)    

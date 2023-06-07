@@ -15,7 +15,7 @@ import math
 from steelpy.sections.process.stress import BeamStress
 from steelpy.sections.process.operations import ShapeProperty
 from .operations import SectionBasic, ShapeBasic
-import numpy as np
+#import numpy as np
 #
 #
 #
@@ -351,8 +351,8 @@ class IbeamBasic(ShapeBasic):
         Pilkey Formulas
         Chapter 14.
         """
-        coord =  self.section_coordinates()
-        ho = (self.d - 0.5 * self.tft - 0.5 * self.tfb)
+        #coord =  self.section_coordinates()
+        #ho = (self.d - 0.5 * self.tft - 0.5 * self.tfb)
         #
         Cw, J, K, w, Qw = self.warping_properties()
         # Normal warping stress

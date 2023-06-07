@@ -334,11 +334,13 @@ d   |     |   Z
 
         return tau_y, tau_z
     #
-    def torsional_stress(self, T=1.0):
+    def torsional_stress(self, T):
         """
         Roark Torsion chapter
         """
-        d, w = self.get_geometry()
+        coord =  self.section_coordinates()
+        d =  self.depth
+        w =  self.width
         a = w / 2.0
         b = d / 2.0
         if a == b:
@@ -354,7 +356,9 @@ d   |     |   Z
                        / (8 * a * b**2))
         else:
             raise ValueError(' section not applicable')
-        return tau_max
+        
+        tau_x = [tau_max for item in coord.y]
+        return tau_x
     #
     #
     def curved(self, R):
@@ -435,20 +439,19 @@ d   |     |   Z
         """
         # get section's coordinates
         coord =  self.section_coordinates()
-        #coord_y = self.section_coordinates.y # lateral
-        #coord_z = self.section_coordinates.z # vertical
         prop = self.properties()
         #
         tau_y, tau_z = self.shear_stress(actions.Fz, actions.Fy, 
                                            stress_type=stress_type)
         #
-        a =  self.width
-        b =  self.depth
-        if a < b:
-            b =  self.width
-            a =  self.depth            
-        tau_x = [3 * actions.Mx / (a * b**2 * (1 - 0.63 * b / a + 0.25 * b**2 / a**2))
-                 for _ in coord.y]
+        #a =  self.width
+        #b =  self.depth
+        #if a < b:
+        #    b =  self.width
+        #    a =  self.depth            
+        #tau_x = [3 * actions.Mx / (a * b**2 * (1 - 0.63 * b / a + 0.25 * b**2 / a**2))
+        #         for _ in coord.y]
+        tau_x = self.torsional_stress(T=actions.Mx)
         #
         sigma_x = [actions.Fx / prop.area for _ in coord.y]
         sigma_y = [actions.My * _coord / prop.Iy for _coord in coord.z]
@@ -611,10 +614,13 @@ class CircleBasic(ShapeBasic):
     def torsional_stress(self, T):
         """
         """
-        _r = self.depth / 2.0
-        K = math.pi * _r**4
-        tau_max = 2 * T / (math.pi * _r**3)
-        return tau_max
+        coord =  self.section_coordinates()
+        r = self.d / 2.0
+        K = math.pi * r**4
+        tau_max = 2 * T / (math.pi * r**3)
+        
+        tau_x = [tau_max for item in coord.y]
+        return tau_x
     #
     def curved(self, R):
         """
@@ -654,7 +660,6 @@ class CircleBasic(ShapeBasic):
     def _stress(self, actions, stress=None, stress_type: str='average'):
         """
         """
-        radius = self.d * 0.50
         # get section's coordinates
         coord =  self.section_coordinates()
         prop = self.properties()
@@ -662,8 +667,7 @@ class CircleBasic(ShapeBasic):
         tau_y, tau_z = self.shear_stress(Vz=actions.Fz, Vy=actions.Fy, 
                                          stress_type=stress_type)
         #           
-        tau_x = [2 * actions.Mx / (math.pi * radius ** 3)
-                 for _ in coord.y]
+        tau_x = self.torsional_stress(T=actions.Mx)
         #
         sigma_x = [actions.Fx / prop.area for _ in coord.y]
         sigma_y = [actions.My * _coord / prop.Iy for _coord in coord.z]
