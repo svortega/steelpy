@@ -44,20 +44,22 @@ class BSOTM:
     rho: float = 1025 # 
     #
     #
-    def CdCm(self, Z):
+    def CdCm(self, Z, HTs: float):
         """ """
         cm = np.zeros((Z.shape))
+        cm += 1.5
+        cm[Z > HTs] = 1.6
+        #cm[Z <= 2] = 1.2
+        #
         cd = np.zeros((Z.shape))
-        cm[Z > 2] = 1.6
-        cm[Z <= 2] = 1.2
-    
         # switch condition
         if self.condition == 1:
-            cd = cd + 1.15
+            cd += 1.15
         else:
             #elif condition == 2:
-            cd[Z > 2] = 0.65
-            cd[Z <= 2] = 1.05
+            cd += 1.05
+            cd[Z > HTs] = 0.65
+            #cd[Z <= 2] = 1.05
         #
         return cd, cm
     #
@@ -115,7 +117,7 @@ class BSOTM:
         return vc    
     #
     #
-    def inertia(self, At, cm, AX, dz):
+    def mass(self, At, cm, AX):
         """ """
         # inertia load per unit length
         pinertia = self.rho * cm * At * AX  
@@ -127,18 +129,20 @@ class BSOTM:
         # hold all
         # plot(pdrag(:),Z(:),'.-','LineWidth',1)
     
-        dinertia = pinertia * dz
+        #dinertia = pinertia * dz
         #binertia = dinertia.sum(dim='z')
-        return dinertia
+        #return dinertia
+        return pinertia
     #
-    def mass(self, D: float, cd, UX, dz):
+    def drag(self, D: float, cd, UX):
         """ """
         # drag load per unit length
         pdrag = 0.5 * self.rho * cd * D * UX * np.abs(UX)
-        ddrag = pdrag * dz
+        #return pdrag * dz
         #bdrag = np.sum(ddrag, axis=2)
         #bdrag = ddrag.sum(dim='z')
-        return ddrag
+        #return ddrag
+        return pdrag
     #
     #
     #def base_shear(self, dinertia, ddrag):
@@ -161,7 +165,6 @@ class BSOTM:
         otm.drop('row', axis=1, inplace=True)
         otm['z'] = Z.flatten()
         return otm
-    #
     #
     def BS(self, dinertia, ddrag, Z):
         """ Base Shear"""
@@ -233,18 +236,31 @@ class BSOTM:
         #
         # -----------------------------------------
         #        
-        dinertia = self.inertia(At, cm, AX, dz)
+        dmass = self.mass(At, cm, AX)
         #
-        ddrag = self.mass(Dh, cd, UX, dz)
+        ddrag = self.drag(Dh, cd, UX)
         #
-        bs = self.BS(dinertia, ddrag, Z)
+        bs = self.BS(dmass, ddrag, Z)
         #
-        otm = self.OTM(dinertia, ddrag, Z, d)
+        otm = self.OTM(dmass, ddrag, Z, d)
         #
         return bs, otm
     #
+    # -----------------------------------------------
     #
-    def wave_force(self, mesh):
+    def span_loading(self, fx, fz, Lm, nelev):
+        """ """
+        #Fx = np.cumsum(fx, axis=1) * Lm / (nelev - 1)
+        #Fz = np.cumsum(fz, axis=1) * Lm / (nelev - 1)
+        Fx = fx.cumsum(dim='z') * Lm / (nelev - 1)
+        Fz = fz.cumsum(dim='z') * Lm / (nelev - 1)        
+        #Fx = fx * Lm / (nelev - 1)
+        #Fz = fz * Lm / (nelev - 1)        
+        # x, range, wave lenght
+        return Fx, Fz
+    #
+    #
+    def wave_force(self, mesh, nelev=10):
         """Calculation of wave forces on beam elements"""
         beams = mesh.elements().beams()
         #
@@ -252,8 +268,10 @@ class BSOTM:
         #
         beam = beams[12]
         uvector = np.array(beam.unit_vector)
+        print(f'Unit Vector [{uvector[0]}, {uvector[1]}, {uvector[2]}]')
+        print('')
         #Duv = uvector / 100
-        #DS = beam.L / 100
+        Lm = beam.L
         #
         n1, n2 = beam.nodes
         #x = n1.x - Duv[0] * 0.5
@@ -265,8 +283,19 @@ class BSOTM:
         d = self.kinematics.d
         z =  self.kinematics.z
         ux =  self.kinematics.ux
-        ax =  self.kinematics.ax
+        uz =  self.kinematics.uz
+        print(f'Max horizontal wave particle velocity {max(np.max(ux), np.min(ux), key=abs): 1.4e}')
+        print(f'Max vertical wave particle velocity {max(np.max(uz), np.min(uz), key=abs): 1.4e}')        
         #
+        ax =  self.kinematics.ax
+        az =  self.kinematics.az
+        print('')
+        print(f'Max horizontal wave particle acceleration {max(np.max(ax), np.min(ax), key=abs): 1.4e}')
+        print(f'Max vertical wave particle acceleration {max(np.max(az), np.min(az), key=abs): 1.4e}')        
+        #
+        eta = self.kinematics.surface.eta
+        #
+        crestmax = np.max(eta)
         #
         # -----------------------------------------
         #
@@ -275,7 +304,7 @@ class BSOTM:
         #
         zmax = np.maximum(n1.y, n2.y)
         zmin = np.minimum(n1.y, n2.y)
-        Elev = np.linspace(zmin, zmax, 10)
+        Elev = np.linspace(zmin, zmax, nelev)
         #
         #b_range = np.abs(n2.y - n1.y)
         #
@@ -294,15 +323,62 @@ class BSOTM:
         #
         # -----------------------------------------
         # Cd & Cm
-        cd, cm = self.CdCm(Z)
+        cd, cm = self.CdCm(Z, crestmax)
         #
+        # -----------------------------------------
+        # Current
+        Vct=1.54
+        Vc = self.Vc(Vct, d, z, eta)
+        Vc = 0
         #
         # -----------------------------------------
         # Kinematis
         #
-        kin = self.kinematics.get_kin(Z)        
-        #        
+        kin = self.kinematics.get_kin(Z)
         #
+        print('')
+        print('--> local Member')
+        print(f"Max horizontal wave particle velocity {max(np.max(kin['ux']), np.min(kin['ux']), key=abs): 1.4e} m/s")
+        print(f"Max vertical wave particle velocity {max(np.max(kin['uz']), np.min(kin['uz']), key=abs): 1.4e} m/s")
+        print('')
+        print(f"Max horizontal wave particle acceleration {max(np.max(kin['ax']), np.min(kin['ax']), key=abs): 1.4e} m/s2")
+        print(f"Max vertical wave particle acceleration {max(np.max(kin['az']), np.min(kin['az']), key=abs): 1.4e} m/s2")
+        print('--> local Member')
+        print('')
+        #
+        # Components of velocity local to the member
+        #
+        Un = Vc + kin['ux'] - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        Vn = kin['uz'] - uvector[1] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        Wn = - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        #
+        print('')
+        print('========================================')
+        print('Components of velocity local to the member [N/m]')
+        print(f'Un ={np.max(Un): 1.4e}, Vn={np.max(Vn): 1.4e}, Wn={np.max(Wn): 1.4e}')
+        print(f'Un ={np.min(Un): 1.4e}, Vn={np.min(Vn): 1.4e}, Wn={np.min(Wn): 1.4e}')        
+        #
+        # Water velocity normal to the cilinder axis
+        #
+        vn = Vc + np.sqrt(np.power(kin['ux'], 2) + np.power(kin['uz'], 2)
+                          - np.power(uvector[0] * kin['ux'] + uvector[1] * kin['uz'], 2))
+        #
+        print('')
+        print('Water velocity normal to the cilinder axis [N/m]')
+        print(f'vnmax ={np.max(vn): 1.4e}, vnmin={np.min(vn): 1.4e}')       
+        #
+        # Components of acceleration local to the member
+        #
+        Anx = kin['ax'] - uvector[0] * (uvector[0] *  kin['ax'] + uvector[1] * kin['az'])
+        Anz = kin['az'] - uvector[1] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
+        Any = - uvector[0] * (uvector[0] *  kin['ax'] + uvector[1] * kin['az'])
+        #
+        #
+        print('')
+        print('Components of acceleration local to the member [N/m]')
+        print(f'Anx ={np.max(Anx): 1.4e}, Anz={np.max(Anz): 1.4e}, Any={np.max(Any): 1.4e}')
+        print(f'Anx ={np.min(Anx): 1.4e}, Anz={np.min(Anz): 1.4e}, Any={np.min(Any): 1.4e}')
+        print('========================================')
         #
         # ---------------------------------------
         #
@@ -320,15 +396,45 @@ class BSOTM:
         #
         # ---------------------------------------
         #
-        dinertia = self.inertia(At, cm, kin['ax'], dz)
+        # Components of the force per unit of cilinder length acting in 
+        # the x, y and z dir are given by the generalized Morisson equation
+        #        
+        dmx = self.mass(At, cm, Anx)
+        dmz = self.mass(At, cm, Anz)
+        dmy = self.mass(At, cm, Any)
+        print('')
+        print('Components of mass per unit on cilinder lenght [N/m]')
+        print(f'dmx ={np.max(dmx): 1.4e}, dmy={np.max(dmz): 1.4e}, dmz={np.max(dmy): 1.4e}')
+        print(f'dmx ={np.min(dmx): 1.4e}, dmy={np.min(dmz): 1.4e}, dmz={np.min(dmy): 1.4e}')
         #
-        ddrag = self.mass(Dh, cd, kin['ux'], dz)
+        ddx = self.drag(Dh, cd, Un)
+        ddz = self.drag(Dh, cd, Vn)
+        ddy = self.drag(Dh, cd, Wn)
+        print('')
+        print('Components of drag per unit on cilinder lenght [N/m]')
+        print(f'ddx ={np.max(ddx): 1.4e}, ddy={np.max(ddz): 1.4e}, ddz={np.max(ddy): 1.4e}')
+        print(f'ddx ={np.min(ddx): 1.4e}, ddy={np.min(ddz): 1.4e}, ddz={np.min(ddy): 1.4e}')
         #
         #
-        bs = self.BS(dinertia, ddrag, Z)
+        fx = dmx+ddx
+        fz = dmz+ddz
+        fy = dmy+ddy
         #
         #
-        print('--')
+        print('')
+        print('Components of the force per unit on cilinder lenght [N/m]')
+        print(f'fx ={np.max(fx): 1.4e}, Fy={np.max(fz): 1.4e}, fz={np.max(fy): 1.4e}')
+        print(f'fx ={np.min(fx): 1.4e}, Fy={np.min(fz): 1.4e}, fz={np.min(fy): 1.4e}')
+        #
+        # ---------------------------------------
+        # Calculate wave loading on exposed span
+        #
+        Fx, Fz = self.span_loading(fx, fz, Lm, nelev)
+        #
+        print('')
+        print('Total combined force [kN]')
+        print(f'Fx ={np.max(Fx) / 1000: 1.3e}, Fz={np.max(Fz) / 1000: 1.3e}')
+        print('---')
     #
     #
 #

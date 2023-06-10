@@ -292,6 +292,12 @@ class KinematicResults:
         plt.show()
         #print('---')
     #
+    #
+    def plot_particles(self):
+        """ """
+        pass
+    #
+    #
     # -------------------------------------------------------
     #
     def kindf(self, items, xx, zdepth):
@@ -316,8 +322,8 @@ class KinematicResults:
         rows =  np.array([0.0])
         xx =  self.surface.x
         #items = self._data.groupby(['x'])[['z', 'u', 'ut']]
-        items =  ['u', 'ut']
-        title = ['ux', 'ax']
+        items =  ['u', 'ut', 'v', 'vt']
+        title = ['ux', 'ax', 'uz', 'az']
         #
         kdf = dict()
         for i, name in enumerate(items):

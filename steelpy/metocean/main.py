@@ -78,6 +78,7 @@ class Metocean:
         """
         """
         if values:
+            print('-->')
             1/0
         else:
             try:
@@ -111,7 +112,11 @@ class Metocean:
     def get_load(self, mesh, kinematic,
                  condition:int = 1,
                  rho:float = 1025):
-        """ """
+        """
+        condition :
+            1 - Linear wave (dafault)
+            2 - Non-linear wave
+        """
         wforce = BSOTM(kinematic, condition, rho)
         wforce.wave_force(mesh=mesh)
         print('-->')
@@ -126,7 +131,7 @@ class Metocean:
         D : Pile diametre
         L : Pile length
         kinematics : kinematic dataframe
-        condtion :
+        condition :
             1 - Linear wave (dafault)
             2 - Non-linear wave
         """

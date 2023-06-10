@@ -76,7 +76,7 @@ class WaveItem:
         nsteps : Number of height steps to reach H/d
         niter  : Maximum number of iterations for each step (20)
         crit   : Criterion for convergence (1e-6)
-        Height : ??
+        Height : wave height
         finite_depth : True/False
         """
         MaxH = self.H / self.d
@@ -122,7 +122,7 @@ class WaveItem:
         return SurfaceResults(surface, self.H, self.Tw, self.d, self.finite_depth)
     #
     #
-    def kinematics(self, surface=None, depth_points:int = 20,
+    def kinematics(self, surface=None, depth_points:int = 100,
                    surface_points:int = 36):
         """ """
         self.__call__()
