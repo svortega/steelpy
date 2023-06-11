@@ -35,11 +35,16 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
         s = 0.0
         g = 0.0
         if i <= m:
-            scale = np.sum([abs(a[k][i]) for k in range(i, m + 1)])
-            if scale != 0:
-                for k in range(i, m + 1):
-                    a[k][i] /= scale
-                    s += a[k][i] * a[k][i]
+            #scale = np.sum([np.abs(a[k][i]) for k in range(i, m + 1)])
+            #if scale != 0:            
+            try:
+                1 / (scale := np.sum(np.abs(a[i: m + 1, i])))
+                #
+                a[i: m + 1, i] /= scale
+                s = np.sum(np.power(a[i: m + 1, i], 2))
+                #for k in range(i, m + 1):
+                #    a[k][i] /= scale
+                #    s += a[k][i] * a[k][i]
                 # ss = sum([a[k][i] * a[k][i] for k in range(i, m+1)])
                 f = a[i][i]
                 g = np.copysign(np.sqrt(s), f) * -1.0
@@ -47,25 +52,36 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
                 a[i][i] = f - g
 
                 for j in range(l, n + 1):
-                    s = sum([a[k][i] * a[k][j]
-                             for k in range(i, m + 1)])
+                    s = np.sum(a[i: m + 1, i] * a[i: m + 1, j])
+                    #s = sum([a[k][i] * a[k][j]
+                    #         for k in range(i, m + 1)])
                     f = s / h
-                    for k in range(i, m + 1):
-                        a[k][j] += f * a[k][i]
+                    #
+                    a[i: m + 1, j] += f * a[i: m + 1, i]
+                    #for k in range(i, m + 1):
+                    #    a[k][j] += f * a[k][i]
                 #
-                for k in range(i, m + 1):
-                    a[k][i] *= scale
+                a[i: m + 1, i] *= scale
+                #for k in range(i, m + 1):
+                #    a[k][i] *= scale
+            except ZeroDivisionError:
+                pass
         #
         w[i] = scale * g
         # scale = 0.0
         s = 0.0
         g = 0.0
         if i <= m and i != n:
-            scale = sum([abs(a[i][k]) for k in range(l, n + 1)])
-            if scale != 0:
-                for k in range(l, n + 1):
-                    a[i][k] /= scale
-                    s += a[i][k] * a[i][k]
+            #scale = sum([abs(a[i][k]) for k in range(l, n + 1)])
+            #if scale != 0:
+            try:
+                1 / (scale := np.sum(np.abs(a[i, l: n + 1])))
+                #
+                a[i, l: n + 1] /= scale
+                s = np.sum(np.power(a[i, l: n + 1], 2))
+                #for k in range(l, n + 1):
+                #    #a[i][k] /= scale
+                #    s += a[i][k] * a[i][k]
                 #
                 f = a[i][l]
                 g = np.copysign(np.sqrt(s), f) * -1.0
@@ -82,20 +98,28 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
                 #           if h != 0.0]
                 #
                 for j in range(l, m + 1):
-                    s = np.sum([a[j][k] * a[i][k]
-                                for k in range(l, n + 1)])
-
-                    for k in range(l, n + 1):
-                        a[j][k] += s * rv1[k]
+                    s = np.sum(a[j, l: n + 1] * a[i, l: n + 1])
+                    #s = np.sum([a[j][k] * a[i][k]
+                    #            for k in range(l, n + 1)])
+                    #
+                    a[j, l: n + 1] += s * rv1[l: n + 1]
+                    #for k in range(l, n + 1):
+                    #    a[j][k] += s * rv1[k]
                 #
-                for k in range(l, n + 1):
-                    a[i][k] *= scale
+                a[i, l: n + 1] *= scale
+                #for k in range(l, n + 1):
+                #    a[i][k] *= scale
+            except ZeroDivisionError:
+                pass
         #
-        anorm = max(anorm, (abs(w[i]) + abs(rv1[i])))
+        anorm = np.maximum(anorm, (np.abs(w[i]) + np.abs(rv1[i])))
     # Next i
     for i in range(n, 0, -1):
         if i < n:
-            if g != 0:
+            #if g != 0:
+            try:
+                1 / g
+                #v[l: n + 1, i] = (a[i, l: n + 1] / a[i, l: n + 1]) / g
                 for j in range(l, n + 1):
                     try:
                         v[j][i] = (a[i][j] / a[i][l]) / g
@@ -103,41 +127,54 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
                         v[j][i] = 0
                 #
                 for j in range(l, n + 1):
-                    s = sum([a[i][k] * v[k][j] for k in range(l, n + 1)])
-                    for k in range(l, n + 1):
-                        v[k][j] += s * v[k][i]
-            #
-            for j in range(l, n + 1):
-                v[i][j] = 0.0
-                v[j][i] = 0.0
+                    s = np.sum(a[i, l: n + 1] * v[l: n + 1, j])
+                    #s = sum([a[i][k] * v[k][j] for k in range(l, n + 1)])
+                    v[l: n + 1, j] += s * v[l: n + 1, i]
+                    #for k in range(l, n + 1):
+                    #    v[k][j] += s * v[k][i]
+            except ZeroDivisionError:
+                #v[l: n + 1, i] = 0
+                pass
+            # TODO : is this necessary?
+            v[i, l: n + 1] = 0.0
+            v[l: n + 1, i] = 0.0            
+            #for j in range(l, n + 1):
+            #    v[i][j] = 0.0
+            #    v[j][i] = 0.0
         #
         v[i][i] = 1.0
         g = rv1[i]
         l = i
     # 
-    ii = min(m, n)
+    ii = np.minimum(m, n)
     for i in range(ii, 0, -1):
         l = i + 1
         g = w[i]
-
-        for j in range(l, n + 1):
-            a[i][j] = 0.0
         #
-        if g != 0:
+        a[i, l: n + 1] = 0.0
+        #for j in range(l, n + 1):
+        #    a[i][j] = 0.0
+        #
+        #if g != 0:
+        try:
             g = 1.0 / g
             for j in range(l, n + 1):
-                s = np.sum([a[k][i] * a[k][j]
-                            for k in range(l, m + 1)])
+                s = np.sum(a[l: m + 1, i] * a[l: m + 1, j])
+                #s = np.sum([a[k][i] * a[k][j]
+                #            for k in range(l, m + 1)])
                 f = (s / a[i][i]) * g
-
-                for k in range(i, m + 1):
-                    a[k][j] += f * a[k][i]
-
-            for j in range(i, m + 1):
-                a[j][i] *= g
-        else:
-            for j in range(i, m + 1):
-                a[j][i] = 0.0
+                #
+                a[i: m + 1, j] += f * a[i: m + 1, i]
+                #for k in range(i, m + 1):
+                #    a[k][j] += f * a[k][i]
+            #
+            a[i: m + 1, i] *= g
+            #for j in range(i, m + 1):
+            #    a[j][i] *= g
+        except ZeroDivisionError:
+            a[i: m + 1, i] = 0.0
+            #for j in range(i, m + 1):
+            #    a[j][i] = 0.0
         #
         a[i][i] += 1
         # i -= 1
@@ -147,11 +184,11 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
             flag = 1
             for l in range(k, 0, -1):
                 nm = l - 1
-                if abs(rv1[l]) + anorm == anorm:
+                if np.abs(rv1[l]) + anorm == anorm:
                     flag = 0
                     break
 
-                if abs(w[nm]) + anorm == anorm:
+                if np.abs(w[nm]) + anorm == anorm:
                     break
             #
             if flag != 0:
@@ -160,7 +197,7 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
                 for i in range(l, k + 1):
                     f = s * rv1[i]
                     rv1[i] = c * rv1[i]
-                    if abs(f) + anorm == anorm:
+                    if np.abs(f) + anorm == anorm:
                         break
                     #
                     g = w[i]
@@ -179,8 +216,9 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
             if l == k:
                 if z < 0.0:
                     w[k] = -z
-                    for j in range(1, n + 1):
-                        v[j][k] = -1 * v[j][k]
+                    v[1: n + 1, k] = -1 * v[1: n + 1, k]
+                    #for j in range(1, n + 1):
+                    #    v[j][k] = -1 * v[j][k]
                 break
             #
             if its == 50:

@@ -4,7 +4,7 @@
 from __future__ import annotations
 # Python stdlib imports
 #import math
-#from typing import NamedTuple, Tuple, Union, List, Dict
+from typing import NamedTuple
 from dataclasses import dataclass
 #
 # package imports
@@ -15,7 +15,57 @@ from numpy.matlib import repmat
 #
 
 
-
+#
+#
+class KinVel(NamedTuple):
+    """ Kinematic components of velocity"""
+    Un: list
+    Vn: list
+    Wn: list
+#
+#
+class KinAcc(NamedTuple):
+    """ Kinematic components of velocity"""
+    Anx: list
+    Any: list
+    Anz: list
+#
+#
+class BeamUnitForce(NamedTuple):
+    """Components of the force per unit of cilinder lenght"""
+    qx: list
+    qy: list
+    qz: list
+    elevation: list
+    beam_name: str | int
+    #
+    def line(self):
+        """get line loading
+        [load_title, 'beam', beam_name, 'line',  qx0,qy0,qz0, qx1,qy1,qz1, L0,L1, comment(optional)]"""
+        #qx = self.qx.isel(x=0)
+        #row, col, length = self.qx.indexes.values()
+        #name = 'qx'
+        qx = self.qx.to_dataframe(name='qx').reset_index()
+        #data = qx.groupby(['x'])[name].agg(lambda x : x.tolist())
+        elev = self.elevation
+        qxgrp = qx.groupby(['row', 'length'])[['col', 'qx']]
+        #
+        load = {}
+        for key, item in qxgrp:
+            load[key] = []
+            step = None
+            for el in  elev:
+                idx = item.index[item['col'] == el].tolist()
+                try:
+                    qn = item['qx'][idx[0]]
+                    load[key].append([step, qn])
+                    step = qn
+                except IndexError:
+                    step = 0
+            #print(key, item)
+        print('--->')
+        1 / 0
+#
 #
 @dataclass
 class BSOTM:
@@ -47,7 +97,7 @@ class BSOTM:
     def CdCm(self, Z, HTs: float):
         """ """
         cm = np.zeros((Z.shape))
-        cm += 1.5
+        cm += 1.2
         cm[Z > HTs] = 1.6
         #cm[Z <= 2] = 1.2
         #
@@ -134,10 +184,10 @@ class BSOTM:
         #return dinertia
         return pinertia
     #
-    def drag(self, D: float, cd, UX):
+    def drag(self, D: float, cd, UX, vn):
         """ """
         # drag load per unit length
-        pdrag = 0.5 * self.rho * cd * D * UX * np.abs(UX)
+        pdrag = 0.5 * self.rho * cd * D * UX * vn
         #return pdrag * dz
         #bdrag = np.sum(ddrag, axis=2)
         #bdrag = ddrag.sum(dim='z')
@@ -177,7 +227,7 @@ class BSOTM:
         bs['z'] = Z.flatten()
         return bs
     #
-    def solve(self, D: float, L: float):
+    def solveBSOTM(self, D: float, L: float):
         """
         D : Pile diametre
         L : Pile length
@@ -186,6 +236,10 @@ class BSOTM:
         z =  self.kinematics.z
         ux =  self.kinematics.ux
         ax =  self.kinematics.ax
+        #
+        eta = self.kinematics.surface.eta
+        #
+        crestmax = np.max(eta)        
         #
         # [x, z, time] = value --> irregular
         # [x, z, lenght] = value --> regular
@@ -209,11 +263,11 @@ class BSOTM:
         # -----------------------------------------
         #
         # get Cd & Cm
-        cd, cm = self.CdCm(Z)
+        cd, cm = self.CdCm(Z, crestmax)
         #
         # -----------------------------------------
         #
-        eta = self.kinematics.surface.eta
+        #eta = self.kinematics.surface.eta
         Vct=1.54
         #zd = (z + d) / d
         Vc = self.Vc(Vct, d, z, eta)
@@ -238,7 +292,7 @@ class BSOTM:
         #        
         dmass = self.mass(At, cm, AX)
         #
-        ddrag = self.drag(Dh, cd, UX)
+        ddrag = self.drag(Dh, cd, UX, np.abs(UX))
         #
         bs = self.BS(dmass, ddrag, Z)
         #
@@ -248,102 +302,28 @@ class BSOTM:
     #
     # -----------------------------------------------
     #
-    def span_loading(self, fx, fz, Lm, nelev):
+    def span_loading(self, fx, fz, dz):
         """ """
         #Fx = np.cumsum(fx, axis=1) * Lm / (nelev - 1)
         #Fz = np.cumsum(fz, axis=1) * Lm / (nelev - 1)
-        Fx = fx.cumsum(dim='z') * Lm / (nelev - 1)
-        Fz = fz.cumsum(dim='z') * Lm / (nelev - 1)        
+        Fx = fx.cumsum(dim='z') * dz
+        Fz = fz.cumsum(dim='z') * dz        
         #Fx = fx * Lm / (nelev - 1)
         #Fz = fz * Lm / (nelev - 1)        
         # x, range, wave lenght
         return Fx, Fz
     #
-    #
-    def wave_force(self, mesh, nelev=10):
-        """Calculation of wave forces on beam elements"""
-        beams = mesh.elements().beams()
+    def local_kin(self, beam, kin, Vc):
+        """ Kinematics local to the member
+        
+        beam : beam element
+        kin : kinematics
+        Vc : current
+        """
         #
-        # process
-        #
-        beam = beams[12]
         uvector = np.array(beam.unit_vector)
+        #uvector = [0.447, 0.525, 0.724]
         print(f'Unit Vector [{uvector[0]}, {uvector[1]}, {uvector[2]}]')
-        print('')
-        #Duv = uvector / 100
-        Lm = beam.L
-        #
-        n1, n2 = beam.nodes
-        #x = n1.x - Duv[0] * 0.5
-        #y = n1.y - Duv[1] * 0.5
-        #z = n1.z - Duv[2] * 0.5
-        #
-        # -----------------------------------------
-        #
-        d = self.kinematics.d
-        z =  self.kinematics.z
-        ux =  self.kinematics.ux
-        uz =  self.kinematics.uz
-        print(f'Max horizontal wave particle velocity {max(np.max(ux), np.min(ux), key=abs): 1.4e}')
-        print(f'Max vertical wave particle velocity {max(np.max(uz), np.min(uz), key=abs): 1.4e}')        
-        #
-        ax =  self.kinematics.ax
-        az =  self.kinematics.az
-        print('')
-        print(f'Max horizontal wave particle acceleration {max(np.max(ax), np.min(ax), key=abs): 1.4e}')
-        print(f'Max vertical wave particle acceleration {max(np.max(az), np.min(az), key=abs): 1.4e}')        
-        #
-        eta = self.kinematics.surface.eta
-        #
-        crestmax = np.max(eta)
-        #
-        # -----------------------------------------
-        #
-        section = beam.section
-        D = section.diameter
-        #
-        zmax = np.maximum(n1.y, n2.y)
-        zmin = np.minimum(n1.y, n2.y)
-        Elev = np.linspace(zmin, zmax, nelev)
-        #
-        #b_range = np.abs(n2.y - n1.y)
-        #
-        #bzidx = (z > zmin) & (z < zmax)
-        #
-        #
-        # -----------------------------------------
-        #
-        dz = np.diff(Elev)
-        # locating the midle point of each element
-        Z = Elev[:-1] + dz * 0.50        
-        #
-        # -----------------------------------------
-        # Hydro diametre & area
-        Dh, At = self.Dh(D, Z)
-        #
-        # -----------------------------------------
-        # Cd & Cm
-        cd, cm = self.CdCm(Z, crestmax)
-        #
-        # -----------------------------------------
-        # Current
-        Vct=1.54
-        Vc = self.Vc(Vct, d, z, eta)
-        Vc = 0
-        #
-        # -----------------------------------------
-        # Kinematis
-        #
-        kin = self.kinematics.get_kin(Z)
-        #
-        print('')
-        print('--> local Member')
-        print(f"Max horizontal wave particle velocity {max(np.max(kin['ux']), np.min(kin['ux']), key=abs): 1.4e} m/s")
-        print(f"Max vertical wave particle velocity {max(np.max(kin['uz']), np.min(kin['uz']), key=abs): 1.4e} m/s")
-        print('')
-        print(f"Max horizontal wave particle acceleration {max(np.max(kin['ax']), np.min(kin['ax']), key=abs): 1.4e} m/s2")
-        print(f"Max vertical wave particle acceleration {max(np.max(kin['az']), np.min(kin['az']), key=abs): 1.4e} m/s2")
-        print('--> local Member')
         print('')
         #
         # Components of velocity local to the member
@@ -376,65 +356,175 @@ class BSOTM:
         #
         print('')
         print('Components of acceleration local to the member [N/m]')
-        print(f'Anx ={np.max(Anx): 1.4e}, Anz={np.max(Anz): 1.4e}, Any={np.max(Any): 1.4e}')
-        print(f'Anx ={np.min(Anx): 1.4e}, Anz={np.min(Anz): 1.4e}, Any={np.min(Any): 1.4e}')
+        print(f'Anx ={np.max(Anx): 1.4e}, Any={np.max(Anz): 1.4e}, Anz={np.max(Any): 1.4e}')
+        print(f'Anx ={np.min(Anx): 1.4e}, Any={np.min(Anz): 1.4e}, Anz={np.min(Any): 1.4e}')
         print('========================================')
+        #
+        return KinVel(Un, Vn, Wn), KinAcc(Anx, Anz, Any),  vn
+    #
+    def local_uforce(self, Dh, At, cd, cm,
+                     kinvel, kinacc, vn,
+                     Elev, beam):
+        """Components of the force per unit of cilinder length acting in 
+        the x, y and z dir are given by the generalized Morisson equation
+        
+        """
+        dmx = self.mass(At, cm, kinacc.Anx)
+        dmy = self.mass(At, cm, kinacc.Any)
+        dmz = self.mass(At, cm, kinacc.Anz)
+        print('')
+        print('Components of mass per unit on cilinder lenght [N/m]')
+        print(f'dmx ={np.max(dmx): 1.4e}, dmy={np.max(dmy): 1.4e}, dmz={np.max(dmz): 1.4e}')
+        print(f'dmx ={np.min(dmx): 1.4e}, dmy={np.min(dmy): 1.4e}, dmz={np.min(dmz): 1.4e}')
+        #
+        ddx = self.drag(Dh, cd, kinvel.Un, vn)
+        ddy = self.drag(Dh, cd, kinvel.Vn, vn)
+        ddz = self.drag(Dh, cd, kinvel.Wn, vn)
+        print('')
+        print('Components of drag per unit on cilinder lenght [N/m]')
+        print(f'ddx ={np.max(ddx): 1.4e}, ddy={np.max(ddy): 1.4e}, ddz={np.max(ddz): 1.4e}')
+        print(f'ddx ={np.min(ddx): 1.4e}, ddy={np.min(ddy): 1.4e}, ddz={np.min(ddz): 1.4e}')
+        #
+        #
+        fx = dmx + ddx
+        fy = dmy + ddy
+        fz = dmz + ddz
+        #
+        #
+        print('')
+        print('Components of the force per unit on cilinder lenght [N/m]')
+        print(f'qx ={np.max(fx): 1.4e}, qy={np.max(fy): 1.4e}, qz={np.max(fz): 1.4e}')
+        print(f'qx ={np.min(fx): 1.4e}, qy={np.min(fy): 1.4e}, qz={np.min(fz): 1.4e}')
+        print('========================================')
+        #
+        return BeamUnitForce(fx, fy, fz, Elev, beam.name)
+    #
+    def wave_force(self, mesh, nelev=5):
+        """Calculation of wave forces on beam elements"""
+        beams = mesh.elements().beams()
+        #
+        # process
+        #
+        beam = beams[12]
+        #uvector = np.array(beam.unit_vector)
+        #print(f'Unit Vector [{uvector[0]}, {uvector[1]}, {uvector[2]}]')
+        #print('')
+        #Duv = uvector / 100
+        #Lm = beam.L
+        #
+        n1, n2 = beam.nodes
+        #x = n1.x - Duv[0] * 0.5
+        #y = n1.y - Duv[1] * 0.5
+        #z = n1.z - Duv[2] * 0.5
+        #
+        # -----------------------------------------
+        #
+        d = self.kinematics.d
+        z =  self.kinematics.z
+        #ux =  self.kinematics.ux
+        #uz =  self.kinematics.uz
+        #print(f'Max horizontal wave particle velocity {max(np.max(ux), np.min(ux), key=abs): 1.4e}')
+        #print(f'Max vertical wave particle velocity {max(np.max(uz), np.min(uz), key=abs): 1.4e}')        
+        #
+        #ax =  self.kinematics.ax
+        #az =  self.kinematics.az
+        #print('')
+        #print(f'Max horizontal wave particle acceleration {max(np.max(ax), np.min(ax), key=abs): 1.4e}')
+        #print(f'Max vertical wave particle acceleration {max(np.max(az), np.min(az), key=abs): 1.4e}')        
+        #
+        eta = self.kinematics.surface.eta
+        #
+        crestmax = np.max(eta)
+        #
+        # -----------------------------------------
+        #
+        section = beam.section
+        D = section.diameter
+        #
+        zmax = np.maximum(n1.y, n2.y)
+        zmin = np.minimum(n1.y, n2.y)
+        Elev = np.linspace(zmin, zmax, nelev)
+        #
+        #b_range = np.abs(n2.y - n1.y)
+        #
+        #bzidx = (z > zmin) & (z < zmax)
+        #
+        #
+        # -----------------------------------------
+        #
+        dz = np.diff(Elev)
+        # locating the midle point of each element
+        Z = Elev[:-1] + dz        
+        #
+        # -----------------------------------------
+        # Hydro diametre & area
+        Dh, At = self.Dh(D, Z)
+        #
+        # -----------------------------------------
+        # Cd & Cm
+        cd, cm = self.CdCm(Z, crestmax)
+        #
+        # -----------------------------------------
+        # Current
+        Vct=1.54
+        Vc = self.Vc(Vct, d, z, eta)
+        Vc = 0
+        #
+        # -----------------------------------------
+        # Kinematis
+        #
+        kin = self.kinematics.get_kin(Z)
+        #
+        print('')
+        print('--> local Member')
+        print(f"Max horizontal wave particle velocity {max(np.max(kin['ux']), np.min(kin['ux']), key=abs): 1.4e} m/s")
+        print(f"Max vertical wave particle velocity {max(np.max(kin['uz']), np.min(kin['uz']), key=abs): 1.4e} m/s")
+        print('')
+        print(f"Max horizontal wave particle acceleration {max(np.max(kin['ax']), np.min(kin['ax']), key=abs): 1.4e} m/s2")
+        print(f"Max vertical wave particle acceleration {max(np.max(kin['az']), np.min(kin['az']), key=abs): 1.4e} m/s2")
+        print('--> local Member')
+        print('')
+        #
         #
         # ---------------------------------------
         #
-        At = permute2(At, (kin['ax'].shape[0], kin['ax'].shape[2]), 1)
+        kinvel, kinacc, vn  = self.local_kin(beam, kin, Vc)
         #
-        cm = permute2(cm, (kin['ax'].shape[0], kin['ax'].shape[2]), 1)
+        # ---------------------------------------
         #
-        cd = permute2(cd, (kin['ax'].shape[0], kin['ax'].shape[2]), 1)        
+        At = permute2(At, (vn.shape[0], vn.shape[2]), 1)
         #
-        Dh = permute2(Dh, (kin['ax'].shape[0], kin['ax'].shape[2]), 1)        
+        cm = permute2(cm, (vn.shape[0], vn.shape[2]), 1)
         #
-        dz = permute2(dz, (kin['ax'].shape[0], kin['ax'].shape[2]), 1)
+        cd = permute2(cd, (vn.shape[0], vn.shape[2]), 1)        
         #
-        Z = permute2(Z, (kin['ax'].shape[0], kin['ax'].shape[2]), 1)
+        Dh = permute2(Dh, (vn.shape[0], vn.shape[2]), 1)        
+        #
+        dz = permute2(dz, (vn.shape[0], vn.shape[2]), 1)
+        #
+        Z = permute2(Z, (vn.shape[0], vn.shape[2]), 1)
         #
         # ---------------------------------------
         #
         # Components of the force per unit of cilinder length acting in 
         # the x, y and z dir are given by the generalized Morisson equation
         #        
-        dmx = self.mass(At, cm, Anx)
-        dmz = self.mass(At, cm, Anz)
-        dmy = self.mass(At, cm, Any)
-        print('')
-        print('Components of mass per unit on cilinder lenght [N/m]')
-        print(f'dmx ={np.max(dmx): 1.4e}, dmy={np.max(dmz): 1.4e}, dmz={np.max(dmy): 1.4e}')
-        print(f'dmx ={np.min(dmx): 1.4e}, dmy={np.min(dmz): 1.4e}, dmz={np.min(dmy): 1.4e}')
+        udl = self.local_uforce(Dh, At, cd, cm,
+                                kinvel, kinacc, vn,
+                                Elev, beam)
         #
-        ddx = self.drag(Dh, cd, Un)
-        ddz = self.drag(Dh, cd, Vn)
-        ddy = self.drag(Dh, cd, Wn)
-        print('')
-        print('Components of drag per unit on cilinder lenght [N/m]')
-        print(f'ddx ={np.max(ddx): 1.4e}, ddy={np.max(ddz): 1.4e}, ddz={np.max(ddy): 1.4e}')
-        print(f'ddx ={np.min(ddx): 1.4e}, ddy={np.min(ddz): 1.4e}, ddz={np.min(ddy): 1.4e}')
-        #
-        #
-        fx = dmx+ddx
-        fz = dmz+ddz
-        fy = dmy+ddy
-        #
-        #
-        print('')
-        print('Components of the force per unit on cilinder lenght [N/m]')
-        print(f'fx ={np.max(fx): 1.4e}, Fy={np.max(fz): 1.4e}, fz={np.max(fy): 1.4e}')
-        print(f'fx ={np.min(fx): 1.4e}, Fy={np.min(fz): 1.4e}, fz={np.min(fy): 1.4e}')
+        line = udl.line()
         #
         # ---------------------------------------
         # Calculate wave loading on exposed span
         #
-        Fx, Fz = self.span_loading(fx, fz, Lm, nelev)
+        Fx, Fy = self.span_loading(udl.qx, udl.qy, dz)
         #
         print('')
         print('Total combined force [kN]')
-        print(f'Fx ={np.max(Fx) / 1000: 1.3e}, Fz={np.max(Fz) / 1000: 1.3e}')
+        print(f'Fx ={np.max(Fx) / 1000: 1.3e}, Fy={np.max(Fy) / 1000: 1.3e}')
         print('---')
+        return Fx, Fy
     #
     #
 #

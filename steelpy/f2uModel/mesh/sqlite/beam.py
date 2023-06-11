@@ -20,12 +20,12 @@ from math import dist
 # package imports
 from steelpy.f2uModel.mesh.process.process_sql import create_connection, check_nodes
 #from steelpy.beam.main import BasicCalcs
-from .nodes import get_node, NodeSQL
-from steelpy.sections.sqlite.main import get_section, SectionSQL
-from steelpy.material.sqlite.isotropic import  get_materialSQL, MaterialSQL
+from .nodes import get_node #, NodeSQL
+from steelpy.sections.sqlite.main import get_section #, SectionSQL
+from steelpy.material.sqlite.isotropic import  get_materialSQL #, MaterialSQL
 from ..process.elements.beam import BeamBasic, BeamItemBasic
 #
-from ..process.Kmatrix.stiffness import beam_stiffness
+#from ..process.Kmatrix.stiffness import beam_stiffness
 # (beam_Klocal, trans_3d_beam, Rmatrix, Rmatrix_new, trans3Dbeam)
 #
 

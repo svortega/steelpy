@@ -145,10 +145,10 @@ class Metocean:
         #    raise NotImplemented
         #
         bsotm = BSOTM(kinematic, condition, rho)
-        bs, otm = bsotm.solve(D=Dp, L=Lp)
+        bs, otm = bsotm.solveBSOTM(D=Dp, L=Lp)
         #
         return bs, otm 
-        #return surface    
+        #return surface
 #
 #
 # HYDRODYNAMICS Section

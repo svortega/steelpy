@@ -3,7 +3,7 @@
 from __future__ import annotations
 #
 # Python stdlib imports
-from array import array
+#from array import array
 #from dataclasses import dataclass
 #import math
 #from typing import NamedTuple, Tuple, Union, List, Dict
@@ -14,7 +14,7 @@ from steelpy.metocean.regular.fourier.Dsvbksb import dsvbksb
 import numpy as np
 #
 #
-def solver(a: list[array], b: array, m: int, n: int, NP: int):
+def solver(a: list, b: list, m: int, n: int, NP: int):
     """
     """
     # Perform decomposition

@@ -13,6 +13,33 @@ units = Units()
 # Regular wave
 #
 waveReg = meto.regular_wave()
+#
+#
+# Fourier
+#
+fourier = waveReg.Fourier()
+#fourier.mean_current.Euler = 0.31 * units.m/units.sec
+# [H, T, d]
+fourier['100yrs'] = {'Hw':15.0 * units.m, 'Tw':12.0 * units.sec, 'd':100*units.m}
+Lf = fourier['100yrs'].L
+print(f'Wave length = {Lf: 1.4e} m')
+surface = fourier['100yrs'].surface(surface_points=18)
+#surface.plot()
+print(surface)
+#
+kinematic = fourier['100yrs'].kinematics(depth_points=10)
+#kinematic.plot()
+print(kinematic)
+#
+BS, OTM = meto.pile_response(D=1*units.m, L=100*units.m,
+                             kinematic=kinematic)
+# get maximum
+BSgrp = BS.groupby(['length'])['BS'].sum()
+BSgrp.plot(kind="line",
+           xlabel='Wave length [m]', ylabel='BS [N]')
+plt.show()
+#
+#
 ##
 #waveReg['100yrs'] = {'Hw':15.0 * units.m, 'Tw':12.0 * units.sec, 'd':100*units.m}
 ##waveReg['100yrs'] = [15.0 * units.m, 12.0 * units.sec, 100*units.m]
@@ -50,30 +77,13 @@ kinematic = stokes5['100yrs'].kinematics(depth_points=10)
 #pressure = kinematic.pressure
 phi = kinematic.phi
 #
-BS, OTM = meto.pile_response(D=1*units.m, L=100*units.m, 
-                             kinematic=kinematic)
-# get maximum
-BSgrp = BS.groupby(['length'])['BS'].sum()
-BSgrp.plot(kind="line",
-           xlabel='Wave length [m]', ylabel='BS [N]')
-plt.show()
-#
-# Fourier
-#
-fourier = waveReg.Fourier()
-#fourier.mean_current.Euler = 0.31 * units.m/units.sec
-# [H, T, d]
-fourier['100yrs'] = {'Hw':15.0 * units.m, 'Tw':12.0 * units.sec, 'd':100*units.m}
-Lf = fourier['100yrs'].L
-print(f'Wave length = {Lf: 1.4e} m')
-surface = fourier['100yrs'].surface(surface_points=18)
-#surface.plot()
-print(surface)
-#
-kinematic = fourier['100yrs'].kinematics(depth_points=10)
-#kinematic.plot()
-print(kinematic)
-#
+#BS, OTM = meto.pile_response(D=1*units.m, L=100*units.m, 
+#                             kinematic=kinematic)
+## get maximum
+#BSgrp = BS.groupby(['length'])['BS'].sum()
+#BSgrp.plot(kind="line",
+#           xlabel='Wave length [m]', ylabel='BS [N]')
+#plt.show()
 #
 #
 print('-->')

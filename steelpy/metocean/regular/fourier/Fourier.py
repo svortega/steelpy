@@ -138,18 +138,20 @@ def FourierMain(MaxH:float, case:str,
     """
     #current=0.31
     crit = accuracy
-    pi = np.pi
-    g = 9.80665  # m/s^2
+    #pi = np.pi
+    #g = 9.80665  # m/s^2
     #
     print("# Solution by {:}-term Fourier series".format(norder))
     method = ("Fourier method with {:} terms in series".format(norder))
     num = 2 * norder + 10
     dhe = Height / nstep
     dho = MaxH / nstep
-
-    CC = np.zeros((num+1, num+1))
-    for j in range(1, num+1):
-        CC[j][j] = 1.0
+    #
+    #CC = np.identity(n=num+1)
+    #CC = np.zeros((num+1, num+1))
+    #for j in range(1, num+1):
+    #    CC[j][j] = 1.0
+    #
     #
     Y = np.zeros(num+1)
     sol = np.zeros((num+1, 2+1))
@@ -158,7 +160,7 @@ def FourierMain(MaxH:float, case:str,
     for ns in range(1, nstep+1):
         height = ns * dhe
         hoverd = ns * dho
-        print("height step {:} of {:}".format(ns, nstep))
+        print("--- height step {:} of {:}".format(ns, nstep))
         # Calculate initial linear solution
         if ns <= 1:
             #sol, z, cosa, sina = initial(height, hoverd, current,
@@ -171,8 +173,8 @@ def FourierMain(MaxH:float, case:str,
             z = [2.0 * sol[i][2] - sol[i][1] for i in range(num+1)]
         #
         # Commence iterative solution
-        for _iter in range(1, niter+1):
-            print("# Iteration {:}:".format(_iter))
+        for itr in range(1, niter+1):
+            print("# Iteration {:}:".format(itr))
             # Calculate right sides of equations and differentiate numerically
             # to obtain Jacobian matrix, : solve matrix equation
             z, error, Tanh = Newton(height, hoverd, z, cosa, sina,
@@ -185,28 +187,31 @@ def FourierMain(MaxH:float, case:str,
             if ns == nstep:
                 criter = 1.e-10
             #
-            if error < criter * abs(z[1]) and _iter > 1:
+            if error < criter * abs(z[1]) and itr > 1:
                 break # Exit for
             #
-            if _iter == niter:
+            if itr == niter:
                 print("# Note that the program still had not converged to the degree specified")
             # Operations for extrapolations if more than one height step used
             if ns == 1:
-                for i in range(1, num+1):
-                    sol[i][2] = z[i]
+                sol[1: num+1, 2] = z[1: num+1]
+                #for i in range(1, num+1):
+                #    sol[i][2] = z[i]
             else:
-                for i in range(1, num+1):
-                    sol[i][1] = sol[i][2]
-                    sol[i][2] = z[i]
+                sol[1: num+1, 1] = sol[1: num+1, 2]
+                sol[1: num+1, 2] = z[1: num+1]
+                #for i in range(1, num+1):
+                #    sol[i][1] = sol[i][2]
+                #    sol[i][2] = z[i]
         #
         # Fourier coefficients (for surface elevation by slow Fourier transform)
         Y[0] = 0.0
         for j in range(1, norder+1):
             B[j] = z[j + norder + 10]
-            _sum = 0.5 * (z[10] + z[norder + 10] * np.power(-1.0, float(j)))
-            _sum += np.sum([z[10 + m] * cosa[(m * j) % (norder + norder)]
-                         for m in range(1, norder)])
-            Y[j] = 2.0 * _sum / norder
+            sumf = 0.5 * (z[10] + z[norder + 10] * np.power(-1.0, float(j)))
+            sumf += np.sum([z[10 + m] * cosa[(m * j) % (norder + norder)]
+                            for m in range(1, norder)])
+            Y[j] = 2.0 * sumf / norder
     #
     #  Highest wave - eqn (32) of Fenton (1990)
     #
