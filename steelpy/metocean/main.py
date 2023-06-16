@@ -14,8 +14,9 @@ from steelpy.process.units.main import Units
 #from steelpy.metocean.interface.wave import RegularWaves, IregularWaves
 #from steelpy.metocean.interface.wind import Winds
 #from steelpy.metocean.interface.current import Currents
-#from steelpy.f2uModel.load.combination import MetoceanCombination
+from steelpy.metocean.process.combination import MetoceanCombination
 from steelpy.metocean.regular.process.bsotm import BSOTM
+from steelpy.metocean.hydrodynamic.hydrodynamic import Hydrodynamic
 #
 #
 class Metocean:
@@ -47,7 +48,8 @@ class Metocean:
     #
     __slots__ = ['_regular_wave', '_iregular_wave',
                  '_current', '_wind', '_units',
-                 '_combination', '_spectrum']
+                 '_combination', '_spectrum',
+                 '_hydrodynamic']
     #
     def __init__(self):
         """
@@ -57,8 +59,9 @@ class Metocean:
         #self._wind = Winds()
         #self._current = Currents()
         #self._units = Units()
-        #self._combination = MetoceanCombination()
+        self._combination = MetoceanCombination()
         #self._spectrum = Sprectrum()
+        self._hydrodynamic =  Hydrodynamic()
     #
     #@property
     #def spectrum(self):
@@ -100,23 +103,34 @@ class Metocean:
     #    """
     #    """
     #    return self._current
-    ##
+    #
     #@property
-    #def combination(self):
-    #    """
-    #    """
-    #    return self._combination
+    def hydrodynamic(self):
+        """ """
+        return self._hydrodynamic
+    #
+    #
+    #
+    #
+    #
+    #@property
+    def load(self):
+        """
+        """
+        return self._combination
     #
     #
     #
     def get_load(self, mesh, kinematic,
-                 condition:int = 1,
+                 condition:int|None = None,
                  rho:float = 1025):
         """
         condition :
             1 - Linear wave (dafault)
             2 - Non-linear wave
         """
+        #if not condition:
+            
         wforce = BSOTM(kinematic, condition, rho)
         wforce.wave_force(mesh=mesh)
         print('-->')

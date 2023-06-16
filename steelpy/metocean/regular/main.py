@@ -13,11 +13,12 @@ from steelpy.metocean.regular.fourier.Fourier import FourierModule
 from steelpy.metocean.regular.cnoidal.Cnoidal import CnoidalModule
 
 class RegularWaves:
-    __slots__ = ['_wave']
+    __slots__ = ['_wave', '_condition']
 
     def __init__(self)-> None:
         """
         """
+        self._condition = 2
         self._wave = FourierModule()
     #
     @property

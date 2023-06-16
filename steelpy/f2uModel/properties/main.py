@@ -11,7 +11,7 @@ from __future__ import annotations
 # package imports
 #from steelpy.process.units.main import Units
 from .codecheck.codecheck import CodeCheck
-from .hydrodynamic.hydrodynamic import Hydrodynamic
+
 
 
 #
@@ -24,7 +24,6 @@ class Properties:
         """
         """
         #self._units = Units()
-        self._hydrodynamic =  Hydrodynamic()
         self._code_check = CodeCheck()
     #
     #@property
@@ -33,10 +32,6 @@ class Properties:
     #    """
     #    return self._units    
     #
-    #@property
-    def hydrodynamic(self):
-        """ """
-        return self._hydrodynamic
     #
     #@property
     def design_parameters(self):

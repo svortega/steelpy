@@ -1,13 +1,14 @@
 # 
-# Copyright (c) 2009-2019 fem2ufo
+# Copyright (c) 2009-2023 fem2ufo
 #
 
 # Python stdlib imports
+from __future__ import annotations
 #from array import array
 #import copy
 #from dataclasses import dataclass
 #import logging
-from typing import NamedTuple, Tuple, List, Iterator, Dict
+from typing import NamedTuple
 from collections.abc import Mapping
 
 # package imports
@@ -37,7 +38,7 @@ class Flooding(Mapping):
         return len(self._flooded)
 
     
-    def __iter__(self) -> Iterator[Tuple]:
+    def __iter__(self) -> iter[tuple]:
         return iter(self._flooded)
     
     def __contains__(self, value) -> bool:

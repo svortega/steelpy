@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.matlib import repmat
 #
+from steelpy.process.dataframe.main import DBframework
 #
 
 
@@ -43,28 +44,97 @@ class BeamUnitForce(NamedTuple):
         """get line loading
         [load_title, 'beam', beam_name, 'line',  qx0,qy0,qz0, qx1,qy1,qz1, L0,L1, comment(optional)]"""
         #qx = self.qx.isel(x=0)
-        #row, col, length = self.qx.indexes.values()
-        #name = 'qx'
-        qx = self.qx.to_dataframe(name='qx').reset_index()
-        #data = qx.groupby(['x'])[name].agg(lambda x : x.tolist())
-        elev = self.elevation
-        qxgrp = qx.groupby(['row', 'length'])[['col', 'qx']]
+        #row, col, length = self.qx.coords[['x','z','length']]
+        coords = self.qx.coords
+        rows = coords['x'].values
+        cols = coords['z'].values
+        wlength = coords['length'].values
         #
-        load = {}
-        for key, item in qxgrp:
-            load[key] = []
+        #qx = self._get_line2(qname ='qx', qitem=self.qx)
+        #
+        qitem = self.qx.to_dataframe(name='qx').reset_index()
+        qx = self._get_line(qname ='qx', qitem=qitem)
+        qitem = self.qy.to_dataframe(name='qy').reset_index()
+        qy = self._get_line(qname='qy', qitem=qitem)
+        qitem = self.qz.to_dataframe(name='qz').reset_index()
+        qz = self._get_line(qname='qz', qitem=qitem)
+        #
+        lforce = []
+        for x, row in enumerate(rows):
+            #lforce = []
+            for idx, wstep in enumerate(wlength):
+                for hstep, col in enumerate(cols):
+                    #coord = f'{0}_{0}_{self.elevation[hstep]}'
+                    ldata = list(zip(qx[idx][hstep], qy[idx][hstep], qz[idx][hstep]))
+                    lforce.append(['beam', self.beam_name, 'line',
+                                   *ldata[0], *ldata[1], 0, 0,
+                                   row, wstep, col])
+            #lforce1.append(lforce)
+        #
+        header =  ['element_type', 'element_name', 'load_type',
+                   'qx0','qy0','qz0', 'qx1','qy1','qz1',
+                   'L0','L1', 'x', 'y', 'z']
+        #
+        df = DBframework()
+        dfload = df.DataFrame(data=lforce, columns=header, index=None)        
+        #
+        #print('--->')
+        #1 / 0
+        return dfload
+    #
+    #
+    def _get_line2(self, qname:str, qitem):
+        """ """
+        elev = self.elevation
+        coords = qitem.coords
+        rows = coords['x'].values
+        cols = coords['col'].values
+        wlength = coords['length'].values
+        #
+        1 / 0
+        grpx = qitem.groupby('x')
+        for keyx, item in grpx:
+            grp2 = item.groupby('length')
+            for keyw, wstep in grp2:
+                keyw, wstep
+                if -93.75 in wstep.coords['col']:
+                    print('--')
+        
+        for row in rows:
+            for wstep in wlength:
+                for el in  elev:
+                    try:
+                        cols =  qitem.sel(x=row, col=el, length=wstep)
+                        print('--')
+                    except TypeError:
+                        step = 0
+        #
+        1 / 0
+        print('--')
+    #
+    #
+    def _get_line(self, qname:str, qitem):
+        """ """
+        elev = self.elevation
+        #data = qx.groupby(['x'])[name].agg(lambda x : x.tolist())
+        qgrp = qitem.groupby(['x', 'length'])[['z', qname]]
+        #
+        load_1 = []
+        for key, item in qgrp:
+            load_2 = []
             step = None
             for el in  elev:
-                idx = item.index[item['col'] == el].tolist()
+                idx = item.index[item['z'] == el].tolist()
                 try:
-                    qn = item['qx'][idx[0]]
-                    load[key].append([step, qn])
+                    qn = np.round(item[qname][idx[0]], decimals=3)
+                    load_2.append([step, qn])
                     step = qn
                 except IndexError:
                     step = 0
             #print(key, item)
-        print('--->')
-        1 / 0
+            load_1.append(load_2)
+        #
+        return load_1
 #
 #
 @dataclass
@@ -212,8 +282,8 @@ class BSOTM:
         otm = oinertia + odrag
         #
         otm = otm.to_dataframe(name='OTM').reset_index()
-        otm.drop('row', axis=1, inplace=True)
-        otm['z'] = Z.flatten()
+        #otm.drop('row', axis=1, inplace=True)
+        #otm['z'] = Z.flatten()
         return otm
     #
     def BS(self, dinertia, ddrag, Z):
@@ -222,9 +292,9 @@ class BSOTM:
         #bs = self.base_shear(dinertia, ddrag)
         #
         bs = bs.to_dataframe(name='BS').reset_index()
-        bs.drop('row', axis=1, inplace=True)
+        #bs.drop('row', axis=1, inplace=True)
         #
-        bs['z'] = Z.flatten()
+        #bs['z'] = Z.flatten()
         return bs
     #
     def solveBSOTM(self, D: float, L: float):
@@ -234,8 +304,8 @@ class BSOTM:
         """
         d = self.kinematics.d
         z =  self.kinematics.z
-        ux =  self.kinematics.ux
-        ax =  self.kinematics.ax
+        #ux =  self.kinematics.ux
+        #ax =  self.kinematics.ax
         #
         eta = self.kinematics.surface.eta
         #
@@ -244,8 +314,8 @@ class BSOTM:
         # [x, z, time] = value --> irregular
         # [x, z, lenght] = value --> regular
         #
-        UX = ux[:, :-1, :] + ux.diff('z') * 0.50
-        AX = ax[:, :-1, :] + ax.diff('z') * 0.50
+        #UX = ux[:, :-1, :] + ux.diff('z') * 0.50
+        #AX = ax[:, :-1, :] + ax.diff('z') * 0.50
         #
         # sea water density
         #rho = self.rho  
@@ -254,7 +324,13 @@ class BSOTM:
         # locating the midle point of each element
         Z = z[:-1] + dz * 0.50
         #
+        # -----------------------------------------
+        # Kinematis
         #
+        kin = self.kinematics.get_kin(Z)
+        #
+        UX = kin['ux']
+        AX = kin['ax']
         #
         # -----------------------------------------
         #
@@ -513,7 +589,7 @@ class BSOTM:
                                 kinvel, kinacc, vn,
                                 Elev, beam)
         #
-        line = udl.line()
+        lineload = udl.line()
         #
         # ---------------------------------------
         # Calculate wave loading on exposed span
@@ -524,7 +600,9 @@ class BSOTM:
         print('Total combined force [kN]')
         print(f'Fx ={np.max(Fx) / 1000: 1.3e}, Fy={np.max(Fy) / 1000: 1.3e}')
         print('---')
-        return Fx, Fy
+        #
+        #
+        return lineload
     #
     #
 #

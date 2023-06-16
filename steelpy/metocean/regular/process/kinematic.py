@@ -32,7 +32,8 @@ class KinematicResults:
         #
         self._data = kindata
         self._type = 'regular'
-    
+    #
+    #
     def get_data(self, name: str, title: str):
         """ """
         #
@@ -346,15 +347,16 @@ class KinematicResults:
     #
     def to_xarray(self, rows, cols, length, data, name: str):
         """ """
-        row_meshgrid, col_meshgrid = np.meshgrid(rows, cols, indexing='ij')
+        #row_meshgrid, col_meshgrid = np.meshgrid(rows, cols, indexing='ij')
         return xr.DataArray(data=data,
                             dims=['x', 'z', 'length'],
-                            coords={
-                                'row': (["x","z"], row_meshgrid),
-                                'col': (["x","z"], col_meshgrid),
-                                #'x': rows,
-                                #'z': cols,                          
-                                'length' : length},
+                            coords=[rows, cols, length], 
+                            #coords={
+                            #    'row': (["x","z"], row_meshgrid),
+                            #    'col': (["x","z"], col_meshgrid),
+                            #    #'x': rows,
+                            #    #'z': cols,                          
+                            #    'length' : length},
                             name=name)
         #return ds
     #

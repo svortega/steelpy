@@ -4,14 +4,14 @@
 from __future__ import annotations
 #
 # Python stdlib imports
-import itertools as it
-from itertools import chain
-import pickle
+#import itertools as it
+#from itertools import chain
+#import pickle
 import time
 #from multiprocessing import Process, Manager
 
 # package imports
-from steelpy.process.math.operations import to_matrix, zeros, transposeM
+#from steelpy.process.math.operations import to_matrix, zeros, transposeM
 #from steelpy.trave3D.processor.operations import shape_cond
 import numpy as np
 #import pandas as pd
@@ -147,10 +147,11 @@ def UDUt(a: list[float]) -> list:
     based on Weaver & Gare pp 469-472.  
     """
     start_time = time.time()
+    #neq, iband = np.shape(a)
     neq = len(a)
     iband = len(a[0])
     #print("** Processing UDU")
-    if a[0][0] == 0.0:
+    if a[0, 0] == 0.0:
         raise RuntimeError("error:  zero diagonal term")
     if neq == 1:
         return a
@@ -159,16 +160,18 @@ def UDUt(a: list[float]) -> list:
         j2 = max(j - iband + 1, 0)
         # off-diagonal terms
         for i in range(j2+1, j):
-            a[i][j - i] -= np.sum([a[k][i - k] * a[k][j - k]
+            a[i, j - i] -= np.sum([a[k, i - k] * a[k, j - k]
                                    for k in range(j2, i)])
+            #a[i, j - i] -= np.sum(a[j2: i, i - j2: 0]
+            #                      * a[j2: i, j - j2: j - i])
         # diagonal  terms
         for k in range(j2, j):
-            temp = a[k][j - k] / a[k][0]
-            a[j][0] -= a[k][j - k] * temp
-            a[k][j - k] = temp
+            temp = a[k, j - k] / a[k, 0]
+            a[j, 0] -= a[k, j - k] * temp
+            a[k, j - k] = temp
         # check diagonal zero terms
         try:
-            1.0 / a[j][0]
+            1.0 / a[j, 0]
         except ZeroDivisionError:
             raise RuntimeError("error:  zero diagonal term")
     #
@@ -190,9 +193,9 @@ def assemble(ipv:list, a:list, aa:list):
             for j in range(i, 12):
                 try:
                     1.0 / (ieqn2 := ipv[j])
-                    iband = min(ieqn1, ieqn2) - 1
-                    jband = abs(ieqn1 - ieqn2)
-                    aa[iband][jband] += a[i][j]
+                    iband = np.minimum(ieqn1, ieqn2) - 1
+                    jband = np.abs(ieqn1 - ieqn2)
+                    aa[iband, jband] += a[i, j]
                 except ZeroDivisionError:
                     continue
         except ZeroDivisionError:
@@ -241,14 +244,14 @@ def form_Kmatrix(elements, jbc:list, neq:int, iband:int):
     :return
     a : global banded stiffness matrix (neq X iband)
     """
-    aa = zeros(neq, iband)
+    aa = np.zeros((neq, iband))
     for key, element in elements.items():
         #idof, jdof = element.DoF
         nodes = element.connectivity
         # FIXME: beam here?
-        beam = element.beam()
-        a = beam.Kglobal
-        #a = element.Kglobal
+        #beam = element.beam()
+        #a = beam.Kglobal
+        a = element.K
         #ipv = jbc[idof] + jbc[jdof]
         bc1 = jbc.loc[nodes[0]].tolist()
         bc2 = jbc.loc[nodes[1]].tolist()        

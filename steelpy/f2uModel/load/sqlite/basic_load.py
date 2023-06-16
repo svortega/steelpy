@@ -129,7 +129,7 @@ class BasicLoadSQL(BasicLoadBasic):
 class LoadTypeSQL:
     """
     """
-    __slots__ = ['_node', '_beam', '_selfweight',
+    __slots__ = ['_node', '_beam', '_selfweight', '_wave', 
                  'name', 'number', 'title', '_bd_file']
 
     def __init__(self, name: str, number: int, title: str, bd_file:str):
@@ -223,11 +223,6 @@ class LoadTypeSQL:
         return self._node
 
     #
-    #@property
-    #def beam(self):
-    #    """ """
-    #    return self._beam
-    #
     #@beam.setter
     def beam(self, values:list|None=None):
         """ """
@@ -249,6 +244,18 @@ class LoadTypeSQL:
                 self._beam[values[0]] = values[1:]
         #
         return self._beam
+    #
+    #
+    @property
+    def wave(self):
+        """ """
+        return self._wave
+    
+    @wave.setter
+    def wave(self, values):
+        """ """
+        self._wave = values
+    #    
 #
 #
 #

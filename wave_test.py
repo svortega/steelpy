@@ -29,7 +29,7 @@ print(surface)
 #
 kinematic = fourier['100yrs'].kinematics(depth_points=10)
 #kinematic.plot()
-print(kinematic)
+#print(kinematic)
 #
 BS, OTM = meto.pile_response(D=1*units.m, L=100*units.m,
                              kinematic=kinematic)
@@ -68,7 +68,7 @@ Ls = stokes5['100yrs'].L
 #print(f'Wave length = {Ls: 1.4e} m')
 #surface = stokes5['100yrs'].surface(surface_points=18)
 #surface.plot(phase=True)
-#print(surface)
+print(surface)
 #
 kinematic = stokes5['100yrs'].kinematics(depth_points=10)
 #print(kinematic)
@@ -77,13 +77,13 @@ kinematic = stokes5['100yrs'].kinematics(depth_points=10)
 #pressure = kinematic.pressure
 phi = kinematic.phi
 #
-#BS, OTM = meto.pile_response(D=1*units.m, L=100*units.m, 
-#                             kinematic=kinematic)
-## get maximum
-#BSgrp = BS.groupby(['length'])['BS'].sum()
-#BSgrp.plot(kind="line",
-#           xlabel='Wave length [m]', ylabel='BS [N]')
-#plt.show()
+BS, OTM = meto.pile_response(D=1*units.m, L=100*units.m, 
+                             kinematic=kinematic)
+# get maximum
+BSgrp = BS.groupby(['length'])['BS'].sum()
+BSgrp.plot(kind="line",
+           xlabel='Wave length [m]', ylabel='BS [N]')
+plt.show()
 #
 #
 print('-->')
