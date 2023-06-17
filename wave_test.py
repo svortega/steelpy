@@ -25,7 +25,7 @@ Lf = fourier['100yrs'].L
 print(f'Wave length = {Lf: 1.4e} m')
 surface = fourier['100yrs'].surface(surface_points=18)
 #surface.plot()
-print(surface)
+#print(surface)
 #
 kinematic = fourier['100yrs'].kinematics(depth_points=10)
 #kinematic.plot()
@@ -68,7 +68,7 @@ Ls = stokes5['100yrs'].L
 #print(f'Wave length = {Ls: 1.4e} m')
 #surface = stokes5['100yrs'].surface(surface_points=18)
 #surface.plot(phase=True)
-print(surface)
+#print(surface)
 #
 kinematic = stokes5['100yrs'].kinematics(depth_points=10)
 #print(kinematic)

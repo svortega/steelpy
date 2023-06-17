@@ -220,6 +220,10 @@ class f2uModel:
             #return mesh
             #_sql.write_concept(self._concept)
         #
+        # check wave load case
+        #
+        self._mesh._load._basic.wave_process()
+        #
         # TODO : remove second _load for simplification
         self._mesh._load._basic.FER()        
         #

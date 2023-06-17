@@ -7,7 +7,7 @@ from __future__ import annotations
 from array import array
 from collections.abc import Mapping
 #from collections import defaultdict
-# from dataclasses import dataclass
+from dataclasses import dataclass
 #from operator import sub, add
 from typing import NamedTuple
 # import re
@@ -18,7 +18,7 @@ import pandas as pd
 #from ....process.math.operations import zeros, trns_3Dv #, zeros_vector , linspace
 #from ....process.math.vector import Vector
 #from steelpy.formulas.beam.main import BasicCalcs
-
+import pandas as pd
 #
 #
 #
@@ -230,6 +230,104 @@ class BasicLoadBasic(Mapping):
         return dftemp
     #    
     #
+    def wave_process(self):
+        """ Wave los postprocessing"""
+        load_name = list(self.keys())
+        #lcbeam = {} 
+        for lname in load_name:
+            lcase = self.__getitem__(lname)
+            df = lcase._wave.process()
+            lcase.beam(df=df)
+        print('-->')
+        #return lcbeam
+    #
 #
 #
+class LoadTypeBasic:
+        
+    def __init__(self, name: str | int, number: int, title: str):
+        """
+        """
+        self.name = name
+        self.number = number
+        self.title = title
+    #
+    #@property
+    def gravity(self, values:list|None=None):
+        """
+        The self weight form allows you to specify multipliers to 
+        acceleration due to gravity (g) in the X, Y, and Z axes. 
+        If switched on, the default self weight acts in the Y axis 
+        with a magnitude and sign of -1."""
+        #
+        if isinstance(values, list):
+            if isinstance(values[0], list):
+                for value in values:
+                    self._selfweight[value[0]] = value[1:]
+            else:
+                self._selfweight[values[0]] = values[1:]
+        return self._selfweight
+    
+    def selfweight(self, values:list|None=None):
+        """
+        The self weight form allows you to specify multipliers to 
+        acceleration due to gravity (g) in the X, Y, and Z axes. 
+        If switched on, the default self weight acts in the Y axis 
+        with a magnitude and sign of -1."""
+        #
+        return self.gravity(values) 
+    #  
+    #
+    #
+    #@property
+    #def node(self):
+    #    """ """
+    #    return self._node
+
+    #@node.setter
+    def node(self, values:list|None=None):
+        """ """
+        #
+        if isinstance(values, list):
+            if isinstance(values[0], list):
+                for value in values:
+                    self._node[value[0]] = value[1:]
+            else:
+                self._node[values[0]] = values[1:]
+        #
+        return self._node
+
+    #
+    #@beam.setter
+    def beam(self, values:list|None=None,
+             df=None):
+        """ """
+        if isinstance(values, list):
+            if isinstance(values[0], list):
+                for value in values:
+                    #try:
+                    #    self._f2u_beams[value[0]]
+                    #except KeyError:
+                    #    raise IOError(f"beam {value[0]} not found")
+                    #
+                    self._beam[value[0]] = value[1:]
+            else:
+                #try:
+                #    self._f2u_beams[values[0]]
+                #except KeyError:
+                #    raise IOError(f"beam {values[0]} not found")
+                #
+                self._beam[values[0]] = values[1:]
+        #
+        # dataframe input
+        try:
+            df.columns
+            1/0
+            #self._sections.df(df)
+        except AttributeError:
+            pass
+        #
+        return self._beam
+    #
+ 
 #

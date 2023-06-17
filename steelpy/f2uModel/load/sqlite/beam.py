@@ -137,6 +137,11 @@ class BeamLoadSQL(BeamLoad):
         return self    
     #
     #
+    #def df(self, data):
+    #    """ """
+    #    print('===')
+    #    1/0
+    #
 #
 #    
 #

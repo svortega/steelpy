@@ -82,8 +82,7 @@ class CnoidalModule(WaveRegModule):
                          number=number, accuracy=accuracy)
 
     #
-    def __setitem__(self, case_name: int,
-                    case_data: Union[List[float], Dict[str, float]]) -> None:
+    def __setitem__(self, case_name: int, data: list[float]) -> None:
         """
         case_name : Wave name
          H : Wave height [unit length]
@@ -101,7 +100,7 @@ class CnoidalModule(WaveRegModule):
             self._labels.append(case_name)
             current = self._current._current
             c_type = self._current.c_type
-            data = get_wave_data(case_data)
+            #data = get_wave_data(case_data)
             self._cases.append(WaveCnoidal(H=data[0], T=data[1], d=data[2],
                                            title=case_name,
                                            order=self.order, nstep=self.nsteps, number=self.max_iter,

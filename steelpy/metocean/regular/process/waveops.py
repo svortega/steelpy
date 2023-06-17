@@ -233,32 +233,35 @@ def get_wave_data(case_data):
 #
 def get_data_dic(data:dict)->list[float]:
     """[case, load, theta, phi, rho, phase]"""
-    new_data = [0,0,0,0]
+    new_data = [0,0,0,0, "Fourier"]
     for key, item in data.items():
-        if re.match(r"\b((wave)?h(eight)?(w)?)\b", key, re.IGNORECASE):
+        if re.match(r"\b((wave(\_)?)?h(eight)?(w)?)\b", key, re.IGNORECASE):
             new_data[0] = item.value
-        elif re.match(r"\b((wave)?period|t(w)?|s)\b", key, re.IGNORECASE):
+        elif re.match(r"\b((wave(\_)?)?period|t(w)?|s)\b", key, re.IGNORECASE):
         #elif re.match(r"\b(t(w)?|s)\b", key, re.IGNORECASE):
             new_data[1] = item.value
-        elif re.match(r"\b((water)?d(epth)?)\b", key, re.IGNORECASE):
+        elif re.match(r"\b((water(\_)?)?d(epth)?)\b", key, re.IGNORECASE):
             new_data[2] = item.value
-        elif re.match(r"\b((wave)?l(ength)?)\b", key, re.IGNORECASE):
+        elif re.match(r"\b((wave(\_)?)?l(ength)?)\b", key, re.IGNORECASE):
             new_data[3] = item.value
-        #elif re.match(r"\b(rho)\b", key, re.IGNORECASE):
-        #    new_data[4] = item.value        
+        elif re.match(r"\b((wave(\_)?)?t(ype|heory))\b", key, re.IGNORECASE):
+            new_data[4] = item
         #elif re.match(r"\b(phase)\b", key, re.IGNORECASE):
         #    new_data[5] = item.value        
     return new_data
 #
 #
-def get_data_list(data:list, steps:int=4)->list[float]:
+def get_data_list(data:list, steps:int=5)->list[float]:
     """
-    [Hw, Tw, d, Lw]
+    [Hw, Tw, d, Lw, wave_type]
     """
     new_data = [0] * steps
+    new_data[-1] = "Fourier"
     for x, item in enumerate(data):
-        new_data[x] = item.value
-    
+        try:
+            new_data[x] = item.value
+        except AttributeError:
+            new_data[-1] = item
     return new_data
 #
 #

@@ -10,7 +10,7 @@ from __future__ import annotations
 from ..process.actions import SelfWeight
 from ..inmemory.beam import BeamLoadItemIM
 from ..inmemory.node import NodeLoadItemIM
-from ..process.basic_load import BasicLoadBasic
+from ..process.basic_load import BasicLoadBasic, LoadTypeBasic
 
 
 #
@@ -93,7 +93,7 @@ class BasicLoad(BasicLoadBasic):
 #
 #
 #
-class LoadTypeInMemory:
+class LoadTypeInMemory(LoadTypeBasic):
     """
     """
     __slots__ = ['_node', '_beam', '_selfweight',
@@ -104,9 +104,10 @@ class LoadTypeInMemory:
                  nodes, elements):
         """
         """
-        self.name = name
-        self.number = number
-        self.title = title
+        super().__init__(name, number, title)
+        #self.name = name
+        #self.number = number
+        #self.title = title
         self._selfweight = SelfWeight()
         self._node = NodeLoadItemIM(load_name=name,
                                     load_title = title, 
@@ -116,76 +117,4 @@ class LoadTypeInMemory:
                                     load_title = title,
                                     beams=beams)
     #
-    #@property
-    def gravity(self, values:list|None=None):
-        """
-        The self weight form allows you to specify multipliers to 
-        acceleration due to gravity (g) in the X, Y, and Z axes. 
-        If switched on, the default self weight acts in the Y axis 
-        with a magnitude and sign of -1."""
-        #
-        if isinstance(values, list):
-            if isinstance(values[0], list):
-                for value in values:
-                    self._selfweight[value[0]] = value[1:]
-            else:
-                self._selfweight[values[0]] = values[1:]
-        return self._selfweight
-    
-    def selfweight(self, values:list|None=None):
-        """
-        The self weight form allows you to specify multipliers to 
-        acceleration due to gravity (g) in the X, Y, and Z axes. 
-        If switched on, the default self weight acts in the Y axis 
-        with a magnitude and sign of -1."""
-        #
-        return self.gravity(values) 
-
-    #
-    #@property
-    #def node(self):
-    #    """ """
-    #    return self._node
-
-    #@node.setter
-    def node(self, values:list|None=None):
-        """ """
-        #
-        if isinstance(values, list):
-            if isinstance(values[0], list):
-                for value in values:
-                    self._node[value[0]] = value[1:]
-            else:
-                self._node[values[0]] = values[1:]
-        #
-        return self._node
-
-    #
-    #@property
-    #def beam(self):
-    #    """ """
-    #    return self._beam
-    #
-    #@beam.setter
-    def beam(self, values:list|None=None):
-        """ """
-        if isinstance(values, list):
-            if isinstance(values[0], list):
-                for value in values:
-                    #try:
-                    #    self._f2u_beams[value[0]]
-                    #except KeyError:
-                    #    raise IOError(f"beam {value[0]} not found")
-                    #
-                    self._beam[value[0]] = value[1:]
-            else:
-                #try:
-                #    self._f2u_beams[values[0]]
-                #except KeyError:
-                #    raise IOError(f"beam {values[0]} not found")
-                #
-                self._beam[values[0]] = values[1:]
-        #
-        return self._beam
-
 #

@@ -215,9 +215,6 @@ class BeamItemSQL(BeamItemBasic):
         #
         self.db_file = db_file
         self.type: str = "beam"
-        #self._f2u_sections = SectionSQL(db_file)
-        #self._f2u_materials =  MaterialSQL(db_file)
-        #self._f2u_nodes =  NodeSQL(db_file)
     #
     @property
     def number(self) -> int:
@@ -246,7 +243,7 @@ class BeamItemSQL(BeamItemBasic):
         return connodes
 
     @connectivity.setter
-    def connectivity(self, nodes:list[int]) -> list:
+    def connectivity(self, nodes:list[int]):
         """
         """
         conn = create_connection(self.db_file)
@@ -306,7 +303,7 @@ class BeamItemSQL(BeamItemBasic):
         conn = create_connection(self.db_file)
         item = "section"
         with conn:
-            update_element_item(conn, self.name, item, self.name)
+            update_element_item(conn, self.name, item, section_name)
 
     #
     @property
@@ -318,12 +315,12 @@ class BeamItemSQL(BeamItemBasic):
         return data[3]
     
     @beta.setter
-    def beta(self, value):
+    def beta(self, roll_angle:float):
         """beta angle roll"""
         conn = create_connection(self.db_file)
         item = "roll_angle"
         with conn:
-            update_element_item(conn, self.name, item, self.name)
+            update_element_item(conn, self.name, item, roll_angle)
     #
     #
     def __str__(self) -> str:

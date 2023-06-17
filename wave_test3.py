@@ -116,18 +116,21 @@ mg['MG_1'].set_default()
 # Regular wave [Stokes/Fourier/Cnoidal]
 # ----------------------------------------------------
 #
-waveReg = meto.regular_wave()
+wave = meto.regular_wave()
 #
 # -------------------------------------------------------------------
 #
 # Stokes
 #
-wave = waveReg.Stokes()
+#wave = waveReg.Stokes()
 #wave = waveReg.Fourier()
 #wave.mean_current.Euler = 0.31 * units.m/units.sec
 #wave.infinite_water_depth
 # [H, T, d]
-wave['100yrs'] = {'Hw':15.0 * units.m, 'Tw':12.0 * units.sec, 'd':100*units.m}
+#wave['100yrs'] = {'Hw':15.0 * units.m, 'Tw':12.0 * units.sec, 'd':100*units.m}
+# 
+# [Hw, Tw, d, ]
+wave['100yrs'] = [15 * units.m, 12.0 * units.sec, 100*units.m, 'Stokes']
 Ls = wave['100yrs'].L
 print(f'Wave length = {Ls: 1.4e} m')
 #surface = wave['100yrs'].surface(surface_points=18)
@@ -177,7 +180,7 @@ basic = load.basic()
 #
 #
 basic[10] = 'wave load'
-basic[10].wave = metload['sea_1']
+basic[10].wave(load_case=metload['sea_1'])
 #
 # ----------------------------------------------------
 # Meshing input

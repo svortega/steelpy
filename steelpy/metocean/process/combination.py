@@ -16,9 +16,10 @@ from typing import NamedTuple
 
 # package imports
 # steelpy.f2uModel.load
+from steelpy.metocean.process.bsotm import BSOTM
 #import pandas as pd
 from steelpy.process.dataframe.main import DBframework
-from steelpy.f2uModel.load.process.combination import LoadCombinationBasic
+#from steelpy.f2uModel.load.process.combination import LoadCombinationBasic
 
 #
 #
@@ -42,26 +43,24 @@ class MetoceanCombination(Mapping):
       :number:  integer internal number 
       :name:  string node external name
     """
-    __slots__ = ['_combination']
+    __slots__ = ['_combination', '_hydro', '_regular']
 
-    def __init__(self):
+    def __init__(self, regular_wave, hydro):
         """
         """
         self._combination:dict = {}
-    
+        self._hydro = hydro
+        self._regular = regular_wave
     #
+    def __setitem__(self, comb_name: str|int, comb_title: str) -> None:
+        """
+        """
+        self._combination[comb_name] = CombTypes(comb_name, comb_title, self)
     #
     def __getitem__(self, comb_name:str|int):
         """
         """
         return self._combination[comb_name]
-    
-    
-    def __setitem__(self, comb_name: str|int, comb_title: str) -> None:
-        """
-        """
-        self._combination[comb_name] = CombTypes(comb_name, comb_title)
-    #
     #
     def __delitem__(self, load_name:str|int):
         """
@@ -127,9 +126,9 @@ class CombTypes:
     """
     """
     __slots__ = ['_wave', '_current', '_wind', 
-                 'name', 'number', 'title']
+                 'name', 'number', 'title', '_cls']
     
-    def __init__(self, name:int, title:str):
+    def __init__(self, name:int|str, title:str, cls):
         """
         """
         self.name = name
@@ -138,6 +137,7 @@ class CombTypes:
         self._wave = None
         self._current = None
         self._wind = None
+        self._cls =cls
     #
     @property
     def wave(self):
@@ -150,8 +150,9 @@ class CombTypes:
         """
         [wave_name, Direction(deg), Kinematics, title]
         """
-        values, title = get_values(values)
-        self._wave = WaveBasic(wave=values[0],
+        values, title = self.get_values(values)
+        wave = self._cls._regular[values[0]]
+        self._wave = WaveBasic(wave=wave,
                                direction=values[1],
                                kinematics=values[2],
                                title=title)
@@ -166,7 +167,7 @@ class CombTypes:
     def current(self, values: list|dict):
         """
         """
-        values, title = get_values(values)
+        values, title = self.get_values(values)
         self._current =  CurrentBasic(current=values[0],
                                       direction=values[1],
                                       blockage=values[2],
@@ -183,25 +184,37 @@ class CombTypes:
     def wind(self, values: list|dict):
         """
         """
-        values, title = get_values(values)
+        values, title = self.get_values(values)
         self._wind = WindBasic(wind=values[0],
                                direction=values[1],
                                title=title)
-#
-#
-def get_values(values):
-    """ """
-    if isinstance(values, (list|tuple)):
-        if isinstance(values[-1], str):
-            title = values.pop(-1)
-        else:
-            title = ""
-        
-    elif isinstance(values, dict):
-        pass
-    else:
-        raise IOError('Input data not valid')
     #
-    return values, title
-#
+    # -----------------------------
+    # load process
+    #
+    def load(self):
+        """ convert to beam load"""
+        wave = self._wave.wave
+        kinematics = wave.kinematics()
+        return BSOTM(kinematics=kinematics, condition=2)
+        #calc
+    #
+    # -----------------------------
+    # operations
+    #
+    def get_values(self,values):
+        """ """
+        if isinstance(values, (list|tuple)):
+            if isinstance(values[-1], str):
+                title = values.pop(-1)
+            else:
+                title = ""
+            
+        elif isinstance(values, dict):
+            pass
+        else:
+            raise IOError('Input data not valid')
+        #
+        return values, title
+    #
 #

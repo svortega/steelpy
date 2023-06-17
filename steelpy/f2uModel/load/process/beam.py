@@ -536,7 +536,7 @@ class BeamLoad:
     #    self._beam_id = beam_name
     #    return self
     #
-    #
+    # ------------------
     #
     @property
     def line(self):
@@ -611,8 +611,8 @@ class BeamLoad:
             nload = trns_3Dv(nload, self._beam.T)
             nload = [*nload[:3], *nload[6:9]] 
             return [*nload, *udl[6:], 1, title]
-    #   
     #
+    # ------------------
     #
     @property
     def point(self):
@@ -668,6 +668,7 @@ class BeamLoad:
             pload = trns_3Dv(pload, self._beam.T)
             return [*pload, point[6], 1, title]
     #
+    # ------------------
     #
     def local_system(self):
         """set load beam local system"""
@@ -683,7 +684,8 @@ class BeamLoad:
         self._line.coordinate_system = self._system_flag
         self._point.coordinate_system = self._system_flag
         return "global"
-
+    #
+    # ------------------
     #
     def __str__(self, units: str = "si") -> str:
         """ """
@@ -820,7 +822,6 @@ class BeamLoad:
         #print('---')
         return beamfun #loadfun
     #
-    #
     def fer(self):
         """ """
         """Calculate bean reacition according to boundaries"""
@@ -844,6 +845,14 @@ class BeamLoad:
         #1 / 0
         #return [r1[:4], r1[4:]], [r2[:4], r2[4:]]
         return b2n
+    #
+    # ------------------
+    #
+    def df(self, data):
+        """ """
+        print('====')
+        1/0
+    #
     #
 #
 #

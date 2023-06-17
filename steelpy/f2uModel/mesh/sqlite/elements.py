@@ -82,7 +82,7 @@ class ElementsSQL(Mapping):
             raise IOError(f' element type {element_type} not recognised')    
     #
     #
-    def __len__(self) -> float:
+    def __len__(self) -> int:
         return len(self._labels)
 
     def __iter__(self):

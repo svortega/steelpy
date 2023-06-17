@@ -6,19 +6,22 @@
 from __future__ import annotations
 #from array import array
 #from collections.abc import Mapping
-#from dataclasses import dataclass
-#from typing import NamedTuple, Tuple, List, Iterator, Dict, Iterable, ClassVar, Union
+from dataclasses import dataclass
+from typing import NamedTuple
 #import re
 
 # package imports
 # steelpy.f2uModel
-from ...load.process.actions import SelfWeight
-from ...load.process.basic_load import BasicLoadBasic
-from ...load.sqlite.beam import BeamLoadItemSQL
-from ...load.sqlite.node import  NodeLoadItemSQL
+from steelpy.f2uModel.load.process.actions import SelfWeight
+from steelpy.f2uModel.load.process.basic_load import BasicLoadBasic, LoadTypeBasic
+from steelpy.f2uModel.load.sqlite.beam import BeamLoadItemSQL
+from steelpy.f2uModel.load.sqlite.node import  NodeLoadItemSQL
+#
+from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 # steelpy.f2uModel
 from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table
 #
+import pandas as pd
 #
 # ---------------------------------
 #
@@ -75,7 +78,7 @@ class BasicLoadSQL(BasicLoadBasic):
                                                  number=load_number,
                                                  title=load_title,
                                                  bd_file=self.db_file)
-            #           
+    #           
     #
     def __getitem__(self, load_name: str|int):
         """
@@ -126,7 +129,7 @@ class BasicLoadSQL(BasicLoadBasic):
     #
 #
 #
-class LoadTypeSQL:
+class LoadTypeSQL(LoadTypeBasic):
     """
     """
     __slots__ = ['_node', '_beam', '_selfweight', '_wave', 
@@ -135,9 +138,10 @@ class LoadTypeSQL:
     def __init__(self, name: str, number: int, title: str, bd_file:str):
         """
         """
-        self.name = name
-        self.number = number
-        self.title = title        
+        super().__init__(name, number, title)
+        #self.name = name
+        #self.number = number
+        #self.title = title        
         self._bd_file = bd_file
         #
         self._node = NodeLoadItemSQL(load_name=self.name,
@@ -146,116 +150,55 @@ class LoadTypeSQL:
                                      bd_file=self._bd_file)
         self._selfweight = SelfWeight()
     #
-    #@property
-    #def name(self):
-    #    """ """
-    #    return self._cls._labels[self._cls._index]
-
-    #@name.setter
-    #def name(self, name:str):
-    #    """ """
-    #    self._cls._title[self._cls._index] = name
     #
     #@property
-    #def number(self):
+    #def wave(self):
     #    """ """
-    #    return self._cls._number[self._cls._index]
-
-    #@number.setter
-    #def number(self, name:str):
-    #    """ """
-    #    self._cls._number[self._cls._index] = name
+    #    return self._wave
     #
-    #
-    #@property
-    #def title(self):
-    #    """ """
-    #    return self._cls._title[self._cls._index]
-
-    #@title.setter
-    #def title(self, title:str):
-    #    """ """
-    #    self._cls._title[self._cls._index] = title
-    #
-    #
-    #@property
-    def gravity(self, values:list|None=None):
-        """
-        The self weight form allows you to specify multipliers to 
-        acceleration due to gravity (g) in the X, Y, and Z axes. 
-        If switched on, the default self weight acts in the Y axis 
-        with a magnitude and sign of -1."""
-        #
-        if isinstance(values, list):
-            if isinstance(values[0], list):
-                for value in values:
-                    self._selfweight[value[0]] = value[1:]
-            else:
-                self._selfweight[values[0]] = values[1:]
-        return self._selfweight
-    
-    def selfweight(self, values:list|None=None):
-        """
-        The self weight form allows you to specify multipliers to 
-        acceleration due to gravity (g) in the X, Y, and Z axes. 
-        If switched on, the default self weight acts in the Y axis 
-        with a magnitude and sign of -1."""
-        #
-        return self.gravity(values) 
-
-    #
-    #@property
-    #def node(self):
-    #    """ """
-    #    return self._node
-
-    #@node.setter
-    def node(self, values:list|None=None):
+    #@wave.setter
+    def wave(self, load_case):
         """ """
-        #
-        if isinstance(values, list):
-            if isinstance(values[0], list):
-                for value in values:
-                    self._node[value[0]] = value[1:]
-            else:
-                self._node[values[0]] = values[1:]
-        #
-        return self._node
-
-    #
-    #@beam.setter
-    def beam(self, values:list|None=None):
-        """ """
-        if isinstance(values, list):
-            if isinstance(values[0], list):
-                for value in values:
-                    #try:
-                    #    self._f2u_beams[value[0]]
-                    #except KeyError:
-                    #    raise IOError(f"beam {value[0]} not found")
-                    #
-                    self._beam[value[0]] = value[1:]
-            else:
-                #try:
-                #    self._f2u_beams[values[0]]
-                #except KeyError:
-                #    raise IOError(f"beam {values[0]} not found")
-                #
-                self._beam[values[0]] = values[1:]
-        #
-        return self._beam
-    #
-    #
-    @property
-    def wave(self):
-        """ """
-        return self._wave
-    
-    @wave.setter
-    def wave(self, values):
-        """ """
-        self._wave = values
-    #    
+        self._wave = WaveLoadCase(load_case, self._bd_file)
+# 
 #
 #
+@dataclass
+class WaveLoadCase:
+    """ """
+    __slots__ = ['wave','_bd_file']
+    def __init__(self, wave, bd_file:str):
+        self.wave = wave
+        self._bd_file = bd_file
+    #
+    def process(self):
+        """ """
+        print('# Calculating wave beam forces')
+        #
+        bload = self.wave.load()
+        #
+        conn = create_connection(self._bd_file)
+        with conn:
+            labels = self.get_elements(conn)
+        #
+        beam_force = None
+        for idx, key in enumerate(labels):
+            beam =  BeamItemSQL(key[1], self._bd_file)
+            output = bload.wave_force(beam=beam)
+            try:
+                1/idx
+                beam_force = pd.concat([beam_force, output], ignore_index=True)
+            except ZeroDivisionError:
+                beam_force = output
+        print('# End process')
+        return beam_force
+    #
+    #
+    def get_elements(self,conn):
+        """ """
+        cur = conn.cursor()
+        cur.execute ("SELECT * FROM tb_Elements;")
+        row = cur.fetchall()
+        return row
+    #
 #

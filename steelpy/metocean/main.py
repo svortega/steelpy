@@ -59,9 +59,10 @@ class Metocean:
         #self._wind = Winds()
         #self._current = Currents()
         #self._units = Units()
-        self._combination = MetoceanCombination()
         #self._spectrum = Sprectrum()
         self._hydrodynamic =  Hydrodynamic()
+        self._combination = MetoceanCombination(regular_wave=self._regular_wave,
+                                                hydro=self._hydrodynamic)
     #
     #@property
     #def spectrum(self):
