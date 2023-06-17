@@ -187,29 +187,6 @@ beams[35] = [30, 40, 1, 2, 0]
 print(elements)
 #
 #
-# ----------------------------------------------------
-# Propertis input
-# ----------------------------------------------------
-#
-#
-properties = f2umodel.properties()
-hydro = properties.hydrodynamic()
-mg = hydro.marine_growth()
-mg['MG_1'] = "profile"
-mg['MG_1'].level[1] = [   0 * units.m, 60 * units.mm]
-mg['MG_1'].level[2] = [ -10 * units.m, 60 * units.mm]
-mg['MG_1'].level[3] = [ -50 * units.m, 30 * units.mm]
-mg['MG_1'].level[4] = [-100 * units.m, 10 * units.mm]
-mg['MG_1'].level[5] = [-120 * units.m,  0 * units.mm]
-mg['MG_1'].set_default()
-#
-mg['MG_2'] = "constant"
-mg['MG_2'].thickness = 100 * units.mm
-mg['MG_2'].elements = 1, 3
-#
-#
-cdcm = hydro.CdCm
-#
 #
 #
 # ----------------------------------------------------
@@ -363,7 +340,7 @@ f2umodel.build()
 # ----------------------------------------------------
 #
 plot = f2umodel.plot()
-plot.mesh()
+#plot.mesh()
 #plot.basic_load(name=22)
 #
 # ----------------------------------------------------
@@ -373,6 +350,6 @@ plot.mesh()
 #
 frame = Trave3D()
 frame.mesh = mesh
-results = frame.run_static()
+results = frame.run_static(method = 'banded')
 results.print()
 print('-->')

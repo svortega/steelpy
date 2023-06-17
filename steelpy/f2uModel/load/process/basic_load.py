@@ -238,7 +238,7 @@ class BasicLoadBasic(Mapping):
             lcase = self.__getitem__(lname)
             df = lcase._wave.process()
             lcase.beam(df=df)
-        print('-->')
+        #print('-->')
         #return lcbeam
     #
 #
@@ -322,8 +322,8 @@ class LoadTypeBasic:
         # dataframe input
         try:
             df.columns
-            1/0
-            #self._sections.df(df)
+            #1/0
+            self._beam.df(df)
         except AttributeError:
             pass
         #

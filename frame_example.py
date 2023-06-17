@@ -23,8 +23,9 @@ nodes[2] = [3, 0, 0]
 nodes[3] = [6, 0, 0]
 # boundary nodes
 boundary = mesh.boundaries()
-boundary.node[1] = [1,1,1,1,1,1]
-#boundary.node[3] = [1,1,1,0,0,0]
+supports = boundary.supports()
+supports[1] = [1,1,1,1,1,1]
+#supports[3] = [1,1,1,0,0,0]
 print(boundary)
 # elements [type, node1, node2, material, section]
 elements = mesh.elements()
@@ -94,6 +95,6 @@ f2umodel.build()
 #
 frame = Trave3D()
 frame.mesh = mesh
-results = frame.run_static()
+results = frame.run_static(method = 'banded')
 results.print()
 print('-->')

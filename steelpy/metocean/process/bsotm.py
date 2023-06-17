@@ -399,8 +399,8 @@ class BSOTM:
         #
         uvector = np.array(beam.unit_vector)
         #uvector = [0.447, 0.525, 0.724]
-        print(f'Unit Vector [{uvector[0]}, {uvector[1]}, {uvector[2]}]')
-        print('')
+        #print(f'Unit Vector [{uvector[0]}, {uvector[1]}, {uvector[2]}]')
+        #print('')
         #
         # Components of velocity local to the member
         #
@@ -408,20 +408,20 @@ class BSOTM:
         Vn = kin['uz'] - uvector[1] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
         Wn = - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
         #
-        print('')
-        print('========================================')
-        print('Components of velocity local to the member [N/m]')
-        print(f'Un ={np.max(Un): 1.4e}, Vn={np.max(Vn): 1.4e}, Wn={np.max(Wn): 1.4e}')
-        print(f'Un ={np.min(Un): 1.4e}, Vn={np.min(Vn): 1.4e}, Wn={np.min(Wn): 1.4e}')        
+        #print('')
+        #print('========================================')
+        #print('Components of velocity local to the member [N/m]')
+        #print(f'Un ={np.max(Un): 1.4e}, Vn={np.max(Vn): 1.4e}, Wn={np.max(Wn): 1.4e}')
+        #print(f'Un ={np.min(Un): 1.4e}, Vn={np.min(Vn): 1.4e}, Wn={np.min(Wn): 1.4e}')        
         #
         # Water velocity normal to the cilinder axis
         #
         vn = Vc + np.sqrt(np.power(kin['ux'], 2) + np.power(kin['uz'], 2)
                           - np.power(uvector[0] * kin['ux'] + uvector[1] * kin['uz'], 2))
         #
-        print('')
-        print('Water velocity normal to the cilinder axis [N/m]')
-        print(f'vnmax ={np.max(vn): 1.4e}, vnmin={np.min(vn): 1.4e}')       
+        #print('')
+        #print('Water velocity normal to the cilinder axis [N/m]')
+        #print(f'vnmax ={np.max(vn): 1.4e}, vnmin={np.min(vn): 1.4e}')       
         #
         # Components of acceleration local to the member
         #
@@ -430,11 +430,11 @@ class BSOTM:
         Any = - uvector[0] * (uvector[0] *  kin['ax'] + uvector[1] * kin['az'])
         #
         #
-        print('')
-        print('Components of acceleration local to the member [N/m]')
-        print(f'Anx ={np.max(Anx): 1.4e}, Any={np.max(Anz): 1.4e}, Anz={np.max(Any): 1.4e}')
-        print(f'Anx ={np.min(Anx): 1.4e}, Any={np.min(Anz): 1.4e}, Anz={np.min(Any): 1.4e}')
-        print('========================================')
+        #print('')
+        #print('Components of acceleration local to the member [N/m]')
+        #print(f'Anx ={np.max(Anx): 1.4e}, Any={np.max(Anz): 1.4e}, Anz={np.max(Any): 1.4e}')
+        #print(f'Anx ={np.min(Anx): 1.4e}, Any={np.min(Anz): 1.4e}, Anz={np.min(Any): 1.4e}')
+        #print('========================================')
         #
         return KinVel(Un, Vn, Wn), KinAcc(Anx, Anz, Any),  vn
     #
@@ -448,18 +448,18 @@ class BSOTM:
         dmx = self.mass(At, cm, kinacc.Anx)
         dmy = self.mass(At, cm, kinacc.Any)
         dmz = self.mass(At, cm, kinacc.Anz)
-        print('')
-        print('Components of mass per unit on cilinder lenght [N/m]')
-        print(f'dmx ={np.max(dmx): 1.4e}, dmy={np.max(dmy): 1.4e}, dmz={np.max(dmz): 1.4e}')
-        print(f'dmx ={np.min(dmx): 1.4e}, dmy={np.min(dmy): 1.4e}, dmz={np.min(dmz): 1.4e}')
+        #print('')
+        #print('Components of mass per unit on cilinder lenght [N/m]')
+        #print(f'dmx ={np.max(dmx): 1.4e}, dmy={np.max(dmy): 1.4e}, dmz={np.max(dmz): 1.4e}')
+        #print(f'dmx ={np.min(dmx): 1.4e}, dmy={np.min(dmy): 1.4e}, dmz={np.min(dmz): 1.4e}')
         #
         ddx = self.drag(Dh, cd, kinvel.Un, vn)
         ddy = self.drag(Dh, cd, kinvel.Vn, vn)
         ddz = self.drag(Dh, cd, kinvel.Wn, vn)
-        print('')
-        print('Components of drag per unit on cilinder lenght [N/m]')
-        print(f'ddx ={np.max(ddx): 1.4e}, ddy={np.max(ddy): 1.4e}, ddz={np.max(ddz): 1.4e}')
-        print(f'ddx ={np.min(ddx): 1.4e}, ddy={np.min(ddy): 1.4e}, ddz={np.min(ddz): 1.4e}')
+        #print('')
+        #print('Components of drag per unit on cilinder lenght [N/m]')
+        #print(f'ddx ={np.max(ddx): 1.4e}, ddy={np.max(ddy): 1.4e}, ddz={np.max(ddz): 1.4e}')
+        #print(f'ddx ={np.min(ddx): 1.4e}, ddy={np.min(ddy): 1.4e}, ddz={np.min(ddz): 1.4e}')
         #
         #
         fx = dmx + ddx
@@ -467,11 +467,11 @@ class BSOTM:
         fz = dmz + ddz
         #
         #
-        print('')
-        print('Components of the force per unit on cilinder lenght [N/m]')
-        print(f'qx ={np.max(fx): 1.4e}, qy={np.max(fy): 1.4e}, qz={np.max(fz): 1.4e}')
-        print(f'qx ={np.min(fx): 1.4e}, qy={np.min(fy): 1.4e}, qz={np.min(fz): 1.4e}')
-        print('========================================')
+        #print('')
+        #print('Components of the force per unit on cilinder lenght [N/m]')
+        #print(f'qx ={np.max(fx): 1.4e}, qy={np.max(fy): 1.4e}, qz={np.max(fz): 1.4e}')
+        #print(f'qx ={np.min(fx): 1.4e}, qy={np.min(fy): 1.4e}, qz={np.min(fz): 1.4e}')
+        #print('========================================')
         #
         return BeamUnitForce(fx, fy, fz, Elev, beam.name)
     #
@@ -551,15 +551,15 @@ class BSOTM:
         #
         kin = self.kinematics.get_kin(Z)
         #
-        print('')
-        print('--> local Member')
-        print(f"Max horizontal wave particle velocity {max(np.max(kin['ux']), np.min(kin['ux']), key=abs): 1.4e} m/s")
-        print(f"Max vertical wave particle velocity {max(np.max(kin['uz']), np.min(kin['uz']), key=abs): 1.4e} m/s")
-        print('')
-        print(f"Max horizontal wave particle acceleration {max(np.max(kin['ax']), np.min(kin['ax']), key=abs): 1.4e} m/s2")
-        print(f"Max vertical wave particle acceleration {max(np.max(kin['az']), np.min(kin['az']), key=abs): 1.4e} m/s2")
-        print('--> local Member')
-        print('')
+        #print('')
+        #print('--> local Member')
+        #print(f"Max horizontal wave particle velocity {max(np.max(kin['ux']), np.min(kin['ux']), key=abs): 1.4e} m/s")
+        #print(f"Max vertical wave particle velocity {max(np.max(kin['uz']), np.min(kin['uz']), key=abs): 1.4e} m/s")
+        #print('')
+        #print(f"Max horizontal wave particle acceleration {max(np.max(kin['ax']), np.min(kin['ax']), key=abs): 1.4e} m/s2")
+        #print(f"Max vertical wave particle acceleration {max(np.max(kin['az']), np.min(kin['az']), key=abs): 1.4e} m/s2")
+        #print('--> local Member')
+        #print('')
         #
         #
         # ---------------------------------------
@@ -596,10 +596,10 @@ class BSOTM:
         #
         Fx, Fy = self.span_loading(udl.qx, udl.qy, dz)
         #
-        print('')
-        print('Total combined force [kN]')
-        print(f'Fx ={np.max(Fx) / 1000: 1.3e}, Fy={np.max(Fy) / 1000: 1.3e}')
-        print('---')
+        #print('')
+        #print('Total combined force [kN]')
+        #print(f'Fx ={np.max(Fx) / 1000: 1.3e}, Fy={np.max(Fy) / 1000: 1.3e}')
+        #print('---')
         #
         #
         return lineload

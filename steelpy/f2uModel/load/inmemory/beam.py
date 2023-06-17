@@ -74,15 +74,15 @@ class BeamLoadItemIM(BeamLoadItem):
         except KeyError:
             raise IOError(f"beam {beam_name} not found")
         #
-        if not beam_name in self._labels:
-            self._labels.append(beam_name)
+        #if not beam_name in self._labels:
+        self._labels.append(beam_name)
         return self._load(beam=beam) # ,  beam_name=beam_name
     #
     #
     def fer(self):
         """ Return Fix End Reactions (FER) global system"""
         beams = self._f2u_beams
-        for key in self._labels:
+        for key in set(self._labels):
             beam = beams[key]
             end_nodes = beam.connectivity
             res = self._load(beam=beam).fer()

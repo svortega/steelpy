@@ -1,12 +1,11 @@
 #
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009-2022 steelpy
 #
-from __future__ import annotations
 # Python stdlib imports
-#from array import array
+from array import array
 from dataclasses import dataclass
-#import math
-from typing import NamedTuple
+import math
+from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
 from steelpy.process.units.main import Units

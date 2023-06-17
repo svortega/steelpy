@@ -180,7 +180,7 @@ basic = load.basic()
 #
 #
 basic[10] = 'wave load'
-basic[10].wave(load_case=metload['sea_1'])
+basic[10].wave(metload['sea_1'])
 #
 # ----------------------------------------------------
 # Meshing input

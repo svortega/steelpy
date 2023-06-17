@@ -96,8 +96,8 @@ class BeamLoadItemSQL(BeamLoadItem):
         except TypeError:
             raise IOError(f"beam {beam_name} not found")
         #
-        if not beam_name in self._labels:
-            self._labels.append(beam_name)
+        #if not beam_name in self._labels:
+        self._labels.append(beam_name)
         
         return self._load(beam=beam)
     #
@@ -105,7 +105,7 @@ class BeamLoadItemSQL(BeamLoadItem):
     def fer(self):
         """ Return Fix End Reactions (FER) global system"""
         #beams = self._f2u_beams
-        for key in self._labels:
+        for key in set(self._labels):
             #beam = beams[key]
             beam =  BeamItemSQL(key, self._bd_file)
             end_nodes = beam.connectivity
@@ -114,7 +114,50 @@ class BeamLoadItemSQL(BeamLoadItem):
                 self._node_eq[key] = [[end_nodes[0], *gnload[4], gnload[1], gnload[2]],
                                       [end_nodes[1], *gnload[5], gnload[1], gnload[2]]]
         #print('--> get_end_forces')
-        #1 / 0    
+        #1 / 0
+    #
+    #
+    #
+    def df(self, data):
+        """ """
+        #
+        conn = create_connection(self._bd_file)
+        #
+        beams = data.groupby(['element_type']).get_group('beam')
+        grpbeam = beams.groupby(['element_name', 'load_name'])
+        #
+        for key, item in grpbeam:
+            subgrp = item.groupby('load_type')
+            line = subgrp.get_group('line')
+            #
+            beam_name = key[0]
+            with conn:  
+                beam_data = check_element(conn, beam_name)
+                load_data = get_load_data(conn, key[1], load_type='basic')
+            #
+            #
+            #if not beam_name in self._labels:
+            self._labels.append(beam_name)           
+            #
+            line['load_number'] = load_data[0]
+            line['beam_number'] = beam_data[0]
+            line['qx0i'] = 'NULL'
+            line['qy0i'] = 'NULL'
+            line['qz0i'] = 'NULL'
+            line['qx1i'] = 'NULL'
+            line['qy1i'] = 'NULL'
+            line['qz1i'] = 'NULL'
+            #
+            line = line[['load_number', 'beam_number',
+                         'load_title', 'load_system', 
+                         'L0', 'qx0', 'qy0', 'qz0', 'qx0i', 'qy0i', 'qz0i',
+                         'L1', 'qx1', 'qy1', 'qz1', 'qx1i', 'qy1i', 'qz1i']].values
+            #line
+            with conn:
+                self._load._line._push_load(conn, beam_name=beam_name, load=line)
+        #print('===')
+        #1/0
+    #    
 #
 #
 class BeamLoadSQL(BeamLoad):
@@ -135,12 +178,6 @@ class BeamLoadSQL(BeamLoad):
         #self._beam_id = beam_name
         self._beam = beam # =  BeamItemSQL(beam_name, self._bd_file)
         return self    
-    #
-    #
-    #def df(self, data):
-    #    """ """
-    #    print('===')
-    #    1/0
     #
 #
 #    
@@ -173,7 +210,7 @@ class BeamDistributedSQL(BeamDistMaster):
         with conn:  
             beam = check_element(conn, beam_name)        
         try:
-            beam_number = beam[0] 
+            beam_number = beam[0]
         except TypeError:
             raise IOError(f"beam {beam_name} not found")        
         # get load data
@@ -284,6 +321,20 @@ class BeamDistributedSQL(BeamDistMaster):
         cur = conn.cursor()
         cur.execute(sql, project)      
     #
+    def _push_load(self, conn, beam_name: str, load: list):
+        """ """
+        #
+        self._labels.append(beam_name)
+        #
+        sql = 'INSERT INTO tb_LoadBeamLine(load_number, element_number,\
+                                            title, system,\
+                                            L_end1, qx1, qy1, qz1, qx1i, qy1i, qz1i,\
+                                            L_end2, qx2, qy2, qz2, qx2i, qy2i, qz2i)\
+                                            VALUES(?,?,?,?,\
+                                                   ?,?,?,?,?,?,?,\
+                                                   ?,?,?,?,?,?,?)'
+        cur = conn.cursor()
+        cur.executemany(sql, load)     
     #
     def _get_beam_load(self, conn, beam_name:int, load_name:int):
         """ """

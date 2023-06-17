@@ -5,7 +5,7 @@
 from __future__ import annotations
 import re
 from collections.abc import Mapping
-from typing import NamedTuple
+from typing import NamedTuple, Tuple, List, Union
 
 #
 # package imports
@@ -71,8 +71,8 @@ class MarineGrowth(Mapping):
 class Profile(NamedTuple):
     """
     """
-    elevation : list
-    thickness : list
+    elevation : List
+    thickness : List
 #
 class MGprofile(BasicProperty):
     """

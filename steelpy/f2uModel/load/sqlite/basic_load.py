@@ -157,41 +157,47 @@ class LoadTypeSQL(LoadTypeBasic):
     #    return self._wave
     #
     #@wave.setter
-    def wave(self, load_case):
+    def wave(self, wave_load):
         """ """
-        self._wave = WaveLoadCase(load_case, self._bd_file)
+        load_name = self.name
+        self._wave = WaveLoadCase(wave_load, load_name, self._bd_file)
 # 
 #
 #
 @dataclass
 class WaveLoadCase:
     """ """
-    __slots__ = ['wave','_bd_file']
-    def __init__(self, wave, bd_file:str):
+    __slots__ = ['wave','_bd_file', 'load_name']
+    def __init__(self, wave, load_name: int|str, bd_file:str):
         self.wave = wave
         self._bd_file = bd_file
+        self.load_name = load_name
     #
     def process(self):
         """ """
         print('# Calculating wave beam forces')
         #
+        title = f'{self.wave.name}' # _{self.wave.title}
         bload = self.wave.load()
         #
         conn = create_connection(self._bd_file)
         with conn:
             labels = self.get_elements(conn)
         #
-        beam_force = None
+        df_bload = None
         for idx, key in enumerate(labels):
             beam =  BeamItemSQL(key[1], self._bd_file)
-            output = bload.wave_force(beam=beam)
+            df_load = bload.wave_force(beam=beam)
+            df_load['load_name'] = self.load_name
+            df_load['load_title'] = df_load.apply(lambda row: f"{self.wave.name}_{round(row.x, 2)}_{round(row.y, 2)}_{round(row.z, 2)}", axis=1)
+            df_load['load_system'] = 1
             try:
                 1/idx
-                beam_force = pd.concat([beam_force, output], ignore_index=True)
+                df_bload = pd.concat([df_bload, df_load], ignore_index=True)
             except ZeroDivisionError:
-                beam_force = output
+                df_bload = df_load
         print('# End process')
-        return beam_force
+        return df_bload
     #
     #
     def get_elements(self,conn):
