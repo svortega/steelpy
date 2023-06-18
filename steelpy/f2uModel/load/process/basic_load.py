@@ -181,6 +181,14 @@ class BasicLoadBasic(Mapping):
             # -------------------------------
             # plates
             # -------------------------------
+            #
+            #
+            # -------------------------------
+            # wave
+            # -------------------------------
+            #
+            lcase._wave.fer()
+            #
         #
         print('---> element2node')
     #
@@ -232,14 +240,12 @@ class BasicLoadBasic(Mapping):
     #
     def wave_process(self):
         """ Wave los postprocessing"""
+        print('# --> wave2beamload')
         load_name = list(self.keys())
-        #lcbeam = {} 
         for lname in load_name:
             lcase = self.__getitem__(lname)
-            df = lcase._wave.process()
-            lcase.beam(df=df)
-        #print('-->')
-        #return lcbeam
+            lcase._wave.process(lname)
+        print('# --> End')
     #
 #
 #

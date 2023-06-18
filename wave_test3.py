@@ -129,7 +129,7 @@ wave = meto.regular_wave()
 # [H, T, d]
 #wave['100yrs'] = {'Hw':15.0 * units.m, 'Tw':12.0 * units.sec, 'd':100*units.m}
 # 
-# [Hw, Tw, d, ]
+# [Hw, Tw, d, wave_type(Fourier/Stokes)]
 wave['100yrs'] = [15 * units.m, 12.0 * units.sec, 100*units.m, 'Stokes']
 Ls = wave['100yrs'].L
 print(f'Wave length = {Ls: 1.4e} m')
@@ -180,7 +180,8 @@ basic = load.basic()
 #
 #
 basic[10] = 'wave load'
-basic[10].wave(metload['sea_1'])
+basic[10].wave(wave_load = metload['sea_1'],
+               design_load = 'max_BSOTM')
 #
 # ----------------------------------------------------
 # Meshing input

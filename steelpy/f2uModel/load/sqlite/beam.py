@@ -25,7 +25,8 @@ from ..process.beam import (LineBeam, PointBeam,
                             BeamLoadItem, BeamLoad)
 from ..process.nodes import NodeLoadBasic, PointNode
 # steelpy.
-from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table, get_load_data
+from steelpy.f2uModel.mesh.process.process_sql import (create_connection, create_table,
+                                                       get_load_data, check_element)
 from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 #
 from steelpy.process.dataframe.main import DBframework
@@ -33,17 +34,9 @@ from steelpy.process.dataframe.main import DBframework
 # ---------------------------------
 #
 #
-def check_element(conn, element_name):
-    """ """
-    cur = conn.cursor()
-    cur.execute ("SELECT * FROM tb_Elements\
-                WHERE tb_Elements.name = {:};".format(element_name))
-    row = cur.fetchone()
-    return row
-#
 #
 class BeamLoadItemSQL(BeamLoadItem):
-    __slots__ = ['_labels', '_load', '_bd_file', ]
+    __slots__ = ['_labels', '_load', '_bd_file']
 
     def __init__(self, load_name: int|float, bd_file: str) -> None:
         """

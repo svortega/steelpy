@@ -6,8 +6,8 @@
 from __future__ import annotations
 #from array import array
 #from collections.abc import Mapping
-from dataclasses import dataclass
-from typing import NamedTuple
+#from dataclasses import dataclass
+#from typing import NamedTuple
 #import re
 
 # package imports
@@ -16,12 +16,13 @@ from steelpy.f2uModel.load.process.actions import SelfWeight
 from steelpy.f2uModel.load.process.basic_load import BasicLoadBasic, LoadTypeBasic
 from steelpy.f2uModel.load.sqlite.beam import BeamLoadItemSQL
 from steelpy.f2uModel.load.sqlite.node import  NodeLoadItemSQL
+from steelpy.f2uModel.load.sqlite.wave_load import WaveLoadItemSQL
 #
 from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 # steelpy.f2uModel
 from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table
 #
-import pandas as pd
+#import pandas as pd
 #
 # ---------------------------------
 #
@@ -149,6 +150,8 @@ class LoadTypeSQL(LoadTypeBasic):
         self._beam = BeamLoadItemSQL(load_name=self.name,
                                      bd_file=self._bd_file)
         self._selfweight = SelfWeight()
+        self._wave = WaveLoadItemSQL(load_name=self.name,
+                                     bd_file=self._bd_file)
     #
     #
     #@property
@@ -157,54 +160,10 @@ class LoadTypeSQL(LoadTypeBasic):
     #    return self._wave
     #
     #@wave.setter
-    def wave(self, wave_load):
-        """ """
-        load_name = self.name
-        self._wave = WaveLoadCase(wave_load, load_name, self._bd_file)
+    def wave(self, wave_load, design_load: str = 'max_BSOTM'):
+        """
+        design_load : max_BSOTM
+        """
+        self._wave[self.name] = [wave_load, design_load, self.title]
 # 
-#
-#
-@dataclass
-class WaveLoadCase:
-    """ """
-    __slots__ = ['wave','_bd_file', 'load_name']
-    def __init__(self, wave, load_name: int|str, bd_file:str):
-        self.wave = wave
-        self._bd_file = bd_file
-        self.load_name = load_name
-    #
-    def process(self):
-        """ """
-        print('# Calculating wave beam forces')
-        #
-        title = f'{self.wave.name}' # _{self.wave.title}
-        bload = self.wave.load()
-        #
-        conn = create_connection(self._bd_file)
-        with conn:
-            labels = self.get_elements(conn)
-        #
-        df_bload = None
-        for idx, key in enumerate(labels):
-            beam =  BeamItemSQL(key[1], self._bd_file)
-            df_load = bload.wave_force(beam=beam)
-            df_load['load_name'] = self.load_name
-            df_load['load_title'] = df_load.apply(lambda row: f"{self.wave.name}_{round(row.x, 2)}_{round(row.y, 2)}_{round(row.z, 2)}", axis=1)
-            df_load['load_system'] = 1
-            try:
-                1/idx
-                df_bload = pd.concat([df_bload, df_load], ignore_index=True)
-            except ZeroDivisionError:
-                df_bload = df_load
-        print('# End process')
-        return df_bload
-    #
-    #
-    def get_elements(self,conn):
-        """ """
-        cur = conn.cursor()
-        cur.execute ("SELECT * FROM tb_Elements;")
-        row = cur.fetchall()
-        return row
-    #
 #

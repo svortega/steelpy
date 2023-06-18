@@ -62,3 +62,11 @@ def check_nodes(conn, node_name: int|str):
     node = cur.fetchone()
     return node    
 #
+#
+def check_element(conn, element_name):
+    """ """
+    cur = conn.cursor()
+    cur.execute ("SELECT * FROM tb_Elements\
+                WHERE tb_Elements.name = {:};".format(element_name))
+    row = cur.fetchone()
+    return row
