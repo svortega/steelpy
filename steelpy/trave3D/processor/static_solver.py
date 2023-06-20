@@ -101,7 +101,8 @@ def solve_deflections(df_nload, method: str):
     #dfbool = dfjbc.stack()
     #
     dfnload = update_load(df_nload)
-    blgrp = dfnload.groupby(['load_name', 'load_number'])
+    blgrp = dfnload.groupby(['load_name', 'load_number', 
+                             'load_type','load_system'])
     #
     dftemp = []
     for key, litem in blgrp:
@@ -122,7 +123,7 @@ def solve_deflections(df_nload, method: str):
                  for ieqnum in jbcc]
         #1/0
         ndisp = to_matrix(ndisp, 6)
-        filldata = [[*key, 'basic',  litem['load_title'].iloc[0], 'global',
+        filldata = [[*key,  litem['load_title'].iloc[0],
                     nname, *ndisp[x]]
                     for x, nname in enumerate(df_jbc.index)]
         #
@@ -164,7 +165,7 @@ def get_dfdisp(dftemp):
     """ """
     db = DBframework()
     header = ['load_name', 'load_number', 'load_type',
-              'load_title', 'load_system',
+              'load_system', 'load_title',
               'node_name', 'x', 'y', 'z', 'rx', 'ry', 'rz']
     return db.DataFrame(data=dftemp, columns=header, index=None)
         

@@ -6,6 +6,7 @@
 from __future__ import annotations
 #from array import array
 #from collections.abc import Mapping
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import NamedTuple
 #import re
@@ -18,9 +19,11 @@ from itertools import groupby
 #from steelpy.f2uModel.load.process.basic_load import BasicLoadBasic, LoadTypeBasic
 from steelpy.f2uModel.load.sqlite.beam import BeamLoadItemSQL,  BeamToNodeSQL
 #from steelpy.f2uModel.load.sqlite.node import  NodeLoadItemSQL
+from steelpy.process.math.operations import linspace
 #
 # steelpy.f2uModel.load
 from ..process.beam import BeamLoadItem #, BeamLoad
+from steelpy.process.math.operations import trns_3Dv
 #
 from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 # steelpy.f2uModel
@@ -268,7 +271,7 @@ class WaveLoadItemSQL(BeamLoadItem):
             df_load['load_name'] = self._name
             df_load['load_title'] = wname
             #df_load['load_title'] = df_load.apply(lambda row: f"{wname}_{round(row.x, 2)}_{round(row.y, 2)}_{round(row.z, 2)}", axis=1)
-            df_load['load_system'] = 1
+            df_load['load_system'] = 'local'
             try:
                 1/idx
                 df_bload = pd.concat([df_bload, df_load], ignore_index=True)
@@ -333,21 +336,28 @@ class WaveLoadItemSQL(BeamLoadItem):
             res = []
             for key, items in grpm:
                 beam =  BeamItemSQL(key[0], self._bd_file)
-                end_nodes = beam.connectivity
+                node1,node2 = beam.nodes
                 #
                 for item in items.itertuples():
+                    #
                     data = [item.qx1, item.qy1, item.qz1,
                             item.qx2, item.qy2, item.qz2,
                             item.L_end1, item.L_end2,
                             item.element_name, item.load_comment,
                             item.load_name, item.load_system,
-                            0, 'Line Load']
+                            1, 'Line Load']
                     load = LineBeam._make(data)
-                    gnload = load.fer(L=beam.L)
-                    res.extend([[gnload[1], gnload[2], 1, beam.number,
-                                 end_nodes[0], *gnload[4], *ipart],
-                                [gnload[1], gnload[2], 1, beam.number,
-                                 end_nodes[1], *gnload[5], *ipart]])
+                    gnload = load.fer_beam(L=beam.L)
+                    # load local system to global 
+                    gnload = [*gnload[4], *gnload[5]]
+                    lnload = trns_3Dv(gnload, beam.T)
+                    #
+                    res.extend([[item.load_number, item.load_comment, 
+                                 'global', beam.number,
+                                 node1.number, *lnload[:6], *ipart],
+                                [item.load_number, item.load_comment, 
+                                 'global', beam.number,
+                                 node2.number, *lnload[6:], *ipart]])
                 #
                 #
                 #self._load.df(data=items)
@@ -363,8 +373,46 @@ class WaveLoadItemSQL(BeamLoadItem):
                 self._push_node_load(conn, res)
             #
             #print('---')
-        print('--> get_end_forces')
+        #print('--> get_end_forces')
         #1 / 0    
+    #
+    #
+    # -----------------------------------------------
+    #
+    def beam_load(self,steps:int = 10):
+        """ """
+        conn = create_connection(self._bd_file)
+        beamfun = defaultdict(list)		
+        for load_name in set(self._labels):
+            with conn: 
+                bldf = self.get_wave_load(conn, load_name=load_name)
+            #
+            # TODO : select coordinate for design load
+            #
+            grpm = bldf.groupby(['element_name'])
+            #
+            for key, items in grpm:
+                beam =  BeamItemSQL(key[0], self._bd_file)
+                mat = beam.material
+                sec = beam.section.properties()
+                Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
+				#
+                for item in items.itertuples():
+                    data = [item.qx1, item.qy1, item.qz1,
+                            item.qx2, item.qy2, item.qz2,
+                            item.L_end1, item.L_end2,
+                            item.element_name, item.load_comment,
+                            item.load_name, item.load_system,
+                            1, 'Line Load']
+                    bitem = LineBeam._make(data)
+                    lout = bitem.Fx(x=Lsteps, L=beam.L,
+                                    E=mat.E, G=mat.G, 
+                                    Iy=sec.Iy, Iz=sec.Iy,
+                                    J=sec.J, Cw=sec.Cw, Area=sec.area)
+                    beamfun[key[0]].extend(lout)
+		#
+        #print('---')
+        return beamfun
     #
     #
 #

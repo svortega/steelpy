@@ -76,6 +76,9 @@ class LineBeam(NamedTuple):
         #
         try:  # local system
             1 / self.system
+        except TypeError:
+            if self.system.lower() == 'global':
+                raise IOError('line line should be in beam local system')
         except ZeroDivisionError:
             raise IOError('line line should be in beam local system')
             # global system
@@ -176,12 +179,13 @@ class LineBeam(NamedTuple):
     #
     #
     #
-    def fer(self, L):
-        """fix end reaction [fer] - Line beam load  
+    def fer_beam(self, L):
+        """fix end reaction [fer] - Line beam load local system
         
         Return:
         fer : [load_name, system, beam_load_id, beam_name, end_1, end_2]
         end : [fx, fy, fz, mx, my, mz]"""
+        #
         # convert load to beam local
         self.local_system()        
         #[Fa, Fb]
@@ -383,8 +387,8 @@ class PointBeam(NamedTuple):
         return Fx_out
     #
     #
-    def fer(self, L: float) -> list:
-        """fix end reaction [fer] - Point beam load  
+    def fer_beam(self, L: float) -> list:
+        """fix end reaction [fer] - Point beam load local system 
         
         Return:
         fer : [load_name, system, beam_load_id, beam_name, end_1, end_2]
@@ -824,23 +828,32 @@ class BeamLoad:
     #
     def fer(self):
         """ """
-        """Calculate bean reacition according to boundaries"""
+        """Beam reacition global system according to boundaries
+        """
         b2n = []
         beam = self._beam
+        global_system = 0
         # line loadreactions
         for key, item in self._line.items():
             #print(f'line load {key}')
             for bload in item:
-                res = bload.fer(L=beam.L)
-                #b2n.append([bload, item.name, item.title])
-                b2n.append(res)
+                res = bload.fer_beam(L=beam.L)
+                # local to global system
+                gnload = [*res[4], *res[5]]
+                lnload = trns_3Dv(gnload, beam.T)
+                b2n.append([bload.load_name, bload.title, global_system, 
+                            key, lnload[:6], lnload[6:]])
         # point load
         for key, item in self._point.items():
             #print(f'point load {key}')
             for bload in item:
-                res = bload.fer(L=beam.L)
+                res = bload.fer_beam(L=beam.L)
+                gnload = [*res[4], *res[5]]
+                lnload = trns_3Dv(gnload, beam.T)
                 #b2n.append([bload, item.name, item.title])
-                b2n.append(res)
+                #b2n.append(res)
+                b2n.append([bload.load_name, bload.title, global_system, 
+                            key, lnload[:6], lnload[6:]])
         #
         #1 / 0
         #return [r1[:4], r1[4:]], [r2[:4], r2[4:]]

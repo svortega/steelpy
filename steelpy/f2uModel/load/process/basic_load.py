@@ -137,11 +137,13 @@ class BasicLoadBasic(Mapping):
         #dftemp = []
         for name in self._labels:
             lcase = self.__getitem__(name)
+            #
+            bfunc = {}
+            #bfunc = []
             # -------------------------------
             # beam line load (line & point)
             # -------------------------------
-            bfunc = {}
-            #bfunc = []
+            #
             beamload = lcase.beam()
             for key, items in beamload.items():
                 try:
@@ -150,10 +152,28 @@ class BasicLoadBasic(Mapping):
                 except ZeroDivisionError:
                     continue
             #
+            # -------------------------------
+            # wave line load
+            # -------------------------------
+            #
+            waveload = lcase.wave()
+            waveload.beam_load()
+            #for key, items in waveload.items():
+                #try:
+               #1/len(items.line())
+                #bfunc.update(items.beam_function(steps=steps))
+                #except ZeroDivisionError:
+                #continue
+
+            #
+            # -------------------------------
+            #
             load_func[name] = bfunc
+            #
             # -------------------------------
             # plate load
-            # -------------------------------            
+            # -------------------------------
+            #         
         #print('---')
         # [Fx, Fy, Fz, Mx, My, Mz]
         # [V, M, w, theta]
@@ -227,8 +247,14 @@ class BasicLoadBasic(Mapping):
             #
             df2 = lcase._beam._node_eq.df
             if not df2.empty:
-                dftemp = update_df(dftemp, df2, lcase.number, lcase.title)            
+                dftemp = update_df(dftemp, df2, lcase.number, lcase.title)
             #
+            # -------------------------------
+            # wave load (line & point)  
+            #
+            df2 = lcase._wave._node_eq.df
+            if not df2.empty:
+                dftemp = update_df(dftemp, df2, lcase.number, lcase.title)
         #
         dftemp = dftemp.reindex(columns=['load_name', 'load_number', 'load_type',
                                          'load_title', 'load_comment', 'load_system',
@@ -244,7 +270,10 @@ class BasicLoadBasic(Mapping):
         load_name = list(self.keys())
         for lname in load_name:
             lcase = self.__getitem__(lname)
-            lcase._wave.process(lname)
+            try:
+                lcase._wave.process(lname)
+            except KeyError:
+                continue
         print('# --> End')
     #
 #
@@ -335,5 +364,19 @@ class LoadTypeBasic:
         #
         return self._beam
     #
- 
+    #@property
+    #def wave(self):
+    #    """ """
+    #    return self._wave
+    #
+    #@wave.setter
+    def wave(self, wave_load=None, design_load: str = 'max_BSOTM'):
+        """
+        design_load : max_BSOTM
+        """
+        if wave_load:
+            self._wave[self.name] = [wave_load, design_load, self.title]
+        #
+        return self._wave
+# 
 #

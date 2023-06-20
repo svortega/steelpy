@@ -36,7 +36,7 @@ from steelpy.process.dataframe.main import DBframework
 #
 #
 class BeamLoadItemSQL(BeamLoadItem):
-    __slots__ = ['_labels', '_load', '_bd_file']
+    __slots__ = ['_labels', '_load', '_bd_file', '_name']
 
     def __init__(self, load_name: int|float, bd_file: str) -> None:
         """
@@ -44,10 +44,12 @@ class BeamLoadItemSQL(BeamLoadItem):
         super().__init__()
         self._bd_file =  bd_file
         self._load = BeamLoadSQL(load_name=load_name,
-                                     bd_file=self._bd_file)
+                                 bd_file=self._bd_file)
         #
         self._node_eq = BeamToNodeSQL(load_name=load_name, 
-                                        bd_file=bd_file)
+                                      bd_file=bd_file)
+        #
+        self._name = load_name
     #
     def __setitem__(self, beam_name: int|str,
                     beam_load: list) -> None:
@@ -97,17 +99,37 @@ class BeamLoadItemSQL(BeamLoadItem):
     #
     def fer(self):
         """ Return Fix End Reactions (FER) global system"""
-        #beams = self._f2u_beams
+        conn = create_connection(self._bd_file)
+        with conn:
+            load_data = get_load_data(conn, self._name, load_type='basic')
+            load_number = load_data[0]
+        #
+        ipart = ['NULL', 'NULL', 'NULL','NULL', 'NULL', 'NULL']
+        res =[]
         for key in set(self._labels):
-            #beam = beams[key]
             beam =  BeamItemSQL(key, self._bd_file)
-            end_nodes = beam.connectivity
-            res = self._load(beam=beam).fer()
-            for gnload in res:
-                self._node_eq[key] = [[end_nodes[0], *gnload[4], gnload[1], gnload[2]],
-                                      [end_nodes[1], *gnload[5], gnload[1], gnload[2]]]
+            #end_nodes = beam.connectivity
+            node1, node2 = beam.nodes
+            res1 = self._load(beam=beam).fer()
+            #for gnload in res:
+            #    self._node_eq[key] = [[end_nodes[0], *gnload[4], gnload[1], gnload[2]],
+            #                          [end_nodes[1], *gnload[5], gnload[1], gnload[2]]]
+            #
+            for gnload in res1:
+                try:
+                    1 / gnload[2]
+                    raise RuntimeError('node load in local system')
+                except ZeroDivisionError:
+                    load_system = 'global'
+                #
+                res = [[load_number, gnload[1], load_system, beam.number, node1.number, *gnload[4], *ipart],
+                       [load_number, gnload[1], load_system, beam.number, node2.number, *gnload[5], *ipart]]
         #print('--> get_end_forces')
         #1 / 0
+        if res:
+            #conn = create_connection(self._bd_file)
+            with conn:  
+                self._node_eq._push_node_load(conn, res)
     #
     #
     #
@@ -571,11 +593,11 @@ class BeamToNodeSQL(NodeLoadBasic):
         #
         try:
             1 / load_system
-            load_system = 'global'
+            raise RuntimeError('node load in local system')
         except ZeroDivisionError:
-            raise RuntimeError('node load in global system')
+            lsystem = 'global'
         #
-        project = (load_number, load_title, load_system,
+        project = (load_number, load_title, lsystem,
                    beam_number, node_number,
                    *node_load,
                    'NULL', 'NULL', 'NULL',
@@ -590,6 +612,25 @@ class BeamToNodeSQL(NodeLoadBasic):
                                                    ?,?,?,?,?)'
         cur = conn.cursor()
         cur.execute(sql, project)
+    #
+    def _push_node_load(self, conn, node_load:list):
+        """ """
+        #
+        #project = (load_number, load_title, load_system,
+        #           beam_number, node_number,
+        #           *node_load,
+        #           'NULL', 'NULL', 'NULL',
+        #           'NULL', 'NULL', 'NULL')
+        #
+        sql = 'INSERT INTO tb_LoadBeamToNode(load_number, title, system, \
+                                            element_number,\
+                                            node_number, fx, fy, fz, mx, my, mz,\
+                                            fxi, fyi, fzi, mxi, myi, mzi)\
+                                            VALUES(?,?,?,?,?,\
+                                                   ?,?,?,?,?,?,?,\
+                                                   ?,?,?,?,?)'
+        cur = conn.cursor()
+        cur.executemany(sql, node_load)
     #
     def _get_beam_load(self, conn, beam_name:int, load_name:int):
         """ """

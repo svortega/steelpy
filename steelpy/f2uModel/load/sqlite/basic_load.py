@@ -154,16 +154,4 @@ class LoadTypeSQL(LoadTypeBasic):
                                      bd_file=self._bd_file)
     #
     #
-    #@property
-    #def wave(self):
-    #    """ """
-    #    return self._wave
-    #
-    #@wave.setter
-    def wave(self, wave_load, design_load: str = 'max_BSOTM'):
-        """
-        design_load : max_BSOTM
-        """
-        self._wave[self.name] = [wave_load, design_load, self.title]
-# 
 #

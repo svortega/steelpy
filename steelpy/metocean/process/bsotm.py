@@ -43,25 +43,23 @@ class BeamUnitForce(NamedTuple):
     def line(self):
         """get line loading
         [load_title, 'beam', beam_name, 'line',  qx0,qy0,qz0, qx1,qy1,qz1, L0,L1, comment(optional)]"""
-        #qx = self.qx.isel(x=0)
-        #row, col, length = self.qx.coords[['x','z','length']]
+        #
         coords = self.qx.coords
         rows = coords['x'].values
         cols = coords['z'].values
         wlength = coords['length'].values
         #
-        #qx = self._get_line2(qname ='qx', qitem=self.qx)
+        # FIXME: wave system to beam local system
         #
         qitem = self.qx.to_dataframe(name='qx').reset_index()
-        qx = self._get_line(qname ='qx', qitem=qitem)
+        qy = self._get_line(qname ='qx', qitem=qitem)
         qitem = self.qy.to_dataframe(name='qy').reset_index()
-        qy = self._get_line(qname='qy', qitem=qitem)
+        qz = self._get_line(qname='qy', qitem=qitem)
         qitem = self.qz.to_dataframe(name='qz').reset_index()
-        qz = self._get_line(qname='qz', qitem=qitem)
+        qx = self._get_line(qname='qz', qitem=qitem)
         #
         lforce = []
         for x, row in enumerate(rows):
-            #lforce = []
             for idx, wstep in enumerate(wlength):
                 for hstep, col in enumerate(cols):
                     #coord = f'{0}_{0}_{self.elevation[hstep]}'
@@ -69,7 +67,6 @@ class BeamUnitForce(NamedTuple):
                     lforce.append(['beam', self.beam_name, 'line',
                                    *ldata[0], *ldata[1], 0, 0,
                                    row, wstep, col])
-            #lforce1.append(lforce)
         #
         header =  ['element_type', 'element_name', 'load_type',
                    'qx0','qy0','qz0', 'qx1','qy1','qz1',

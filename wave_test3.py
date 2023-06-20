@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 from steelpy import f2uModel
 from steelpy import Metocean
+from steelpy import Trave3D
 from steelpy import Units
 
 
@@ -190,5 +191,13 @@ basic[10].wave(wave_load = metload['sea_1'],
 f2umodel.build()
 #
 #
+# ----------------------------------------------------
+# Structural Analysis
+# ----------------------------------------------------
+#
+frame = Trave3D()
+frame.mesh = mesh
+results = frame.run_static()
+results.print()
 #
 print('-->')
