@@ -12,9 +12,9 @@ from collections.abc import Mapping
 # package imports
 from steelpy.process.geometry.L3D import (DistancePointLine3D,
                                           LineLineIntersect3D)
-from ..Kmatrix.stiffness import (beam_Klocal, trans_3d_beam,
-                                 Rmatrix, Rmatrix_new,
-                                 trans3Dbeam, beam_stiffness)
+from steelpy.f2uModel.mesh.process.elements.bstiffness import (beam_Klocal, trans_3d_beam,
+                                                               Rmatrix, Rmatrix_new,
+                                                               trans3Dbeam, beam_stiffness)
 #
 import numpy as np
 from numpy.linalg import inv

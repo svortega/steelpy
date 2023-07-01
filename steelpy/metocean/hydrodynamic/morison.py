@@ -7,7 +7,7 @@ from __future__ import annotations
 from array import array
 from collections.abc import Mapping
 import re
-from typing import NamedTuple, Tuple, List, Iterator, Dict, ClassVar
+from typing import NamedTuple #, Tuple, List, Iterator, Dict, ClassVar
 
 
 # package imports
@@ -244,9 +244,9 @@ class CdCmCoefficients(Mapping):
     def __init__(self):
         """
         """
-        self._cdcm: Dict = {}
+        self._cdcm: dict = {}
     
-    def __getitem__(self, cdcm_name) -> ClassVar:
+    def __getitem__(self, cdcm_name):
         """
         """
         return self._cdcm[cdcm_name]

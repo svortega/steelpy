@@ -1,6 +1,7 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2023 steelpy
 #
+from __future__ import annotations
 # Python stdlib imports
 import re
 

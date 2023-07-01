@@ -13,7 +13,7 @@ from operator import sub, add
 # package imports
 from steelpy.process.units.main import Units
 #import steelpy.process.io_module.text as common
-from steelpy.f2uModel.mesh.process.Kmatrix.stiffness import Rmatrix
+from steelpy.f2uModel.mesh.process.elements.bstiffness import Rmatrix
 #
 #
 #

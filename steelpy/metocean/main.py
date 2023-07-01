@@ -106,11 +106,14 @@ class Metocean:
     #    return self._current
     #
     #@property
-    def hydrodynamic(self):
+    #def hydrodynamic(self):
+    #    """ """
+    #    return self._hydrodynamic
+    #
+    #
+    def marine_growth(self):
         """ """
-        return self._hydrodynamic
-    #
-    #
+        return self._hydrodynamic.marine_growth()
     #
     #
     #

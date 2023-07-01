@@ -12,7 +12,7 @@ from ..inmemory.tubular import TubularBasic
 #from ..process.operations import get_sect_properties
 from .operations import SectionSQLite
 #from ..inmemory.operations import ShapeBasic
-from steelpy.f2uModel.mesh.process.process_sql import create_connection
+from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection
 from ..process.operations import get_sect_prop_df
 #
 #

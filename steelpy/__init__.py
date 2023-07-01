@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2022 steelpy
+# Copyright (c) 2009-2023 steelpy
 #
 # TODO: host until sure no longer needed
 #
@@ -14,8 +14,8 @@ from steelpy.material.main import Materials
 from steelpy.sections.main import Sections
 from steelpy.process.units.main import Units
 
-from steelpy.process.spreadsheet.xl_main import Spreadsheet
-#from steelpy.f2uModel.plot.model import PlotModel
+from steelpy.process.spreadsheet.main import Spreadsheet
+#from steelpy.vibration.main import Vibration
 
 # constants
 __major__ = 0.  # for major interface/format changes

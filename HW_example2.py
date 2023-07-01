@@ -8,14 +8,12 @@ from steelpy import Units
 #
 units = Units()
 #
-# Pass Asset ID from user interface (python trigger)
-assetId = 17
+#
+#
+###########################################################
+#
 # Pass Equipment ID from user interface (python trigger)
 equipmentId = "143"
-# Pass metocean Criteria ID from user interface (python trigger)
-metoceancriteriaId = 112
-# print('')
-# print (_metoceancriteriaId)
 #
 ###########################################################
 # Start conceptual modelling
@@ -27,13 +25,23 @@ concept = f2u_model.concept()
 # -----------------------------------
 # Read data from spreadsheet
 ss = Spreadsheet()
-wb = ss.read_book("Clair Caisson C3 Test Data HW v0 25-Aug-2020.xlsx")
+wb = ss.read_book("Clair Caisson C3 Test Data HW v1 26-June-2023.xlsx")
 sheets = wb.sheet_names
 print(sheets)
 #
 # -----------------------------------
+# Asset Data
+#
+ws = wb.sheets["Asset"]
+asset = ws.to_df()
+#print(asset)
+asset['WaterDepth_m'] *= units.m
+asset['DeckElevation_m'] *= units.m
+AssetID = dict(zip(asset['AssetID'], asset['WaterDepth_m']))
+#
+# -----------------------------------
 # Define boundary conditions
-
+#
 ws = wb.sheets["Caisson Supports"]
 # get data as dataframe
 data = ws.to_df()
@@ -44,9 +52,9 @@ bc = data[["NodeNo", "x", "y", "z", "Support Fixity"]].copy()
 bc.rename(columns={"NodeNo": "name", "Support Fixity": "support"},
           inplace=True)
 #bc['units'] = "metre"
-bc["x"] = bc["x"] * units.m
-bc["y"] = bc["y"] * units.m
-bc["z"] = bc["z"] * units.m
+bc["x"] *= units.m
+bc["y"] *= units.m
+bc["z"] *= units.m
 #print(bc.tabulate())
 #
 # -----------------------------------
@@ -67,7 +75,7 @@ print(data)
 mat = data[["Yield"]].copy()
 mat["type"] = "elastic"
 mat["name"] = mat["Yield"].apply(lambda x: f"mat_{str(x)}")
-mat["Yield"] = mat["Yield"] * units.MPa
+mat["Yield"] *= units.MPa
 mat.rename(columns={"Yield": "Fy"}, inplace=True)
 #
 # -----------------------------------
@@ -83,8 +91,8 @@ sect["type"] = 'tubular'
 #def naming(row):
 sect["name"] = sect.apply(lambda row: f"TUB_{str(row.OD)}x{str(row.WT)}", axis=1)
 print(sect)
-sect["OD"] = sect["OD"] * units.mm
-sect["WT"] = sect["WT"] * units.mm
+sect["OD"] *= units.mm
+sect["WT"] *= units.mm
 sect.rename(columns={"OD": "d", "WT": "tw"}, inplace=True)
 #
 concept.sections(df=sect)
@@ -121,17 +129,29 @@ load = concept.load()
 # define basic load
 basic = load.basic()
 # create new basic load
-basic[1] = 'dead load'
-basic[1].gravity = [0, -1* units.gravity, 0] #* units.gravity
+#basic[1] = 'Gravity load example'
+#basic[1].gravity = [0, -1* units.gravity, 0] #* units.gravity
 #
 # create new basic load
-basic[2] = 'Deck Load'
+basic[2] = 'Point load example'
 basic[2].point = [0* units.m, 5.0* units.m] #* units.m
-basic[2].point.load = {'fx': -1 * units.MN, 'name': "deck_1"} # nodal load in plane
+basic[2].point.load = {'fx': -1 * units.MN, 'name': "deck_2"} # nodal load in plane
 #
-#basic[3] = 'wave load'
-#basic[3].line = [0* units.m, -42 * units.m], [0 * units.m, 2.0 * units.m]
-#basic[3].line.load = {'qx': -1 * units.kN/units.m, 'name': "SW"}
+#
+basic[3] = 'Beam load example'
+basic[3].beam = 'SECT143-1'
+
+basic[3].beam.point = {'fz': 2 * units.MN, 'L1': 3 * units.m,
+                       'name': "deck_3"}
+
+basic[3].beam.line = {'qx': -3 * units.kN/units.m, 'name': "wind_3"}
+#
+#
+#basic[4] = 'wave load'
+#1 / 0
+# box [point1, point2, width, height]
+#basic[4].box = [0* units.m, -42 * units.m], [0 * units.m, 2.0 * units.m]
+#basic[4].box.load = {'qx': -1 * units.kN/units.m, 'name': "SW"}
 #
 # -----------------------------------
 #
@@ -153,9 +173,29 @@ basic[2].point.load = {'fx': -1 * units.MN, 'name': "deck_1"} # nodal load in pl
 # Metocean criteria data
 #
 #
-#ws = wb.sheets["Metocean Criteria"]
-#met = ws.to_df()
-#print(met)
+Csheets = wb.sheets["Current Profile"]
+current = Csheets.to_df()
+current['HeightFromSeaBed_m'] *= units.m
+current['CurrentSpeed_ms'] *= units.m / units.sec
+
+#
+MGsheet = wb.sheets["Marine Growth"]
+mg = MGsheet.to_df()
+mg['TopElevation_m'] *= units.m
+mg['BottomElevation_m'] *= units.m
+mg['Thickness_mm'] *= units.m
+#
+#
+Msheet = wb.sheets["Metocean Criteria"]
+met = Msheet.to_df()
+print(met)
+met['StormSurge_m'] *= units.m
+met['StormTide_m'] *= units.m
+met['WaveHeightHmax_m'] *= units.m
+met['StormTide_m'] *= units.m
+met['CrestElevation_m'] *= units.m
+#
+met['WindSpeed_ms'] *= units.m / units.sec
 #
 #meto = Metocean()
 # Regular wave

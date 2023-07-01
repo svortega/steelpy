@@ -16,7 +16,7 @@ from .boundaries import Boundaries
 from .elements import Elements
 #
 from steelpy.process.dataframe.main import DBframework
-from .process.Kmatrix.assemble import assemble_Kmatrix_np, assemble_banded_Kmatrix
+from steelpy.f2uModel.mesh.process.main import Kmatrix
 #
 
 #
@@ -169,14 +169,7 @@ class Mesh:
         jbc= self._nodes.jbc(supports=self._boundaries._nodes)
         neq = self._nodes.neq(supports=self._boundaries._nodes)
         #
-        # Banded matrix
-        if solver == 'banded':
-            iband = self._elements.max_bandwidth(jbc=jbc)
-            aa =  assemble_banded_Kmatrix(elements=self._elements , jbc=jbc,
-                                          neq=neq, iband=iband)
-        else:
-            # numpy matrix
-            aa = assemble_Kmatrix_np(elements=self._elements, jbc=jbc, neq=neq)            
+        aa = Kmatrix(elements=self._elements, jbc=jbc, neq=neq, solver=solver)
         #
         if drop:
             with open("stfmx.f2u", "wb") as f:

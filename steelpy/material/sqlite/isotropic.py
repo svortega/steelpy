@@ -16,7 +16,7 @@ from steelpy.process.units.main import Units
 #from steelpy.process.units.buckingham import Number
 #from ..process.operations import
 from ..process.print_report import print_isomat
-from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table
+from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
 #
 from ..process.operations import get_isomat_prop, get_isomat_prop_df
 from ..process.mechanical import MaterialItem 

@@ -18,7 +18,7 @@ from steelpy.f2uModel.load.sqlite.basic_load import BasicLoadSQL
 from ..process.operations import duplicates, indices
 from ..process.combination import LoadCombinationBasic
 # steelpy
-from steelpy.f2uModel.mesh.process.process_sql import create_connection
+from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection
 from steelpy.process.dataframe.main import DBframework
 #
 #

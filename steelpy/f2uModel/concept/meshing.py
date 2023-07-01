@@ -220,7 +220,7 @@ class Meshing:
                         except RuntimeWarning:
                             continue # no load should be applied to this segment
                         # set load for mesh element
-                        print(f'Element: {bname} {Lbi:4.2f} {xi:4.2f} {qinp} {qoutp} {Li}')
+                        print(f'Element: {bname} --> {Lbi:4.2f} {xi:4.2f} {qinp} {qoutp} {Li}')
                         mlb_beam[bname].line = [qaxial[0], qinp[0], qoutp[0],
                                                 qaxial[1], qinp[1], qoutp[1],
                                                 Li[0], Li[1], lbload.title]
@@ -269,7 +269,7 @@ class Meshing:
                                                  point=point)
                                 break
         #
-        #print('--> end')
+        #print('--> end mesh loading')
     #
     #
     def _beam_pload(self, beam, pload,

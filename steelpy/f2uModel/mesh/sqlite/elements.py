@@ -17,7 +17,7 @@ import re
 #from steelpy.f2uModel.mesh.sqlite.nodes import get_node
 #from steelpy.material.matsql import get_materialSQL
 #from steelpy.sections.main import get_sectionSQL
-from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table
+from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
 #from steelpy.f2uModel.mesh.operations.elements  import (beam_Klocal, trans_3d_beam, Rmatrix)
 #from steelpy.f2uModel.mesh.operations.elements import BeamElementSQL
 from .beam import BeamSQL, get_connectivity

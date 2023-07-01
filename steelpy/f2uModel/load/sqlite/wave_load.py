@@ -27,7 +27,7 @@ from steelpy.process.math.operations import trns_3Dv
 #
 from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 # steelpy.f2uModel
-from steelpy.f2uModel.mesh.process.process_sql import (create_connection, create_table,
+from steelpy.f2uModel.mesh.sqlite.process_sql import (create_connection, create_table,
                                                        get_load_data, check_element)
 #
 from steelpy.f2uModel.load.process.beam import LineBeam, BeamLoad
@@ -42,7 +42,7 @@ from steelpy.process.dataframe.main import DBframework
 class WaveLoadItemSQL(BeamLoadItem):
     """ """
     __slots__ = ['_wave','_bd_file', '_name', '_load']
-    
+
     def __init__(self, load_name: int|str, bd_file:str):
         """ """
         super().__init__()
@@ -53,7 +53,7 @@ class WaveLoadItemSQL(BeamLoadItem):
         self._name = load_name
         #
         self._node_eq = BeamToNodeSQL(load_name=load_name, 
-                                        bd_file=bd_file)
+                                      bd_file=bd_file)
         #
         #self._load = BeamLoad()
         #
@@ -379,7 +379,7 @@ class WaveLoadItemSQL(BeamLoadItem):
     #
     # -----------------------------------------------
     #
-    def beam_load(self,steps:int = 10):
+    def beam_load(self, steps:int = 10):
         """ """
         conn = create_connection(self._bd_file)
         beamfun = defaultdict(list)		
@@ -396,7 +396,7 @@ class WaveLoadItemSQL(BeamLoadItem):
                 mat = beam.material
                 sec = beam.section.properties()
                 Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
-				#
+                #
                 for item in items.itertuples():
                     data = [item.qx1, item.qy1, item.qz1,
                             item.qx2, item.qy2, item.qz2,
@@ -410,7 +410,7 @@ class WaveLoadItemSQL(BeamLoadItem):
                                     Iy=sec.Iy, Iz=sec.Iy,
                                     J=sec.J, Cw=sec.Cw, Area=sec.area)
                     beamfun[key[0]].extend(lout)
-		#
+                #
         #print('---')
         return beamfun
     #

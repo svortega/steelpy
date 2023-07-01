@@ -10,7 +10,7 @@ import re
 
 # package imports
 # steelpy.f2uModel
-from steelpy.f2uModel.mesh.process.process_sql import (create_connection, create_table,
+from steelpy.f2uModel.mesh.sqlite.process_sql import (create_connection, create_table,
                                                        get_load_data, check_nodes)
 # steelpy.f2uModel.load
 from ..process.nodes import (NodeLoadBasic, NodeItem,

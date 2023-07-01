@@ -20,7 +20,7 @@ from steelpy.f2uModel.load.sqlite.wave_load import WaveLoadItemSQL
 #
 from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 # steelpy.f2uModel
-from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table
+from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
 #
 #import pandas as pd
 #

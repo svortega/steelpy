@@ -782,17 +782,21 @@ class BeamLoad:
         #
         return lnload
     #
-    def beam_function(self, steps:int = 10):
+    def beam_function(self, beams, steps:int = 10):
         """ """
-        beam = self._beam
-        mat = beam.material
-        sec = beam.section.properties()
+        #1 / 0
+        #beam = self._beam
+        #mat = beam.material
+        #sec = beam.section.properties()
         #
         beamfun = defaultdict(list)
-        Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
         #loadfun = []
         # line load
         for key, items in self._line.items():
+            beam = beams[key]
+            mat = beam.material
+            sec = beam.section.properties()
+            Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
             for bitem in items:
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
                                 E=mat.E, G=mat.G, 
@@ -809,6 +813,10 @@ class BeamLoad:
                 #    loadfun.append([bitem.name, 'local', key, *step])
         # point load
         for key, items in self._point.items():
+            beam = beams[key]
+            mat = beam.material
+            sec = beam.section.properties()
+            Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
             for bitem in items:
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
                                 E=mat.E, G=mat.G, 
@@ -826,15 +834,17 @@ class BeamLoad:
         #print('---')
         return beamfun #loadfun
     #
-    def fer(self):
+    def fer(self, beams):
         """ """
         """Beam reacition global system according to boundaries
         """
         b2n = []
-        beam = self._beam
+        #beam = self._beam
         global_system = 0
         # line loadreactions
         for key, item in self._line.items():
+            beam = beams[key]
+            node1, node2 = beam.nodes
             #print(f'line load {key}')
             for bload in item:
                 res = bload.fer_beam(L=beam.L)
@@ -842,9 +852,11 @@ class BeamLoad:
                 gnload = [*res[4], *res[5]]
                 lnload = trns_3Dv(gnload, beam.T)
                 b2n.append([bload.load_name, bload.title, global_system, 
-                            key, lnload[:6], lnload[6:]])
+                            beam.number, node1.number, lnload[:6], node2.number, lnload[6:]])
         # point load
         for key, item in self._point.items():
+            beam = beams[key]
+            node1, node2 = beam.nodes
             #print(f'point load {key}')
             for bload in item:
                 res = bload.fer_beam(L=beam.L)
@@ -853,7 +865,7 @@ class BeamLoad:
                 #b2n.append([bload, item.name, item.title])
                 #b2n.append(res)
                 b2n.append([bload.load_name, bload.title, global_system, 
-                            key, lnload[:6], lnload[6:]])
+                            beam.number, node1.number, lnload[:6], node2.number, lnload[6:]])
         #
         #1 / 0
         #return [r1[:4], r1[4:]], [r2[:4], r2[4:]]
@@ -871,7 +883,7 @@ class BeamLoad:
 #
 # ---------------------------------
 #
-# Beam fix end formulas
+# Beam fixed end formulas
 #
 # ---------------------------------
 #

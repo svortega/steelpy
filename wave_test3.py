@@ -94,9 +94,8 @@ meto = Metocean()
 # ----------------------------------------------------
 #
 #
-hydro = meto.hydrodynamic()
 #
-mg = hydro.marine_growth()
+mg = meto.marine_growth()
 mg['MG_1'] = "profile"
 mg['MG_1'].level[1] = [ 10 * units.m, 60 * units.mm]
 mg['MG_1'].level[2] = [ 00 * units.m, 60 * units.mm]
@@ -105,9 +104,9 @@ mg['MG_1'].level[4] = [-50 * units.m, 10 * units.mm]
 mg['MG_1'].level[5] = [-100 * units.m, 0 * units.mm]
 mg['MG_1'].set_default()
 #
-#mg['MG_2'] = "constant"
-#mg['MG_2'].thickness = 100 * units.mm
-#mg['MG_2'].elements = 12, 23
+mg['MG_2'] = "constant"
+mg['MG_2'].thickness = 100 * units.mm
+mg['MG_2'].elements = 12, 23
 #
 #
 #cdcm = hydro.CdCm

@@ -13,19 +13,14 @@ import re
 
 
 # package imports
-#from ....process.units.buckingham import Number
-#from steelpy.f2uModel.load.operations.operations import get_beam_load
-#from ..process.operations import (check_point_dic, check_list_units,
-#                                  check_beam_dic,  
-#                                  get_beam_node_load, get_beam_udl_load)
-from steelpy.f2uModel.mesh.process.process_sql import  check_nodes
+from steelpy.f2uModel.mesh.sqlite.process_sql import  check_nodes
 # steelpy.f2uModel.load
 from ..process.beam import (LineBeam, PointBeam,
                             BeamDistMaster,
                             BeamLoadItem, BeamLoad)
 from ..process.nodes import NodeLoadBasic, PointNode
 # steelpy.
-from steelpy.f2uModel.mesh.process.process_sql import (create_connection, create_table,
+from steelpy.f2uModel.mesh.sqlite.process_sql import (create_connection, create_table,
                                                        get_load_data, check_element)
 from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 #
@@ -97,7 +92,7 @@ class BeamLoadItemSQL(BeamLoadItem):
         return self._load(beam=beam)
     #
     #
-    def fer(self):
+    def fer(self, beams):
         """ Return Fix End Reactions (FER) global system"""
         conn = create_connection(self._bd_file)
         with conn:
@@ -106,28 +101,18 @@ class BeamLoadItemSQL(BeamLoadItem):
         #
         ipart = ['NULL', 'NULL', 'NULL','NULL', 'NULL', 'NULL']
         res =[]
-        for key in set(self._labels):
-            beam =  BeamItemSQL(key, self._bd_file)
-            #end_nodes = beam.connectivity
-            node1, node2 = beam.nodes
-            res1 = self._load(beam=beam).fer()
-            #for gnload in res:
-            #    self._node_eq[key] = [[end_nodes[0], *gnload[4], gnload[1], gnload[2]],
-            #                          [end_nodes[1], *gnload[5], gnload[1], gnload[2]]]
-            #
-            for gnload in res1:
-                try:
-                    1 / gnload[2]
-                    raise RuntimeError('node load in local system')
-                except ZeroDivisionError:
-                    load_system = 'global'
+        res1 = self._load.fer(beams)
+        for gnload in res1:
+            try:
+                1 / gnload[2]
+                raise RuntimeError('node load in local system')
+            except ZeroDivisionError:
+                load_system = 'global'
                 #
-                res = [[load_number, gnload[1], load_system, beam.number, node1.number, *gnload[4], *ipart],
-                       [load_number, gnload[1], load_system, beam.number, node2.number, *gnload[5], *ipart]]
+            res.extend([[load_number, gnload[1], load_system, gnload[3], gnload[4], *gnload[5], *ipart],
+                        [load_number, gnload[1], load_system, gnload[3], gnload[6], *gnload[7], *ipart]])
         #print('--> get_end_forces')
-        #1 / 0
         if res:
-            #conn = create_connection(self._bd_file)
             with conn:  
                 self._node_eq._push_node_load(conn, res)
     #
@@ -680,8 +665,7 @@ class BeamToNodeSQL(NodeLoadBasic):
                         AND tb_LoadBeamToNode.node_number = tb_Nodes.number \
                         AND tb_LoadBeamToNode.element_number = tb_Elements.number \
                         AND tb_Load.name = {:};".format(self._name))
-        #
-        rows = cur.fetchall()
+            rows = cur.fetchall()
         #
         cols = ['load_name', 'load_type', 'node_name', 'element_name', 
                 'load_comment', 'load_system',

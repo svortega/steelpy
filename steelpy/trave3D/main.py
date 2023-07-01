@@ -10,7 +10,7 @@ from __future__ import annotations
 # package imports
 #from steelpy.f2uModel.results.main import Results
 # steelpy.trave3D
-from .preprocessor.mass import form_mass
+#from .preprocessor.mass import form_mass
 from .processor.dynamic_solver import eigen, trnsient
 from .processor.static_solver import solve_deflections
 from .postprocessor.main import Results

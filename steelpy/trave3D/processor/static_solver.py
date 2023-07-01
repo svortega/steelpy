@@ -8,8 +8,8 @@ from copy import copy
 from math import fsum
 import pickle
 #from typing import List #, NamedTuple, Union
-from itertools import chain
-import time
+#from itertools import chain
+#import time
 #
 # package imports
 from steelpy.process.math.operations import to_matrix #, zeros_vector, matAbd, trns_3Dv
@@ -30,6 +30,7 @@ def BAK(a: list[float], b: list[float]) -> list:
     """
     back substitution
     """
+    #neq, iband = np.shape(a)
     neq = len(a)
     iband = len(a[0])
     wk = copy(b)
@@ -38,14 +39,19 @@ def BAK(a: list[float], b: list[float]) -> list:
         j = max(i - iband + 1, 0)
         wk[i] -= fsum([a[k][i - k] * wk[k]
                        for k in range(j, i)])
+        #
+        #wk[i] -= np.sum(a[j: i, i - j: 0] * wk[j: i])
     # middle terms
     wk = array('d', [wk[i] / a[i][0] for i in range(neq)])
+    #wk = wk[:neq] / a[:neq, 0]
     #wkk = copy(wk)
     # backward substitution
     for i in range(neq - 1, -1, -1):
         j = min(i + iband, neq)
         wk[i] -= fsum([a[i][k - i] * wk[k]
                        for k in range(i+1, j)])
+        #
+        #wk[i] -= np.sum(a[i, 1: j - i] * wk[i+1: j])
     #
     return wk
 #

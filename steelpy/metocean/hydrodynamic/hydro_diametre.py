@@ -6,7 +6,7 @@
 from __future__ import annotations
 from array import array
 #import logging
-from typing import NamedTuple, Tuple, List, Iterator, Dict, Union
+from typing import NamedTuple #, Tuple, List, Iterator, Dict, Union
 from collections.abc import Mapping
 
 # package imports
@@ -50,10 +50,10 @@ class HydroDiametre(Mapping):
     def __init__(self) -> None:
         """
         """
-        self._label : List[int] = array('I', [])
-        self._title : List[Union[float, int, str]] = []
-        self._diameter : List[float] = array('f', [])
-        self.sets : Dict[Union[float, int, str], Tuple] = {}
+        self._label : array = array('I', [])
+        self._title : list[float|int|str] = []
+        self._diameter : array = array('f', [])
+        self.sets : dict = {}
     
     def __getitem__(self, parameter_name):
         """
@@ -89,7 +89,7 @@ class HydroDiametre(Mapping):
         return len(self._title)
 
     
-    def __iter__(self) -> Iterator[Tuple]:
+    def __iter__(self):
         return iter(self._title)
     
     def __contains__(self, value) -> bool:

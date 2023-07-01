@@ -9,7 +9,7 @@ import re
 #
 
 # package imports
-from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table
+from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
 #
 from .angle import AngleSQLite
 from .tubular import TubularSQL

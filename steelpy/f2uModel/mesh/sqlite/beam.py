@@ -18,7 +18,7 @@ from itertools import groupby
 from math import dist
 
 # package imports
-from steelpy.f2uModel.mesh.process.process_sql import create_connection, check_nodes
+from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, check_nodes
 #from steelpy.beam.main import BasicCalcs
 from .nodes import get_node #, NodeSQL
 from steelpy.sections.sqlite.main import get_section #, SectionSQL

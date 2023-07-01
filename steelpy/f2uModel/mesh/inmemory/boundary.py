@@ -10,7 +10,7 @@ import re
 
 
 # package imports
-from ..process.elements.boundary import BoundaryNode, BoundaryItem
+from steelpy.f2uModel.mesh.process.boundary import BoundaryNode, BoundaryItem
 
 #
 class BoundaryNodes(BoundaryNode):

@@ -256,8 +256,8 @@ blbeam[25].line = [0, -50_000, 0,  0, -50_000, 0,
 #blbeam[2].line = [0, 0, -10_000, 0, 0, -10_000,
 #                  0, 0, 'validation']
 #
-#blbeam[25].point = [5, 0, -10_000, 0,
-#                    'validation_point']
+blbeam[25].point = [5, 0, -10_000, 0,
+                    'validation_point']
 #
 #blbeam[2].line = [0, 2, -480_000, 'snow load on roof']
 ##basic[2].udl_beam[2] = [-10_000_000, 0, 0]

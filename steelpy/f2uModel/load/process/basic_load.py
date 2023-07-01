@@ -133,8 +133,9 @@ class BasicLoadBasic(Mapping):
     def process(self, elements, steps:int):
         """process element load"""
         #
-        load_func = {}
+        beams = elements.beams()
         #dftemp = []
+        load_func = {}
         for name in self._labels:
             lcase = self.__getitem__(name)
             #
@@ -148,7 +149,8 @@ class BasicLoadBasic(Mapping):
             for key, items in beamload.items():
                 try:
                     1/(len(items.line) + len(items.point))
-                    bfunc.update(items.beam_function(steps=steps))
+                    bfunc.update(items.beam_function(beams=beams,
+                                                     steps=steps))
                 except ZeroDivisionError:
                     continue
             #
@@ -157,14 +159,10 @@ class BasicLoadBasic(Mapping):
             # -------------------------------
             #
             waveload = lcase.wave()
-            waveload.beam_load()
-            #for key, items in waveload.items():
-                #try:
-               #1/len(items.line())
-                #bfunc.update(items.beam_function(steps=steps))
-                #except ZeroDivisionError:
-                #continue
-
+            bfunc.update(waveload.beam_load(steps=steps))
+            #wload = waveload.beam_load(steps=steps)
+            #if wload:
+            #    bfunc.update(wload)
             #
             # -------------------------------
             #
@@ -189,15 +187,17 @@ class BasicLoadBasic(Mapping):
         return load_func
     #
     #
-    def FER(self):
+    def FER(self, elements):
         """Convert element load to global fixed end reactions"""
+        #
+        beams = elements.beams()
         load_name = list(self.keys())
         for lname in load_name:
             lcase = self.__getitem__(lname)
             # -------------------------------
             # beam line load (line & point)
             # -------------------------------
-            lcase._beam.fer()
+            lcase._beam.fer(beams=beams)
             # -------------------------------
             # plates
             # -------------------------------
@@ -252,9 +252,9 @@ class BasicLoadBasic(Mapping):
             # -------------------------------
             # wave load (line & point)  
             #
-            df2 = lcase._wave._node_eq.df
-            if not df2.empty:
-                dftemp = update_df(dftemp, df2, lcase.number, lcase.title)
+            #df2 = lcase._wave._node_eq.df
+            #if not df2.empty:
+            #    dftemp = update_df(dftemp, df2, lcase.number, lcase.title)
         #
         dftemp = dftemp.reindex(columns=['load_name', 'load_number', 'load_type',
                                          'load_title', 'load_comment', 'load_system',

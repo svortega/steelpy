@@ -225,7 +225,7 @@ class f2uModel:
         self._mesh._load._basic.wave_process()
         #
         # TODO : remove second _load for simplification
-        self._mesh._load._basic.FER()        
+        self._mesh._load._basic.FER(elements= self._mesh._elements)        
         #
         #
         print('end meshing')

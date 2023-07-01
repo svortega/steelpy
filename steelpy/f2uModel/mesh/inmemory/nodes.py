@@ -15,8 +15,8 @@ import re
 # steelpy
 #from ....process.units.main import Units
 # steelpy.f2uModel.mesh
-from ..process.elements.nodes import (check_point_list, check_point_dic, 
-                                      get_coordinate_system, NodeBasic)
+from steelpy.f2uModel.mesh.process.nodes import (check_point_list, check_point_dic, 
+                                                 get_coordinate_system, NodeBasic)
 # steelpy.f2uModel.mesh
 #from ..inmemory.boundary import BoundaryNodes
 #

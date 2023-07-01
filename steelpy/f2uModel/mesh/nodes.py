@@ -15,7 +15,7 @@ import itertools as it
 # steelpy.f2uModel.mesh
 from .sqlite.nodes import NodeSQL
 from .inmemory.nodes import NodesIM
-from .process.elements.nodes import node_renumbering
+from .process.nodes import node_renumbering
 #
 from steelpy.process.math.operations import zeros, to_matrix
 from steelpy.process.dataframe.main import DBframework

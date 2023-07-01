@@ -9,8 +9,8 @@ from typing import NamedTuple
 
 
 # package imports
-from ..process.elements.boundary import BoundaryItem, BoundaryNode
-from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table, check_nodes
+from steelpy.f2uModel.mesh.process.boundary import BoundaryItem, BoundaryNode
+from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table, check_nodes
 
 #
 #

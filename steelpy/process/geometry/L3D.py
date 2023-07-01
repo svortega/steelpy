@@ -8,7 +8,7 @@ from dataclasses import dataclass
 # from typing import NamedTuple, Tuple, Union, List, Dict, Iterator
 
 # package imports
-from steelpy.f2uModel.mesh.process.elements.nodes import CoordCartesian as Point
+from steelpy.f2uModel.mesh.process.nodes import CoordCartesian as Point
 
 # from point import Point
 # from euclid import Point3 as Point

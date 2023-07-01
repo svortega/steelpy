@@ -10,10 +10,10 @@ from typing import NamedTuple
 # package imports
 #from steelpy.process.units.main import Units
 # steelpy.f2uModel.mesh
-from ..process.elements.nodes import (check_point_list, check_point_dic, 
-                                      get_coordinate_system, NodeBasic)
+from steelpy.f2uModel.mesh.process.nodes import (check_point_list, check_point_dic, 
+                                                 get_coordinate_system, NodeBasic)
 # steelpy
-from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table
+from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
 
 
 
@@ -182,6 +182,7 @@ class NodeSQL(NodeBasic):
         """ """
         indexes = [self._labels.index(node_name) 
                    for node_name in new_numbers]
+        indexes = [(val, j + 1, ) for j, val in enumerate(indexes)]
         conn = create_connection(self.db_file)
         with conn:
             update_colum(conn, colname='idx', newcol=indexes)
@@ -191,6 +192,7 @@ class NodeSQL(NodeBasic):
             #nodes = [nodes[indx][1:] for indx in indexes]
             #update_table(conn, nodes)
             #conn.commit()
+        #print('-->?')
     #
     #def update_number(self, node_name:int, value:Union[float,int]):
     #    """ """
@@ -315,9 +317,9 @@ def push_nodes(conn, nodes):
 #
 def update_colum(conn, colname: str, newcol: list):
     """update entire column values"""
-    sql = f'UPDATE tb_Nodes SET {colname} = ?'
+    sql = f'UPDATE tb_Nodes SET {colname} = ? WHERE rowId = ?'
     cur = conn.cursor()
-    cur.executemany(sql, ((val,) for val in newcol))
+    cur.executemany(sql, newcol)
 #    
 #
 #
