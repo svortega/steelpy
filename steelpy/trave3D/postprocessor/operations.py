@@ -85,103 +85,103 @@ def get_deflection(nodes, basic_load, load_combination,
 #
 def updape_ndf(dfnode, dfcomb, 
                values:list[str]): #['x', 'y', 'z', 'rx', 'ry', 'rz']
-        """
-        Update node displacements to include lcomb
-        """
-        db = DBframework()
-        # group basic load by name
-        ndgrp = dfnode.groupby('load_name')
-        # get combinations with basic loads 
-        #
-        combgrp = dfcomb.groupby('load_name')
-        for key, combfactors in combgrp:
-            for row in combfactors.itertuples():
-                comb = ndgrp.get_group(row.basic_load).copy()
-                comb.loc[:, values] *= row.factor
-                comb['load_type'] = 'combination'
-                comb['load_name'] = row.load_name
-                comb['load_number'] = row.load_number
-                comb['load_title'] = row.load_title
-                #
-                try:
-                    dftemp = db.concat([dftemp, comb], ignore_index=True)
-                except UnboundLocalError:
-                    dftemp = comb
+    """
+    Update node displacements to include lcomb
+    """
+    db = DBframework()
+    # group basic load by name
+    ndgrp = dfnode.groupby('load_name')
+    # get combinations with basic loads 
+    #
+    combgrp = dfcomb.groupby('load_name')
+    for key, combfactors in combgrp:
+        for row in combfactors.itertuples():
+            comb = ndgrp.get_group(row.basic_load).copy()
+            comb.loc[:, values] *= row.factor
+            comb['load_type'] = 'combination'
+            comb['load_name'] = row.load_name
+            comb['load_number'] = row.load_number
+            comb['load_title'] = row.load_title
             #
-            #check = dftemp.groupby(['node_name', 'c']).sum().reset_index()
-            comb = dftemp.groupby(['load_name', 'load_number','load_type',
-                                   'load_title', 'load_system','node_name'],
-                                    as_index=False)[values].sum()
-            #test
-            dfnode = db.concat([dfnode, comb], ignore_index=True)
+            try:
+                dftemp = db.concat([dftemp, comb], ignore_index=True)
+            except UnboundLocalError:
+                dftemp = comb
         #
-        return dfnode #, memb_comb
+        #check = dftemp.groupby(['node_name', 'c']).sum().reset_index()
+        comb = dftemp.groupby(['load_name', 'load_number','load_type',
+                               'load_title', 'load_system','node_name'],
+                                as_index=False)[values].sum()
+        #test
+        dfnode = db.concat([dfnode, comb], ignore_index=True)
+    #
+    return dfnode #, memb_comb
 #
 #
 def updape_memberdf(dfmemb, dfcomb, 
                      values:list[str]):
-        """
-        Update node displacements to include lcomb
-        """
-        db = DBframework()
-        # group basic load by name
-        grp = dfmemb.groupby('load_name')
-        combgrp = dfcomb.groupby('load_name')
-        for key, combfactors in combgrp:
-            for row in combfactors.itertuples():
-                comb = grp.get_group(row.basic_load).copy()
-                comb.loc[:, values] *= row.factor
-                comb['load_type'] = 'combination'
-                comb['load_name'] = row.load_name
-                comb['load_number'] = row.load_number
-                comb['load_title'] = row.load_title
-                #
-                try:
-                    dftemp = db.concat([dftemp, comb], ignore_index=True)
-                except UnboundLocalError:
-                    dftemp = comb
+    """
+    Update node displacements to include lcomb
+    """
+    db = DBframework()
+    # group basic load by name
+    grp = dfmemb.groupby('load_name')
+    combgrp = dfcomb.groupby('load_name')
+    for key, combfactors in combgrp:
+        for row in combfactors.itertuples():
+            comb = grp.get_group(row.basic_load).copy()
+            comb.loc[:, values] *= row.factor
+            comb['load_type'] = 'combination'
+            comb['load_name'] = row.load_name
+            comb['load_number'] = row.load_number
+            comb['load_title'] = row.load_title
             #
-            comb = dftemp.groupby(['load_name', 'load_number','load_type',
-                                   'load_title', 'load_system',
-                                   'element_name' ,'node_name'],
-                                    as_index=False)[values].sum()
-            #test
-            dfmemb = db.concat([dfmemb, comb], ignore_index=True)
+            try:
+                dftemp = db.concat([dftemp, comb], ignore_index=True)
+            except UnboundLocalError:
+                dftemp = comb
         #
-        return dfmemb
+        comb = dftemp.groupby(['load_name', 'load_number','load_type',
+                               'load_title', 'load_system',
+                               'element_name' ,'node_name'],
+                                as_index=False)[values].sum()
+        #test
+        dfmemb = db.concat([dfmemb, comb], ignore_index=True)
+    #
+    return dfmemb
 #
 #
 def updape_memberdf2(dfmemb, dfcomb, 
                      values:list[str]):
-        """
-        Update node displacements to include lcomb
-        """
-        db = DBframework()
-        # group basic load by name
-        grp = dfmemb.groupby('load_name')
-        combgrp = dfcomb.groupby('load_name')
-        for key, combfactors in combgrp:
-            for row in combfactors.itertuples():
-                comb = grp.get_group(row.basic_load).copy()
-                comb.loc[:, values] *= row.factor
-                comb['load_type'] = 'combination'
-                comb['load_name'] = row.load_name
-                comb['load_number'] = row.load_number
-                comb['load_title'] = row.load_title
-                #
-                try:
-                    dftemp = db.concat([dftemp, comb], ignore_index=True)
-                except UnboundLocalError:
-                    dftemp = comb
+    """
+    Update node displacements to include lcomb
+    """
+    db = DBframework()
+    # group basic load by name
+    grp = dfmemb.groupby('load_name')
+    combgrp = dfcomb.groupby('load_name')
+    for key, combfactors in combgrp:
+        for row in combfactors.itertuples():
+            comb = grp.get_group(row.basic_load).copy()
+            comb.loc[:, values] *= row.factor
+            comb['load_type'] = 'combination'
+            comb['load_name'] = row.load_name
+            comb['load_number'] = row.load_number
+            comb['load_title'] = row.load_title
             #
-            comb = dftemp.groupby(['load_name', 'load_number','load_type',
-                                   'load_title', 'load_system',
-                                   'element_name' ,'node_end'],
-                                    as_index=False)[values].sum()
-            #test
-            dfmemb = db.concat([dfmemb, comb], ignore_index=True)
+            try:
+                dftemp = db.concat([dftemp, comb], ignore_index=True)
+            except UnboundLocalError:
+                dftemp = comb
         #
-        return dfmemb
+        comb = dftemp.groupby(['load_name', 'load_number','load_type',
+                               'load_title', 'load_system',
+                               'element_name' ,'node_end'],
+                                as_index=False)[values].sum()
+        #test
+        dfmemb = db.concat([dfmemb, comb], ignore_index=True)
+    #
+    return dfmemb
 #
 #
 #
@@ -189,7 +189,7 @@ def updape_memberdf2(dfmemb, dfcomb,
 # 
 # -----------------------------------------------------------
 #
-def beam_end_force(elements, basic_load, df_ndisp, df_nload):
+def beam_end_forceX(elements, basic_load, df_ndisp, df_nload):
     """Convert node displacement to beam end forces [F = Kd]"""
     # get jbc
     #file = open("stfmx.f2u", "rb")
@@ -288,12 +288,82 @@ def beam_end_force(elements, basic_load, df_ndisp, df_nload):
     return df_nforce
 #
 #
+def beam_end_force(elements, df_ndisp,
+                   m2D:bool = False):
+    """Convert node displacement to beam end forces [F = Kd]"""
+    ndof:int = 6
+    headdisp = ['node_name','x', 'y', 'z', 'rx', 'ry', 'rz']
+    headforce = ['node_name','Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+    
+    if m2D:
+        ndof:int = 3
+        headdisp = ['node_name','x', 'y', 'rz']
+        headforce = ['node_name','Fx', 'Fy', 'Mz']
+        #dummyf = np.array([0]*3)
+    #
+    dummyf = np.array([0]*ndof)
+    dispgrp = df_ndisp.groupby(['load_name', 'load_number', 'load_title',
+                                'load_type', 'load_system'])
+    #
+    ntest = []
+    for key, item in dispgrp:
+        df1 = item[headdisp]
+        df1.set_index('node_name', inplace=True)
+        #
+        for mname, element in elements.items():
+            nodes = element.connectivity
+            #
+            #bload = beamload[mname]
+            # ---------------------------------------------
+            # get beam end-node displacement in global system
+            ndisp = []
+            for node in nodes:
+                try:
+                    ndisp.append(df1.loc[node])
+                except KeyError:
+                    ndisp.append(dummyf)
+            gndisp = np.concatenate(ndisp, axis=None)
+            #gndisp = np.concatenate((df1.loc[nodes[0]],
+            #                         df1.loc[nodes[1]]), axis=None)
+            #
+            # ---------------------------------------------
+            # convert beam end-node disp to force [F = Kd] in global system
+            gnforce = mtxmul(element.K(m2D=m2D), gndisp)
+            # ---------------------------------------------
+            #
+            ntest.append([*key, mname, nodes[0], *gnforce[:ndof]])
+            ntest.append([*key, mname, nodes[1], *gnforce[ndof:]])
+    #
+    # get df 
+    db = DBframework()
+    header: list[str] = ['load_name', 'load_number', 'load_title',
+                         'load_type', 'load_system', 
+                         'element_name', *headforce]
+    df_nforce = db.DataFrame(data=ntest, columns=header, index=None)
+    return df_nforce
+#
+#
+# -----------------------------------------------------------
+# 
+# -----------------------------------------------------------
+#
+#
 def beam_force(elements, basic_load,
                df_ndisp, df_nforce,
-               steps:int = 10):
+               steps:int = 10,
+               m2D:bool = False):
     """get beam forces for basic loads"""
-    #
     print("** Calculating Member Forces")
+    #
+    ndof:int = 6
+    headforce = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+    headdisp = ['node_name', 'x', 'y', 'z', 'rx', 'ry', 'rz']
+    if m2D:
+        ndof:int = 3
+        #df_jbc = df_jbc[['x', 'y', 'rz']]
+        headforce = ['Fx', 'Fy', 'Mz']
+        headdisp = ['node_name','x', 'y', 'rz']   
+    #
     bload_func = basic_load.process(elements=elements, steps=steps)
     #    
     ndgrp = df_ndisp.groupby(['load_name', 'load_number', 'load_type', 'load_title'])
@@ -301,14 +371,13 @@ def beam_force(elements, basic_load,
     #
     Fblank = [0, 0, 0, 0]
     Fblank_t = [0, 0, 0, 0, 0]
-    dummyf = np.array([0]*6)
+    dummyf = np.array([0]*ndof)
     #
     member_load: list = []
     #ndbasic = ndgrp.get_group('basic')
     for key, noded in ndgrp:
         #
-        ndisp = noded[['node_name', 'x', 'y', 'z',
-                       'rx', 'ry', 'rz']]
+        ndisp = noded[headdisp]
         ndisp.set_index('node_name', inplace=True)        
         #
         # get elements
@@ -348,20 +417,22 @@ def beam_force(elements, basic_load,
             #
             # convert global end-node disp in beam's local system
             #lndisp = beam.transformation(vector=gndisp)
-            lndisp = trns_3Dv(gndisp, member.T)
+            lndisp = trns_3Dv(gndisp, member.T(m2D=m2D))
+            #Tlg = member.T(m2D=m2D)
+            #lndisp2 = (np.transpose(Tlg).dot(gndisp)).dot(Tlg)
             # displacement end 0
-            lndisp0 = lndisp[:6]
+            lndisp0 = lndisp[:ndof]
             #lndisp1 = lndisp[6:]
             #
             # --------------------------------------------
             # convert beam end-node disp to force [F = Kd] in global system
             #gnforce2 = mtxmul(a=member.K, b=gndisp)
             # FIXME : select node by number
-            gnforce = np.concatenate(nodef[['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']].values)
+            gnforce = np.concatenate(nodef[headforce].values)
             # covert global nodal force in beam's local system
-            lnforce = trns_3Dv(gnforce, member.T)
+            lnforce = trns_3Dv(gnforce, member.T(m2D=m2D))
             # force end 0
-            lnforce0 = lnforce[:6]
+            lnforce0 = lnforce[:ndof]
             #
             # set beam to general response expresions --> R0
             # [V, M, theta, w]
@@ -442,8 +513,4 @@ def beam_force(elements, basic_load,
                          'F_phix', 'F_thetay', 'F_thetaz']]
     return df_membf
 #
-#
-# -----------------------------------------------------------
-# 
-# -----------------------------------------------------------
 #

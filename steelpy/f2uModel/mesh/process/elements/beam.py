@@ -12,9 +12,10 @@ from collections.abc import Mapping
 # package imports
 from steelpy.process.geometry.L3D import (DistancePointLine3D,
                                           LineLineIntersect3D)
-from steelpy.f2uModel.mesh.process.elements.bstiffness import (beam_Klocal, trans_3d_beam,
+from steelpy.f2uModel.mesh.process.elements.bstiffness import (beam3D_Klocal, trans_3d_beam,
                                                                Rmatrix, Rmatrix_new,
-                                                               trans3Dbeam, beam_stiffness)
+                                                               trans3Dbeam, beam3D_K)
+from steelpy.f2uModel.mesh.process.elements.bstiffness2D import (beam2D_K, beam2D_Geom, Rmatrix2D)
 #
 import numpy as np
 from numpy.linalg import inv
@@ -67,34 +68,48 @@ class BeamItemBasic:
         #self._intersect = LineLineIntersect3D()
     #
     #
-    @property
-    def T(self):
+    #@property
+    def T(self, m2D:bool = False):
         """
         Returns the transformation matrix for the member
         """
-        #if self.type in ['beam', 'truss']:
-        return Rmatrix(*self.unit_vector, self.beta)
-        #else:
-        #    raise IOError("no yet included")    
+        if m2D:
+            # Element length and orientation
+            node1,  node2 = self.nodes
+            Tlg = Rmatrix2D(node1, node2)
+            return Tlg
+        else:
+            #if self.type in ['beam', 'truss']:
+            return Rmatrix(*self.unit_vector, self.beta)
+            #else:
+            #    raise IOError("no yet included")    
     #
-    @property
-    def K(self):
+    #@property
+    def K(self, m2D:bool = False):
         """
+        m2d : Matrix 2D (False default --> 3D) 
+        
         Return the stiffness matrix in global coordinates
         """
-        k = self.k()
-        #
-        #
-        #self.beta = 30
-        #disb = self.R
-        #node1 = self._cls._f2u_nodes[self._cls._connectivity[self.index][0]]
-        #node2 = self._cls._f2u_nodes[self._cls._connectivity[self.index][-1]]
-        #dirc = Rmatrix_new(node1[:3], node2[:3], self.beta)
-        #xxx = trans3Dbeam(K, node1[:3], node2[:3])
-        #return trans3Dbeam(K, node1[:3], node2[:3])
-        #return trans_3d_beam(K, dirc)
-        return trans_3d_beam(k, self.T)
-        #return self.trans3d(K)    
+        if m2D:
+            Kl = self.k2D()
+            Tlg =  self.T(m2D=m2D)
+            Kg = (np.transpose(Tlg).dot(Kl)).dot(Tlg)
+            return Kg
+        else:
+            k = self.k3D()
+            #
+            #
+            #self.beta = 30
+            #disb = self.R
+            #node1 = self._cls._f2u_nodes[self._cls._connectivity[self.index][0]]
+            #node2 = self._cls._f2u_nodes[self._cls._connectivity[self.index][-1]]
+            #dirc = Rmatrix_new(node1[:3], node2[:3], self.beta)
+            #xxx = trans3Dbeam(K, node1[:3], node2[:3])
+            #return trans3Dbeam(K, node1[:3], node2[:3])
+            #return trans_3d_beam(K, dirc)
+            return trans_3d_beam(k, self.T())
+            #return self.trans3d(K)    
     #
     def _partition(self, unp_matrix):
         """
@@ -150,8 +165,51 @@ class BeamItemBasic:
         return k_condensed
     #
     #
+    def k3D(self):
+        """Returns the condensed (and expanded) local stiffness matrix for the member"""
+        # get section properties 
+        section = self.section
+        #section = self._cls._f2u_sections[section]
+        section = section.properties()
+        # get material properties
+        material = self.material
+        #material = self._cls._f2u_materials[material]        
+        #
+        #
+        # solve K matrix
+        #Kb = beam3D_Klocal(self.L,
+        #                    self.area, self.J,
+        #                    self.Iy, self.Iz,
+        #                    self.E, self.G,
+        #                    self.area, self.area)
+        #        
+        kb = beam3D_K(self.L,
+                      section.area, section.J,
+                      section.Iy, section.Iz,
+                      material.E, material.G)
+        #
+        k_cond = self._k_unc(kb)
+        return k_cond
+        #return K
     #
-    @property
+    #
+    def k2D(self, beta:int=0):
+        """
+        """
+        # get section properties 
+        section = self.section
+        #section = self._cls._f2u_sections[section]
+        section = section.properties()
+        # get material properties
+        material = self.material
+        #
+        k_cond =beam2D_K(L=self.L, 
+                         A=section.area, I=section.Iz, 
+                         E=material.E, beta=beta)
+        return k_cond
+    #
+    # Mass
+    #@property
     def Km(self):
         """
         """
@@ -168,34 +226,6 @@ class BeamItemBasic:
             raise IOError("no yet included")     
     #  
     #
-    #
-    def k(self):
-        """Returns the condensed (and expanded) local stiffness matrix for the member"""
-        # get section properties 
-        section = self.section
-        #section = self._cls._f2u_sections[section]
-        section = section.properties()
-        # get material properties
-        material = self.material
-        #material = self._cls._f2u_materials[material]        
-        #
-        #
-        # solve K matrix
-        #Kb = beam_Klocal(self.L,
-        #                    self.area, self.J,
-        #                    self.Iy, self.Iz,
-        #                    self.E, self.G,
-        #                    self.area, self.area)
-        #        
-        kb = beam_stiffness(self.L,
-                            section.area, section.J,
-                            section.Iy, section.Iz,
-                            material.E, material.G)
-        #
-        k_condensed = self._k_unc(kb)
-        return k_condensed
-        #return K
-    #    
     # Geometry
     #
     def intersect_point(self, point:list):

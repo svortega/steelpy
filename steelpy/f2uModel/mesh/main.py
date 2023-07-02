@@ -4,6 +4,7 @@
 # Python stdlib imports
 from __future__ import annotations
 import pickle
+import re
 #
 
 # package imports
@@ -58,20 +59,30 @@ class Mesh:
         self._df = DBframework()
         self._Kmatrix = False
     #
-    def nodes(self, values:None|list=None,
+    def nodes(self, values:None|list|tuple=None,
               df=None):
         """
         """
         supports = self._boundaries.supports()
         #if values:
-        if isinstance(values, list):
-            for value in values:
-                self._nodes[value[0]] = value[1:4]
+        if isinstance(values, (list,tuple)):
+            if isinstance(values[0], (list,tuple)):
+                for value in values:
+                    self._nodes[value[0]] = value[1:4]
+                    try:
+                        if isinstance(value[4], str):
+                            supports[value[0]] = value[4]
+                        else:
+                            supports[value[0]] = value[4:]
+                    except IndexError:
+                        pass
+            else:
+                self._nodes[values[0]] = values[1:4]
                 try:
-                    #if isinstance(value[4], str):
-                    #    supports[value[0]] = value[4]
-                    #else:
-                    supports[value[0]] = value[4:]
+                    if isinstance(values[4], str):
+                        supports[values[0]] = values[4]
+                    else:
+                        supports[values[0]] = values[4:]
                 except IndexError:
                     pass
         #
@@ -85,14 +96,16 @@ class Mesh:
         return self._nodes
 
     #
-    def elements(self, values:None|list=None,
+    def elements(self, values:None|list|tuple=None,
                  df=None):
         """
         """
-        if isinstance(values, list):
-        #if values:
-            for value in values:
-                self._elements[value[0]] = value[1:]
+        if isinstance(values, (list, tuple)):
+            if isinstance(values[0], (list,tuple)):
+                for value in values:
+                    self._elements[value[0]] = value[1:]
+            else:
+                self._elements[values[0]] = values[1:]
         #
         #
         # dataframe input
@@ -103,14 +116,16 @@ class Mesh:
             pass
         return self._elements
     #
-    def boundaries(self, values:None|list=None,
+    def boundaries(self, values:None|list|tuple=None,
                    df=None):
         """
         """
-        #if values:
-        if isinstance(values, list):
-            for item in values:
-                self._boundaries[item[0]] = item[1:]
+        if isinstance(values, (list, tuple)):
+            if isinstance(values[0], (list,tuple)):
+                for item in values:
+                    self._boundaries[item[0]] = item[1:]
+            else:
+                self._boundaries[values[0]] = values[1:]
         #
         # dataframe input
         try:
@@ -121,13 +136,26 @@ class Mesh:
         #
         return self._boundaries
     #
-    def load(self, values:None|list=None,
+    def load(self, values:None|list|tuple=None,
              df=None):
         """
         """
-        if isinstance(values, list):
-            for item in values:
-                item
+        if isinstance(values, (list, tuple)):
+            if isinstance(values[0], (list,tuple)):
+                for item in values:
+                    if re.match(r"\b(basic(\_)?(load)?)\b", item[0], re.IGNORECASE):
+                        self._load.basic(item[1:])
+                    elif re.match(r"\b(comb(ination)?(\_)?(load)?)\b", item[0], re.IGNORECASE):
+                        self._load.combination(item[1:])
+                    else:
+                        raise IOError(f'load {item[0]}')
+            else:
+                if re.match(r"\b(basic(\_)?(load)?)\b", values[0], re.IGNORECASE):
+                    self._load.basic(values[1:])
+                elif re.match(r"\b(comb(ination)?(\_)?(load)?)\b", values[0], re.IGNORECASE):
+                    self._load.combination(values[1:])
+                else:
+                    raise IOError(f'load {values[0]}')                
         #
         # dataframe input
         try:
@@ -160,16 +188,20 @@ class Mesh:
     # --------------------
     #
     def K(self, solver: str|None = None, log: bool = False,
-          drop: bool = True):
+          drop: bool = True, m2D:bool = False):
         """Returns the model's global stiffness matrix.
         
         Solver: numpy/banded/sparse
         """
-        #
-        jbc= self._nodes.jbc(supports=self._boundaries._nodes)
+        # get data
+        jbc = self._nodes.jbc(supports=self._boundaries._nodes)
         neq = self._nodes.neq(supports=self._boundaries._nodes)
         #
-        aa = Kmatrix(elements=self._elements, jbc=jbc, neq=neq, solver=solver)
+        if m2D:
+            jbc = jbc[['x', 'y', 'rz']]        
+        #
+        aa = Kmatrix(elements=self._elements, jbc=jbc, neq=neq,
+                     solver=solver, m2D=m2D)
         #
         if drop:
             with open("stfmx.f2u", "wb") as f:

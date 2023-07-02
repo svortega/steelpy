@@ -320,25 +320,34 @@ class LoadTypeBasic:
     #    return self._node
 
     #@node.setter
-    def node(self, values:list|None=None):
+    def node(self, values:tuple|list|None=None,
+             df=None):
         """ """
         #
-        if isinstance(values, list):
-            if isinstance(values[0], list):
+        if isinstance(values, (list, tuple)):
+            if isinstance(values[0], (list, tuple)):
                 for value in values:
                     self._node[value[0]] = value[1:]
             else:
                 self._node[values[0]] = values[1:]
         #
+        # dataframe input
+        try:
+            df.columns
+            #1/0
+            self._node.df(df)
+        except AttributeError:
+            pass        
+        #
         return self._node
 
     #
     #@beam.setter
-    def beam(self, values:list|None=None,
+    def beam(self, values:tuple|list|None=None,
              df=None):
         """ """
-        if isinstance(values, list):
-            if isinstance(values[0], list):
+        if isinstance(values, (list, tuple)):
+            if isinstance(values[0], (list, tuple)):
                 for value in values:
                     #try:
                     #    self._f2u_beams[value[0]]

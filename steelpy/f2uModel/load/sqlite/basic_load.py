@@ -4,9 +4,6 @@
 
 # Python stdlib imports
 from __future__ import annotations
-#from array import array
-#from collections.abc import Mapping
-#from dataclasses import dataclass
 #from typing import NamedTuple
 #import re
 
@@ -18,7 +15,7 @@ from steelpy.f2uModel.load.sqlite.beam import BeamLoadItemSQL
 from steelpy.f2uModel.load.sqlite.node import  NodeLoadItemSQL
 from steelpy.f2uModel.load.sqlite.wave_load import WaveLoadItemSQL
 #
-from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
+#from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 # steelpy.f2uModel
 from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
 #

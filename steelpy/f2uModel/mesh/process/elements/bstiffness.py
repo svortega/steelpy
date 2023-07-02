@@ -27,9 +27,9 @@ def cross3(a: list, b: list):
     return Vector(c)
 #
 #
-def beam_stiffness(length: float, 
-                   area:float, J:float, Iy:float, Iz:float,
-                   Emod:float, Gmod:float):
+def beam3D_K(length: float, 
+             area:float, J:float, Iy:float, Iz:float,
+             Emod:float, Gmod:float):
     """
     Calculate the beam element stiffness matrix
     length, J, Iy, Iz, area, Emod, Gmod
@@ -248,7 +248,7 @@ def trans_3d_beam(ek: list, r_matrix: list):
 #
 # ---------------------------------------------
 #
-def beam_Klocal(length: float, 
+def beam3D_Klocal(length: float, 
             area:float, J:float, Iy:float, Iz:float,
             Emod:float, Gmod:float, 
             areasy:float, areasz:float):

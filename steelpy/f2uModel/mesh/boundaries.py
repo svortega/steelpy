@@ -41,7 +41,10 @@ class Boundaries:
                                   b_type=boundary_type)
         #
         if re.match(r"\b(support(s)?|constrain(s)?)\b", boundary_type, re.IGNORECASE):
-            self._nodes[boundary_name] = values[1:]
+            if isinstance(values[1], str):
+                self._nodes[boundary_name] = values[1]
+            else:
+                self._nodes[boundary_name] = values[1:]
         #elif 'curve' == boundary_type :
         #    raise Exception('--> Mat type No ready')
         else:

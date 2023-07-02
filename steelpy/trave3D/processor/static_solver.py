@@ -87,9 +87,12 @@ def solver_np(stf, nloads):
 # ---------------------------------------------
 #
 #
-def solve_deflections(df_nload, method: str): 
+def solve_deflections(df_nload, method: str,
+                      m2D:bool = False): 
     """
+    m2D: 2D Marix (False default)
     """
+    #
     print("** Calculating Joint Displacements")
     print("** reloaded [k] & {p}")    
     #
@@ -98,15 +101,25 @@ def solve_deflections(df_nload, method: str):
     stf = pickle.load( file )
     file.close()
     #
+    #
+    ndof:int = 6
+    headforce = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+    headdisp = ['x', 'y', 'z', 'rx', 'ry', 'rz']
+    if m2D:
+        ndof:int = 3
+        #df_jbc = df_jbc[['x', 'y', 'rz']]
+        headforce = ['Fx', 'Fy', 'Mz']
+        headdisp = ['x', 'y', 'rz']
+    #
     solver = solver_np
     if method == 'banded':
         solver = solver_Mbanded
     #
     jbcc = df_jbc.stack()
-    dfbool, dfzeros = get_mask(df_jbc)
+    dfbool, dfzeros = get_mask(df_jbc, m2D=m2D)
     #dfbool = dfjbc.stack()
     #
-    dfnload = update_load(df_nload)
+    dfnload = update_load(df_nload, headforce)
     blgrp = dfnload.groupby(['load_name', 'load_number', 
                              'load_type','load_system'])
     #
@@ -115,36 +128,41 @@ def solve_deflections(df_nload, method: str):
         # map loading 
         df1 = litem.set_index(litem['node_name'])
         df2 = dfzeros.copy()
-        df2.loc[df2.index.isin(df1['node_name'])] = df1[['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']]
+        df2.loc[df2.index.isin(df1['node_name'])] = df1[headforce]
         # get load vector flatted
         df2 = df2.stack()
         nloads = df2[dfbool]
         #df2.mask(dfjbc, other=df2, inplace=True)
         #nloads = df2.stack()
         # Solve displcements
-        ndisp = solver(stf, nloads)
+        ndisp = iter(solver(stf, nloads))
         # reshape vector in matrix form [row, col]
         #xxx = df2.mask(dfjbc, other=df2)
-        ndisp = [ndisp[ieqnum - 1] if ieqnum != 0 else ieqnum
+        #ndisp = [ndisp[ieqnum - 1] if ieqnum != 0 else ieqnum
+        #         for ieqnum in jbcc]
+        ndisp = [next(ndisp) if ieqnum != 0 else ieqnum
                  for ieqnum in jbcc]
         #1/0
-        ndisp = to_matrix(ndisp, 6)
+        ndisp = to_matrix(ndisp, ndof)
         filldata = [[*key,  litem['load_title'].iloc[0],
                     nname, *ndisp[x]]
                     for x, nname in enumerate(df_jbc.index)]
         #
         dftemp.extend(filldata)
     #
-    df_ndisp = get_dfdisp(dftemp)
+    df_ndisp = get_dfdisp(dftemp, headdisp)
     print("** Finished Calculating Joint Displacements")
     return df_ndisp, df_nload
 #
 #
-def get_mask(df_jbc):
+def get_mask(df_jbc, m2D:bool = False):
     """ """
+    cols =  {'x':'Fx', 'y':'Fy', 'z':'Fz',
+             'rx':'Mx', 'ry':'My', 'rz':'Mz'}
+    if m2D:
+        cols = {'x':'Fx', 'y':'Fy','rz':'Mz'}
     # remove rows with zeros
-    dfjbc = df_jbc.rename(columns={'x':'Fx', 'y':'Fy', 'z':'Fz',
-                           'rx':'Mx', 'ry':'My', 'rz':'Mz'}) # , inplace=True
+    dfjbc = df_jbc.rename(columns=cols) # , inplace=True
     dfjbc = dfjbc[df_jbc.any(axis=1)]
     dfjbc = dfjbc.replace(0, np.nan)
     dfjbc = dfjbc.notnull()
@@ -158,20 +176,20 @@ def get_mask(df_jbc):
     #
     return dfbool, dfjbc
 #
-def update_load(df_nload):
+def update_load(df_nload, headforce):
     """ """
     dfnload = (df_nload.groupby(['load_name', 'load_number', 'load_type',
                                  'load_title','load_system', 'node_name'])
-             [['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']].sum())
+               [headforce].sum())
     #
     dfnload.reset_index(inplace=True)
     return dfnload
 #
-def get_dfdisp(dftemp):
+def get_dfdisp(dftemp, headdisp):
     """ """
     db = DBframework()
     header = ['load_name', 'load_number', 'load_type',
               'load_system', 'load_title',
-              'node_name', 'x', 'y', 'z', 'rx', 'ry', 'rz']
+              'node_name', *headdisp]
     return db.DataFrame(data=dftemp, columns=header, index=None)
         

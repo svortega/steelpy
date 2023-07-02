@@ -16,9 +16,9 @@ from operator import sub, add
 # package imports
 # steelpy.f2uModel.mesh.
 
-from steelpy.f2uModel.mesh.process.elements.bstiffness import (beam_Klocal, trans_3d_beam,
-                                                               Rmatrix, Rmatrix_new,
-                                                               trans3Dbeam, beam_stiffness)
+#from steelpy.f2uModel.mesh.process.elements.bstiffness import (beam_Klocal, trans_3d_beam,
+#                                                               Rmatrix, Rmatrix_new,
+#                                                               trans3Dbeam, beam_stiffness)
 #
 #from ...process.beam.beam_sol import BeamBasic
 #from steelpy.formulas.pilkey.main import BasicBeam

@@ -7,11 +7,12 @@ from __future__ import annotations
 
 # package imports
 #steelpy.f2uModel.mesh
-from steelpy.f2uModel.mesh.process.mtxassemble.Kassemble import assemble_Kmatrix_np, assemble_banded_Kmatrix
+from steelpy.f2uModel.mesh.process.matrix.Kassemble import assemble_Kmatrix_np, assemble_banded_Kmatrix
 #
 #
 
-def Kmatrix(elements, jbc, neq, solver: str|None = None):
+def Kmatrix(elements, jbc, neq, solver: str|None = None,
+            m2D:bool = False):
     """ """
     
     # Banded matrix
@@ -21,7 +22,7 @@ def Kmatrix(elements, jbc, neq, solver: str|None = None):
                                       neq=neq, iband=iband)
     else:
         # numpy matrix
-        aa = assemble_Kmatrix_np(elements=elements, jbc=jbc, neq=neq)
+        aa = assemble_Kmatrix_np(elements=elements, jbc=jbc, neq=neq, m2D=m2D)
     #
     return aa
 #

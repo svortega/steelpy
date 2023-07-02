@@ -612,7 +612,7 @@ class BeamLoad:
             # local nodal loading
             nload = [*udl[:3], 0, 0, 0,
                      *udl[3:6], 0, 0, 0,]
-            nload = trns_3Dv(nload, self._beam.T)
+            nload = trns_3Dv(nload, self._beam.T())
             nload = [*nload[:3], *nload[6:9]] 
             return [*nload, *udl[6:], 1, title]
     #
@@ -669,7 +669,7 @@ class BeamLoad:
             return [*point, 1, title]
         except ZeroDivisionError:
             pload = point[:6]
-            pload = trns_3Dv(pload, self._beam.T)
+            pload = trns_3Dv(pload, self._beam.T())
             return [*pload, point[6], 1, title]
     #
     # ------------------
@@ -800,7 +800,7 @@ class BeamLoad:
             for bitem in items:
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
                                 E=mat.E, G=mat.G, 
-                                Iy=sec.Iy, Iz=sec.Iy,
+                                Iy=sec.Iy, Iz=sec.Iz,
                                 J=sec.J, Cw=sec.Cw, Area=sec.area)
                 beamfun[key].extend(lout)
                 #
@@ -820,7 +820,7 @@ class BeamLoad:
             for bitem in items:
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
                                 E=mat.E, G=mat.G, 
-                                Iy=sec.Iy, Iz=sec.Iy,
+                                Iy=sec.Iy, Iz=sec.Iz,
                                 J=sec.J, Cw=sec.Cw, Area=sec.area)
                 #beamfun[key].append([bitem.name, lout])
                 beamfun[key].extend(lout)
@@ -850,7 +850,7 @@ class BeamLoad:
                 res = bload.fer_beam(L=beam.L)
                 # local to global system
                 gnload = [*res[4], *res[5]]
-                lnload = trns_3Dv(gnload, beam.T)
+                lnload = trns_3Dv(gnload, beam.T())
                 b2n.append([bload.load_name, bload.title, global_system, 
                             beam.number, node1.number, lnload[:6], node2.number, lnload[6:]])
         # point load
@@ -861,7 +861,7 @@ class BeamLoad:
             for bload in item:
                 res = bload.fer_beam(L=beam.L)
                 gnload = [*res[4], *res[5]]
-                lnload = trns_3Dv(gnload, beam.T)
+                lnload = trns_3Dv(gnload, beam.T())
                 #b2n.append([bload, item.name, item.title])
                 #b2n.append(res)
                 b2n.append([bload.load_name, bload.title, global_system, 

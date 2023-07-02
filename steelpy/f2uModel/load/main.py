@@ -52,37 +52,48 @@ class Load:
     #    return self._load._basic
 
     # @basic.setter
-    def basic(self, values: None | list = None,
+    def basic(self, values: None|list|tuple = None,
               df = None):
         """
         """
-        if isinstance(values, list):
-            number = len(self._load._basic) #+ 1
-            for item in values:
-                name = item[0]
+        if isinstance(values, (list, tuple)):
+            number = len(self._basic) #+ 1
+            if isinstance(values[0], (list,tuple)):
+                for item in values:
+                    name = item[0]
+                    try:
+                        index = self._labels.index(name)
+                        number = self._number[index]
+                    except ValueError:
+                        number += 1
+                        self._basic[number] = name
+                        self._number.append(number)
+                        self._labels.append(name)
+                    #
+                    if re.match(r"\b(node(s)?|point(s)?)\b", item[1], re.IGNORECASE):
+                        self._basic[number].node(item[2:])
+                    
+                    elif re.match(r"\b(beam(s)?)\b", item[1], re.IGNORECASE):
+                        self._basic[number].beam(item[2:])
+                    
+                    else:
+                        raise IOError(f"Basic load type {item[1]} not available")
+            else:
+                name = values[0]
                 try:
                     index = self._labels.index(name)
                     number = self._number[index]
                 except ValueError:
                     number += 1
-                    self._load.basic[number] = name
-                    #self._load._basic[name] = item[0]
+                    self._basic[number] = name
                     self._number.append(number)
                     self._labels.append(name)
                 #
-                if re.match(r"\b(node(s)?|point(s)?)\b", item[1], re.IGNORECASE):
-                    #print('node')
-                    #self._load.basic[number].node[item[2]] = item[3:]
-                    self._basic[number].node(item[2:])
+                if re.match(r"\b(node(s)?|point(s)?)\b", values[1], re.IGNORECASE):
+                    self._basic[number].node(values[2:])
                 
-                elif re.match(r"\b(beam(s)?)\b", item[1], re.IGNORECASE):
-                    #1/0
-                    #print('beam')
-                    #self._load.basic[number].beam[item[2]] = item[3:]
-                    self._basic[number].beam(item[2:])
-                
-                else:
-                    raise IOError(f"Basic load type {item[1]} not available")
+                elif re.match(r"\b(beam(s)?)\b", values[1], re.IGNORECASE):
+                    self._basic[number].beam(values[2:])                
         #
         # dataframe input
         try:
@@ -100,7 +111,7 @@ class Load:
         """
         """
         if isinstance(values, list):
-            number = len(self._load.combination)
+            number = len(self._combination)
             for item in values:
                 name = item[0]
                 try:

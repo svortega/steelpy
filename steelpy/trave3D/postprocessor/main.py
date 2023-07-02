@@ -8,7 +8,7 @@ import pickle
 
 #
 # package imports
-# steelpy.f2uModel.results
+# steelpy.trave3D.postprocessor
 from .operations import (get_reactions, beam_end_force, beam_force,
                          updape_ndf, updape_memberdf, updape_memberdf2)
 from .output import ResultInmemory
@@ -83,8 +83,7 @@ class Results:
         df_nload = load._df_nodal
         #
         # get beam end node forces
-        df_nforce = beam_end_force(elements, basic_load,
-                                   df_ndisp, df_nload)
+        df_nforce = beam_end_force(elements, df_ndisp)
         #
         # -----------------------------------
         # get beam force along lenght 

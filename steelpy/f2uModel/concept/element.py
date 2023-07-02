@@ -409,13 +409,20 @@ class Beam(Element):
         uv = list(map(sub, node2[:3], node1[:3]))
         return [item / L for item in uv]        
     #
-    @property
-    def T(self):
+    #@property
+    def T(self, m2D:bool = False):
         """
         Returns the transformation matrix for the member
         """
-        #if self.type in ['beam', 'truss']:
-        return Rmatrix(*self.unit_vector, self.beta)    
+        if m2D:
+            # Element length and orientation
+            #node1,  node2 = self.nodes
+            #Tlg = Rmatrix2D(node1, node2)
+            #return Tlg
+            raise NotImplementedError()
+        else:        
+            #if self.type in ['beam', 'truss']:
+            return Rmatrix(*self.unit_vector, self.beta)    
 #
 #
 class ConceptElements(Mapping):

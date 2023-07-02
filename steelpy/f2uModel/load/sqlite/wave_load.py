@@ -350,7 +350,7 @@ class WaveLoadItemSQL(BeamLoadItem):
                     gnload = load.fer_beam(L=beam.L)
                     # load local system to global 
                     gnload = [*gnload[4], *gnload[5]]
-                    lnload = trns_3Dv(gnload, beam.T)
+                    lnload = trns_3Dv(gnload, beam.T())
                     #
                     res.extend([[item.load_number, item.load_comment, 
                                  'global', beam.number,

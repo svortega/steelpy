@@ -4,10 +4,6 @@
 
 # Python stdlib imports
 from __future__ import annotations
-#from array import array
-#from collections.abc import Mapping
-#from collections import defaultdict
-#from dataclasses import dataclass
 #from typing import NamedTuple, Tuple, List, Union, Iterable, Dict
 import re
 

@@ -4,17 +4,11 @@
 from __future__ import annotations
 #
 # Python stdlib imports
-#import itertools as it
-#from itertools import chain
-#import pickle
 import time
 #from multiprocessing import Process, Manager
 
 # package imports
-#from steelpy.process.math.operations import to_matrix, zeros, transposeM
-#from steelpy.trave3D.processor.operations import shape_cond
 import numpy as np
-#import pandas as pd
 
 #
 #
@@ -28,17 +22,23 @@ import numpy as np
 # Solution using numpy
 #
 #
-def assemble_Kmatrix_np(elements, jbc, neq):
+def assemble_Kmatrix_np(elements, jbc, neq,
+                        m2D: bool=False):
     """
     Asseable the element matrices
     -------------------------------------------------
-    aa : stiffness matrix
+    Ka : stiffness matrix
     jbc : nodes freedom
+    m2D : 2D matrix
     """
     print("** Processing Global [K] Matrix")
     start_time = time.time()
-    #aa, jbc = get_Kmatrix_np(elements, nodes, boundaries)
-    aa = form_Kmatrix_np(elements, jbc)
+    #
+    #if m2D:
+    #    jbc = jbc[['x', 'y', 'rz']]
+    #
+    nn = len(jbc)
+    Ka = form_Kmatrix_np(elements, nn, m2D=m2D)
     #
     #jbcc = list(it.chain.from_iterable(jbc))
     jbcc = jbc.stack().values
@@ -47,7 +47,7 @@ def assemble_Kmatrix_np(elements, jbc, neq):
                            if item == 0]))
     #
     for i in index:
-        aa = remove_column_row(aa, i, i) 
+        Ka = remove_column_row(Ka, i, i) 
     #
     #
     #
@@ -70,7 +70,7 @@ def assemble_Kmatrix_np(elements, jbc, neq):
     #
     uptime = time.time() - start_time
     print("** [K] assembly Finish Process Time: {:1.4e} sec".format(uptime))
-    return aa
+    return Ka
 #
 #
 def remove_column_row(a: list, row: float, col: int):
@@ -79,35 +79,36 @@ def remove_column_row(a: list, row: float, col: int):
     return np.delete(without_row, col, axis=1)
 #
 #
-def form_Kmatrix_np(elements, jbc):
+def form_Kmatrix_np(elements, nn:int,
+                    m2D:bool = False):
     """
-    elements
-    jbc : node equations
-
+    Global system stiffness matrix 
+    
+    elements : 
+    nn  : node number
+    m2D : Matrix 2D (False default --> 3D)
     :return
-    a : global stiffness matrix
+    Ka : global stiffness matrix
     """
-    ndof:int = 6    # nodal degrees of freedom
-    # global system stiffness matrix
-    nn = len(jbc)
-    aa = np.zeros((nn*ndof, nn*ndof), dtype=np.float64)
+    #nodal degrees of freedom per node 
+    ndof:int = 6
+    if m2D:
+        ndof:int = 3
+    Ka = np.zeros((nn*ndof, nn*ndof), dtype=np.float64)
     for key, element in elements.items():
-        # FIXME
-        #beam = element.beam()
-        #keg = np.array(beam.Kglobal)
-        keg = np.array(element.K)
+        # TODO : check applicable to all element type
+        keg = np.array(element.K(m2D=m2D))
         idof, jdof = element.DoF
         # node and corresponding dof (start, finish), used to define the
         # elements of the system stiffness and force matrices
         niqi, niqj = idof*ndof, idof*ndof + ndof
         njqi, njqj = jdof*ndof, jdof*ndof + ndof
         # assemble global stiffness matrix, quadrant 1 to 4
-        aa[niqi:niqj, niqi:niqj] += keg[:6, :6]         # 2nd
-        aa[niqi:niqj, njqi:njqj] += keg[:6, 6:12]       # 1st
-        aa[njqi:njqj, niqi:niqj] += keg[6:12, :6]       # 3rd
-        aa[njqi:njqj, njqi:njqj] += keg[6:12, 6:12]     # 4th
-    #
-    return aa
+        Ka[niqi:niqj, niqi:niqj] += keg[:ndof, :ndof]             # 2nd
+        Ka[niqi:niqj, njqi:njqj] += keg[:ndof, ndof:2*ndof]       # 1st
+        Ka[njqi:njqj, niqi:niqj] += keg[ndof:2*ndof, :ndof]       # 3rd
+        Ka[njqi:njqj, njqi:njqj] += keg[ndof:2*ndof, ndof:2*ndof] # 4th
+    return Ka
 #
 #
 def remove_column_of_zeros_and_shift_row(a, row, col):
@@ -130,10 +131,6 @@ def swap_row(arr, start_index, last_index):
 #
 #
 #
-#
-# ---------------------------------------------
-# 
-# ---------------------------------------------
 #
 #
 #
@@ -218,12 +215,8 @@ def max_bandwidth(elements,  jbc):
     """
     #TODO : plates 
     ibndm4 = [0]
-    for key, element in elements.items():
-        #idof, jdof = element.DoF
-        #bc1 = jbc[idof]
-        #bc2 = jbc[jdof]        
+    for key, element in elements.items():        
         nodes = element.connectivity
-        #for node in nodes:
         bc1 = jbc.loc[nodes[0]].tolist()
         bc2 = jbc.loc[nodes[1]].tolist()
         ieqn = bc1 + bc2
@@ -250,10 +243,8 @@ def form_Kmatrix(elements, jbc:list, neq:int, iband:int):
     for key, element in elements.items():
         #idof, jdof = element.DoF
         nodes = element.connectivity
-        # FIXME: beam here?
-        #beam = element.beam()
-        #a = beam.Kglobal
-        a = element.K
+        # TODO : check applicable to all element type
+        a = element.K()
         #ipv = jbc[idof] + jbc[jdof]
         bc1 = jbc.loc[nodes[0]].tolist()
         bc2 = jbc.loc[nodes[1]].tolist()        
@@ -264,28 +255,22 @@ def form_Kmatrix(elements, jbc:list, neq:int, iband:int):
 #
 # ---------------------
 #
-#
-#
 def assemble_banded_Kmatrix(elements, jbc, neq, iband):
     """
     Asseable the element matrices in upper band form;
     call separatly from formstif, formmass, formgeom
     -------------------------------------------------
-    aa : stiffness matrix
+    Ka : stiffness matrix
     jbc : nodes freedom
     """
     print("** Processing Global [K] Banded Matrix")
     start_time = time.time()
     #
-    #iband = max_bandwidth(elements=elements, jbc=jbc)
-    #
-    #aa, jbc = get_Kmatrix(elements, nodes, boundaries=boundaries)
-    aa = form_Kmatrix(elements, jbc=jbc, neq=neq, iband=iband)
-    #
-    # set matrix
-    aa = UDUt(aa)
+    Ka = form_Kmatrix(elements, jbc=jbc, neq=neq, iband=iband)
+    # set UDUt matrix
+    Ka = UDUt(Ka)
     #
     uptime = time.time() - start_time
     print("** [Kb] assembly Finish Process Time: {:1.4e} sec".format(uptime))
-    return aa
+    return Ka
 #

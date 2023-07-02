@@ -23,7 +23,7 @@ from steelpy.process.dataframe.main import DBframework
 #
 #
 class NodeLoadItemSQL(Mapping):
-    __slots__ = ['_name', '_labels', 'node_load', '_type', 
+    __slots__ = ['_name', '_labels', '_node', '_type', 
                  '_bd_file']
     
     def __init__(self, load_name: int|float, bd_file: str) -> None:
@@ -31,7 +31,7 @@ class NodeLoadItemSQL(Mapping):
         """
         self._bd_file = bd_file
         self._name = load_name
-        self.node_load = NodeItemSQL(self._name, self._bd_file)
+        self._node = NodeItemSQL(self._name, self._bd_file)
         #
         self._labels = []
         self._type = []        
@@ -54,27 +54,22 @@ class NodeLoadItemSQL(Mapping):
             raise IOError(f"Node {node_name} not found")         
         #
         # set element load        
-        load_type = node_load[0]
+        load_type = node_load.pop(0)
         #load_number = next(self.get_number())
         self._labels.append(node_number)
         #
-        if isinstance(point_load[-1], str):
-            load_title = point_load[-1]
-            point_load.pop()
-        else:
-            load_title = 'NULL'
+        #if isinstance(node_load[-1], str):
+        #    load_title = node_load[-1]
+        #    node_load.pop()
+        #else:
+        #    load_title = 'NULL'
         #
         #
         bd_file = self._bd_file
         conn = create_connection(bd_file)        
         #
         if re.match(r"\b(point|load|node)\b", load_type, re.IGNORECASE):
-            #
-            point_load = get_nodal_load(point_load)
-            # push to SQL
-            with conn:
-                self._push_load(conn, node_number, load_title, point_load)
-                conn.commit()
+            self._node._load[node_number] = node_load
         
         elif re.match(r"\b(mass)\b", load_type, re.IGNORECASE):
             raise NotImplementedError(f'node mass')
@@ -98,7 +93,7 @@ class NodeLoadItemSQL(Mapping):
             if not node_name in self._labels:
                 self._labels.append(node_name)
             #
-            return self.node_load(node_name)            
+            return self._node(node_name)            
         except TypeError:
             raise IOError(f"Node {node_name} not found")         
         #1 / 0
@@ -135,7 +130,7 @@ class NodeLoadItemSQL(Mapping):
     def __str__(self, units: str = "si") -> str:
         """ """
         output = ""
-        output += self.node_load.__str__()
+        output += self._node.__str__()
         return output
     #    
     #
@@ -143,7 +138,7 @@ class NodeLoadItemSQL(Mapping):
     def load(self):
         """
         """
-        return self.node_load._load    
+        return self._node._load    
     #     
     #
     def _create_table(self, conn) -> None:
@@ -286,7 +281,7 @@ class NodeLoadSQL(NodeLoadBasic):
             title = point_load.pop()
             point_load = get_nodal_load(point_load)
         else:
-            self._title.append("NULL")
+            title = "NULL"
             point_load = get_nodal_load(point_load)
         #
         # Push to database

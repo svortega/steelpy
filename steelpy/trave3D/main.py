@@ -120,7 +120,7 @@ class Trave3D:
         #
         jbc, K = mesh.K(solver=method, log=log)
         #
-        #
+        # TODO: no change in df_nload?
         df_ndisp, df_nload = solve_deflections(df_nload, method)
         #
         load._df_nodal = df_nload
