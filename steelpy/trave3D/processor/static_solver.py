@@ -88,6 +88,7 @@ def solver_np(stf, nloads):
 #
 #
 def solve_deflections(df_nload, method: str,
+                      stf=None, jbc=None, 
                       m2D:bool = False): 
     """
     m2D: 2D Marix (False default)
@@ -96,10 +97,14 @@ def solve_deflections(df_nload, method: str,
     print("** Calculating Joint Displacements")
     print("** reloaded [k] & {p}")    
     #
-    file = open("stfmx.f2u", "rb")
-    df_jbc = pickle.load( file )
-    stf = pickle.load( file )
-    file.close()
+    if not stf:
+        file = open("stfmx.f2u", "rb")
+        df_jbc = pickle.load( file )
+        stf = pickle.load( file )
+        file.close()
+    else:
+        stf = stf
+        df_jbc = jbc
     #
     #
     ndof:int = 6
@@ -152,7 +157,7 @@ def solve_deflections(df_nload, method: str,
     #
     df_ndisp = get_dfdisp(dftemp, headdisp)
     print("** Finished Calculating Joint Displacements")
-    return df_ndisp, df_nload
+    return df_ndisp #, df_nload
 #
 #
 def get_mask(df_jbc, m2D:bool = False):

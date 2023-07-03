@@ -94,6 +94,15 @@ def trns_3Dv(gloads:list, r_matrix:list):
     return lloads
 #
 #
+def trns_2Dv(gloads:list, r_matrix:list):
+    """
+    Makes 3-d vector transformations.
+    """
+    #Tlg = member.T(m2D=m2D)
+    lloads = (np.transpose(r_matrix).dot(gloads)).dot(r_matrix)
+    #lndisp2 = np.matmul(np.matmul(np.linalg.inv(member.T()), gndisp), member.T())
+    return lloads
+#
 #
 def Tmatrix(Rmat):
     """

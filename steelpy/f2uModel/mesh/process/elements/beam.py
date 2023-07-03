@@ -204,7 +204,7 @@ class BeamItemBasic:
         material = self.material
         #
         k_cond =beam2D_K(L=self.L, 
-                         A=section.area, I=section.Iz, 
+                         A=section.area, I=section.Iy, 
                          E=material.E, beta=beta)
         return k_cond
     #

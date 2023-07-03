@@ -1,14 +1,7 @@
 # Import steelpy modules
 from steelpy import Units
 from steelpy import f2uModel
-#from steelpy import Trave3D
-#from steelpy.beam.frame2D.process.assembleK import assembleKa, get_Kf
-#from steelpy.beam.frame2D.process.assemble_f2u import solve_deflections
-#from steelpy.beam.frame2D.process.postprocess_f2u import beam_end_force
-# 
-from steelpy.trave3D.postprocessor.operations import beam_end_force,  beam_force
-from steelpy.f2uModel.mesh.process.matrix.Kassemble import assemble_Kmatrix_np
-from steelpy.trave3D.processor.static_solver import solve_deflections
+from steelpy import Trave2D
 #
 #
 units = Units()
@@ -89,9 +82,9 @@ mesh.elements([(1,  'beam',  1, 4, 10, 20, 0),
                (5,  'beam',  5, 6, 10, 20, 0),
                (6,  'beam',  4, 7, 10, 20, 0),
                (7,  'beam',  5, 8, 10, 20, 0),
-               (9,  'beam',  6, 9, 10, 20, 0),
-               (10, 'beam',  7, 8, 10, 20, 0),
-               (11, 'beam',  8, 9, 10, 20, 0)])
+               (8,  'beam',  6, 9, 10, 20, 0),
+               (9, 'beam',  7, 8, 10, 20, 0),
+               (10, 'beam',  8, 9, 10, 20, 0)])
 #
 print(mesh.elements().beams())
 #
@@ -135,6 +128,10 @@ basic = load.basic()
 #                [3, 'load', 0, -2_000_000_000, 'wind_2']])
 #
 #
+#basic[10] = 'Beam load'
+#basic[10].beam([[8, 'line', 0, -1000, 'udl_1'],
+#                [9, 'line', 0, -1000, 'udl_2'],
+#                [10, 'line', 0, -1000, 'udl_2']])
 #
 #
 basic[11] = 'Buckling Example'
@@ -168,35 +165,8 @@ f2umodel.build()
 # Structural Analysis
 # ----------------------------------------------------
 #
-nodes = mesh.nodes()
-boundaries = mesh.boundaries()
-elements = mesh.elements()
-beams = elements.beams()
-load = mesh.load()
-basic = load.basic()
-df_nload = basic.node_df()
-#
-#
-neq = nodes.neq(supports=boundaries._nodes)
-jbc = nodes.jbc(supports=boundaries._nodes)
-#Kf = assemble_Kmatrix_np(elements=elements, jbc=jbc, neq=neq, m2D=True)
-jbc, K = mesh.K(solver=False, log=False, m2D=True)
-#
-df_ndisp, df_nload = solve_deflections(df_nload, method=None, m2D=True)
-#
-df_nforce = beam_end_force(elements=elements, df_ndisp=df_ndisp, m2D=True)
-#
-# get beam end node forces
-# -----------------------------------
-# get beam force along lenght 
-df_membf = beam_force(elements, 
-                      basic_load=basic,
-                      df_ndisp=df_ndisp, 
-                      df_nforce=df_nforce,
-                      m2D=True)
-#
-#frame = Trave3D()
-#frame.mesh = mesh
-#results = frame.run_static(method = 'banded')
-#results.print()
+frame = Trave2D()
+frame.mesh = mesh
+results = frame.run_static()
+results.print()
 print('-->')

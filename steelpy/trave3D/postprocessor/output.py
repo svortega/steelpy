@@ -19,9 +19,13 @@ class Results(NamedTuple):
 # -------------------------
 #
 #
-def print_node_deflections(disp_result):
+def print_node_deflections(disp_result, m2D: bool):
     """
     """
+    disphead = ['x', 'y', 'z', 'rx', 'ry', 'rz']
+    if m2D:
+        disphead = ['x', 'y', 'rz']
+    #
     #ndgrp = disp_result.groupby(['load_type', 'load_name'])
     ndgrp = disp_result.groupby('load_type')
     #
@@ -37,8 +41,11 @@ def print_node_deflections(disp_result):
         header =  wk[['load_name', 'load_number', 'load_title', 'load_system']].values
         print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
               .format(*header[0]))
-        print("     node  x-disp     y-disp     z-disp     x-rot      y-rot      z-rot")
-        printout(wk.node_name, wk[['x', 'y', 'z', 'rx', 'ry', 'rz']].values)
+        if m2D:
+            print("     node     x [ m]     y [ m]   rz [rad]")
+        else:
+            print("     node     x [ m]     y [ m]     z [ m]   rx [rad]   ry [rad]   rz [rad]")
+        printout(wk.node_name, wk[disphead].values)
         print("")
     #
     # Combination
@@ -59,8 +66,11 @@ def print_node_deflections(disp_result):
             print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
                   .format(*header[0]))
             #
-            ndsum =  wk.groupby('node_name')[['x', 'y', 'z', 'rx', 'ry', 'rz']].sum()
-            print("     node  x-disp     y-disp     z-disp     x-rot      y-rot      z-rot")
+            ndsum =  wk.groupby('node_name')[disphead].sum()
+            if m2D:
+                print("     node     x [ m]     y [ m]   rz [rad]")
+            else:
+                print("     node     x [ m]     y [ m]     z [ m]   rx [rad]   ry [rad]   rz [rad]")
             printout(ndsum.index, ndsum.values)
             print("")
     except KeyError:
@@ -68,10 +78,13 @@ def print_node_deflections(disp_result):
     #
     #print('-->')
 #
-def print_node_reactions(reactions):
+def print_node_reactions(reactions, m2D: bool):
     """
     :return:
     """
+    forcehead = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+    if m2D:
+        forcehead = ['Fx', 'Fy', 'Mz']
     #
     nreacgrp =  reactions.groupby('load_type')
     #1 / 0
@@ -88,8 +101,11 @@ def print_node_reactions(reactions):
         print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
               .format(*header[0]))
         #
-        print("     node  x-force    y-force    z-force    x-moment   y-moment   z-moment")
-        printout(wk.node_name, wk[['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']].values)
+        if m2D:
+            print("     node    Fx [ N]    Fy [ N]  Mz[ N-m ]")
+        else:
+            print("     node    Fx [ N]    Fy [ N]    Fz [ N]  Mx[ N-m ]  My[ N-m ]  Mz[ N-m ]")
+        printout(wk.node_name, wk[forcehead].values)
         print("")
     #
     # Combinations
@@ -104,8 +120,11 @@ def print_node_reactions(reactions):
             print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
                   .format(*header[0]))
             #
-            print("     node  x-force    y-force    z-force    x-moment   y-moment   z-moment")
-            printout(wk.node_name, wk[['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']].values)
+            if m2D:
+                print("     node    Fx [ N]    Fy [ N]  Mz[ N-m ]")
+            else:
+                print("     node    Fx [ N]    Fy [ N]    Fz [ N]  Mx[ N-m ]  My[ N-m ]  Mz[ N-m ]")
+            printout(wk.node_name, wk[forcehead].values)
             print("")
     except KeyError:
         pass
@@ -154,7 +173,7 @@ def printout(node_id:list, disp:list, str1=""):
 # output
 # --------------------
 #
-def print_member_forces(df_membforce):
+def print_beam_forces(df_membforce, m2D: bool):
     """
     """
     blgrp = df_membforce.groupby('load_type')
@@ -172,7 +191,7 @@ def print_member_forces(df_membforce):
         print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
               .format(*header[0]))
         #
-        print_member_end_forces(wk)
+        print_beam_end_forces(wk, m2D)
         print("")
     #
     # combinations    
@@ -185,23 +204,29 @@ def print_member_forces(df_membforce):
             print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
                   .format(*header[0]))
             #
-            print_member_end_forces(wk)
+            print_beam_end_forces(wk, m2D)
             print("")
     except KeyError:
         pass
 #
 #
-def print_member_end_forces(eforces):
+def print_beam_end_forces(eforces, m2D: bool):
     """
     """
     mgroup = eforces.groupby("element_name") #.groups .get_group([0,1])
     #
-    print("  Element       Node  Fx{:} Fy{:} Fz{:} Mx{:} Mz{:} Mz"
-          .format(8*" ", 8*" ", 8*" ", 8*" ", 8*" "))
-
+    if m2D:
+        ndof = 3
+        forcehead = ['node_end', 'F_Vx', 'F_Vy', 'F_Mz']
+        print("     Beam  Len[ m]    Fx [ N]    Fy [ N]  Mz[ N-m ]")
+    else:
+        ndof = 6
+        forcehead = ['node_end', 'F_Vx', 'F_Vy', 'F_Vz', 'F_Mx', 'F_My', 'F_Mz']
+        print("     Beam  Len[ m]    Fx [ N]    Fy [ N]    Fz [ N]  Mx[ N-m ]  My[ N-m ]  Mz[ N-m ]")
+    #
     for key, mgroup in mgroup:
         print("{:9d} ".format(key), end='')
-        items = mgroup[['node_end', 'F_Vx', 'F_Vy', 'F_Vz', 'F_Mx', 'F_My', 'F_Mz']].values
+        items = mgroup[forcehead].values
         
         for x, member in enumerate(items):
             #
@@ -211,8 +236,8 @@ def print_member_end_forces(eforces):
             except ZeroDivisionError:
                 pass
             
-            print("{:2.3f} ".format(member[0]), end='')
-            for i in range(6):
+            print("{:1.2e} ".format(member[0]), end='')
+            for i in range(ndof):
                 print("{: 1.3e} ".format(member[i+1]), end='')            
             #
             #member = eforces.iloc[index]
@@ -228,22 +253,22 @@ def print_member_end_forces(eforces):
             #print("{:}".format(8*" "))
             print("")
         #print("\n")
-    print("\n")
+    #print("\n")
 #
 #
 class ResultInmemory:
     
     __slots__ = ['_displacement', '_reaction', 
-                 '_node_force', '_beam_force']
+                 '_node_force', '_beam_force', '_m2D']
 
-    def __init__(self):
+    def __init__(self, m2D: bool):
         """
         """
         #self._basic_loads = basic_loads
         #self._displacement = {}
         #self._beam_force = BeamForce()
         #self._reaction = BoundaryNodes()
-        pass
+        self._m2D = m2D
     #
     #
     @property
@@ -264,7 +289,7 @@ class ResultInmemory:
     def print_node_displacement(self):
         """
         """
-        print_node_deflections(self._displacement)
+        print_node_deflections(self._displacement, self._m2D)
     #
     @property
     def beam_force(self):
@@ -283,7 +308,7 @@ class ResultInmemory:
     #
     def print_element_forces(self):
         """ """
-        print_member_forces(self.beam_force)
+        print_beam_forces(self.beam_force, self._m2D)
     #
     #
     #
@@ -305,6 +330,6 @@ class ResultInmemory:
     def print_node_reactions(self):
         """
         """
-        print_node_reactions(self._reaction)
+        print_node_reactions(self._reaction, self._m2D)
     #
 #

@@ -47,11 +47,12 @@ class BeamLoadItemSQL(BeamLoadItem):
         """
         """
         conn = create_connection(self._bd_file)
-        with conn:  
-            beam = check_element(conn, beam_name)        
+        with conn:
+            beam =  BeamItemSQL(beam_name, self._bd_file)
+            #beam = check_element(conn, beam_name)        
         try:
-            memb_type = beam[3]
-        except TypeError:
+            beam.L
+        except (TypeError, IndexError):
             raise IOError(f"beam {beam_name} not found")        
         #
         #
@@ -59,10 +60,12 @@ class BeamLoadItemSQL(BeamLoadItem):
         self._labels.append(beam_name)
         #
         if re.match(r"\b(point|node)\b", str(beam_load[0]), re.IGNORECASE):
-            self._load._point[beam_name] = beam_load[1:]
+            self._load(beam).point =  beam_load[1:]
+            #self._load._point[beam_name] = beam_load[1:]
             
         elif re.match(r"\b(line|udl)\b", str(beam_load[0]), re.IGNORECASE):
-            self._load._line[beam_name] = beam_load[1:]
+            self._load(beam).line = beam_load[1:]
+            #self._load.line[beam_name] = beam_load[1:]
             
         else:
             raise IOError(f'Beam lod type {beam_load[0]} not implemented')

@@ -9,8 +9,7 @@ import pickle
 #
 # package imports
 # steelpy.trave3D.postprocessor
-from .operations import (get_reactions, beam_end_force, beam_force,
-                         updape_ndf, updape_memberdf, updape_memberdf2)
+#from .operations import get_reactions
 from .output import ResultInmemory
 
 #
@@ -18,13 +17,14 @@ from .output import ResultInmemory
 class Results:
     """
     """
-    __slots__ = ['_results', '_mesh']
+    __slots__ = ['_results', '_mesh', '_m2D']
     
-    def __init__(self, mesh):
+    def __init__(self, mesh, m2D: bool):
         """
         """
-        self._results = ResultInmemory()
+        self._results = ResultInmemory(m2D=m2D)
         self._mesh = mesh
+        self._m2D = m2D
     #
     #def __setitem__(self, material_name:Union[str, int],
     #                material_type:str) -> None:
@@ -39,88 +39,40 @@ class Results:
     #
     # -----------------
     #
-    @property
-    def mesh(self):
-        """
-        FE model mesh
-        """
-        return self._mesh
+    #@property
+    #def mesh(self):
+    #    """
+    #    FE model mesh
+    #    """
+    #    return self._mesh
     #
-    @property
-    def load(self):
-        """
-        FE model load
-        """
-        return self._mesh.load()
+    #@property
+    #def load(self):
+    #    """
+    #    FE model load
+    #    """
+    #    return self._mesh.load()
     #
-    @property
-    def K(self):
-        """Global Stiffnes matrix"""
-        file = open ( "stfmx.f2u", "rb" )
-        jbc = pickle.load( file )
-        stf = pickle.load( file )
-        file.close()
-        return stf
+    #@property
+    #def K(self):
+    #    """Global Stiffnes matrix"""
+    #    file = open ( "stfmx.f2u", "rb" )
+    #    jbc = pickle.load( file )
+    #    stf = pickle.load( file )
+    #    file.close()
+    #    return stf
     #
         #
     # -----------------
     #
-    def postprocess(self, df_ndisp):
+    def postprocess(self, df_ndisp, df_nforce, df_membf, df_reactions):
         """Postprocess"""
-                # geometry
-        mesh = self._mesh
-        elements = mesh.elements()
-        boundaries = mesh.boundaries()
-        #
-        # loading
-        load =  self._mesh.load()
-        basic_load = load.basic()
-        load_combination = load.combination()
-        df_comb = load_combination.to_basic()
-        #
-        #
-        # TODO: node load should be in SQL
-        df_nload = load._df_nodal
-        #
-        # get beam end node forces
-        df_nforce = beam_end_force(elements, df_ndisp)
-        #
-        # -----------------------------------
-        # get beam force along lenght 
-        df_membf = beam_force(elements, 
-                              basic_load,
-                              df_ndisp=df_ndisp, 
-                              df_nforce=df_nforce)
-        #
-        #
-        # ---------------------------------------
-        # Update df to include load combinations
-        # ---------------------------------------
-        #
-        df_ndisp = updape_ndf(dfnode=df_ndisp, dfcomb=df_comb,
-                              values=['x', 'y', 'z', 'rx', 'ry', 'rz'])
-        #
-        df_nload = updape_ndf(dfnode=df_nload, dfcomb=df_comb,
-                              values=['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
-        #
-        df_nforce = updape_memberdf(dfmemb=df_nforce, dfcomb=df_comb,
-                                    values=['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
-        #
-        df_memb = updape_memberdf2(dfmemb=df_membf, dfcomb=df_comb,
-                                    values=['F_Vx', 'F_Vy', 'F_Vz', 'F_Mx', 'F_My', 'F_Mz',
-                                            'F_wx', 'F_wy', 'F_wz', 'F_phix', 'F_thetay', 'F_thetaz'])
-        #
-        # -------------------------------------
-        # node reactions
-        # -------------------------------------
-        #
-        df_reactions = get_reactions(boundaries, df_nforce)
         #
         #self.process_deflection(df_ndisp=df_ndisp, df_nload=df_nload)
         self._results._displacement = df_ndisp
         self._results._node_force = df_nforce
         self._results._reaction = df_reactions
-        self._results._beam_force = df_memb
+        self._results._beam_force = df_membf
     #
     #
     #

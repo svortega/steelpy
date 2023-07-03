@@ -15,19 +15,22 @@ from .processor.dynamic_solver import eigen, trnsient
 from .processor.static_solver import solve_deflections
 from .postprocessor.main import Results
 #
+from .processor.operations import beam_end_force, beam_int_force, comb_update, get_reactions
 #
-class Trave3D:
+#
+class TraveMain:
     """
     A program for static & dynamic analysis
     of 3-d framed structures
     """
-    __slots__ = ['_mesh', '_load', '_f2u', '_results']
+    __slots__ = ['_mesh', '_load', '_f2u', '_results', '_m2D']
     
     def __init__(self) -> None:
         """
         """       
-        print ("-- module : trave3D version 2.50")
+        print ("-- module : Trave3D version 2.50")
         print ('{:}'.format(52 * '-'))
+        #self._results = Results()
     #
     #
     @property
@@ -40,25 +43,94 @@ class Trave3D:
     def mesh(self, value):
         """
         """
-        #self._mesh = value
-        self._results = Results(mesh=value)
+        self._mesh = value
     #
-    def run_static(self, method:str|None=None):
+    def run_static(self, method:str|None=None,
+                   log: bool = False):
         """
         Solves the static system 
         method : banded, frontal
         """
-        # -----------------------------------
-        df_ndisp = self.deflection(method=method)
-        # -----------------------------------
+        # get mesh
+        mesh = self._mesh
+        # loading
+        load =  mesh.load()
+        basic_load = load.basic()        
+        df_nload = basic_load.node_df()
         #
-        self._results.postprocess(df_ndisp=df_ndisp)
+        # ------------------------------
+        # Static solution
+        # ------------------------------
+        # get K
+        jbc, K = mesh.K(solver=method, log=log, m2D=self._m2D)
+        # get displacements
+        df_ndisp = solve_deflections(df_nload, method, m2D=self._m2D)
         #
-        #self._results.node.deflection = df_ndisp
+        # ------------------------------
+        # get beam end node forces
+        # ------------------------------
+        #
+        elements = mesh.elements()
+        #
+        df_nforce = beam_end_force(elements, df_ndisp, m2D=self._m2D)
+        #
+        # -----------------------------------
+        # get beam force along lenght
+        # -----------------------------------
+        df_membf = beam_int_force(elements, 
+                                  basic_load,
+                                  df_ndisp=df_ndisp, 
+                                  df_nforce=df_nforce,
+                                  m2D=self._m2D)
+        #
+        # -----------------------------------
+        # Updating load combinations
+        # -----------------------------------
+        # get load combinations
+        load_combination = load.combination()
+        df_comb = load_combination.to_basic()
+        #
+        (df_nload, df_ndisp,
+         df_nforce, df_membf) = comb_update(df_comb, df_nload, df_ndisp,
+                                            df_nforce, df_membf, m2D=self._m2D)
+        #
+        # -------------------------------------
+        # node reactions
+        # -------------------------------------
+        #
+        boundaries = mesh.boundaries()
+        #
+        df_reactions = get_reactions(boundaries, df_nforce, m2D=self._m2D)
+        #
+        # -------------------------------------
+        # Results
+        # -------------------------------------        
+        #
+        results = Results(mesh=mesh, m2D=self._m2D)
+        results.postprocess(df_ndisp, df_nforce,
+                            df_membf, df_reactions)
         #
         # -----------------------------------
         #print("-->")
-        return self._results
+        return results
+    #
+    #
+#
+#
+#
+class Trave3D(TraveMain):
+    """
+    A program for static & dynamic analysis
+    of 3-d framed structures
+    """
+    __slots__ = ['_mesh', '_load', '_f2u', '_results', '_m2D']
+    
+    def __init__(self) -> None:
+        """
+        """       
+        super().__init__()
+        self._m2D:bool = False
+    #
     #
     def run_dynamic(self, end_time: float, delta_t: float,
                     type:str|None=None):
@@ -103,30 +175,22 @@ class Trave3D:
         print('--')
     #
     #
-    def deflection(self, method: str, log: bool = False):
-        """Calculate node deflection
-        
-        method: numpy/banded/sparse
+#
+#
+#
+class Trave2D(TraveMain):
+    """
+    A program for static & dynamic analysis
+    of 3-d framed structures
+    """
+    __slots__ = ['_mesh', '_load', '_f2u', '_results', '_m2D']
+    
+    def __init__(self) -> None:
         """
-        # geometry
-        mesh = self._results.mesh
-        # loading
-        load = self._results.load
-        basic_load = load.basic()
-        #df_nload = basic_load.get_node_load2(elements, nodes, boundaries)
-        df_nload = basic_load.node_df()
-        #
-        # solution
-        #
-        jbc, K = mesh.K(solver=method, log=log)
-        #
-        # TODO: no change in df_nload?
-        df_ndisp, df_nload = solve_deflections(df_nload, method)
-        #
-        load._df_nodal = df_nload
-        return df_ndisp
-#
-#
+        """       
+        super().__init__()
+        self._m2D:bool = True
+    #
 #    
     
     

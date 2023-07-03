@@ -6,7 +6,7 @@ from steelpy.codes.main import CodeCheck
 from steelpy.formulas.main import Formulas
 from steelpy.design.main import ClampDesign as Clamp
 from steelpy.metocean.main import Metocean
-from steelpy.trave3D.main import Trave3D
+from steelpy.trave3D.main import Trave3D, Trave2D
 from steelpy.beam.main import Beam #, SimpleBeam
 from steelpy.f2uModel.main import f2uModel
 #
