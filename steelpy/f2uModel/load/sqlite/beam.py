@@ -86,6 +86,7 @@ class BeamLoadItemSQL(BeamLoadItem):
             raise IOError(f"beam {beam_name} not found")
         #
         #if not beam_name in self._labels:
+        #if not beam_name in  self._labels:
         self._labels.append(beam_name)
         
         return self._load(beam=beam)

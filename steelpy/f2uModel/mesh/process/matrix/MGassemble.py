@@ -10,7 +10,7 @@ import pickle
 # package imports
 import numpy as np
 #from ..preprocessor.assemble import assemble
-from steelpy.process.math.operations import to_matrix, zeros, mtxmul, trns_3Dv
+from steelpy.process.math.operations import to_matrix, zeros, mtxmul, trnsload_3Dv
 from steelpy.process.math.vector import Vector
 
 # ---------------------

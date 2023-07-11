@@ -244,13 +244,18 @@ class BasicCombSQL(Mapping):
         conn = create_connection(self.bd_file)
         with conn:
             if self._type == 'basic':
-                bl_number = get_basic_number(conn, load_name)
-                lc_number = None
+                try:
+                    bl_number = get_basic_number(conn, load_name)
+                    lc_number = None
+                except TypeError:
+                    raise IOError(f' Basic Load {load_name} not found')
                 
             elif self._type == 'combination':
-                bl_number = None
-                lc_number = get_comb_number(conn, load_name)
-            
+                try:
+                    bl_number = None
+                    lc_number = get_comb_number(conn, load_name)
+                except TypeError:
+                    raise IOError(f' Load Combination {load_name} not found')            
             else:
                 1 / 0
             #

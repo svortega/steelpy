@@ -1,8 +1,8 @@
-# 
-# Copyright (c) 2009-2021 fem2ufo
 #
-
+# Copyright (c) 2009-2023 fem2ufo
+#
 # Python stdlib imports
+from __future__ import annotations
 #from typing import NamedTuple, Dict, List, Iterable, Union
 
 # package imports

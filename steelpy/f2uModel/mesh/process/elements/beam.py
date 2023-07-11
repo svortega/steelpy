@@ -12,9 +12,9 @@ from collections.abc import Mapping
 # package imports
 from steelpy.process.geometry.L3D import (DistancePointLine3D,
                                           LineLineIntersect3D)
-from steelpy.f2uModel.mesh.process.elements.bstiffness import (beam3D_Klocal, trans_3d_beam,
-                                                               Rmatrix, Rmatrix_new,
-                                                               trans3Dbeam, beam3D_K)
+from steelpy.f2uModel.mesh.process.elements.bstiffness import (beam3D_Klocal, 
+                                                               Rmatrix, Rmatrix2, 
+                                                               beam3D_K)
 from steelpy.f2uModel.mesh.process.elements.bstiffness2D import (beam2D_K, beam2D_Geom, Rmatrix2D)
 #
 import numpy as np
@@ -80,7 +80,9 @@ class BeamItemBasic:
             return Tlg
         else:
             #if self.type in ['beam', 'truss']:
-            return Rmatrix(*self.unit_vector, self.beta)
+            nodei, nodej = self.nodes
+            return Rmatrix2(nodei, nodej, L=self.L)
+            #return Rmatrix(*self.unit_vector, self.beta)
             #else:
             #    raise IOError("no yet included")    
     #
@@ -91,13 +93,14 @@ class BeamItemBasic:
         
         Return the stiffness matrix in global coordinates
         """
+        Tlg =  self.T(m2D=m2D)
         if m2D:
             Kl = self.k2D()
-            Tlg =  self.T(m2D=m2D)
-            Kg = (np.transpose(Tlg).dot(Kl)).dot(Tlg)
-            return Kg
+            #Tlg =  self.T(m2D=m2D)
+            #Kg = (np.transpose(Tlg).dot(Kl)).dot(Tlg)
+            #return Kg
         else:
-            k = self.k3D()
+            Kl = self.k3D()
             #
             #
             #self.beta = 30
@@ -108,8 +111,18 @@ class BeamItemBasic:
             #xxx = trans3Dbeam(K, node1[:3], node2[:3])
             #return trans3Dbeam(K, node1[:3], node2[:3])
             #return trans_3d_beam(K, dirc)
-            return trans_3d_beam(k, self.T())
-            #return self.trans3d(K)    
+            #return trans_3d_beam(k, self.T())
+            #return self.trans3d(K)
+            #Tlg = self.T()
+        #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
+        return Tlg.T @ Kl @ Tlg
+    #
+    def k(self, m2D:bool = False):
+        """Return the stiffness matrix in global coordinates"""
+        if m2D:
+            return self.k2D()
+        else:
+            return self.k3D()
     #
     def _partition(self, unp_matrix):
         """
@@ -166,7 +179,7 @@ class BeamItemBasic:
     #
     #
     def k3D(self):
-        """Returns the condensed (and expanded) local stiffness matrix for the member"""
+        """Returns the condensed (and expanded) local stiffness matrix for the 3D beam"""
         # get section properties 
         section = self.section
         #section = self._cls._f2u_sections[section]
@@ -195,6 +208,8 @@ class BeamItemBasic:
     #
     def k2D(self, beta:int=0):
         """
+        beam 2D matrix local system
+        beta : shear deformation (0-off/1-on)
         """
         # get section properties 
         section = self.section

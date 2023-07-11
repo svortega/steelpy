@@ -81,6 +81,7 @@ class TraveMain:
                                   basic_load,
                                   df_ndisp=df_ndisp, 
                                   df_nforce=df_nforce,
+                                  df_nload=df_nload, 
                                   m2D=self._m2D)
         #
         # -----------------------------------

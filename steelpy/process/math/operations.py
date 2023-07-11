@@ -78,30 +78,11 @@ def transposeM(matrix):
     return list(zip(*matrix))
 #
 #
-def trns_3Dv(gloads:list, r_matrix:list):
+def trnsload(gloads:list, r_matrix:list):
     """
-    Makes 3-d vector transformations.
+    Makes load vector transformations.
     """
-    index = len(gloads)  # 12
-    step = len(r_matrix) # 3
-    lloads = np.zeros(index) # 12
-    for i in range(0, index, step): # 12, 3
-        lloads[i:i+3] = mtxmul(r_matrix, gloads[i:i+step])
-        #lloads[i:i + 3] = r_matrix @ gloads[i:i + 3]
-    #yy = [mtxmul(r_matrix, gloads[i:i+3]) 
-    #      for i in range(0, 12, 3)]
-    #
-    return lloads
-#
-#
-def trns_2Dv(gloads:list, r_matrix:list):
-    """
-    Makes 3-d vector transformations.
-    """
-    #Tlg = member.T(m2D=m2D)
-    lloads = (np.transpose(r_matrix).dot(gloads)).dot(r_matrix)
-    #lndisp2 = np.matmul(np.matmul(np.linalg.inv(member.T()), gndisp), member.T())
-    return lloads
+    return np.transpose(r_matrix).dot(gloads)
 #
 #
 def Tmatrix(Rmat):

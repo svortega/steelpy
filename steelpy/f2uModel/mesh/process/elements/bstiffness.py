@@ -12,7 +12,7 @@ import math
 from steelpy.process.math.operations import zeros, transposeM #, matAbd, trns_3Dv, to_matrix, zeros_vector# FIXME
 from steelpy.process.math.vector import Vector
 #
-#import numpy as np
+import numpy as np
 #import numpy.linalg as la
 #from numpy.testing import assert_array_almost_equal
 #from numpy import sin, cos, arccos, arctan
@@ -35,7 +35,8 @@ def beam3D_K(length: float,
     length, J, Iy, Iz, area, Emod, Gmod
     """
     # initialize all ek elements to zero  
-    ek = zeros( 12, 12 )
+    #ek = zeros( 12, 12 )
+    ek = np.zeros(( 12, 12 ))
     # stiffness matrix in local coordinates 
     emlen = Emod / length
     emlen2 = emlen / length
@@ -73,10 +74,7 @@ def beam3D_K(length: float,
     ek[ 8 ][ 10 ] = -ek[ 2 ][ 4 ]
     #
     # impose the geometry
-    for i in range( 12 ):
-        for j in range( i, 12 ):
-            ek[ j ][ i ] = ek[ i ][ j ]
-    # L10:
+    ek += np.triu(ek, k=1).T
     return ek
 #
 def Rmatrix(l:float, m:float, n:float, beta: float = 0):
@@ -118,14 +116,116 @@ def Rmatrix(l:float, m:float, n:float, beta: float = 0):
             r[ 2 ][ 1 ] = -(l * sb + m * n * cb) / d
             r[ 2 ][ 2 ] = d * cb
     #
-    #for i in range(3):
-    #    for j in range(3):
-    #        try:
-    #            1/r[i][j]
-    #        except ZeroDivisionError:
-    #            r[ i ][ j ] = 0.0
     #
-    return r
+    # Build full transformation matrix
+    transMatrix = np.zeros((12, 12))
+    transMatrix[0:3, 0:3] = r
+    transMatrix[3:6, 3:6] = r
+    transMatrix[6:9, 6:9] = r
+    transMatrix[9:12, 9:12] = r
+    #
+    return transMatrix    
+    #return r
+#
+#
+# Transformation matrix
+def Rmatrix2(nodei, nodej, L, auxNode=None):
+    """
+    Returns the transformation matrix for the member.
+    """
+
+    x1 = nodei.x
+    x2 = nodej.x
+    y1 = nodei.y
+    y2 = nodej.y
+    z1 = nodei.z
+    z2 = nodej.z
+    #L = self.L()
+    
+    # Calculate the direction cosines for the local x-axis
+    x = [(x2-x1)/L, (y2-y1)/L, (z2-z1)/L]
+    
+    # Calculate the direction cosines for the local z-axis based on the auxiliary node
+    if auxNode != None:
+        
+        xa = auxNode.x
+        ya = auxNode.y
+        za = auxNode.y
+        
+        # Define a vector in the local xz plane using the auxiliary point 
+        z = [xa-x1, ya-y1, za-z1]
+        
+        # Find the direction cosines for the local y-axis
+        y = np.cross(z, x)
+        y = np.divide(y, (y[0]**2 + y[1]**2 + y[2]**2)**0.5)
+        
+        # Ensure the z-axis is perpendicular to the x-axis.
+        # If the vector from the i-node to the auxiliary node is not perpendicular to the member, this will ensure the local coordinate system is orthogonal
+        z = np.cross(x, y)
+        
+        # Turn the z-vector into a unit vector of direction cosines
+        z = np.divide(z, (z[0]**2 + z[1]**2 + z[2]**2)**0.5)
+    
+    # If no auxiliary node is specified the program will determine the member's local z-axis automatically
+    else:
+        # Calculate the remaining direction cosines. The local z-axis will be kept parallel to the global XZ plane in all cases
+        # Vertical members
+        if np.isclose(x1, x2) and np.isclose(z1, z2):
+            
+            # For vertical members, keep the local y-axis in the XY plane to make 2D problems easier to solve in the XY plane
+            if y2 > y1:
+                y = [-1, 0, 0]
+                z = [0, 0, 1]
+            else:
+                y = [1, 0, 0]
+                z = [0, 0, 1]
+
+        # Horizontal members
+        elif np.isclose(y1, y2):
+        
+            # Find a vector in the direction of the local z-axis by taking the cross-product
+            # of the local x-axis and the local y-axis. This vector will be perpendicular to
+            # both the local x-axis and the local y-axis.
+            y = [0, 1, 0]
+            z = np.cross(x, y)
+
+            # Divide the z-vector by its magnitude to produce a unit vector of direction cosines
+            z = np.divide(z, (z[0]**2 + z[1]**2 + z[2]**2)**0.5)
+
+        # Members neither vertical or horizontal
+        else:
+
+            # Find the projection of x on the global XZ plane
+            proj = [x2-x1, 0, z2-z1]
+
+            # Find a vector in the direction of the local z-axis by taking the cross-product
+            # of the local x-axis and its projection on a plane parallel to the XZ plane. This
+            # produces a vector perpendicular to both the local x-axis and its projection. This
+            # vector will always be horizontal since it's parallel to the XZ plane. The order
+            # in which the vectors are 'crossed' has been selected to ensure the y-axis always
+            # has an upward component (i.e. the top of the beam is always on top).
+            if y2 > y1:
+                z = np.cross(proj, x)
+            else:
+                z = np.cross(x, proj)
+
+            # Divide the z-vector by its magnitude to produce a unit vector of direction cosines
+            z = np.divide(z, (z[0]**2 + z[1]**2 + z[2]**2)**0.5)
+            
+            # Find the direction cosines for the local y-axis
+            y = np.cross(z, x)
+            y = np.divide(y, (y[0]**2 + y[1]**2 + y[2]**2)**0.5)
+
+    # Create the direction cosines matrix
+    dirCos = np.array([x, y, z])
+  
+    # Build the transformation matrix
+    transMatrix = np.zeros((12, 12))
+    transMatrix[0:3, 0:3] = dirCos
+    transMatrix[3:6, 3:6] = dirCos
+    transMatrix[6:9, 6:9] = dirCos
+    transMatrix[9:12, 9:12] = dirCos
+    return transMatrix  
 #
 #
 def Rmatrix_new(node1, node2, beta: float = 0):
@@ -218,33 +318,6 @@ def Rmatrix_new2(node1, node2, beta: float = 0):
     #        local_z.direction()]
 #
 #
-def trans_3d_beam(ek: list, r_matrix: list):
-    """
-    Makes 3-d coordinate transformations. 
-    ek : stiffness matrix
-    r  : rotation matrix 
-    """
-    # transpose rotation matrix
-    rt = transposeM(r_matrix)
-    #
-    # take [rtrans][k][r] using the nature of [r] for speed.  
-    # k is sectioned off into 3x3s : multiplied [rtrans][k][r]
-    ktemp = zeros(12, 12)
-    for j1 in range(0, 12, 3):
-        for j2 in range(0, 12, 3):
-            # [k][r]
-            for k in range(3):
-                for ii in range(3):
-                    ktemp[j1 + k][j2 + ii] = math.fsum([ek[j1 + k][j2 + jj] * r_matrix[jj][ii]
-                                                        for jj in range(3)])
-            # [rtrans][k][r]
-            for k in range(3):
-                for ii in range(3):
-                    ek[j1 + k][j2 + ii] = math.fsum([rt[k][jj] * ktemp[j1 + jj][j2 + ii]
-                                                     for jj in range(3)])
-            # 24
-    # 22
-    return ek
 #
 # ---------------------------------------------
 #
@@ -257,7 +330,7 @@ def beam3D_Klocal(length: float,
     length, J, Iy, Iz, area, Emod, Gmod
     """
     # initialize all ek elements to zero  
-    ek = zeros( 12, 12 )
+    ek = np.zeros(( 12, 12 ))
     # stiffness matrix in local coordinates 
     emlen = Emod / length
     emlen2 = emlen / length
@@ -299,10 +372,7 @@ def beam3D_Klocal(length: float,
     ek[ 8 ][ 10 ] = -ek[ 2 ][ 4 ]
     #
     # impose the geometry
-    for i in range(12):
-        for j in range(i, 12):
-            ek[j][i] = ek[i][j]
-    # L10:
+    ek += np.triu(ek, k=1).T
     return ek    
 #
 #

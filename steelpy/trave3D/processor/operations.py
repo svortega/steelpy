@@ -14,7 +14,7 @@ import itertools as it
 # package imports
 from steelpy.formulas.main import BeamBasic
 from steelpy.process.math.operations import (zeros, to_matrix, mtxmul,
-                                             trns_3Dv, trns_2Dv, linspace)
+                                             trnsload, linspace)
 from steelpy.process.dataframe.main import DBframework
 import numpy as np
 #
@@ -289,6 +289,7 @@ def beam_end_force(elements, df_ndisp,
 #
 def beam_int_force(elements, basic_load,
                    df_ndisp, df_nforce,
+                   df_nload, 
                    steps:int = 10,
                    m2D:bool = False):
     """get beam forces for basic loads"""
@@ -297,18 +298,28 @@ def beam_int_force(elements, basic_load,
     ndof:int = 6
     headforce = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
     headdisp = ['node_name', 'x', 'y', 'z', 'rx', 'ry', 'rz']
-    trns = trns_3Dv
+    headload = ['axial', 'torsion', 'VM_inplane', 'VM_outplane']
+    #trns = trnsload
     if m2D:
         ndof:int = 3
         #df_jbc = df_jbc[['x', 'y', 'rz']]
         headforce = ['Fx', 'Fy', 'Mz']
         headdisp = ['node_name','x', 'y', 'rz']
-        trns = trns_2Dv
+        #trns = trnsload_2Dv
     #
     bload_func = basic_load.process(elements=elements, steps=steps)
-    #    
-    ndgrp = df_ndisp.groupby(['load_name', 'load_number', 'load_type', 'load_title'])
-    nfgrp = df_nforce.groupby(['load_name', 'load_number', 'load_type', 'load_title'])
+    #
+    # -------------
+    #comb0 = df_nforce.groupby(['load_name', 'load_number','load_type',
+    #                           'load_title', 'load_system','node_name'],
+    #                            as_index=False)[headforce].sum()
+    #comb1 = comb0.set_index('node_name')
+    # -------------
+    #
+    ndgrp = df_ndisp.groupby(['load_name', 'load_type', 'load_number', 'load_title'])
+    nfgrp = df_nforce.groupby(['load_name',  'load_type', 'load_number', 'load_title'])
+    nlgrp = df_nload.groupby(['load_name',  'load_type', 'load_number', 'load_title'])
+    blgrp = bload_func.groupby(['load_name',  'load_type'])
     #
     # Dummy Bending [V, M, theta, w]
     Fblank = [0, 0, 0, 0]
@@ -329,13 +340,18 @@ def beam_int_force(elements, basic_load,
         #
         # check if basic load
         try:
-            mbload = bload_func[key[0]]
+            mbload = blgrp.get_group(key[:2])
+            mbload = mbload.groupby(['element_name'])
+            #mbload = bload_func[key[0]]
+            #
+            nlval = nlgrp.get_group(key)
+            nlval = nlval.groupby(['element_name'])
         except KeyError:
             mbload = {}
         #
         for mname, nodef in enfgrp:
             member = elements[mname]
-            #beam = member.beam()           
+            Tlg = member.T(m2D=m2D)           
             #
             material = member.material
             section = member.section.properties()
@@ -346,33 +362,50 @@ def beam_int_force(elements, basic_load,
             #
             #in1, in2 = node_id.index(nodes[0]),  node_id.index(nodes[1]) 
             #n1, n2 = member.connectivity
-            nitem = []
-            for node in member.connectivity:
-                try:
-                    nitem.append(ndisp.loc[node])
-                except KeyError:
-                    nitem.append(dummyf)
+            #nlitem = []
+            #for node in member.connectivity:
+            #    try:
+            #        nlitem.append(nlval.loc[node].values)
+            #    except KeyError:
+            #        nlitem.append(dummyf)
             #
+            #nlitem = np.concatenate(nlitem, axis=None)
+            #
+            nodes = member.connectivity
+            nditem = np.concatenate((ndisp.loc[nodes[0]],
+                                     ndisp.loc[nodes[1]]), axis=None)
+            #
+            #nfitem = np.concatenate((comb1.loc[nodes[0]][headforce].values,
+            #                         comb1.loc[nodes[1]][headforce].values), axis=None)             
             # ---------------------------------------------
             # get beam end-node displacement in global system
             #
-            gndisp = np.concatenate(nitem, axis=None)
+            gndisp = np.concatenate(nditem, axis=None)
             #
             # convert global end-node disp in beam's local system
-            lndisp = trns(gndisp, member.T(m2D=m2D))
+            #lndisp = trns(gndisp, Tlg)
+            #lndisp2 = gndisp @ Tlg
+            lndisp = Tlg @ gndisp
             # displacement end 0
-            lndisp0 = lndisp[:ndof]
+            #lndisp0 = lndisp[:ndof]
             #lndisp1 = lndisp[6:]
             #
             # --------------------------------------------
             # convert beam end-node disp to force [F = Kd] in global system
             #
+            #gnforce = mtxmul(member.K(m2D=m2D), gndisp)
+            lnforce = mtxmul(member.k(m2D=m2D), lndisp)
+            #gnforce = np.concatenate(nfitem, axis=None)
+            #gnforce += nlitem            
+            #
             # FIXME : select node by number
-            gnforce = np.concatenate(nodef[headforce].values)
+            #gnforce = np.concatenate(nodef[headforce].values)
             # covert global nodal force in beam's local system
-            lnforce = trns(gnforce, member.T(m2D=m2D))
+            #lnforce = trns(gnforce, Tlg)
+            #lnforce2 = Tlg @ gnforce.T
+            #lnforce3 = Tlg @ gnforce
             # force end 0
-            lnforce0 = lnforce[:ndof]
+            #lnforce0 = lnforce[:ndof]
             #
             # --------------------------------------------
             # set beam to general response expresions --> R0
@@ -380,12 +413,7 @@ def beam_int_force(elements, basic_load,
             #
             #TODO: confirm change reactions sign
             eq = NodeGenRespEq(lnforce, lndisp, ndof, m2D)
-            R0 = eq.R0()
             #
-            #Fblank2[0] = -1 * lnforce0[0]  # axial load
-            #Fblank2[1] = -1 * lnforce0[3]  # torsion
-            #Fblank2[2] = 1 * lndisp0[3]   # theta
-            #Fblank2[3] = 1 * lndisp0[0]   # displacement
             #
             # ---------------------------------------------
             #
@@ -393,23 +421,54 @@ def beam_int_force(elements, basic_load,
                 # Beam load (udl/point)
                 # [load_name, member_load_title, load_type, load_system, 
                 # beam_number, x, Fx, Fy, Fz]                
-                mnload = mbload[mname] 
+                #mnload = mbload[mname]
+                mnload = mbload.get_group(mname)
+                mnload = mnload.groupby(['node_end'], as_index=False)[headload].sum()
                 #
-                R0y = [-1 * lnforce0[1], 1 * lnforce0[5], -1 * lndisp0[5], 1 * lndisp0[1]]
-                R0z = [-1 * lnforce0[2], 1 * lnforce0[4], -1 * lndisp0[4], 1 * lndisp0[2]]
-                # TODO : axial function needed here
+                #
+                #nlval = nlgrp.get_group(key)
+                #nlval = nlval.groupby(['element_name'])
+                nodeloads = nlval.get_group(mname)
+                nodeloads = nodeloads.groupby(['node_name'], as_index=False)[headforce].sum()
+                nodeloads = nodeloads.set_index('node_name')                 
+                #
+                blitem = np.concatenate((nodeloads.loc[nodes[0]],
+                                         nodeloads.loc[nodes[1]]), axis=None)                
+                #
+                #blitem2 = trns(blitem, member.T(m2D=m2D))
+                #Tlg = member.T(m2D=m2D)
+                #blitem = Tlg @ blitem.T
+                blitem = Tlg @ blitem
+                #
+                R0 = eq.R0(bload=blitem)
+                #R0 = eq.R0()
+                #
+                #
+                #lbforce = []
+                #for bstep in  mnload.itertuples():
+                #    #bstep
+                #    lbforce.append(['local', mname, bstep.node_end, 
+                #                    *beam.response(x=bstep.node_end, R0=[R0.x, R0.t, R0.y, R0.z],
+                #                                   Fx=[*bstep[2:]])])
                 #
                 # [load_title, load_system, beam_number,  x, Fx, Fy, Fz, Mx, My, Mz]
-                lbforce = [[bstep[1], *bstep[3:6],
-                            *beam.response(x=bstep[5], R0=[R0.x, R0.t, R0.y, R0.z],
-                                           Fx=[*bstep[6:]])]
-                           for bstep in mnload]
+                #lbforce = [[bstep[1], *bstep[3:6],
+                #            *beam.response(x=bstep[5], R0=[R0.x, R0.t, R0.y, R0.z],
+                #                           Fx=[*bstep[6:]])]
+                #           for bstep in mnload]
+                lbforce = [['local', mname, bstep.node_end,
+                            *beam.response(x=bstep.node_end,
+                                           R0=[R0.x, R0.t, R0.y, R0.z],
+                                           Fx=[*bstep[2:]])]
+                           for bstep in mnload.itertuples()]
+                #print('-->')
             
-            except (KeyError, AttributeError):
+            except (KeyError, AttributeError, TypeError):
                 # No load on beam
+                R0 = eq.R0()
                 # [beam_number, load_title, x, Fx, Fy, Fz, Mx, My, Mz]
                 Lsteps = linspace(start=0, stop=member.L, num=steps+1, endpoint=True)
-                lbforce = [[None,'local', mname,  xstep,
+                lbforce = [['local', mname,  xstep,
                             *beam.response(x=xstep, R0=[R0.x, R0.t, R0.y, R0.z],
                                            Fx=[Fblank, Fblank_t, Fblank, Fblank])]
                            for xstep in Lsteps]
@@ -423,35 +482,39 @@ def beam_int_force(elements, basic_load,
             #
             # ---------------------------------------------
             #
-            member_load.extend([[*key,  *lbf[:4],
-                                 *lbf[4], # axial
-                                 *lbf[5], # torsion
-                                 *lbf[6], # bending in plane
-                                 *lbf[7]] # bending out plane
+            member_load.extend([[*key,    # load_name
+                                 *lbf[:3],# 'load_number', 'load_type'
+                                 *lbf[3], # axial
+                                 *lbf[4], # torsion
+                                 *lbf[5], # bending in plane
+                                 *lbf[6]] # bending out plane
                                 for lbf in lbforce])
     #
     # --------------------------------------------
     # Seting member df
     # --------------------------------------------
     #
-    header = ['load_name', 'load_number', 'load_type', 'load_title',
-              'element_load_name', 'load_system',
+    header = ['load_name', 'load_type', 'load_number','load_title',
+              'load_system',
               'element_name', 'node_end',
-              'F_Vx', 'blank1', 'blank2', 'F_wx',  # axial
+              'F_Vx', 'blank1', 'blank2', 'F_wx',          # axial
               'F_Mx', 'F_B', 'F_psi', 'F_phix', 'F_Tw',    # torsion
-              'F_Vy', 'F_Mz', 'F_thetaz', 'F_wy',  # bending in plane
-              'F_Vz', 'F_My', 'F_thetay', 'F_wz']  # bending out plane
+              'F_Vy', 'F_Mz', 'F_thetaz', 'F_wy',          # bending in plane
+              'F_Vz', 'F_My', 'F_thetay', 'F_wz']          # bending out plane
     #
     db = DBframework()
     df_membf = db.DataFrame(data=member_load, columns=header, index=None)
     # reorder columns
-    df_membf = df_membf[['load_name', 'load_number', 'load_type',
-                         'load_title', 'load_system',
-                         'element_name', 'element_load_name', 'node_end',
+    df_membf = df_membf[['load_name', 'load_number',
+                         'load_type', 'load_title', 
+                         'load_system',
+                         'element_name', 'node_end',
                          'F_Vx', 'F_Vy', 'F_Vz',
                          'F_Mx', 'F_My', 'F_Mz',
                          'F_wx', 'F_wy', 'F_wz',
                          'F_phix', 'F_thetay', 'F_thetaz']]
+    #
+    #
     return df_membf
 #
 #
@@ -465,20 +528,49 @@ class NodeGenRespEq:
         self.ndof = ndof
         self.m2D = m2D
     #
-    def R0(self) -> tuple:
-        """[V, M, theta, w] """
+    def R0(self, bload: list|None = None) -> tuple:
+        """
+        Axial   [FP, blank, blank, Fu]
+        Bending [V, M, theta, w]
+        Torsion [T, B, Psi, Phi, Tw]
+        """
+        bload0 = [0] * self.ndof
+        try:
+            if bload:
+                bload0 = bload[:self.ndof]
+        except (TypeError, ValueError):
+            bload0 = bload[:self.ndof]
+        #
         lnforce0 = self.force[:self.ndof]
         lndisp0 = self.disp[:self.ndof]
         if self.m2D:
-            R0x = [1 * lnforce0[0], 0, 0, 1 * lndisp0[0]] # Fx,0,0,wx
-            R0y = [1 * lnforce0[1], 0, 0, 1 * lndisp0[1]] # Vy,0,0,wy
-            R0z = [0, 1 * lnforce0[2], 1 * lndisp0[2], 0] # 0,Mz,thetaz,0
+            R0x = [1 * (lnforce0[0] + bload0[0]),
+                   0, 0,
+                   1 * lndisp0[0]] # Fx,0,0,Fu
+            #
+            R0y = [-1 * (lnforce0[1] - bload0[1]), # Vy
+                   1 * (lnforce0[2] - bload0[2]), # Mz
+                   -1 * lndisp0[2],  # thetaz
+                   1 * lndisp0[1]]  # wy
+            #
+            R0z = [0, 0, 0, 0] # 0,0,0,0
             R0t = [0, 0, 0, 0, 0] # 0,0,0,0
         else:
-            R0x = [1 * lnforce0[0], 0, 0, 1 * lndisp0[0]]
-            R0y = [1 * lnforce0[1], 1 * lnforce0[5], -1 * lndisp0[5], 1 * lndisp0[1]]
-            R0z = [1 * lnforce0[2], 1 * lnforce0[4], -1 * lndisp0[4], 1 * lndisp0[2]]
-            R0t = [1 * lnforce0[3], 0, 0, 1 * lndisp0[3], 0]
+            R0x = [lnforce0[0] + bload0[0],
+                   0, 0, 1 * lndisp0[0]]
+            #
+            R0y = [-1 * (lnforce0[1] - bload0[1]),
+                   1 * lnforce0[5] - bload0[5],
+                   -1 * lndisp0[5],
+                   1 * lndisp0[1]]
+            #
+            R0z = [-1 * (lnforce0[2] - bload0[2]),
+                   1 * lnforce0[4] - bload0[4],
+                   -1 * lndisp0[4],
+                   1 * lndisp0[2]]
+            #
+            R0t = [1 * (lnforce0[3] + bload0[3]),
+                   0, 0, 1 * lndisp0[3], 0]
         return Req(R0x, R0t, R0y, R0z)
     
 #

@@ -15,7 +15,7 @@ from typing import NamedTuple
 # package imports
 #
 from ....process.units.buckingham import Number
-from steelpy.process.math.operations import trns_3Dv
+from steelpy.process.math.operations import trnsload
 #from steelpy.process.math.vector import Vector
 from ....process.math.operations import linspace
 # steelpy.
@@ -28,6 +28,7 @@ from ....f2uModel.load.process.operations import(check_list_units,
 # steelpy.
 from steelpy.formulas.pilkey.main import BeamTorsion, BeamAxial, BeamBending
 #
+import numpy as np
 #
 # ---------------------------------
 #
@@ -147,31 +148,31 @@ class LineBeam(NamedTuple):
                 Fx_out.append([self.load_name, self.title,
                                'basic', self.coordinate_system,
                                self.name, xstep,
-                               Fx.axial(x=xstep,
+                               np.array(Fx.axial(x=xstep,
                                         P=self.qx0, L1=self.L0,
-                                        P2=self.qx1, L2=self.L1),
-                               Mx_blank, 
-                               in_plane.line(x=xstep,
+                                        P2=self.qx1, L2=self.L1)),
+                               np.array(Mx_blank), 
+                               np.array(in_plane.line(x=xstep,
                                              q1=self.qy0, q2=self.qy1,
-                                             L1=self.L0, L2=self.L1),
-                               out_plane.line(x=xstep,
+                                             L1=self.L0, L2=self.L1)),
+                               np.array(out_plane.line(x=xstep,
                                               q1=self.qz0, q2=self.qz1,
-                                              L1=self.L0, L2=self.L1)])
+                                              L1=self.L0, L2=self.L1))])
         
         else:
             Fx_out = [self.load_name, self.title,
                       'basic', self.coordinate_system,
                       self.name, x,
-                      Fx.axial(x=x,
+                      np.array(Fx.axial(x=x,
                                P=self.qx0, L1=self.L0,
-                               P2=self.qx1, L2=self.L1),
-                      Mx_blank,
-                      in_plane.line(x=x,
+                               P2=self.qx1, L2=self.L1)),
+                      np.array(Mx_blank),
+                      np.array(in_plane.line(x=x,
                                     q1=self.qy0, q2=self.qy1,
-                                    L1=self.L0, L2=self.L1),
-                      out_plane.line(x=x,
+                                    L1=self.L0, L2=self.L1)),
+                      np.array(out_plane.line(x=x,
                                      q1=self.qz0, q2=self.qz1,
-                                     L1=self.L0, L2=self.L1)]
+                                     L1=self.L0, L2=self.L1))]
         #
         # [load_name, load_title, load_type, load_system, 
         # beam_number, x, Fx, Fy, Fz]
@@ -209,8 +210,8 @@ class LineBeam(NamedTuple):
         #
         #
         # [fx, fy, fz, mx, my, mz]
-        end1 = [Fa[0], Finp[0], Foutp[0], Mx[0], Finp[1], Foutp[1]]
-        end2 = [Fa[1], Finp[2], Foutp[2], Mx[1], Finp[3], Foutp[3]]        
+        end1 = [Fa[0], Finp[0], Foutp[0], Mx[0], Foutp[1], Finp[1]]
+        end2 = [Fa[1], Finp[2], Foutp[2], Mx[1], Foutp[3], Finp[3]]        
         #
         Fx_out = [self.load_name, self.system, self.title, 
                   self.name, end1, end2]
@@ -368,7 +369,7 @@ class PointBeam(NamedTuple):
                 #Foutp = list(map(sum, zip(F_outplane(xstep, E, Iz), M_inplane(xstep, E, Iz))))
                 #
                 Fx_out.append([self.load_name, self.title, 'basic', self.coordinate_system,
-                               self.name, xstep, Axial, Torsion, Finp, Foutp])
+                               self.name, xstep, np.array(Axial), np.array(Torsion), np.array(Finp), np.array(Foutp)])
         else:
             Axial =  Fx.axial(x=x, P=self.fx, L1=self.L0)
             #Axial = Fx.loading_function(x=x)
@@ -382,7 +383,7 @@ class PointBeam(NamedTuple):
             #Foutp = list(map(sum, zip(F_outplane(x, E, Iz), M_inplane(x, E, Iz))))
             #
             Fx_out = [self.load_name, self.title, 'basic', self.coordinate_system, 
-                      self.name, x, Axial, Torsion, Finp, Foutp]
+                      self.name, x, np.array(Axial), np.array(Torsion), np.array(Finp), np.array(Foutp)]
         # [axial, torsion, bending_inplane, bending_outplane]
         return Fx_out
     #
@@ -416,8 +417,8 @@ class PointBeam(NamedTuple):
         Foutp = list(map(sum, zip(F_outplace, M_outplace)))
         #
         # [fx, fy, fz, mx, my, mz]
-        end1 = [Fa[0], Finp[0], Foutp[0], Mx[0], Finp[1], Foutp[1]]
-        end2 = [Fa[1], Finp[2], Foutp[2], Mx[1], Finp[3], Foutp[3]]
+        end1 = [Fa[0], Finp[0], Foutp[0], Mx[0], Foutp[1], Finp[1]]
+        end2 = [Fa[1], Finp[2], Foutp[2], Mx[1], Foutp[3], Finp[3]]
         Fx_out = [self.load_name, self.system, self.title,
                   self.name, end1, end2]
         #1 / 0
@@ -612,7 +613,7 @@ class BeamLoad:
             # local nodal loading
             nload = [*udl[:3], 0, 0, 0,
                      *udl[3:6], 0, 0, 0,]
-            nload = trns_3Dv(nload, self._beam.T())
+            nload = trnsload(nload, self._beam.T())
             nload = [*nload[:3], *nload[6:9]] 
             return [*nload, *udl[6:], 1, title]
     #
@@ -668,9 +669,9 @@ class BeamLoad:
             1 / self._system_flag
             return [*point, 1, title]
         except ZeroDivisionError:
-            pload = point[:6]
-            pload = trns_3Dv(pload, self._beam.T())
-            return [*pload, point[6], 1, title]
+            pload = [*point[:6], 0, 0, 0, 0, 0, 0]
+            pload = trnsload(pload, self._beam.T())
+            return [*pload[:6], point[6], 1, title]
     #
     # ------------------
     #
@@ -784,13 +785,9 @@ class BeamLoad:
     #
     def beam_function(self, beams, steps:int = 10):
         """ """
-        #1 / 0
-        #beam = self._beam
-        #mat = beam.material
-        #sec = beam.section.properties()
         #
-        beamfun = defaultdict(list)
-        #loadfun = []
+        #beamfun = defaultdict(list)
+        loadfun = []
         # line load
         for key, items in self._line.items():
             beam = beams[key]
@@ -802,9 +799,10 @@ class BeamLoad:
                                 E=mat.E, G=mat.G, 
                                 Iy=sec.Iy, Iz=sec.Iz,
                                 J=sec.J, Cw=sec.Cw, Area=sec.area)
-                beamfun[key].extend(lout)
+                #beamfun[key].extend(lout)
+                #beamfun[key].append(lout)
                 #
-                #loadfun.extend(lout)
+                loadfun.extend(lout)
                 #loadfun.append([key, bitem.name, lout])
                 #loadfun.extend([[bitem.name, 'local', key, *step]
                 #                for step in lout])
@@ -823,16 +821,17 @@ class BeamLoad:
                                 Iy=sec.Iy, Iz=sec.Iz,
                                 J=sec.J, Cw=sec.Cw, Area=sec.area)
                 #beamfun[key].append([bitem.name, lout])
-                beamfun[key].extend(lout)
+                #beamfun[key].extend(lout)
+                #beamfun[key].append(lout)
                 #
-                #loadfun.extend(lout)
+                loadfun.extend(lout)
                 #loadfun.append([key, bitem.name, lout])
                 #loadfun.extend([[bitem.name, 'local', key, *step]
                 #                for step in lout])                
                 #for step in lout:
                 #    loadfun.append([bitem.name, 'local', key, *step])
         #print('---')
-        return beamfun #loadfun
+        return loadfun # beamfun # 
     #
     def fer(self, beams):
         """ """
@@ -850,7 +849,7 @@ class BeamLoad:
                 res = bload.fer_beam(L=beam.L)
                 # local to global system
                 gnload = [*res[4], *res[5]]
-                lnload = trns_3Dv(gnload, beam.T())
+                lnload = trnsload(gnload, beam.T())
                 b2n.append([bload.load_name, bload.title, global_system, 
                             beam.number, node1.number, lnload[:6], node2.number, lnload[6:]])
         # point load
@@ -861,7 +860,7 @@ class BeamLoad:
             for bload in item:
                 res = bload.fer_beam(L=beam.L)
                 gnload = [*res[4], *res[5]]
-                lnload = trns_3Dv(gnload, beam.T())
+                lnload = trnsload(gnload, beam.T())
                 #b2n.append([bload, item.name, item.title])
                 #b2n.append(res)
                 b2n.append([bload.load_name, bload.title, global_system, 

@@ -157,6 +157,7 @@ def solve_deflections(df_nload, method: str,
     #
     df_ndisp = get_dfdisp(dftemp, headdisp)
     print("** Finished Calculating Joint Displacements")
+    #
     return df_ndisp #, df_nload
 #
 #

@@ -198,7 +198,7 @@ class Mesh:
         neq = self._nodes.neq(supports=self._boundaries._nodes)
         #
         if m2D:
-            jbc = jbc[['x', 'y', 'rz']]        
+            jbc = jbc[['x', 'y', 'rz']]
         #
         aa = Kmatrix(elements=self._elements, jbc=jbc, neq=neq,
                      solver=solver, m2D=m2D)

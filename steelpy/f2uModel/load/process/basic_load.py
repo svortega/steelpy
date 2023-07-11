@@ -134,12 +134,12 @@ class BasicLoadBasic(Mapping):
         """process element load"""
         #
         beams = elements.beams()
-        #dftemp = []
-        load_func = {}
+        dftemp = []
+        #load_func = {}
         for name in self._labels:
             lcase = self.__getitem__(name)
             #
-            bfunc = {}
+            #bfunc = {}
             #bfunc = []
             # -------------------------------
             # beam line load (line & point)
@@ -149,8 +149,9 @@ class BasicLoadBasic(Mapping):
             for key, items in beamload.items():
                 try:
                     1/(len(items.line) + len(items.point))
-                    bfunc.update(items.beam_function(beams=beams,
-                                                     steps=steps))
+                    dftemp.extend(items.beam_function(beams=beams, steps=steps))
+                    #bfunc.update(items.beam_function(beams=beams,
+                    #                                 steps=steps))
                 except ZeroDivisionError:
                     continue
             #
@@ -159,32 +160,41 @@ class BasicLoadBasic(Mapping):
             # -------------------------------
             #
             waveload = lcase.wave()
-            bfunc.update(waveload.beam_load(steps=steps))
+            #bfunc.update(waveload.beam_load(steps=steps))
+            dftemp.extend(waveload.beam_load(steps=steps))
             #wload = waveload.beam_load(steps=steps)
             #if wload:
             #    bfunc.update(wload)
             #
             # -------------------------------
             #
-            load_func[name] = bfunc
+            #load_func[name] = bfunc
             #
             # -------------------------------
             # plate load
             # -------------------------------
-            #         
+            #
+        #
+        #
         #print('---')
+        #
+        # Axial   [FP, blank, blank, Fu]
+        # torsion [T, B, Psi, Phi, Tw]
+        # Bending [V, M, theta, w]        
+        #
         # [Fx, Fy, Fz, Mx, My, Mz]
         # [V, M, w, theta]
-        #header = ['load_name', 'load_type', 'load_title', 'system',
-        #          'element_name', 'node_end',
-        #          'Fx_V', 'Fx_M', 'Fx_w', 'Fx_theta',
-        #          'Fy_V', 'Fy_M', 'Fy_w', 'Fy_theta',
-        #          'Fz_V', 'Fz_M', 'Fz_w', 'Fz_theta',
-        #          'Mx_V', 'Mx_M', 'Mx_w', 'Mx_theta',
-        #          'My_V', 'My_M', 'My_w', 'My_theta',
-        #          'Mz_V', 'Mz_M', 'Mz_w', 'Mz_theta']
-        #dfload = pd.DataFrame(data=dftemp, columns=header, index=None)
-        return load_func
+        header = ['load_name', 'load_comment', 'load_type', 'load_system',
+                  'element_name', 'node_end',
+                  'axial', 'torsion', 'VM_inplane', 'VM_outplane']
+        #
+        #          'FP', 'blank1', 'blank2', 'Fu',
+        #          'T', 'B', 'Psi', 'Phi', 'Tw',
+        #          'Vy', 'Mz', 'theta_y', 'w_y',
+        #          'Vz', 'My', 'theta_z', 'w_z']
+        dfload = pd.DataFrame(data=dftemp, columns=header, index=None)
+        #return load_func
+        return dfload
     #
     #
     def FER(self, elements):

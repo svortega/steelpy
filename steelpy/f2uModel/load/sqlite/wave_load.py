@@ -23,7 +23,7 @@ from steelpy.process.math.operations import linspace
 #
 # steelpy.f2uModel.load
 from ..process.beam import BeamLoadItem #, BeamLoad
-from steelpy.process.math.operations import trns_3Dv
+from steelpy.process.math.operations import trnsload
 #
 from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 # steelpy.f2uModel
@@ -207,28 +207,6 @@ class WaveLoadItemSQL(BeamLoadItem):
     def _push_node_load(self, conn,
                         node_load:list[float]):
         """ """
-        #print("-->")
-        #beam = check_element(conn, beam_name)
-        #beam_number = beam[0]
-        #
-        #node_name = node_load.pop(0)
-        #node = check_nodes(conn, node_name)
-        #node_number = node[0]
-        #
-        #load_data = get_load_data(conn, self._name, load_type='basic')
-        #load_number = load_data[0]
-        #
-        #try:
-        #    1 / load_system
-        #    load_system = 'local'
-        #except ZeroDivisionError:
-        #    raise RuntimeError('node load in global system')
-        #
-        #project = (load_number, load_title, load_system,
-        #           beam_number, node_number,
-        #           *node_load,
-        #           'NULL', 'NULL', 'NULL',
-        #           'NULL', 'NULL', 'NULL')
         #
         sql = 'INSERT INTO tb_LoadBeamToNode(load_number, title, system, \
                                              element_number,\
@@ -350,7 +328,7 @@ class WaveLoadItemSQL(BeamLoadItem):
                     gnload = load.fer_beam(L=beam.L)
                     # load local system to global 
                     gnload = [*gnload[4], *gnload[5]]
-                    lnload = trns_3Dv(gnload, beam.T())
+                    lnload = trnsload(gnload, beam.T())
                     #
                     res.extend([[item.load_number, item.load_comment, 
                                  'global', beam.number,
@@ -382,7 +360,8 @@ class WaveLoadItemSQL(BeamLoadItem):
     def beam_load(self, steps:int = 10):
         """ """
         conn = create_connection(self._bd_file)
-        beamfun = defaultdict(list)		
+        #beamfun = defaultdict(list)
+        beamfun = []
         for load_name in set(self._labels):
             with conn: 
                 bldf = self.get_wave_load(conn, load_name=load_name)
@@ -409,7 +388,8 @@ class WaveLoadItemSQL(BeamLoadItem):
                                     E=mat.E, G=mat.G, 
                                     Iy=sec.Iy, Iz=sec.Iy,
                                     J=sec.J, Cw=sec.Cw, Area=sec.area)
-                    beamfun[key[0]].extend(lout)
+                    #beamfun[key[0]].extend(lout)
+                    beamfun.extend(lout)
                 #
         #print('---')
         return beamfun

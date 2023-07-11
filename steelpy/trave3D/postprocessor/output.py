@@ -170,7 +170,7 @@ def printout(node_id:list, disp:list, str1=""):
 #
 #
 # --------------------
-# output
+# beam print out
 # --------------------
 #
 def print_beam_forces(df_membforce, m2D: bool):
@@ -191,7 +191,7 @@ def print_beam_forces(df_membforce, m2D: bool):
         print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
               .format(*header[0]))
         #
-        print_beam_end_forces(wk, m2D)
+        print_beam_int_forces(wk, m2D)
         print("")
     #
     # combinations    
@@ -204,13 +204,13 @@ def print_beam_forces(df_membforce, m2D: bool):
             print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
                   .format(*header[0]))
             #
-            print_beam_end_forces(wk, m2D)
+            print_beam_int_forces(wk, m2D)
             print("")
     except KeyError:
         pass
 #
 #
-def print_beam_end_forces(eforces, m2D: bool):
+def print_beam_int_forces(eforces, m2D: bool):
     """
     """
     mgroup = eforces.groupby("element_name") #.groups .get_group([0,1])
@@ -254,6 +254,93 @@ def print_beam_end_forces(eforces, m2D: bool):
             print("")
         #print("\n")
     #print("\n")
+#
+#
+def print_beam_disp(df_membforce, m2D: bool):
+    """ """
+    blgrp = df_membforce.groupby('load_type')
+    #
+    print('{:}'.format(52 * '-'))
+    print("** Reloaded Elements Displacement")
+    print('{:}'.format(52 * '-'))
+    print("")
+    #   
+    # basic
+    bltype = blgrp.get_group('basic')
+    blitems = bltype.groupby('load_name')     
+    for key, wk in blitems:
+        header =  wk[['load_name', 'load_number', 'load_title', 'load_system']].values
+        print("-- Basic Load  Name: {:}  Number: {:}  Title: {:}  System: {:}"
+              .format(*header[0]))
+        #
+        print_beam_int_disp(wk, m2D)
+        print("")
+    #
+    # combinations    
+    try:
+        bltype = blgrp.get_group('combination')
+        blitems = bltype.groupby('load_name')        
+        print('{:}'.format(52 * '-'))
+        for key, wk in blitems:
+            header =  wk[['load_name', 'load_number', 'load_title', 'load_system']].values
+            print("-- Load Combination  Name: {:}  Number: {:}  Title: {:}  System: {:}"
+                  .format(*header[0]))
+            #
+            print_beam_int_disp(wk, m2D)
+            print("")
+    except KeyError:
+        pass    
+#
+#
+def print_beam_int_disp(eforces, m2D: bool):
+    """
+    """
+    mgroup = eforces.groupby("element_name") #.groups .get_group([0,1])
+    #
+    if m2D:
+        ndof = 3
+        forcehead = ['node_end', 'F_wx', 'F_wy', 'F_thetaz']
+        print("     Beam  Len[ m]     x [ m]     y [ m]   rz [rad]")
+    else:
+        ndof = 6
+        forcehead = ['node_end', 'F_wx', 'F_wy', 'F_wz', 'F_phix', 'F_thetay', 'F_thetaz']
+        print("     Beam  Len[ m]     x [ m]     y [ m]     rx [rad]   ry [rad]   rz [rad]")
+    #
+    for key, mgroup in mgroup:
+        print("{:9d} ".format(key), end='')
+        items = mgroup[forcehead].values
+        
+        for x, member in enumerate(items):
+            #
+            try:
+                1 / x
+                print("{:} ".format(9 * " "), end='')
+            except ZeroDivisionError:
+                pass
+            
+            print("{:1.2e} ".format(member[0]), end='')
+            for i in range(ndof):
+                print("{: 1.3e} ".format(member[i+1]), end='')            
+            #
+            #member = eforces.iloc[index]
+            #try:
+            #    1/member.end
+            #    print("{:} ".format(9 * " "), end='')
+            #except ZeroDivisionError:
+            #    #print('---=======')
+            #    pass
+            #print("{:10d} ".format(member.node), end='')
+            #for i in range(6):
+            #    print("{: 1.3e} ".format(member[i+4]), end='')
+            #print("{:}".format(8*" "))
+            print("")
+        #print("\n")
+    #print("\n")
+#
+#
+# --------------------
+# output
+# --------------------
 #
 #
 class ResultInmemory:
@@ -310,6 +397,9 @@ class ResultInmemory:
         """ """
         print_beam_forces(self.beam_force, self._m2D)
     #
+    def print_element_disp(self):
+        """ """
+        print_beam_disp(self.beam_force, self._m2D)
     #
     #
     @property

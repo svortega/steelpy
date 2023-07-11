@@ -12,7 +12,7 @@ from __future__ import annotations
 from steelpy.process.math.operations import zeros, to_matrix, linspace, mtxmul
 from steelpy.process.dataframe.main import DBframework
 #
-from steelpy.process.math.operations import trns_3Dv, trns_2Dv, mtxmul, linspace
+from steelpy.process.math.operations import trnsload_3Dv, trnsload_2Dv, mtxmul, linspace
 from steelpy.formulas.main import BeamBasic
 #
 import numpy as np

@@ -9,7 +9,10 @@ import numpy as np
 
 def beam2D_K(L:float, A:float, I:float, E:float, 
              beta:int, nu:float=0.30):
-
+    #
+    #A = 1250 / 1000**2 #m2
+    #I = 275 * 10**-6 #m4
+    #
     # Calculate alpha for shear deformation (assume beta=0 means user doesn't want this)
     if beta > 0.0:
         G = E / (2.0 * (1 + nu))
@@ -18,12 +21,19 @@ def beam2D_K(L:float, A:float, I:float, E:float,
         alpha = 0
 
     # Local stiffness matrix
-    Kl = np.array([(E*A/L,   0,            0,         -E*A/L, 0,            0),
-                   (0,       12*E*I/L**3, -6*E*I/L**2, 0,    -12*E*I/L**3, -6*E*I/L**2),
-                   (0,      -6*E*I/L**2,   (4+alpha)*E*I/L,    0,     6*E*I/L**2,   (2-alpha)*E*I/L),
-                   (-E*A/L,  0,            0,          E*A/L, 0,            0),
-                   (0,      -12*E*I/L**3,  6*E*I/L**2, 0,     12*E*I/L**3,  6*E*I/L**2),
-                   (0,      -6*E*I/L**2,   (2-alpha)*E*I/L,    0,     6*E*I/L**2,   (4+alpha)*E*I/L)])
+    #Kl = np.array([(E*A/L,   0,            0,         -E*A/L, 0,            0),
+    #               (0,       12*E*I/L**3, -6*E*I/L**2, 0,    -12*E*I/L**3, -6*E*I/L**2),
+    #               (0,      -6*E*I/L**2,   (4+alpha)*E*I/L,    0,     6*E*I/L**2,   (2-alpha)*E*I/L),
+    #               (-E*A/L,  0,            0,          E*A/L, 0,            0),
+    #               (0,      -12*E*I/L**3,  6*E*I/L**2, 0,     12*E*I/L**3,  6*E*I/L**2),
+    #               (0,      -6*E*I/L**2,   (2-alpha)*E*I/L,    0,     6*E*I/L**2,   (4+alpha)*E*I/L)])
+    #
+    Kl = np.array([(E*A/L,             0,                 0,    -E*A/L,                  0,                 0),
+                   (0,       12*E*I/L**3,        6*E*I/L**2,         0,       -12*E*I/L**3,        6*E*I/L**2),
+                   (0,        6*E*I/L**2,   (4+alpha)*E*I/L,         0,        -6*E*I/L**2,   (2-alpha)*E*I/L),
+                   (-E*A/L,            0,                 0,     E*A/L,                  0,                 0),
+                   (0,      -12*E*I/L**3,       -6*E*I/L**2,         0,        12*E*I/L**3,       -6*E*I/L**2),
+                   (0,        6*E*I/L**2,   (2-alpha)*E*I/L,         0,        -6*E*I/L**2,   (4+alpha)*E*I/L)])
 
     Kl = np.multiply(Kl, 1.0/(1.0 + alpha))
 

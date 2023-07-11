@@ -96,6 +96,7 @@ class Results:
         self.node.print_deflections()
         self.node.print_reactions()
         self.beam.print_forces()
+        self.beam.print_displacement()
 #
 #
 class NodeType:
@@ -190,7 +191,6 @@ class BeamType:
     @property
     def force(self):
         """ """
-        #return self._cls._results.element_force
         return self._cls._results.beam_force
     
     #@force.setter
@@ -198,31 +198,9 @@ class BeamType:
     #    """ """
     #    self._cls._results.element_force = value
     #
-    #def _get_force(self):
-    #    """ """
-    #    ndisp = self._cls._results._displacement
-    #    nforce = self._cls._results._node_force
-    #    # -----------------------------------
-    #    # geometry
-    #    mesh = self._cls.mesh
-    #    elements = mesh.elements()
-    #    #nodes = mesh.nodes()
-    #    #boundaries = mesh.boundaries()
-    #    # loading
-    #    load =  self._cls.load
-    #    basic_load = load.basic()
-    #    #nload = load._df_nodal
-    #    #
-    #    load_combination = load.combination()
-    #    # -----------------------------------
-    #    # beam 
-    #    membf = beam_force(elements, 
-    #                       basic_load,
-    #                       load_combination=load_combination,
-    #                       #node_load=nload,
-    #                       node_disp=ndisp, 
-    #                       node_force=nforce)
-    #    self._cls._results._beam_force = membf
+    def print_displacement(self):
+        """ """
+        self._cls._results.print_element_disp()
     #
     #
     def print_forces(self):

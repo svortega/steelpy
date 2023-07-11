@@ -12,7 +12,7 @@ import re
 #from .inmemory.main import LoadingInmemory
 from .inmemory.basic_load import BasicLoad
 from .inmemory.combination import LoadCombination
-from .inmemory.timehistory import TimeHistory
+#from .inmemory.timehistory import TimeHistory
 #
 #from .sqlite.main import LoadingSQL
 from .sqlite.basic_load import BasicLoadSQL
