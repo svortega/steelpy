@@ -223,12 +223,21 @@ class WaveLoadItemSQL(BeamLoadItem):
     #
     def process(self, load_name: int | str):
         """ """
+        try:
+            index = self._labels.index(load_name)
+        except ValueError:
+            raise KeyError('Invalid load name : {:}'.format(load_name))        
         print('# Calculating wave beam forces')
-        wave = self.__getitem__(load_name)
+        #index = self._labels.index(load_name)
+        design_load = self._design_load[index]
+        wave = self._wave[index]
+        #wave = self.__getitem__(load_name)
         wname = f'{wave.name}_{wave.title}'
         wload = wave.load()
         #
         df_bload = self.get_beam_load(wname, wload)
+        #
+        #grpbeam = df_bload.groupby(['element_type', 'element_name'])
         #
         self.df(data=df_bload)
         #

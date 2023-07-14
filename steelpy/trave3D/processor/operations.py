@@ -613,8 +613,10 @@ def comb_update(df_comb, df_nload, df_ndisp, df_nforce, df_membf,
                                 values=forcehead)
     #
     df_membf = update_memberdf2(dfmemb=df_membf, dfcomb=df_comb,
-                                values=['F_Vx', 'F_Vy', 'F_Vz', 'F_Mx', 'F_My', 'F_Mz',
-                                        'F_wx', 'F_wy', 'F_wz', 'F_phix', 'F_thetay', 'F_thetaz'])
+                                values=['F_Vx', 'F_Vy', 'F_Vz',
+                                        'F_Mx', 'F_My', 'F_Mz',
+                                        'F_wx', 'F_wy', 'F_wz',
+                                        'F_phix', 'F_thetay', 'F_thetaz'])
     #
     return df_nload, df_ndisp, df_nforce, df_membf
 #    
@@ -645,13 +647,16 @@ def update_ndf(dfnode, dfcomb,
                 dftemp = db.concat([dftemp, comb], ignore_index=True)
             except UnboundLocalError:
                 dftemp = comb
-        #
+    #
+    try:
         #check = dftemp.groupby(['node_name', 'c']).sum().reset_index()
-        comb = dftemp.groupby(['load_name', 'load_number','load_type',
-                               'load_title', 'load_system','node_name'],
-                                as_index=False)[values].sum()
+        dftemp = dftemp.groupby(['load_name', 'load_number','load_type',
+                                 'load_title', 'load_system','node_name'],
+                                  as_index=False)[values].sum()
         #test
-        dfnode = db.concat([dfnode, comb], ignore_index=True)
+        dfnode = db.concat([dfnode, dftemp], ignore_index=True)
+    except UnboundLocalError:
+        pass
     #
     return dfnode #, memb_comb
 #
@@ -678,13 +683,16 @@ def update_memberdf(dfmemb, dfcomb,
                 dftemp = db.concat([dftemp, comb], ignore_index=True)
             except UnboundLocalError:
                 dftemp = comb
-        #
-        comb = dftemp.groupby(['load_name', 'load_number','load_type',
-                               'load_title', 'load_system',
-                               'element_name' ,'node_name'],
-                                as_index=False)[values].sum()
+    #
+    try:
+        dftemp = dftemp.groupby(['load_name', 'load_number','load_type',
+                                 'load_title', 'load_system',
+                                 'element_name' ,'node_name'],
+                                  as_index=False)[values].sum()
         #test
-        dfmemb = db.concat([dfmemb, comb], ignore_index=True)
+        dfmemb = db.concat([dfmemb, dftemp], ignore_index=True)
+    except UnboundLocalError:
+        pass
     #
     return dfmemb
 #
@@ -712,12 +720,22 @@ def update_memberdf2(dfmemb, dfcomb,
             except UnboundLocalError:
                 dftemp = comb
         #
-        comb = dftemp.groupby(['load_name', 'load_number','load_type',
-                               'load_title', 'load_system',
-                               'element_name' ,'node_end'],
-                                as_index=False)[values].sum()
+        #comb = dftemp.groupby(['load_name', 'load_number','load_type',
+        #                       'load_title', 'load_system',
+        #                       'element_name' ,'node_end'],
+        #                        as_index=False)[values].sum()
         #test
-        dfmemb = db.concat([dfmemb, comb], ignore_index=True)
+        #dfmemb2 = db.concat([dfmemb2, comb], ignore_index=True)
+    #
+    try:
+        dftemp = dftemp.groupby(['load_name', 'load_number','load_type',
+                                 'load_title', 'load_system',
+                                 'element_name' ,'node_end'],
+                                  as_index=False)[values].sum()    
+        #
+        dfmemb = db.concat([dfmemb, dftemp], ignore_index=True)
+    except UnboundLocalError:
+        pass
     #
     return dfmemb
 #

@@ -161,6 +161,14 @@ f2umodel.build()
 #plot.mesh()
 #plot.basic_load(name=22)
 #
+#
+#from steelpy.beam.frame2D.process.assembleK import assembleKa, get_Kf
+#nodes = mesh.nodes()
+#beams = mesh.elements().beams()
+#boundaries = mesh.boundaries()
+#Ka, KlStorageFrame, TlgStorageFrame = assembleKa(nodes, frameElements=beams)
+#kf = get_Kf(Ka, nodes, boundaries)
+#
 # ----------------------------------------------------
 # Structural Analysis
 # ----------------------------------------------------

@@ -181,7 +181,7 @@ basic = load.basic()
 #
 basic[10] = 'wave load'
 basic[10].wave(wave_load = metload['sea_1'],
-               design_load = 'max_BSOTM')
+               design_load = 'max_BS')
 #
 # ----------------------------------------------------
 # Meshing input

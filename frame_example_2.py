@@ -2,6 +2,7 @@
 from steelpy import Units
 from steelpy import f2uModel
 from steelpy import Trave3D
+from steelpy import Trave2D
 #
 #
 units = Units()
@@ -230,33 +231,33 @@ basic = load.basic()
 #
 #
 #
-basic[11] = 'snow load 2'
-###basic[11].udl_beam.coordinate_system = 'local'
-blnode = basic[11].node()
-blnode[20].load = [0, -4_000_000_000, 'wind_1']
-blnode[30].load = [0, -2_000_000_000, 'wind_2']
+#basic[11] = 'snow load 2'
+##basic[11].udl_beam.coordinate_system = 'local'
+#blnode = basic[11].node()
+#blnode[20].load = [-1_000_000, 0, 'wind_1']
+#blnode[30].load = [-1_000_000, 0, 'wind_2']
 #
 #
 #basic[22] = 'snow load'
-#blbeam = basic[1].beam()
-#blbeam[1].line = [-1_000_000, 0, 0, 'wind_1']
+#blbeam = basic[22].beam()
+#blbeam[25].line = [0, -10_000, 0,  'wind_1']
 ##basic[1].udl_beam[2] = [-10_000_000, 0, 0]
 #
 ##
 basic[22] = 'snow load'
-#basic[22].beam([2, 'line' , -1_000_000, 0, 0, 'snow load on roof'])
+#basic[22].beam([25, 'line' , 0, -1_00_000,  0, 'snow load on roof'])
 ##basic[2].udl_beam.coordinate_system = 'local'
 blbeam = basic[22].beam()
 #blbeam[25].line = [0, -10_000, 0,  0, -10_000, 0,
 #                  0, 5, 'validation_line']
 #
-blbeam[25].line = [0, -50_000, 0,  0, -50_000, 0,
-                   'validation_line']
+#blbeam[25].line = [0, -10_000, 0,  0, -10_000, 0,
+#                   'validation_line']
 #
 #blbeam[2].line = [0, 0, -10_000, 0, 0, -10_000,
 #                  0, 0, 'validation']
 #
-blbeam[25].point = [5, 0, -10_000, 0,
+blbeam[25].point = [5, 0, -100_000, 0,
                     'validation_point']
 #
 #blbeam[2].line = [0, 2, -480_000, 'snow load on roof']
@@ -276,7 +277,7 @@ blbeam[25].point = [5, 0, -10_000, 0,
 ## tilt
 ##basic[3].point_beam.coordinate_system = 'local'
 #blbeam = basic[33].beam()
-#blbeam[2].point = [2.5, 0, 0, 0,  0, 0, -100_000_000, 'lifting module A']
+#blbeam[25].point = [2.5, 0, 0, 0,  0, 0, -100_000_000, 'lifting module A']
 ##print(basic[3].point_beam.coordinate_system)
 ##
 ##basic[3].point_beam[2] = [2.0, -100_000_000]
@@ -307,25 +308,25 @@ blbeam[25].point = [5, 0, -10_000, 0,
 #                         ['factored comb 1', 'basic', 33, 1.30]])
 #
 #
-comb = load.combination()
-comb[100] = 'factored comb 1'
-comb[100].basic[11] = 1.20
-comb[100].basic[22] = 1.25
+#comb = load.combination()
+#comb[100] = 'factored comb 1'
+#comb[100].basic[11] = 1.20
+#comb[100].basic[22] = 1.25
 #comb[100].basic[33] = 1.30
 ##
 #comb[200] = 'factored comb 2'
 #comb[200].basic[11] = 1.35
 #comb[200].basic[22] = 1.40
 #comb[200].basic[33] = 1.45
-##
-comb[300] = 'factored comb 3'
-comb[300].combination[100] = 1.50
+#
+#comb[300] = 'factored comb 3'
+#comb[300].combination[100] = 1.50
 #comb[300].combination[200] = 1.55
 #comb[300].basic[44] = 1.60
 #
 #print(comb)
 #
-#print(load)
+print(load)
 #
 #
 # ----------------------------------------------------
@@ -347,8 +348,9 @@ plot = f2umodel.plot()
 # ----------------------------------------------------
 #
 #
-frame = Trave3D()
+frame = Trave2D()
 frame.mesh = mesh
-results = frame.run_static(method = 'banded')
+results = frame.run_static()
+#results = frame.run_static(method='banded')
 results.print()
 print('-->')
