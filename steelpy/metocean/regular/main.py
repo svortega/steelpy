@@ -15,12 +15,13 @@ from steelpy.metocean.regular.fourier.Fourier import FourierModule
 from steelpy.metocean.regular.cnoidal.Cnoidal import CnoidalModule
 
 class RegularWaves:
-    __slots__ = ['_wave', '_condition',
+    __slots__ = ['_wave', '_condition', '_cls',
                  '_stokes', '_fourier','_cnoidal']
 
-    def __init__(self)-> None:
+    def __init__(self, cls)-> None:
         """
         """
+        self._cls = cls
         self._condition = 2
         self._wave:dict = {}
         self._stokes = StokesModule()
@@ -46,7 +47,7 @@ class RegularWaves:
     #    """ """
     #    return self._current
     #
-    def __setitem__(self, case_name: int,
+    def __setitem__(self, name: int|str,
                     case_data: list[float]|dict[str, float]) -> None:
         """
         case_name : Wave name
@@ -57,38 +58,51 @@ class RegularWaves:
          Phase : Wave phase [degree]
          Order : ??
         """
+        #
+        self._cls._input(name, 'regular')
+        #
         data = get_wave_data(case_data)
         wave_type = data.pop()
+        #
         if re.match(r"\b(stoke(s)?)\b", wave_type, re.IGNORECASE):
-            self._wave[case_name] = 'stokes'
-            self._stokes[case_name] = data
+            self._wave[name] = 'stokes'
+            self._stokes[name] = data
         
         elif re.match(r"\b(cnoidal)\b", wave_type, re.IGNORECASE):
-            self._wave[case_name] = 'cnoidal'
-            self._cnoidal[case_name] = data
+            self._wave[name] = 'cnoidal'
+            self._cnoidal[name] = data
         else:
-            self._wave[case_name] = 'fourier'
-            self._fourier[case_name] = data
+            self._wave[name] = 'fourier'
+            self._fourier[name] = data
 
         #self._wave[case_name] = case_data
     #
     #
-    def __getitem__(self, case_name: int|str) -> tuple:
+    def __getitem__(self, name: int|str) -> tuple:
         """
         case_name : Wave name
         """
-        if self._wave[case_name] == 'stokes':
-            return self._stokes[case_name]
+        if self._wave[name] == 'stokes':
+            return self._stokes[name]
         
-        elif self._wave[case_name] == 'cnoidal':
-            return self._cnoidal[case_name]
+        elif self._wave[name] == 'cnoidal':
+            return self._cnoidal[name]
         
         else:
-            return self._fourier[case_name] 
+            return self._fourier[name]
     #
     #
     def df(self, df):
         """ """
-        1/0
+        grpname = df.groupby(['name'])
+        for key, item in grpname:
+            values = item[['Hw', 'Tw', 'd', 'theory']].values
+            for idx, value in enumerate(values):
+                # TODO : define input better
+                #name = f'{key[0]}_{idx + 1}'
+                name = key[0]
+                self.__setitem__(name=name,
+                                 case_data=value.tolist())
+        #print('--')
     #
     #

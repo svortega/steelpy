@@ -3,48 +3,90 @@
 #
 # Python stdlib imports
 from __future__ import annotations
-import re
 from collections.abc import Mapping
-from typing import NamedTuple, Tuple, List, Union
+from dataclasses import dataclass
+from operator import itemgetter
+from typing import NamedTuple
+import re
 
 #
 # package imports
-from steelpy.process.units.main import Units
-from steelpy.f2uModel.properties.process.operations import BasicProperty
+from steelpy.process.units.main import Number, Units
+from steelpy.metocean.hydrodynamic.operations import BasicProperty, get_list
+import numpy as np
 
 
 class MarineGrowth(Mapping):
     """
     """
-    __slots__ = ['_marine_growth', 'f2u_units',
-                 'sea_water_density', '_default']
+    __slots__ = ['_mg', '_rho_w'] #'f2u_units',
+                 #'_rhow', '_default']
     
-    def __init__(self):
+    def __init__(self, rho_w):
         """
         """
-        global f2u_units #, mg_default
-        f2u_units = Units()
+        #global f2u_units #, mg_default
+        #f2u_units = Units()
         #
-        self._default: None|str = None
-        self._marine_growth:dict = {}
-        self.sea_water_density:float = 1032.0 * f2u_units.kg / f2u_units.m**3
+        #self._default: None|str = None
+        self._mg:dict = {}
+        self._rho_w:float = rho_w # 1032.0 * f2u_units.kg / f2u_units.m**3
     #
-    def __getitem__(self, mg_name: str|int):
+    def __getitem__(self, name: str|int):
         """
         """
-        return self._marine_growth[mg_name]
+        return self._mg[name]
     
-    def __setitem__(self, mg_name:str|int, mg_type: str) -> None:
+    def __setitem__(self, name:str|int, value) -> None:
         """
         """
-        if re.match(r"\b(constant)\b", mg_type, re.IGNORECASE):
-            self._marine_growth[mg_name] = MGconstant()
-        elif re.match(r"\b(profile)\b", mg_type, re.IGNORECASE):
-            self._marine_growth[mg_name] = MGprofile(self)
-        else:
-            raise IOError("marine growth type {:} not implemented".format(mg_type))
+        #if re.match(r"\b(constant)\b", mg_type, re.IGNORECASE):
+        #    self._mg[mg_name] = MGconstant()
+        #elif re.match(r"\b(profile)\b", mg_type, re.IGNORECASE):
+        #    self._mg[mg_name] = MGprofile(self)
+        #else:
+        #    raise IOError("marine growth type {:} not implemented".format(mg_type))
         #
-        self._marine_growth[mg_name].name = mg_name
+        #self._mg[mg_name].name = mg_name
+        #
+        #
+        if isinstance(value, list|tuple|dict):
+            data = self.get_data(value)
+        elif isinstance(value, Number):
+            data = self.get_data([value])
+        else:
+            raise IOError('data not valid')
+        #
+        self._mg[name] = MGitem(name=name,
+                                density=data[0],
+                                thickness=data[1],
+                                profile=data[2])
+    #
+    #
+    def get_data(self, values):
+        """ [density, thickness, constant/profile, tile] """
+        outval = [0, 0, 'profile', None]
+        mgprofile = outval[2]
+        if isinstance(values, dict):
+            1/0
+        else:
+            if isinstance(values[-1], str):
+                mgprofile = values.pop()
+            #
+            outval[0] = values[0].convert('kilogram/metre^3').value
+            try:
+                outval[1] = values[1].value
+                mgprofile = 'uniform'
+            except IndexError:
+                #outval[2] = 'profile'
+                pass
+        #
+        if re.match(r"\b(constant|uniform|mean)\b", mgprofile, re.IGNORECASE):
+            outval[2] = 'uniform'
+        #
+        return outval
+    #
+    #
     #
     #def add_new(self, mg_name, mg_number=None):
     #    """
@@ -52,21 +94,118 @@ class MarineGrowth(Mapping):
     #    if mg_number:
     #        _number = mg_number
     #    else:
-    #        _number = len(self._marine_growth) + self.number        
+    #        _number = len(self._mg) + self.number        
     #    self.__setitem__(mg_name, _number)
     #    
     #
     def __len__(self) -> int:
-        return len(self._marine_growth)
+        return len(self._mg)
 
     def __iter__(self):
         """
         """
-        return iter(self._marine_growth)
+        return iter(self._mg)
     
     def __contains__(self, value) -> bool:
-        return value in self._marine_growth
+        return value in self._mg
+    #
+    #
+    def df(self, df, columns:dict|None=None):
+        """ """
+        units = Units()
+        grpname = df.groupby(['name'])
+        for key, item in grpname:
+            try:
+                value = item["density"].max()
+            except KeyError:
+                value = self._rho_w * units.kg / units.m**3
+            #
+            self.__setitem__(name=key[0], value=value)
+            profile = item[["zlevel", "thickness"]].values.tolist()
+            self._mg[key[0]].profile = profile
+        #print('-->')    
 #
+#
+@dataclass
+class MGitem:
+    __slots__ = ['name', '_profile', 'mgprofile', 'thickness', 'density']
+    #
+    def __init__(self, name: int|str, density: float, thickness: float,
+                 profile: str = 'uniform'):
+        """ """
+        self.name = name
+        self.density = density
+        self.thickness = thickness
+        self.mgprofile = profile
+        self._profile: list = []
+        #self._depth: float = 0.0
+    #
+    @property
+    def profile(self):
+        """ """
+        if not self._profile:
+            1/0
+            #Vct = self.tvelocity
+            #zd = (self.zd + self._depth) / max(self._depth + self._eta)
+            #zd = self.zd[::-1]
+            #val = (zd + self._depth) / max(self._depth + self._eta)
+            #1/0
+            #val = np.power(np.abs(val), 1.0 / 7.0)
+            #profile = []
+            #for idx, item in enumerate(zd):
+            #    profile.append([item, val[idx]])
+            #self._profile = [self.zd, np.power(np.abs(Vct * zd), 1.0 / 7.0)]
+            #self._profile = profile
+            #1/0
+        #print('-->')
+        return self._profile
+
+    @profile.setter
+    def profile(self, value: list[list]):
+        """ """
+        prof = []
+        for item in value:
+            elev = item[0].value
+            thickness = item[1].value
+            prof.append([elev, thickness])
+        #
+        prof.sort(key=itemgetter(0), reverse=True)
+        self._profile = prof
+    #
+    #
+    def MGX(self, Z):
+        """ MArine growth"""
+        mgr = np.zeros((Z.shape))
+        mgr[:, :, :] = 0.90 # m
+        mgr[Z<-25.0] = 0.50 # m
+        mgr[Z>2] = 0.0      # m
+        return mgr
+    #
+    def MGXX(self, Z):
+        """ MArine growth"""
+        mgr = np.zeros((Z.shape))
+        mgr[:] = 0.90 # m
+        mgr[Z < -25.0] = 0.50 # m
+        mgr[Z > 2] = 0.0      # m
+        return mgr
+    #
+    def MG(self, Z):
+        """ MArine growth"""
+        prof = self.profile
+        elev = list(reversed([item[0] for item in prof]))
+        value = list(reversed([item[1] for item in prof]))
+        mgr = np.zeros((Z.shape))
+        for i, point in enumerate(Z):
+            mgr[i] = np.interp(point, elev, value)
+        #
+        return mgr
+    #    
+    #    
+#
+#
+#
+#
+# -------------------------------------------------------------
 #
 class Profile(NamedTuple):
     """
@@ -110,7 +249,7 @@ class MGprofile(BasicProperty):
         self.inertia : bool = True
         self.absolute_elevations : bool = False
         self.density_factor : float = 1.36
-        self.density : Units = 1400.0 * f2u_units.kg / f2u_units.m**3
+        self.density : float = 1400.0 #* f2u_units.kg / f2u_units.m**3
         #
         self._label : list[float] = []
         self._elevation : list[float] = []
@@ -142,7 +281,7 @@ class MGprofile(BasicProperty):
     def get_density_factor(self, density):
         """
         """
-        self.density_factor = density/self.sea_water_density
+        self.density_factor = density/self._wdensity
         return self.density_factor
     #
     def set_default(self):
@@ -163,7 +302,7 @@ class MGconstant(BasicProperty):
         self.case = 'constant_thickness'
         #
         self._roughness : float = 0.0
-        self.density : float = 1400.0 * f2u_units.kg / f2u_units.m**3
+        self.density : float = 1400.0 #* f2u_units.kg / f2u_units.m**3
         self.density_factor : float = 1.36
     #
     #
@@ -249,20 +388,6 @@ class MGtypes:
             raise Exception('   *** input format not recognized')
         return value
 #
-#
-#
-def get_list(data, steps:int=6)->list[float]:
-    """ """
-    new_data = []
-    for x in range(steps):
-        try:
-            try:
-                new_data.append(data[x].value)
-            except AttributeError:
-                new_data.append(data[x])
-        except IndexError:
-            new_data.append(0.0)
-    return new_data
 #
 def get_dic(data)->list[float]:
     """ """

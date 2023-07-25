@@ -187,7 +187,8 @@ class Meshing:
             # clone mesh load
             mlbasic[Clb_name] = Clb_item.title
             mlb_node = mlbasic[Clb_name].node()
-            mlb_beam =  mlbasic[Clb_name].beam()
+            mlb_beam = mlbasic[Clb_name].beam()
+            #
             # Beam load process
             # TODO : update linefit
             for bname, CBloads in Clb_item.beams.items():
@@ -268,6 +269,11 @@ class Meshing:
                                                  mlb_node, mlb_beam, 
                                                  point=point)
                                 break
+            #
+            # wave
+            for wname, wload in Clb_item.wave.items():
+                mlbasic[Clb_name].wave(wave_load=wload.seastate,
+                                       design_load=wload.design_load)
         #
         #print('--> end mesh loading')
     #

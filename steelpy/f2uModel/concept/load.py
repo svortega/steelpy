@@ -8,14 +8,14 @@ from collections.abc import Mapping
 
 # package imports
 # steelpy.f2uModel.load
-from ..load.process.actions import SelfWeight
-from ..load.process.basic_load import BasicLoadBasic
+from steelpy.f2uModel.load.process.actions import SelfWeight
+from steelpy.f2uModel.load.process.basic_load import BasicLoadBasic
 #
-from ..load.inmemory.beam import BeamLoadItemIM
-from ..load.inmemory.node import NodeLoadItemIM
-from ..load.inmemory.timehistory import TimeHistory
-from ..load.inmemory.combination import LoadCombination
-
+from steelpy.f2uModel.load.inmemory.beam import BeamLoadItemIM
+from steelpy.f2uModel.load.inmemory.node import NodeLoadItemIM
+from steelpy.f2uModel.load.inmemory.timehistory import TimeHistory
+from steelpy.f2uModel.load.inmemory.combination import LoadCombination
+from steelpy.f2uModel.load.inmemory.wave_load import WaveLoadItemIM
 #
 #
 #
@@ -128,7 +128,7 @@ class LoadTypesConcept:
     """
     """
     __slots__ = ['_node', '_node_id', '_beam', '_beam_id',
-                 '_selfweight', '_line', '_line_id',
+                 '_selfweight', '_line', '_line_id', '_wave',
                   'name', 'number', 'title', 'f2u_points', 'f2u_beams']
 
     def __init__(self, name: str|int, number: int, title: str,
@@ -144,14 +144,15 @@ class LoadTypesConcept:
         #
         self._selfweight = SelfWeight()
         
-        self._node = NodeLoadItemIM(load_name=name,
-                                    load_title=title, 
+        self._node = NodeLoadItemIM(load_name=self.name,
+                                    load_title=self.title,
                                     nodes=self.f2u_points)
         
-        self._beam = BeamLoadItemIM(load_name=name,
-                                    load_title=title,
+        self._beam = BeamLoadItemIM(load_name=self.name,
+                                    load_title=self.title,
                                     beams=self.f2u_beams)
-        
+        #
+        self._wave = WaveLoadItemIM(load_name=self.name)
 
     #
     @property
@@ -225,6 +226,37 @@ class LoadTypesConcept:
             
         else:
             self._beam_id = values.name
+    #
+    #
+    @property
+    def wave(self):
+        """ """
+        return self._wave
+    
+    @wave.setter
+    def wave(self, wave_data):
+        """
+        design_load : max_BSOTM
+        wave_load=None, 
+        """
+        design_load: str = 'max_BS'
+        
+        if isinstance(wave_data, (str, int)):
+            wave_data = [wave_data, design_load, self.title]
+        
+        elif isinstance(wave_data, (list, tuple)):
+            try:
+                wave_data.extend([self.title])
+            except AttributeError:
+                wave_data = wave_data + (self.title, )
+        
+        elif isinstance(wave_data, dict):
+            raise NotImplementedError
+        
+        else:
+            raise IOError('wave data not valid')
+        #
+        self._wave[self.name] = wave_data
 #
 #
 #class TimeHistoryConcept(Mapping):

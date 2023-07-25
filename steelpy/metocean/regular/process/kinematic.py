@@ -22,9 +22,9 @@ from steelpy.process.dataframe.main import DBframework
 @dataclass
 class KinematicResults:
     __slots__ = ['depth_points', 'surface',
-                 '_data', '_type']
+                 '_data', '_type', '_stickup']
     
-    def __init__(self,surface, kindata, depth_points:int):
+    def __init__(self,surface, kindata, depth_points:int, stickup:float=1.0):
         """
         """
         self.surface = surface
@@ -32,6 +32,7 @@ class KinematicResults:
         #
         self._data = kindata
         self._type = 'regular'
+        self._stickup = stickup
     #
     #
     def get_data(self, name: str, title: str):
@@ -164,8 +165,8 @@ class KinematicResults:
         #
         eta = self.surface.eta
         points = self.depth_points
+        stickup = self._stickup
         #
-        stickup = 1
         crestmax = np.ceil(eta.max()) + stickup
         crestmin = np.floor(eta.min())    
         step1 = int(np.ceil(points / 2))
@@ -334,11 +335,11 @@ class KinematicResults:
             # insert x axis to simulate a 3d wave [x, z, lenght]
             data = np.expand_dims(data, axis=0)
             newname = title[i]
-            kdf[newname] =  self.to_xarray(rows=rows,
-                                           cols=elev,
-                                           length=xx,
-                                           data=data,
-                                           name=newname)
+            kdf[newname] = self.to_xarray(rows=rows,
+                                          cols=elev,
+                                          length=xx,
+                                          data=data,
+                                          name=newname)
         #print('-->')
         return kdf
     #

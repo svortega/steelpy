@@ -1,11 +1,11 @@
 # 
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009-2023 fem2ufo
 #
-
 # Python stdlib imports
+from __future__ import annotations
 #from array import array
 #import logging
-from typing import  List, Union, Tuple # Iterator, Dict, Union, NamedTuple, 
+#from typing import  List, Union, Tuple # Iterator, Dict, Union, NamedTuple,
 #from collections.abc import Mapping
 
 # package imports
@@ -31,7 +31,7 @@ class BasicProperty:
         return self._groups
     
     @group.setter
-    def group(self, value:Union[List, Tuple, str, int]):
+    def group(self, value:list|tuple|str|int):
         """
         """
         if isinstance(value, (list, tuple)):
@@ -47,7 +47,7 @@ class BasicProperty:
         return self._elements
     
     @elements.setter
-    def elements(self, value:Union[List, Tuple, str, int]):
+    def elements(self, value:list|tuple|str|int):
         """
         """
         if isinstance(value, (list, tuple)):
@@ -59,3 +59,19 @@ class BasicProperty:
     #    """
     #    """
     #    self._default = True
+#
+#
+#
+def get_list(data, steps:int=6)->list[float]:
+    """ """
+    new_data = []
+    for x in range(steps):
+        try:
+            try:
+                new_data.append(data[x].value)
+            except AttributeError:
+                new_data.append(data[x])
+        except IndexError:
+            new_data.append(0.0)
+    return new_data
+#

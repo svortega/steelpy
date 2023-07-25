@@ -10,7 +10,7 @@ import math
 #from typing import NamedTuple
 
 # package imports
-from steelpy.metocean.current.main_current import MeanCurrent
+from steelpy.metocean.current.main import MeanCurrent
 from steelpy.metocean.regular.process.kinematic import  get_kinematic, KinematicResults
 from steelpy.metocean.regular.process.inout import get_Height
 #

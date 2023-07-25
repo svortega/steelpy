@@ -17,18 +17,17 @@ from itertools import groupby
 # steelpy.f2uModel
 #from steelpy.f2uModel.load.process.actions import SelfWeight
 #from steelpy.f2uModel.load.process.basic_load import BasicLoadBasic, LoadTypeBasic
-from steelpy.f2uModel.load.sqlite.beam import BeamLoadItemSQL,  BeamToNodeSQL
+#from steelpy.f2uModel.load.sqlite.beam import BeamLoadItemSQL,  BeamToNodeSQL
 #from steelpy.f2uModel.load.sqlite.node import  NodeLoadItemSQL
 from steelpy.process.math.operations import linspace
 #
 # steelpy.f2uModel.load
-from ..process.beam import BeamLoadItem #, BeamLoad
+from ..process.beam import BeamLoadItem
+from .beam import BeamToNodeIM
 from steelpy.process.math.operations import trnsload
 #
-from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
+#from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 # steelpy.f2uModel
-from steelpy.f2uModel.mesh.sqlite.process_sql import (create_connection, create_table,
-                                                       get_load_data, check_element)
 #
 from steelpy.f2uModel.load.process.beam import LineBeam, BeamLoad
 #
@@ -36,31 +35,32 @@ import pandas as pd
 from steelpy.process.dataframe.main import DBframework
 #
 #
-
+#
+#
+class WaveData(NamedTuple):
+    """ """
+    name: str | int
+    seastate: dict
+    design_load: str
+#
 #
 #@dataclass
-class WaveLoadItemSQL(BeamLoadItem):
+class WaveLoadItemIM(BeamLoadItem):
     """ """
-    __slots__ = ['_seastate','_bd_file', '_name', '_load']
+    __slots__ = ['_seastate', '_name', '_load']
 
-    def __init__(self, load_name: int|str, bd_file:str):
+    def __init__(self, load_name: int|str):
         """ """
         super().__init__()
         #
         self._seastate = []
         self._design_load = []
-        self._bd_file = bd_file
         self._name = load_name
         #
-        self._node_eq = BeamToNodeSQL(load_name=load_name, 
-                                      bd_file=bd_file)
+        self._node_eq = BeamToNodeIM(load_name=load_name)
         #
         #self._load = BeamLoad()
         #
-        conn = create_connection(self._bd_file)
-        with conn:        
-            self._create_table(conn)
-            self._create_node_table(conn)
     #
     #
     def __setitem__(self, load_name: int|str,
@@ -74,8 +74,6 @@ class WaveLoadItemSQL(BeamLoadItem):
             self._labels.append(load_name)
             self._seastate.append(wave_load[0])
             self._design_load.append(wave_load[1])
-            #conn = create_connection(self._bd_file)
-            #1 / 0
     #
     def __getitem__(self, load_name: int | str):
         """
@@ -87,52 +85,14 @@ class WaveLoadItemSQL(BeamLoadItem):
         #
         #conn = create_connection(self._bd_file)
         #1 / 0        
-        return self._seastate[index]
+        #return self._seastate[index]
+        return WaveData(name=self._labels[index], 
+                        seastate=self._seastate[index],
+                        design_load=self._design_load[index])
 
     #
     #
-    def _create_table(self, conn) -> None:
-        """ """
-        _table_element_line = "CREATE TABLE IF NOT EXISTS tb_WaveLoad(\
-                                number INTEGER PRIMARY KEY NOT NULL,\
-                                load_number INTEGER NOT NULL REFERENCES tb_Load(number),\
-                                element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
-                                title TEXT,\
-                                system INTEGER NOT NULL,\
-                                L_end1 DECIMAL,\
-                                qx1 DECIMAL,\
-                                qy1 DECIMAL,\
-                                qz1 DECIMAL,\
-                                qx1i DECIMAL,\
-                                qy1i DECIMAL,\
-                                qz1i DECIMAL,\
-                                L_end2 DECIMAL,\
-                                qx2 DECIMAL,\
-                                qy2 DECIMAL,\
-                                qz2 DECIMAL,\
-                                qx2i DECIMAL,\
-                                qy2i DECIMAL,\
-                                qz2i DECIMAL,\
-                                x DECIMAL,\
-                                y DECIMAL,\
-                                z DECIMAL);"
-        #
-        create_table(conn, _table_element_line)
     #
-    def _push_load(self, conn, load: list):
-        """ """
-        #
-        sql = 'INSERT INTO tb_WaveLoad(load_number, element_number,\
-                                        title, system,\
-                                        L_end1, qx1, qy1, qz1, qx1i, qy1i, qz1i,\
-                                        L_end2, qx2, qy2, qz2, qx2i, qy2i, qz2i,\
-                                        x, y, z)\
-                                        VALUES(?,?,?,?,\
-                                               ?,?,?,?,?,?,?,\
-                                               ?,?,?,?,?,?,?,\
-                                               ?,?,?)'
-        cur = conn.cursor()
-        cur.executemany(sql, load)
     #
     def get_wave_load(self, conn, load_name:int):
         """ """
@@ -141,17 +101,6 @@ class WaveLoadItemSQL(BeamLoadItem):
         #beam = check_element(conn, beam_name)
         #beam_number = beam[0]
         # beam line load
-        load_data = get_load_data(conn, self._name, load_type='basic')
-        load_number = load_data[0]
-        #
-        cur = conn.cursor()
-        cur.execute("SELECT tb_Load.name, tb_Elements.name, tb_WaveLoad.*\
-                    FROM tb_WaveLoad, tb_Elements, tb_Load\
-                    WHERE tb_WaveLoad.load_number = {:}\
-                    AND tb_WaveLoad.element_number = tb_Elements.number\
-                    AND tb_WaveLoad.load_number = tb_Load.number;"
-                    .format(load_number))
-        rows = cur.fetchall()
         #
         cols = ['load_name', 'element_name', 'number', 'load_number', 'element_number', 
                 'load_comment', 'load_system',
@@ -175,48 +124,6 @@ class WaveLoadItemSQL(BeamLoadItem):
         return row
     #
     #
-    #
-    # -----------------------------------------------
-    #
-    #
-    def _create_node_table(self, conn) -> None:
-        """ """
-        _table_element_point = "CREATE TABLE IF NOT EXISTS tb_LoadBeamToNode(\
-                                number INTEGER PRIMARY KEY NOT NULL,\
-                                load_number INTEGER NOT NULL REFERENCES tb_Load(number),\
-                                title TEXT,\
-                                system TEXT,\
-                                element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
-                                node_number INTEGER NOT NULL REFERENCES tb_Nodes(number),\
-                                fx DECIMAL,\
-                                fy DECIMAL,\
-                                fz DECIMAL,\
-                                mx DECIMAL,\
-                                my DECIMAL,\
-                                mz DECIMAL,\
-                                fxi DECIMAL,\
-                                fyi DECIMAL,\
-                                fzi DECIMAL,\
-                                mxi DECIMAL,\
-                                myi DECIMAL,\
-                                mzi DECIMAL);"
-        #
-        create_table(conn, _table_element_point)    
-    #
-    #
-    def _push_node_load(self, conn,
-                        node_load:list[float]):
-        """ """
-        #
-        sql = 'INSERT INTO tb_LoadBeamToNode(load_number, title, system, \
-                                             element_number,\
-                                             node_number, fx, fy, fz, mx, my, mz,\
-                                             fxi, fyi, fzi, mxi, myi, mzi)\
-                                            VALUES(?,?,?,?,?,\
-                                                   ?,?,?,?,?,?,?,\
-                                                   ?,?,?,?,?)'
-        cur = conn.cursor()
-        cur.executemany(sql, node_load)    
     #
     #
     # -----------------------------------------------

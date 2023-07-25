@@ -6,11 +6,10 @@ from __future__ import annotations
 
 #
 # package imports
-from .marine_growth import MarineGrowth
-from .morison import CdCmCoefficients
+#from .marine_growth import MarineGrowth
+#from .morison import CdCmCoefficients
 from .hydro_diametre import HydroDiametre
 from .flooding import Flooding
-
 
 #
 #@dataclass
@@ -21,13 +20,14 @@ class Hydrodynamic:
                  'conductor_shielding',
                  'element_refining',
                  '_buoyancy_area',
-                 '_cdcm', 
+                 #'_cdcm',
                  '_air_drag',
-                 '_marine_growth', #'mg_default',
+                 #'_marine_growth', #'mg_default',
                  '_hydro_diametre',
-                 '_non_hydro']
+                 '_non_hydro',
+                 '_rho_w']
     
-    def __init__(self) -> None:
+    def __init__(self, rho_w:float) -> None:
         """
         """
         #
@@ -35,14 +35,14 @@ class Hydrodynamic:
         #mg_default = None
         #
         self.flooding = Flooding()
-        self._cdcm = CdCmCoefficients()
         self._hydro_diametre = HydroDiametre()
-        self._marine_growth = MarineGrowth()
+        #self._marine_growth = MarineGrowth()
         # TODO: 
         self._non_hydro = {}
         self._buoyancy_area = {}
         self._air_drag = {}
-    #  
+        self._rho_w: float = rho_w  # 1032.0  * kg / m^3
+    #
     #
     #@property
     def CdCm(self):
@@ -50,11 +50,11 @@ class Hydrodynamic:
         """
         return self._cdcm
     #
-    @property
-    def Morison(self):
-        """
-        """
-        return self._cdcm
+    #@property
+    #def Morison(self):
+    #    """
+    #    """
+    #    return self._cdcm
     #
     @property
     def flooded(self):
@@ -63,10 +63,10 @@ class Hydrodynamic:
         return self.flooding
     #
     #@property
-    def marine_growth(self):
-        """
-        """
-        return self._marine_growth
+    #def marine_growth(self):
+    #    """
+    #    """
+    #    return self._marine_growth
     #
     @property
     def diameter(self):

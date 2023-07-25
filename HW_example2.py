@@ -3,7 +3,7 @@ print("start")
 from steelpy import Spreadsheet
 from steelpy import f2uModel
 from steelpy import Metocean
-from steelpy import Trave3D
+from steelpy import Trave2D
 from steelpy import Units
 #
 units = Units()
@@ -122,10 +122,134 @@ concept.beams(df=memb)
 #
 #
 #
+# ----------------------------------------------------
+# Metocean 
+# ----------------------------------------------------
+#
+meto = Metocean()
+#
+# Current
+#
+Csheets = wb.sheets["Current Profile"]
+current = Csheets.to_df()
+current['HeightFromSeaBed_m'] -= current['HeightFromSeaBed_m'].max()
+current['HeightFromSeaBed_m'] *= units.m
+current['CurrentSpeed_ms'] *= units.m / units.sec
+#
+current.rename(columns={"CriteriaID": "name",
+                        "HeightFromSeaBed_m" : "zlevel",
+                        "CurrentSpeed_ms": "velocity"}, inplace=True)
+current = current[['name', 'zlevel', 'velocity']]
+meto.current(df=current)
+#
+# Marine Growth
+#
+MGsheet = wb.sheets["Marine Growth"]
+mg = MGsheet.to_df()
+mg['TopElevation_m'] *= units.m
+mg['BottomElevation_m'] *= units.m
+mg['Thickness_mm'] *= units.mm
+#
+mg.rename(columns={"AssetID": "name",
+                   "TopElevation_m": "zlevel",
+                   "Thickness_mm": "thickness"}, inplace=True)
+#
+meto.MG(df=mg)
+#
+# Wave setup
+#
+Msheet = wb.sheets["Metocean Criteria"]
+metsetup = Msheet.to_df()
+print(metsetup)
+metsetup['StormSurge_m'] *= units.m
+metsetup['StormTide_m'] *= units.m
+metsetup['WaveHeightHmax_m'] *= units.m
+metsetup['StormTide_m'] *= units.m
+metsetup['CrestElevation_m'] *= units.m
+metsetup['WavePeriod_Sec'] *= units.sec
+#
+metsetup['WindSpeed_ms'] *= units.m / units.sec
+#
+#
+wave_type = "regular"
+wave_theory = 'Stokes'
+grpmet = metsetup.groupby(['AssetID'])
+for key, item in AssetID.items():
+    waveitem = grpmet.get_group(name=key)[['CriteriaID',
+                                           'WaveHeightHmax_m',
+                                           'WavePeriod_Sec']]
+    waveitem.rename(columns={"CriteriaID": "name",
+                             "WaveHeightHmax_m": "Hw",
+                             "WavePeriod_Sec": "Tw"}, inplace=True)
+    waveitem['d'] = item
+    waveitem['type'] = wave_type
+    waveitem['theory'] = wave_theory
+    meto.wave(df=waveitem)
+#
+# Metocean combination
+#
+metcomb = Msheet.to_df()
+metcomb.drop(columns=['WaveHeightHmax_m', 'WavePeriod_Sec',
+                      'ReturnPeriod_Yrs', 'SurgeTideReference',
+                      'EWLCrestElevation_m', 'WindSpeed_ms'],
+             inplace=True, axis=1)
+#
+grpcomb = metcomb.groupby(['AssetID'])
+grpcurr = current.groupby(['name'])
+grpmg = mg.groupby(['name'])
+for row in asset.itertuples():
+    waveitem = grpcomb.get_group(name=row.AssetID)
+    criteriaID = waveitem['CriteriaID'].values[0]
+    #
+    waveitem['wave_name'] = criteriaID
+    waveitem['wave_direction'] = 0
+    waveitem['buoyancy'] = False
+    waveitem['CrestElevation_m'] *= units.m
+    #
+    # Marine Growth
+    try:
+        mgitem = grpmg.get_group(name=row.AssetID)
+        waveitem['MG'] = row.AssetID
+    except KeyError:
+        waveitem['MG'] = None
+    #
+    # Current
+    try:
+        curritem = grpcurr.get_group(name=criteriaID)
+        waveitem['current_name'] = criteriaID
+        waveitem['current_direction'] = 0
+        waveitem['current_stretching'] = True
+    except KeyError:
+        waveitem['current_name'] = None
+    #
+    # Wind
+    # TODO: wind not implemented
+    waveitem['wind_name'] = criteriaID
+    waveitem['wind_direction'] = 0
+    #
+    # Setup input
+    #
+    waveitem.rename(columns={'CriteriaID': 'name',
+                             'MetoceanEvent': 'title',
+                             'CrestElevation_m': 'crest_elevation',
+                             'WaveKinematicsFactor': 'wave_kinematics',
+                             'CurrentBlockage': 'current_blockage',
+                             'ConductorShielding': 'conductor_shielding'}, inplace=True)
+    #
+    # Input load
+    #
+    meto.load(df=waveitem)
+#
+#
+metload = meto.load()
+#
+#
 # -----------------------------------
 # Start concept loading
+# -----------------------------------
 #
 load = concept.load()
+#
 # define basic load
 basic = load.basic()
 # create new basic load
@@ -169,37 +293,18 @@ basic[3].beam.line = {'qx': -3 * units.kN/units.m, 'name': "wind_3"}
 #mass['sw'] = 'selfweight'
 #mass['sw'].basic_load[1] = 1.0
 #
-#----------------------------------------------------------
-# Metocean criteria data
+#
+# -----------------------------------
 #
 #
-Csheets = wb.sheets["Current Profile"]
-current = Csheets.to_df()
-current['HeightFromSeaBed_m'] *= units.m
-current['CurrentSpeed_ms'] *= units.m / units.sec
-
-#
-MGsheet = wb.sheets["Marine Growth"]
-mg = MGsheet.to_df()
-mg['TopElevation_m'] *= units.m
-mg['BottomElevation_m'] *= units.m
-mg['Thickness_mm'] *= units.m
+metcases = list(metload.keys())
+lcnumber = 10
+for idx, key in enumerate(metcases):
+    lcnumber += idx
+    basic[lcnumber] = f'wave load {idx+1}'
+    basic[lcnumber].wave = [metload[key], 'max_BS']
 #
 #
-Msheet = wb.sheets["Metocean Criteria"]
-met = Msheet.to_df()
-print(met)
-met['StormSurge_m'] *= units.m
-met['StormTide_m'] *= units.m
-met['WaveHeightHmax_m'] *= units.m
-met['StormTide_m'] *= units.m
-met['CrestElevation_m'] *= units.m
-#
-met['WindSpeed_ms'] *= units.m / units.sec
-#
-#meto = Metocean()
-# Regular wave
-#meto.regular_wave()
 #
 # -----------------------------------
 #
@@ -217,7 +322,7 @@ print(elements)
 load = mesh.load()
 print(load)
 #
-frame = Trave3D()
+frame = Trave2D()
 frame.mesh = mesh
 results = frame.run_static()
 #frame.nfreq()
