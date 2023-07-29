@@ -4,8 +4,8 @@
 # Python stdlib imports
 from __future__ import annotations
 from collections.abc import Mapping
-
-
+#
+#
 # package imports
 # steelpy.f2uModel.load
 from steelpy.f2uModel.load.process.actions import SelfWeight
@@ -240,15 +240,16 @@ class LoadTypesConcept:
         wave_load=None, 
         """
         design_load: str = 'max_BS'
+        criterion: str = 'local'
         
         if isinstance(wave_data, (str, int)):
-            wave_data = [wave_data, design_load, self.title]
+            wave_data = [wave_data, design_load, criterion, self.title]
         
         elif isinstance(wave_data, (list, tuple)):
             try:
-                wave_data.extend([self.title])
+                wave_data.extend([criterion, self.title])
             except AttributeError:
-                wave_data = wave_data + (self.title, )
+                wave_data = wave_data + (criterion, self.title, )
         
         elif isinstance(wave_data, dict):
             raise NotImplementedError

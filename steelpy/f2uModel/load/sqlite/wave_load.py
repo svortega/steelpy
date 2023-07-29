@@ -6,23 +6,23 @@
 from __future__ import annotations
 #from array import array
 #from collections.abc import Mapping
-from collections import defaultdict
-from dataclasses import dataclass
-from typing import NamedTuple
+#from collections import defaultdict
+#from dataclasses import dataclass
+#from typing import NamedTuple
 #import re
-from operator import itemgetter
-from itertools import groupby
+#from operator import itemgetter
+#from itertools import groupby
 
 # package imports
 # steelpy.f2uModel
 #from steelpy.f2uModel.load.process.actions import SelfWeight
 #from steelpy.f2uModel.load.process.basic_load import BasicLoadBasic, LoadTypeBasic
-from steelpy.f2uModel.load.sqlite.beam import BeamLoadItemSQL,  BeamToNodeSQL
+from steelpy.f2uModel.load.sqlite.beam import BeamToNodeSQL #, BeamLoadItemSQL 
 #from steelpy.f2uModel.load.sqlite.node import  NodeLoadItemSQL
 from steelpy.process.math.operations import linspace
 #
 # steelpy.f2uModel.load
-from ..process.beam import BeamLoadItem #, BeamLoad
+from steelpy.f2uModel.load.process.wave_load import WaveLoadItem
 from steelpy.process.math.operations import trnsload
 #
 from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
@@ -30,32 +30,30 @@ from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 from steelpy.f2uModel.mesh.sqlite.process_sql import (create_connection, create_table,
                                                        get_load_data, check_element)
 #
-from steelpy.f2uModel.load.process.beam import LineBeam, BeamLoad
+from steelpy.f2uModel.load.process.beam import LineBeam #, BeamLoad
 #
+import numpy as np
 import pandas as pd
 from steelpy.process.dataframe.main import DBframework
 #
 #
-
+#
+#
 #
 #@dataclass
-class WaveLoadItemSQL(BeamLoadItem):
+class WaveLoadItemSQL(WaveLoadItem):
     """ """
-    __slots__ = ['_seastate','_bd_file', '_name', '_load']
+    __slots__ = ['_seastate','_bd_file', '_name',
+                 '_load', '_criterion']
 
     def __init__(self, load_name: int|str, bd_file:str):
         """ """
-        super().__init__()
+        super().__init__(load_name=load_name)
         #
-        self._seastate = []
-        self._design_load = []
         self._bd_file = bd_file
-        self._name = load_name
         #
         self._node_eq = BeamToNodeSQL(load_name=load_name, 
                                       bd_file=bd_file)
-        #
-        #self._load = BeamLoad()
         #
         conn = create_connection(self._bd_file)
         with conn:        
@@ -63,32 +61,6 @@ class WaveLoadItemSQL(BeamLoadItem):
             self._create_node_table(conn)
     #
     #
-    def __setitem__(self, load_name: int|str,
-                    wave_load: list) -> None:
-        """
-        """
-        try:
-            self._labels.index(load_name)
-            raise Exception('wave load case {:} already exist'.format(load_name))
-        except ValueError:
-            self._labels.append(load_name)
-            self._seastate.append(wave_load[0])
-            self._design_load.append(wave_load[1])
-            #conn = create_connection(self._bd_file)
-            #1 / 0
-    #
-    def __getitem__(self, load_name: int | str):
-        """
-        """
-        try:
-            index = self._labels.index(load_name)
-        except ValueError:
-            raise KeyError('Invalid load name : {:}'.format(load_name))
-        #
-        #conn = create_connection(self._bd_file)
-        #1 / 0        
-        return self._seastate[index]
-
     #
     #
     def _create_table(self, conn) -> None:
@@ -113,6 +85,8 @@ class WaveLoadItemSQL(BeamLoadItem):
                                 qx2i DECIMAL,\
                                 qy2i DECIMAL,\
                                 qz2i DECIMAL,\
+                                BS DECIMAL,\
+                                OTM DECIMAL,\
                                 x DECIMAL,\
                                 y DECIMAL,\
                                 z DECIMAL);"
@@ -126,11 +100,12 @@ class WaveLoadItemSQL(BeamLoadItem):
                                         title, system,\
                                         L_end1, qx1, qy1, qz1, qx1i, qy1i, qz1i,\
                                         L_end2, qx2, qy2, qz2, qx2i, qy2i, qz2i,\
+                                        BS, OTM,\
                                         x, y, z)\
                                         VALUES(?,?,?,?,\
                                                ?,?,?,?,?,?,?,\
                                                ?,?,?,?,?,?,?,\
-                                               ?,?,?)'
+                                               ?,?,?,?,?)'
         cur = conn.cursor()
         cur.executemany(sql, load)
     #
@@ -157,6 +132,7 @@ class WaveLoadItemSQL(BeamLoadItem):
                 'load_comment', 'load_system',
                 'L_end1', 'qx1', 'qy1', 'qz1', 'qx1i', 'qy1i', 'qz1i',
                 'L_end2', 'qx2', 'qy2', 'qz2', 'qx2i', 'qy2i', 'qz2i',
+                'BS', 'OTM',
                 'x', 'y', 'z']        
         df = db.DataFrame(data=rows, columns=cols)
         df = df[['load_name', 'load_number', 
@@ -164,6 +140,7 @@ class WaveLoadItemSQL(BeamLoadItem):
                  'element_name', 'element_number', 
                  'L_end1', 'qx1', 'qy1', 'qz1',
                  'L_end2', 'qx2', 'qy2', 'qz2',
+                 'BS', 'OTM',
                  'x', 'y', 'z']]
         return df
     #
@@ -265,8 +242,22 @@ class WaveLoadItemSQL(BeamLoadItem):
                 df_bload = pd.concat([df_bload, df_load], ignore_index=True)
             except ZeroDivisionError:
                 df_bload = df_load
-        #
-        return df_bload        
+            #
+            # process to select wave point based on user request
+            #
+            #Fx, Fy, OTM = udl.span_loading()
+            #indmax = Fx.argmax(dim='length').values
+            #vmax = Fx.idxmax(dim='length').values
+            #print('')
+            #print('Total combined force [kN-m]')
+            #print(f'Fx ={np.max(Fx) / 1000: 1.3e}, Fy={np.max(Fy) / 1000: 1.3e}, OTM={np.max(OTM)/1000: 1.3e}')
+            #print('---')
+            #
+            #Fx.sel(x=0).plot.line(hue='z')
+            #plt.show()            
+            #
+        #1 / 0
+        return df_bload
     #
     # -----------------------------------------------
     #
@@ -300,6 +291,7 @@ class WaveLoadItemSQL(BeamLoadItem):
                          'load_title', 'load_system', 
                          'L0', 'qx0', 'qy0', 'qz0', 'qx0i', 'qy0i', 'qz0i',
                          'L1', 'qx1', 'qy1', 'qz1', 'qx1i', 'qy1i', 'qz1i',
+                         'BS', 'OTM', 
                          'x', 'y', 'z']].values
             #line
             with conn:
@@ -316,36 +308,64 @@ class WaveLoadItemSQL(BeamLoadItem):
             with conn: 
                 bldf = self.get_wave_load(conn, load_name=load_name)
             #
+            # ------------------------------------------
             # TODO : select coordinate for design load
             #
-            grpm = bldf.groupby(['element_name'])
+            waveinput = self.__getitem__(load_name=load_name)
+            design_load = waveinput.design_load.split("_")
+            criteria = waveinput.criterion
+            #
+            value_type = design_load[0]
+            load_type = design_load[1]
+            #
+            #
+            #grpm = bldf.groupby(['element_name','y'])
+            grpwave = bldf.groupby(['element_name','y'])[['BS', 'OTM']].sum()
+            #
+            if criteria == 'global':
+                # FIXME
+                1 / 0
+            else: # default 
+                grpm = grpwave[load_type].abs().groupby('element_name')
+            #
+            if value_type.lower() == 'max':
+                idx = grpm.idxmax()
+            else:
+                1 / 0
+            #
+            bldf.set_index(['element_name','y'], inplace=True)
+            grpm = bldf.loc[idx]
+            #
+            #
+            # ----------------------------------------
             #
             ipart = ['NULL', 'NULL', 'NULL','NULL', 'NULL', 'NULL']
             res = []
-            for key, items in grpm:
-                beam =  BeamItemSQL(key[0], self._bd_file)
-                node1,node2 = beam.nodes
+            for item in grpm.itertuples():
+                element_name = item.Index[0]
+                beam =  BeamItemSQL(element_name, self._bd_file)
+                node1, node2 = beam.nodes
                 #
-                for item in items.itertuples():
-                    #
-                    data = [item.qx1, item.qy1, item.qz1,
-                            item.qx2, item.qy2, item.qz2,
-                            item.L_end1, item.L_end2,
-                            item.element_name, item.load_comment,
-                            item.load_name, item.load_system,
-                            1, 'Line Load']
-                    load = LineBeam._make(data)
-                    gnload = load.fer_beam(L=beam.L)
-                    # load local system to global 
-                    gnload = [*gnload[4], *gnload[5]]
-                    lnload = trnsload(gnload, beam.T())
-                    #
-                    res.extend([[item.load_number, item.load_comment, 
-                                 'global', beam.number,
-                                 node1.number, *lnload[:6], *ipart],
-                                [item.load_number, item.load_comment, 
-                                 'global', beam.number,
-                                 node2.number, *lnload[6:], *ipart]])
+                #for item in items.itertuples():
+                #
+                data = [item.qx1, item.qy1, item.qz1,
+                        item.qx2, item.qy2, item.qz2,
+                        item.L_end1, item.L_end2,
+                        element_name, item.load_comment,
+                        item.load_name, item.load_system,
+                        1, 'Line Load']
+                load = LineBeam._make(data)
+                gnload = load.fer_beam(L=beam.L)
+                # load local system to global 
+                gnload = [*gnload[4], *gnload[5]]
+                lnload = trnsload(gnload, beam.T())
+                #
+                res.extend([[item.load_number, item.load_comment, 
+                             'global', beam.number,
+                             node1.number, *lnload[:6], *ipart],
+                            [item.load_number, item.load_comment, 
+                             'global', beam.number,
+                             node2.number, *lnload[6:], *ipart]])
                 #
                 #
                 #self._load.df(data=items)

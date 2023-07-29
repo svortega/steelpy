@@ -6,30 +6,22 @@
 from __future__ import annotations
 #from array import array
 #from collections.abc import Mapping
-from collections import defaultdict
-from dataclasses import dataclass
-from typing import NamedTuple
+#from collections import defaultdict
+#from dataclasses import dataclass
+#from typing import NamedTuple
 #import re
-from operator import itemgetter
-from itertools import groupby
+#from operator import itemgetter
+#from itertools import groupby
 
 # package imports
-# steelpy.f2uModel
-#from steelpy.f2uModel.load.process.actions import SelfWeight
-#from steelpy.f2uModel.load.process.basic_load import BasicLoadBasic, LoadTypeBasic
-#from steelpy.f2uModel.load.sqlite.beam import BeamLoadItemSQL,  BeamToNodeSQL
-#from steelpy.f2uModel.load.sqlite.node import  NodeLoadItemSQL
+from steelpy.f2uModel.load.process.wave_load import WaveLoadItem
 from steelpy.process.math.operations import linspace
 #
 # steelpy.f2uModel.load
-from ..process.beam import BeamLoadItem
 from .beam import BeamToNodeIM
 from steelpy.process.math.operations import trnsload
 #
-#from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
-# steelpy.f2uModel
-#
-from steelpy.f2uModel.load.process.beam import LineBeam, BeamLoad
+from steelpy.f2uModel.load.process.beam import LineBeam #, BeamLoad
 #
 import pandas as pd
 from steelpy.process.dataframe.main import DBframework
@@ -37,59 +29,17 @@ from steelpy.process.dataframe.main import DBframework
 #
 #
 #
-class WaveData(NamedTuple):
-    """ """
-    name: str | int
-    seastate: dict
-    design_load: str
-#
-#
 #@dataclass
-class WaveLoadItemIM(BeamLoadItem):
+class WaveLoadItemIM(WaveLoadItem):
     """ """
-    __slots__ = ['_seastate', '_name', '_load']
+    __slots__ = ['_seastate', '_name', '_load', '_criterion']
 
     def __init__(self, load_name: int|str):
         """ """
-        super().__init__()
-        #
-        self._seastate = []
-        self._design_load = []
-        self._name = load_name
+        super().__init__(load_name=load_name)
         #
         self._node_eq = BeamToNodeIM(load_name=load_name)
         #
-        #self._load = BeamLoad()
-        #
-    #
-    #
-    def __setitem__(self, load_name: int|str,
-                    wave_load: list) -> None:
-        """
-        """
-        try:
-            self._labels.index(load_name)
-            raise Exception('wave load case {:} already exist'.format(load_name))
-        except ValueError:
-            self._labels.append(load_name)
-            self._seastate.append(wave_load[0])
-            self._design_load.append(wave_load[1])
-    #
-    def __getitem__(self, load_name: int | str):
-        """
-        """
-        try:
-            index = self._labels.index(load_name)
-        except ValueError:
-            raise KeyError('Invalid load name : {:}'.format(load_name))
-        #
-        #conn = create_connection(self._bd_file)
-        #1 / 0        
-        #return self._seastate[index]
-        return WaveData(name=self._labels[index], 
-                        seastate=self._seastate[index],
-                        design_load=self._design_load[index])
-
     #
     #
     #

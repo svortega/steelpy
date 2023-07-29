@@ -15,10 +15,10 @@ from typing import NamedTuple
 # package imports
 import pandas as pd
 # steelpy
+from .beam import BeamLoadItem
 #from ....process.math.operations import zeros, trns_3Dv #, zeros_vector , linspace
 #from ....process.math.vector import Vector
 #from steelpy.formulas.beam.main import BasicCalcs
-import pandas as pd
 #
 #
 #
@@ -389,13 +389,17 @@ class LoadTypeBasic:
     #    return self._wave
     #
     #@wave.setter
-    def wave(self, wave_load=None, design_load: str = 'max_BSOTM'):
+    def wave(self, wave_load=None, design_load: str = 'max_BS',
+             criterion: str = 'local'):
         """
-        design_load : max_BSOTM
+        design_load : max_BS
+        criterion : select design load based on local (member) or global system
         """
         if wave_load:
-            self._wave[self.name] = [wave_load, design_load, self.title]
+            self._wave[self.name] = [wave_load, design_load, criterion, self.title]
         #
         return self._wave
 # 
 #
+
+    

@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Tuple
+#from typing import Tuple
 
 # package imports
 from steelpy.process.units.main import Units
 from steelpy.process.geometry.L3D import DistancePointLine3D
-from steelpy.f2uModel.mesh.main import Mesh
+#from steelpy.f2uModel.mesh.main import Mesh
 #
 #
 class Meshing:
@@ -273,7 +273,8 @@ class Meshing:
             # wave
             for wname, wload in Clb_item.wave.items():
                 mlbasic[Clb_name].wave(wave_load=wload.seastate,
-                                       design_load=wload.design_load)
+                                       design_load=wload.design_load,
+                                       criterion=wload.criterion)
         #
         #print('--> end mesh loading')
     #

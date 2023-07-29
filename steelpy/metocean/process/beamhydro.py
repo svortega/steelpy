@@ -19,7 +19,7 @@ from steelpy.process.dataframe.main import DBframework
 #
 #
 #
-@ dataclass
+@dataclass
 class BeamHydro:
     __slots__ = ['_beam', 'surface',
                  '_data', '_type']
@@ -194,6 +194,10 @@ class BeamUnitForce(NamedTuple):
         cols = coords['z'].values
         wlength = coords['length'].values
         #
+        #
+        Fx, Fy, OTM = self.span_loading()
+        #
+        #
         # FIXME: wave system to beam local system
         #
         qitem = self.qx.to_dataframe(name='qx').reset_index()
@@ -203,21 +207,24 @@ class BeamUnitForce(NamedTuple):
         qitem = self.qz.to_dataframe(name='qz').reset_index()
         qx = self._get_line(qname='qz', qitem=qitem)
         #
-        lforce = []
+        dftemp = []
         for x, row in enumerate(rows):
             for idx, wstep in enumerate(wlength):
                 for hstep, col in enumerate(cols):
                     ldata = list(zip(qx[idx][hstep], qy[idx][hstep], qz[idx][hstep]))
-                    lforce.append(['beam', self.beam_name, 'line',
+                    dftemp.append(['beam', self.beam_name, 'line',
                                    *ldata[0], *ldata[1], 0, 0,
+                                   float(Fx[x, hstep, idx].values),
+                                   float(OTM[x, hstep, idx].values), 
                                    row, wstep, col])
         #
         header = ['element_type', 'element_name', 'load_type',
                   'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
-                  'L0', 'L1', 'x', 'y', 'z']
+                  'L0', 'L1', 'BS', 'OTM', 
+                  'x', 'y', 'z']
         #
         df = DBframework()
-        dfload = df.DataFrame(data=lforce, columns=header, index=None)
+        dfload = df.DataFrame(data=dftemp, columns=header, index=None)
         # print('--->')
         # 1 / 0
         return dfload

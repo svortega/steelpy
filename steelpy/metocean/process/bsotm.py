@@ -10,11 +10,11 @@ from dataclasses import dataclass
 # package imports
 #
 import numpy as np
-from numpy.matlib import repmat
-import matplotlib.pyplot as plt
+#from numpy.matlib import repmat
+#import matplotlib.pyplot as plt
 #
-from steelpy.process.dataframe.main import DBframework
-from steelpy.metocean.process.beamhydro import BeamUnitForce, BeamHydro
+#from steelpy.process.dataframe.main import DBframework
+from steelpy.metocean.process.beamhydro import BeamHydro
 #
 
 
@@ -304,9 +304,9 @@ class BSOTM:
         # Calculate wave loading on exposed span
         #
         #Fx, Fy = self.span_loading(udl.qx, udl.qy, dz)
-        Fx, Fy, OTM = udl.span_loading()
-        indmax = Fx.argmax(dim='length').values
-        vmax = Fx.idxmax(dim='length').values
+        #Fx, Fy, OTM = udl.span_loading()
+        #indmax = Fx.argmax(dim='length').values
+        #vmax = Fx.idxmax(dim='length').values
         #
         #print('')
         #print('Total combined force [kN-m]')
@@ -326,27 +326,27 @@ def permute(A, order):
     """ """
     return np.tile(np.expand_dims(A, axis=(0, 1)), order)
 #
-def repmat2(A, n, axis:int=1):
-    """
-    """
-    A1 = repmat(A, 1, 1)
-    A1 = np.transpose(A1)
-    A1 = np.expand_dims(A1, 0)
-    A1 = np.transpose(A1)
-    A1 = np.tile(A1, n)
-    return A1
+#def repmat2(A, n, axis:int=1):
+#    """
+#    """
+#    A1 = repmat(A, 1, 1)
+#    A1 = np.transpose(A1)
+#    A1 = np.expand_dims(A1, 0)
+#    A1 = np.transpose(A1)
+#    A1 = np.tile(A1, n)
+#    return A1
 #
-def permute2(A, order, axis:int=1):
-    """ """
-    A1 = repmat(A, order[1], axis)
-    A1 = np.transpose(A1)
-    A1 = np.expand_dims(A1, axis=0)
-    A1 = np.transpose(A1)
-    A1 = np.tile(A1, order[0])
-    return np.transpose(A1)   
+#def permute2(A, order, axis:int=1):
+#    """ """
+#    A1 = repmat(A, order[1], axis)
+#    A1 = np.transpose(A1)
+#    A1 = np.expand_dims(A1, axis=0)
+#    A1 = np.transpose(A1)
+#    A1 = np.tile(A1, order[0])
+#    return np.transpose(A1)   
 #
-def permute1(A, order, axis:int=1):
-    """ """
-    return np.transpose(repmat(A, order, axis))
+#def permute1(A, order, axis:int=1):
+#    """ """
+#    return np.transpose(repmat(A, order, axis))
 #
 #
