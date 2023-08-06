@@ -4,8 +4,9 @@
 
 # Python stdlib imports
 from __future__ import annotations
+#from dataclasses import dataclass
 import re
-# from typing import NamedTuple, Dict, List, Iterable, Union
+from typing import NamedTuple
 
 # package imports
 # steelpy.f2uModel.load
@@ -24,20 +25,22 @@ class Load:
     """
     """
     __slots__ = ['_labels', '_number', '_df_nodal',
-                 '_basic', '_combination']
+                 '_basic', '_combination', '_plane']
 
     def __init__(self, nodes, elements,
+                 plane: NamedTuple, 
                  mesh_type: str,
                  db_file: str | None = None):
         """
         """
+        self._plane = plane
         self._number = []
         self._labels = []
         if mesh_type != "inmemory":
             #self._load = LoadingSQL(db_file=db_file,
             #                        db_system=mesh_type)
-            self._basic = BasicLoadSQL(db_file)
-            self._combination = LoadCombSQL(db_file)
+            self._basic = BasicLoadSQL(db_file, plane=self._plane)
+            self._combination = LoadCombSQL(db_file, plane=self._plane)
         else:
             #self._load = LoadingInmemory(nodes=nodes,
             #                             elements=elements)
@@ -45,11 +48,19 @@ class Load:
             self._combination = LoadCombination(basic_load=self._basic)
 
     #
-    # @property
-    # def basic(self):
-    #    """
-    #    """
-    #    return self._load._basic
+    @property
+    def plane(self) -> NamedTuple:
+        """
+        """
+        return self._plane
+        
+    @plane.setter
+    def plane(self, plane: NamedTuple) -> None:
+        """
+        """
+        self._plane = plane
+        self._basic._plane = self._plane
+        self._combination._plane = self._plane
 
     # @basic.setter
     def basic(self, values: None|list|tuple = None,

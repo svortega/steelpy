@@ -3,7 +3,9 @@
 #
 # Python stdlib imports
 from __future__ import annotations
-import pickle
+from dataclasses import dataclass
+from typing import NamedTuple
+#import pickle
 import re
 #
 
@@ -17,9 +19,107 @@ from .boundaries import Boundaries
 from .elements import Elements
 #
 from steelpy.process.dataframe.main import DBframework
-from steelpy.f2uModel.mesh.process.main import Kmatrix
+from steelpy.f2uModel.mesh.process.main import Kmatrix, Gmatrix, Mmatrix
 #
-
+#
+#
+#@dataclass
+class MeshPlane(NamedTuple):
+    #__slots__ = ['plane2D', '_index']
+    
+    #def __init__(self, plane2D:bool):
+    #    """ """
+    plane2D:bool
+    #
+    # -----------------------------------------------
+    #
+    @property
+    def ndof(self) -> int:
+        """ node dgree of freedom"""
+        return len(self.dof)
+    #
+    @property
+    def dof(self) -> list[str]:
+        """ node degree of freedom"""
+        if self.plane2D:
+            return ['x', 'y', 'rz']
+        return ['x', 'y', 'z', 'rx', 'ry', 'rz']
+    #
+    @property
+    def index(self) -> dict:
+        """ """
+        return {'x': 0, 'y': 1, 'z': 2, 'rx': 3, 'ry': 4, 'rz': 5} 
+    #
+    # -----------------------------------------------
+    #
+    def getidx(self) -> list[int]:
+        """get indexes"""
+        return [self.index[item] for item in self.dof]
+    #
+    @property
+    def index_off(self) -> list[int]:
+        """return index"""
+        idx3D = set(self.index.values())
+        ndof = len(idx3D)
+        #dofactive = set(self._index[item] for item in self.dof)
+        dofactive = set(self.getidx())
+        indexes = list(idx3D - dofactive)
+        indexes.extend([item + ndof for item in indexes])
+        return list(reversed(indexes)) # [2, 3, 4, 8, 9, 10]
+    #
+    # -----------------------------------------------
+    #
+    @property
+    def hforce(self) -> list[str]:
+        """ return force header"""
+        force = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+        if self.plane2D:
+            idx = self.getidx()
+            #force = ['Fx', 'Fy', 'Mz']
+            force = [force[item] for item in idx]
+        return force
+    #
+    @property
+    def hdisp(self) -> list[str]:
+        """ return displacement header"""
+        disp = ['x', 'y', 'z', 'rx', 'ry', 'rz']
+        if self.plane2D:
+            idx = self.getidx()
+            disp = [disp[item] for item in idx]
+        return disp
+    #
+    # beam 
+    #
+    @property
+    def bhforce(self) -> list[str]:
+        """ beam intergration force"""
+        bforce = ['F_Vx', 'F_Vy', 'F_Vz', 'F_Mx', 'F_My', 'F_Mz']
+        if self.plane2D:
+            idx = self.getidx()
+            bforce = [bforce[item] for item in idx]
+        #
+        return ['node_end', *bforce]
+    #
+    @property
+    def bhdisp(self) -> list[str]:
+        """ beam intergration displacement"""
+        bdisp = ['F_wx', 'F_wy', 'F_wz', 'F_phix', 'F_thetay', 'F_thetaz']
+        if self.plane2D:
+            idx = self.getidx()
+            bdisp = [bdisp[item] for item in idx]
+        #
+        return ['node_end', *bdisp]
+    #
+    #
+    @property
+    def colrename(self) -> dict:
+        """"""
+        cols = {'x':'Fx', 'y':'Fy', 'z':'Fz',
+                'rx':'Mx', 'ry':'My', 'rz':'Mz'}
+        if self.plane2D:
+            cols = {key: cols[key] for key in self.dof}
+        return cols    
+#
 #
 class Mesh:
     """
@@ -27,18 +127,21 @@ class Mesh:
     """
     __slots__ = ['_nodes', '_elements', '_load', 'data_type',
                  '_eccentricities', '_boundaries', '_groups',
-                 'db_file', '_df', 
-                 '_Kmatrix']
+                 'db_file', '_df', '_Kmatrix', '_plane']
 
     def __init__(self, materials, sections,
                  mesh_type:str="sqlite",
                  db_file:str|None = None):
         """
         """
-        #mesh_type2 = 'sqlite'
+        #self._plane = Plane3D()
+        self._plane = MeshPlane(plane2D=False)
+        #self._ndof = 6
+        #
         self.db_file = db_file
         self.data_type = mesh_type
         self._nodes = Nodes(mesh_type=mesh_type,
+                            plane=self._plane,
                             db_file=self.db_file)
         self._boundaries = Boundaries(mesh_type=mesh_type,
                                       db_file=self.db_file)
@@ -46,6 +149,7 @@ class Mesh:
         self._elements = Elements(nodes=self._nodes,
                                   materials=materials,
                                   sections=sections,
+                                  plane=self._plane,
                                   mesh_type=mesh_type,
                                   db_file=self.db_file)
         # groups
@@ -53,11 +157,13 @@ class Mesh:
         #
         self._load = Load(nodes=self._nodes,
                           elements=self._elements,
+                          plane=self._plane,
                           mesh_type=mesh_type,
                           db_file=self.db_file)
         # Ops
         self._df = DBframework()
-        self._Kmatrix = False
+        self._Kmatrix:bool = False
+        #self._plane2D:bool = False
     #
     def nodes(self, values:None|list|tuple=None,
               df=None):
@@ -187,28 +293,60 @@ class Mesh:
     # Mesh Operations
     # --------------------
     #
-    def K(self, solver: str|None = None, log: bool = False,
-          drop: bool = True, m2D:bool = False):
+    def plane(self, plane2D: bool) -> None:
+        """ """
+        self._plane = MeshPlane(plane2D)
+        self._nodes.plane = self._plane
+        self._elements.plane = self._plane
+        self._load.plane = self._plane
+    #
+    def jbc(self):
+        """ """
+        return self._nodes.jbc(supports=self._boundaries._nodes)
+    #
+    def neq(self):
+        """number of equations"""
+        return self._nodes.neq(supports=self._boundaries._nodes)
+    #
+    def K(self, solver: str|None = None): # drop: bool = True, 
         """Returns the model's global stiffness matrix.
         
         Solver: numpy/banded/sparse
         """
         # get data
-        jbc = self._nodes.jbc(supports=self._boundaries._nodes)
-        neq = self._nodes.neq(supports=self._boundaries._nodes)
+        #jbc = self._nodes.jbc(supports=self._boundaries._nodes)
+        jbc = self.jbc()
+        neq = self.neq()
         #
-        if m2D:
-            jbc = jbc[['x', 'y', 'rz']]
+        #if self._plane.m2D:
+        #    jbc = jbc[self._plane.dof]
         #
-        aa = Kmatrix(elements=self._elements, jbc=jbc, neq=neq,
-                     solver=solver, m2D=m2D)
+        Ka = Kmatrix(elements=self._elements, jbc=jbc, neq=neq,
+                     ndof=self._plane.ndof, solver=solver)
         #
-        if drop:
-            with open("stfmx.f2u", "wb") as f:
-                pickle.dump(jbc, f)
-                pickle.dump(aa, f)
-        else:
-            return jbc, aa     
+        #if drop:
+        #    with open("stfmx.f2u", "wb") as f:
+        #        pickle.dump(jbc, f)
+        #        pickle.dump(aa, f)
+        #else:
+        return Ka     
         #print('---')
-        return None, None
-        
+        #return None, None
+    #
+    def Kg(self, solver: str|None = None):
+        """ Element global geometric stiffness matrix"""
+        jbc = self.jbc()
+        neq = self.neq()
+        Kg = Gmatrix(elements=self._elements, jbc=jbc, neq=neq,
+                     plane=self._plane.ndof, solver=solver)
+        return Kg
+    #
+    def M(self, solver: str|None = None):
+        """ Element global geometric stiffness matrix"""
+        jbc = self.jbc()
+        neq = self.neq()
+        Ma = Mmatrix(elements=self._elements, jbc=jbc, neq=neq,
+                     plane=self._plane.ndof, solver=solver)
+        return Ma
+    #
+    #

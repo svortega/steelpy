@@ -1,9 +1,12 @@
-# 
-# Copyright (c) 2009-2021 steelpy
+#
+# Copyright (c) 2009-2023 fem2ufo
+#
+from __future__ import annotations
 #
 # Python stdlib imports
 
 # package imports
+import numpy as np
 
 # ---------------------
 #
@@ -158,7 +161,7 @@ def beam_geom(length, s):
     Calculates the element geometric matrix  
     """
     # initialize all eg elements to zero 
-    eg = zeros( 12, 12 )
+    eg = np.zeros( 12, 12 )
     emlenz = s / (30.0 * length)
     alpha = (s / length) * 1.0e-6
 
@@ -214,7 +217,7 @@ def beam_KG(ek, beam_length, E, A, G):
     Phiy = 12*EIz / (G * Asy * L**2)
     Phiz = 12*EIy / (G * Asz * L**2)
     #
-    gk = zeros( 12, 12 )
+    gk = np.zeros( 12, 12 )
     #
     gk[ 0 ][ 0 ] = 0
     gk[ 1 ][ 1 ] = 6/5 + 2*Phiy + Phiy**2 / (1 + Phiy)
@@ -234,3 +237,35 @@ def beam_KG(ek, beam_length, E, A, G):
     gk[ 11 ][ 11 ] = gk[ 5 ][ 5 ]    
     
 #
+#
+def kg_beam(self, P: float, length: float, 
+             area:float, J:float, Iy:float, Iz:float,
+             Emod:float, Gmod:float):
+    """
+    Returns the condensed (expanded) local geometric stiffness matrix for the member.
+
+    Parameters
+    ----------
+    P : number, optional
+        The axial force acting on the member (compression = +, tension = -)
+    """
+    # Get the properties needed to form the local geometric stiffness matrix
+    Ip = Iy + Iz
+    A = area
+    L = length
+    # Create the uncondensed local geometric stiffness matrix
+    kg = np.array([[0, 0,    0,     0,     0,         0,         0, 0,     0,    0,     0,         0],
+                   [0, 6/5,  0,     0,     0,         L/10,      0, -6/5,  0,    0,     0,         L/10],
+                   [0, 0,    6/5,   0,     -L/10,     0,         0, 0,     -6/5, 0,     -L/10,     0],
+                   [0, 0,    0,     Ip/A,  0,         0,         0, 0,     0,    -Ip/A, 0,         0],
+                   [0, 0,    -L/10, 0,     2*L**2/15, 0,         0, 0,     L/10, 0,     -L**2/30,  0],
+                   [0, L/10, 0,     0,     0,         2*L**2/15, 0, -L/10, 0,    0,     0,         -L**2/30],
+                   [0, 0,    0,     0,     0,         0,         0, 0,     0,    0,     0,         0],
+                   [0, -6/5, 0,     0,     0,         -L/10,     0, 6/5,   0,    0,     0,         -L/10],
+                   [0, 0,    -6/5,  0,     L/10,      0,         0, 0,     6/5,  0,     L/10,      0],
+                   [0, 0,    0,     -Ip/A, 0,         0,         0, 0,     0,    Ip/A,  0,         0],
+                   [0, 0,    -L/10, 0,     -L**2/30,  0,         0, 0,     L/10, 0,     2*L**2/15, 0],
+                   [0, L/10, 0,     0,     0,         -L**2/30,  0, -L/10, 0,    0,     0,         2*L**2/15]])
+    
+    kg = kg*P/L
+    return kg

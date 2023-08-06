@@ -12,6 +12,7 @@ from ..inmemory.beam import BeamLoadItemIM
 from ..inmemory.node import NodeLoadItemIM
 from ..process.basic_load import BasicLoadBasic, LoadTypeBasic
 
+from steelpy.f2uModel.load.inmemory.wave_load import WaveLoadItemIM
 
 #
 #
@@ -97,7 +98,7 @@ class LoadTypeInMemory(LoadTypeBasic):
     """
     """
     __slots__ = ['_node', '_beam', '_selfweight',
-                 'name', 'number', 'title']
+                 'name', 'number', 'title', '_wave']
                  #'_f2u_beams', '_f2u_nodes']
 
     def __init__(self, name: str | int, number: int, title: str,
@@ -116,5 +117,7 @@ class LoadTypeInMemory(LoadTypeBasic):
         self._beam = BeamLoadItemIM(load_name=name,
                                     load_title = title,
                                     beams=beams)
+        #
+        self._wave = WaveLoadItemIM(load_name=name)
     #
 #

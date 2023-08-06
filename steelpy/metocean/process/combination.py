@@ -182,6 +182,7 @@ class CombSetup(NamedTuple):
     CdCm: dict
     hydro: dict
     buoyancy: str|int|bool
+    #rho_w: float
 #
 #
 class CombTypes:
@@ -215,7 +216,7 @@ class CombTypes:
             mg = self._cls._marine_growth[values[0]]
         except KeyError:
             units = Units()
-            self._cls._marine_growth['default'] = [self._cls._hydro._rho_w * units.kg / units.m**3,
+            self._cls._marine_growth['default'] = [self._cls._hydro.rho_w * units.kg / units.m**3,
                                                    0 * units.mm, 'constant']
             mg = self._cls._marine_growth['default']
         # CdCm
@@ -296,11 +297,12 @@ class CombTypes:
         wave = self._wave.wave
         current = self._current
         hydro = self._setup
-        #rho_w = self._cls
+        rho_w = self._cls._hydro.rho_w
         kinematics = wave.kinematics()
         res = BSOTM(kinematics=kinematics,
                     current=current,
                     hydro=hydro,
+                    rho_w=rho_w, 
                     condition=2)
         return res
         #calc

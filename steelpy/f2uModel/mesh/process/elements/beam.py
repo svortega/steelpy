@@ -7,24 +7,26 @@ from __future__ import annotations
 from array import array
 from dataclasses import dataclass
 from collections.abc import Mapping
-#from typing import NamedTuple
+from typing import NamedTuple
 
 # package imports
-from steelpy.process.geometry.L3D import (DistancePointLine3D,
-                                          LineLineIntersect3D)
+from steelpy.process.geometry.L3D import DistancePointLine3D, LineLineIntersect3D
 from steelpy.f2uModel.mesh.process.elements.bstiffness import (beam3D_Klocal, 
                                                                Rmatrix, Rmatrix2, 
                                                                beam3D_K)
-from steelpy.f2uModel.mesh.process.elements.bstiffness2D import (beam2D_K, beam2D_Geom, Rmatrix2D)
+from steelpy.f2uModel.mesh.process.elements.bgeometry import kg_beam
+from steelpy.f2uModel.mesh.process.elements.bmass import beam_mass
+#
+from steelpy.process.math.operations import remove_column_row
 #
 import numpy as np
 from numpy.linalg import inv
 
 #
 class BeamBasic(Mapping):
-
+    __slots__ = ['_lables', '_number', '_title']
     
-    def __init__(self) -> None:
+    def __init__(self) -> None: #, m2D: bool
         """
         Beam element 
         """
@@ -33,7 +35,7 @@ class BeamBasic(Mapping):
         self._labels: list[int|str] = []
         self._number: array = array('i', [])
         self._title: list[int|str] = []
-        #
+        #self._m2D = m2D
     #  
     #
     def __contains__(self, value) -> bool:
@@ -58,71 +60,174 @@ class BeamBasic(Mapping):
 class BeamItemBasic:
     """
     """
-    #__slots__ = ['name', 'type']
+    __slots__ = ['name', '_releases', '_plane', 'type']
 
-    def __init__(self, element_name: int|str) -> None:
+    def __init__(self, beam_name: int|str) -> None:
         """
         """
-        self.name: int|str = element_name
+        self.name: int|str = beam_name
+        #self._plane = plane
+        #
         self._releases: list[bool] = [False] * 12
+        # Kmatrix index  [z, Mx, My]
         #self._intersect = LineLineIntersect3D()
+        self.type: str = "beam"
     #
     #
-    #@property
-    def T(self, m2D:bool = False):
-        """
-        Returns the transformation matrix for the member
-        """
-        if m2D:
-            # Element length and orientation
-            node1,  node2 = self.nodes
-            Tlg = Rmatrix2D(node1, node2)
-            return Tlg
-        else:
-            #if self.type in ['beam', 'truss']:
-            nodei, nodej = self.nodes
-            return Rmatrix2(nodei, nodej, L=self.L)
-            #return Rmatrix(*self.unit_vector, self.beta)
-            #else:
-            #    raise IOError("no yet included")    
+    # Transformation
     #
-    #@property
-    def K(self, m2D:bool = False):
+    @property
+    def T(self):
         """
-        m2d : Matrix 2D (False default --> 3D) 
-        
-        Return the stiffness matrix in global coordinates
+        Returns Beam transformation matrix
         """
-        Tlg =  self.T(m2D=m2D)
-        if m2D:
-            Kl = self.k2D()
-            #Tlg =  self.T(m2D=m2D)
-            #Kg = (np.transpose(Tlg).dot(Kl)).dot(Tlg)
-            #return Kg
-        else:
-            Kl = self.k3D()
-            #
-            #
-            #self.beta = 30
-            #disb = self.R
-            #node1 = self._cls._f2u_nodes[self._cls._connectivity[self.index][0]]
-            #node2 = self._cls._f2u_nodes[self._cls._connectivity[self.index][-1]]
-            #dirc = Rmatrix_new(node1[:3], node2[:3], self.beta)
-            #xxx = trans3Dbeam(K, node1[:3], node2[:3])
-            #return trans3Dbeam(K, node1[:3], node2[:3])
-            #return trans_3d_beam(K, dirc)
-            #return trans_3d_beam(k, self.T())
-            #return self.trans3d(K)
-            #Tlg = self.T()
+        Tlg = self.T3D()
+        if self._plane.plane2D:
+            # removing z, Mx, My
+            for i in self._plane.index_off:
+                Tlg = remove_column_row(Tlg, i, i)
+        return Tlg
+    #
+    def T3D(self):
+        """ """
+        nodei, nodej = self.nodes
+        #return Rmatrix(*self.unit_vector, self.beta)
+        return Rmatrix2(nodei, nodej, L=self.L)        
+    #
+    # Stiffness
+    #
+    @property
+    def K(self):
+        """
+        Return Beam stiffness matrix in global coordinates
+        """
+        Tlg =  self.T
+        Kl = self.k
+        #Kl = self.k3D()
+        #if self._plane.m2D:
+        #    # removing z, Mx, My
+        #    for i in self._plane.index_off:
+        #        Kl = remove_column_row(Kl, i, i)
         #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
         return Tlg.T @ Kl @ Tlg
     #
-    def k(self, m2D:bool = False):
-        """Return the stiffness matrix in global coordinates"""
-        if m2D:
-            return self.k2D()
-        else:
-            return self.k3D()
+    @property
+    def k(self):
+        """Return the 2D/3D stiffness matrix in local coordinates """
+        kl = self.k3D()
+        if self._plane.plane2D:
+            for i in self._plane.index_off:
+                kl = remove_column_row(kl, i, i)
+        #else:
+        #    return self.k3D()
+        return kl
+    #
+    def k3D(self):
+        """Returns the condensed (and expanded) local stiffness matrix for 3D beam"""
+        # get section properties 
+        section = self.section
+        #section = self._cls._f2u_sections[section]
+        section = section.properties()
+        # get material properties
+        material = self.material
+        #material = self._cls._f2u_materials[material]        
+        #
+        #
+        # solve K matrix
+        #Kb = beam3D_Klocal(self.L,
+        #                    self.area, self.J,
+        #                    self.Iy, self.Iz,
+        #                    self.E, self.G,
+        #                    self.area, self.area)
+        #        
+        kb = beam3D_K(self.L,
+                      section.area, section.J,
+                      section.Iy, section.Iz,
+                      material.E, material.G)
+        #
+        k_cond = self._k_unc(kb)
+        return k_cond
+        #return K    
+    #
+    # Geometry
+    #
+    def Kg(self, axial):
+        """
+        Return Beam geometrical stiffness matrix in global coordinates
+        """
+        Tlg =  self.T
+        Kl = self.kg(axial=axial)
+        #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
+        return Tlg.T @ Kl @ Tlg
+    #
+    def kg(self, axial):
+        """
+        Return Beam geometrical stiffness matrix in local coordinates
+        """
+        kg = self.kg3D(axial=axial)
+        if self._plane.plane2D:
+            for i in self._plane.index_off:
+                kg = remove_column_row(kg, i, i)
+        return kg
+    #
+    def kg3D(self, axial: float = 0):
+        """
+        Returns the condensed (and expanded) local geometrical stiffness matrix for 3D beam
+        """
+        # get section properties 
+        section = self.section
+        section = section.properties()
+        # get material properties
+        material = self.material       
+        #
+        #        
+        kg = kg_beam(axial, self.L,
+                      section.area, section.J,
+                      section.Iy, section.Iz,
+                      material.E, material.G)
+        #
+        k_cond = self._k_unc(kg)
+        return k_cond
+    #
+    # Mass
+    #
+    #@property
+    def M(self):
+        """
+        Return Beam mass matrix in global coordinates
+        """
+        Tlg =  self.T
+        Km = self.m()
+        #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
+        return Tlg.T @ Km @ Tlg
+    #
+    def m(self):
+        """
+        Return Beam mass matrix in local coordinates
+        """
+        km = self.m3D()
+        if self._plane.plane2D:
+            for i in self._plane.index_off:
+                km = remove_column_row(km, i, i)
+        return km
+    #
+    def m3D(self):
+        """ Returns the condensed (and expanded) local mass matrix for 3D beam"""
+        # get section properties 
+        section = self.section
+        section = section.properties()
+        # get material properties
+        material = self.material       
+        #
+        #        
+        em = beam_mass(self.length,
+                       section, material,
+                       ilump=2)
+        #
+        k_cond = self._k_unc(em)
+        return k_cond        
+    #
+    # Matrix operations
     #
     def _partition(self, unp_matrix):
         """
@@ -176,72 +281,9 @@ class BeamItemBasic:
                 k_condensed = np.insert(k_condensed, i, 0, axis = 1)
         # Return the local stiffness matrix, with end releases applied
         return k_condensed
+    #    
     #
-    #
-    def k3D(self):
-        """Returns the condensed (and expanded) local stiffness matrix for the 3D beam"""
-        # get section properties 
-        section = self.section
-        #section = self._cls._f2u_sections[section]
-        section = section.properties()
-        # get material properties
-        material = self.material
-        #material = self._cls._f2u_materials[material]        
-        #
-        #
-        # solve K matrix
-        #Kb = beam3D_Klocal(self.L,
-        #                    self.area, self.J,
-        #                    self.Iy, self.Iz,
-        #                    self.E, self.G,
-        #                    self.area, self.area)
-        #        
-        kb = beam3D_K(self.L,
-                      section.area, section.J,
-                      section.Iy, section.Iz,
-                      material.E, material.G)
-        #
-        k_cond = self._k_unc(kb)
-        return k_cond
-        #return K
-    #
-    #
-    def k2D(self, beta:int=0):
-        """
-        beam 2D matrix local system
-        beta : shear deformation (0-off/1-on)
-        """
-        # get section properties 
-        section = self.section
-        #section = self._cls._f2u_sections[section]
-        section = section.properties()
-        # get material properties
-        material = self.material
-        #
-        k_cond =beam2D_K(L=self.L, 
-                         A=section.area, I=section.Iy, 
-                         E=material.E, beta=beta)
-        return k_cond
-    #
-    # Mass
-    #@property
-    def Km(self):
-        """
-        """
-        #FIXME: material 
-        #section = self._cls._f2u_sections[self.section].properties
-        #material = self._cls._f2u_materials[self.material]
-        #
-        if self.type in ['beam', 'truss']:
-            em = beam_mass(self.length,
-                           section, material,
-                           ilump=2)
-            return trans_3d_beam(em, self.R)
-        else:
-            raise IOError("no yet included")     
-    #  
-    #
-    # Geometry
+    # Operations
     #
     def intersect_point(self, point:list):
         """line intersection """

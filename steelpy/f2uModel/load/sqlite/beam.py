@@ -4,7 +4,8 @@
 
 # Python stdlib imports
 from __future__ import annotations
-#from typing import NamedTuple, Tuple, List, Union, Iterable, Dict
+#from dataclasses import dataclass
+from typing import NamedTuple
 import re
 
 
@@ -27,36 +28,44 @@ from steelpy.process.dataframe.main import DBframework
 #
 #
 class BeamLoadItemSQL(BeamLoadItem):
-    __slots__ = ['_labels', '_load', '_bd_file', '_name']
+    __slots__ = ['_labels','_name',  '_load', '_plane', 
+                 '_plane', '_node_eq', '_db_file']
 
-    def __init__(self, load_name: int|float, bd_file: str) -> None:
+    def __init__(self, load_name: int|float,
+                 plane: NamedTuple, db_file: str) -> None:
         """
         """
         super().__init__()
-        self._bd_file =  bd_file
-        self._load = BeamLoadSQL(load_name=load_name,
-                                 bd_file=self._bd_file)
-        #
-        self._node_eq = BeamToNodeSQL(load_name=load_name, 
-                                      bd_file=bd_file)
         #
         self._name = load_name
+        self._db_file = db_file
+        self._plane = plane
+        #
+        self._load = BeamLoadSQL(load_name=self._name,
+                                 bd_file=self._db_file)
+        #
+        self._node_eq = BeamToNodeSQL(load_name=self._name, 
+                                      db_file=self._db_file)
+        #
+        
     #
     def __setitem__(self, beam_name: int|str,
                     beam_load: list) -> None:
         """
         """
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         with conn:
-            beam =  BeamItemSQL(beam_name, self._bd_file)
+            beam =  BeamItemSQL(beam_name,
+                                plane=self._plane, 
+                                db_file=self._db_file)
             #beam = check_element(conn, beam_name)        
         try:
             beam.L
         except (TypeError, IndexError):
             raise IOError(f"beam {beam_name} not found")        
         #
-        #
-        self._beam_id = beam_name
+        # TODO: check if _beam_id affects something else
+        #self._beam_id = beam_name
         self._labels.append(beam_name)
         #
         if re.match(r"\b(point|node)\b", str(beam_load[0]), re.IGNORECASE):
@@ -74,10 +83,12 @@ class BeamLoadItemSQL(BeamLoadItem):
     def __getitem__(self, beam_name: int | str):
         """
         """
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         with conn:  
             #beam = check_element(conn, beam_name)
-            beam =  BeamItemSQL(beam_name, self._bd_file)
+            beam =  BeamItemSQL(beam_name=beam_name,
+                                plane=self._plane,
+                                db_file=self._db_file)
         try:
             memb_type = beam.type # beam[3]
             if memb_type != 'beam':
@@ -94,7 +105,7 @@ class BeamLoadItemSQL(BeamLoadItem):
     #
     def fer(self, beams):
         """ Return Fix End Reactions (FER) global system"""
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         with conn:
             load_data = get_load_data(conn, self._name, load_type='basic')
             load_number = load_data[0]
@@ -121,7 +132,7 @@ class BeamLoadItemSQL(BeamLoadItem):
     def df(self, data):
         """ """
         #
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         #
         beams = data.groupby(['element_type']).get_group('beam')
         grpbeam = beams.groupby(['element_name', 'load_name'])
@@ -494,15 +505,15 @@ class BeamPointSQL(NodeLoadBasic):
 class BeamToNodeSQL(NodeLoadBasic):
     __slots__ = ['_labels', '_title', '_complex', 
                 '_system_flag', '_system', 
-                '_bd_file', '_name']
-    def __init__(self, load_name: int|float, bd_file: str) -> None:
+                '_db_file', '_name']
+    def __init__(self, load_name: int|float, db_file: str) -> None:
         """
         """
         super().__init__()
         self._name = load_name
-        self._bd_file =  bd_file
+        self._db_file =  db_file
         # create node table
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         with conn:        
             self._create_table(conn)
     #
@@ -517,7 +528,7 @@ class BeamToNodeSQL(NodeLoadBasic):
         #
         #
         # push to SQL
-        bd_file = self._bd_file
+        bd_file = self._db_file
         conn = create_connection(bd_file)
         for node in node_load:
             title = node.pop()
@@ -530,7 +541,7 @@ class BeamToNodeSQL(NodeLoadBasic):
     def __getitem__(self, beam_name:int|str)-> list:
         """
         """
-        bd_file = self._bd_file
+        bd_file = self._db_file
         # get beam load
         conn = create_connection(bd_file)
         with conn:
@@ -651,7 +662,7 @@ class BeamToNodeSQL(NodeLoadBasic):
     def df(self):
         """nodes in dataframe format"""
         db = DBframework()
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         #
         with conn:
             cur = conn.cursor()

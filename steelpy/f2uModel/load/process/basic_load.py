@@ -7,7 +7,7 @@ from __future__ import annotations
 from array import array
 from collections.abc import Mapping
 #from collections import defaultdict
-from dataclasses import dataclass
+#from dataclasses import dataclass
 #from operator import sub, add
 from typing import NamedTuple
 # import re
@@ -15,7 +15,7 @@ from typing import NamedTuple
 # package imports
 import pandas as pd
 # steelpy
-from .beam import BeamLoadItem
+#from .beam import BeamLoadItem
 #from ....process.math.operations import zeros, trns_3Dv #, zeros_vector , linspace
 #from ....process.math.vector import Vector
 #from steelpy.formulas.beam.main import BasicCalcs
@@ -37,7 +37,8 @@ class BasicLoad(NamedTuple):
 #
 #
 class BasicLoadBasic(Mapping):
-
+    __slots__ = ['_labels', '_title','_number', 'gravity']
+    
     def __init__(self):
         """
         """
@@ -282,8 +283,12 @@ class BasicLoadBasic(Mapping):
             lcase = self.__getitem__(lname)
             try:
                 lcase._wave.process(lname)
-            except KeyError:
+            
+            except (KeyError, AttributeError):
                 continue
+            
+            #except AttributeError:
+            #    break            
         print('# --> End')
     #
 #

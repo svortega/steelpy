@@ -9,7 +9,7 @@ from collections.abc import Mapping
 #from collections import defaultdict
 from collections import Counter, defaultdict
 #from dataclasses import dataclass
-#from typing import Union, Dict, List, Union
+from typing import NamedTuple
 #from math import prod
 
 # package imports
@@ -24,16 +24,19 @@ from steelpy.process.dataframe.main import DBframework
 #
 class LoadCombSQL(LoadCombinationBasic):
     
-    __slots__ = ['_labels', '_title', '_number', 'bd_file',
+    __slots__ = ['_labels', '_title', '_number', 'bd_file', '_plane', 
                  '_index', '_basic', '_combination', '_metocean']
     #
-    def __init__(self, bd_file:str):
+    def __init__(self, bd_file:str, plane: NamedTuple):
         """
         """
         super().__init__()
-        self.bd_file = bd_file
         #
-        self._basic = BasicLoadSQL(db_file=self.bd_file)
+        self.bd_file = bd_file
+        self._plane=plane
+        #
+        self._basic = BasicLoadSQL(db_file=self.bd_file,
+                                   plane=self._plane)
         self._combination = {} #LoadCombinationSQL(self)
     #
     def __setitem__(self, load_name:int|str, load_title:str) -> None:

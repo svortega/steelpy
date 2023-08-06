@@ -8,7 +8,7 @@ from array import array
 from collections import Counter
 from collections.abc import Mapping
 #from math import dist
-#from typing import NamedTuple, Tuple, List, Iterator, Iterable, Union, Dict
+from typing import NamedTuple
 from itertools import chain
 import re
 
@@ -26,9 +26,9 @@ from .beam import BeamSQL, get_connectivity
 #
 class ElementsSQL(Mapping):
     __slots__ = ['db_file', '_labels', '_type', '_number', 
-                 '_beams']
+                 '_beams', '_plane']
     
-    def __init__(self, db_file:str,
+    def __init__(self, db_file:str, plane: NamedTuple, 
                  db_system:str="sqlite") -> None:
         """
         """
@@ -41,7 +41,17 @@ class ElementsSQL(Mapping):
         with conn:        
             self._create_table(conn)
         #
-        self._beams = BeamSQL(db_file=db_file)
+        # TODO: 
+        self._plane = plane
+        self._beams = BeamSQL(db_file=db_file,
+                              plane=self._plane)
+    #
+    #
+    def plane(self, plane: NamedTuple):
+        """ """
+        self._plane = plane
+        self._beams._plane = self._plane
+    #
     #
     def __setitem__(self, element_name: int|str, parameters: list) -> None:
         """

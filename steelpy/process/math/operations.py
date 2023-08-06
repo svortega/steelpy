@@ -111,6 +111,12 @@ def matrix_full(x):
             a[i + j][i] = x[i][j]
     return a
 #
+#
+# --------------------
+#      
+# --------------------
+#
+#
 def linspace(start:int, stop:int, num:int, endpoint:bool=True):
     """ equally space numbers"""
     step = (stop - start) * 1.0 / (num)
@@ -161,3 +167,34 @@ class linspace2(Sequence):
 
     def __hash__(self):
         return hash((type(self), self.start, self.stop, self.num))
+#
+#
+# --------------------
+#      
+# --------------------
+#
+#
+def remove_column_row(a: list, row: float, col: int):
+    """ """
+    without_row = np.delete(a, row, axis=0)
+    return np.delete(without_row, col, axis=1)
+#
+#
+def remove_column_of_zeros_and_shift_row(a, row, col):
+    """ """
+    without_row = np.delete(a, row, axis=0)
+    without_row_and_col = np.delete(without_row, col, axis=1)
+    z = np.zeros((1, len(without_row_and_col[0])))
+    without_col_shifted_row = np.append(z, without_row_and_col, axis=0)
+    return without_col_shifted_row
+#
+#
+def swap_col(arr, start_index, last_index):
+    """ """
+    arr[:, [start_index, last_index]] = arr[:, [last_index, start_index]]
+#
+#
+def swap_row(arr, start_index, last_index):
+    """ """
+    arr[[start_index, last_index],:] = arr[[last_index, start_index],:]
+#

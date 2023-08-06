@@ -324,9 +324,8 @@ print(load)
 #
 frame = Trave2D()
 frame.mesh = mesh
-results = frame.run_static()
-#frame.nfreq()
-#results = frame.run_dynamic(end_time=10, delta_t=0.10)
-results.print()
+frame.static()
+results = frame.solve()
+print(results)
 print('--')
 

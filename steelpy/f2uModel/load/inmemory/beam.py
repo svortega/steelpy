@@ -79,9 +79,9 @@ class BeamLoadItemIM(BeamLoadItem):
         return self._load(beam=beam) # ,  beam_name=beam_name
     #
     #
-    def fer(self):
+    def fer(self, beams):
         """ Return Fix End Reactions (FER) global system"""
-        beams = self._f2u_beams
+        #beams = self._f2u_beams
         for key in set(self._labels):
             beam = beams[key]
             end_nodes = beam.connectivity

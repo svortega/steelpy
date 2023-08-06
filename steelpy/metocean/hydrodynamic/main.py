@@ -25,7 +25,7 @@ class Hydrodynamic:
                  #'_marine_growth', #'mg_default',
                  '_hydro_diametre',
                  '_non_hydro',
-                 '_rho_w']
+                 'rho_w']
     
     def __init__(self, rho_w:float) -> None:
         """
@@ -41,7 +41,7 @@ class Hydrodynamic:
         self._non_hydro = {}
         self._buoyancy_area = {}
         self._air_drag = {}
-        self._rho_w: float = rho_w  # 1032.0  * kg / m^3
+        self.rho_w: float = rho_w  # 1032.0  * kg / m^3
     #
     #
     #@property

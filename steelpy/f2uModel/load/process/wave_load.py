@@ -35,19 +35,17 @@ class WaveData(NamedTuple):
 class WaveLoadItem(BeamLoadItem):
     """ """
     __slots__ = ['_seastate', '_name',
-                 '_load', '_criterion']
+                 '_load', '_criterion', '_design_load']
 
     def __init__(self, load_name: int|str):
         """ """
         super().__init__()
         #
+        self._name = load_name        
+        #
         self._seastate:list = []
         self._design_load:list = []
         self._criterion:list = []
-        #
-        self._name = load_name
-        #
-    #
     #
     def __setitem__(self, load_name: int|str,
                     wave_load: list) -> None:

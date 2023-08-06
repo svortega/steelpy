@@ -7,14 +7,14 @@ from array import array
 from copy import copy
 from math import fsum
 import pickle
-#from typing import List #, NamedTuple, Union
+from dataclasses import dataclass
+from typing import NamedTuple
 #from itertools import chain
 #import time
 #
 # package imports
-from steelpy.process.math.operations import to_matrix #, zeros_vector, matAbd, trns_3Dv
-#from steelpy.process.math.vector import Vector
-#from steelpy.trave3D.processor.operations import get_deflection
+from steelpy.process.math.operations import to_matrix
+#from steelpy.trave.processor.operations import ElementProcess
 from steelpy.process.dataframe.main import DBframework
 #
 import numpy as np
@@ -161,11 +161,11 @@ def solve_deflections(df_nload, method: str,
     return df_ndisp #, df_nload
 #
 #
-def get_mask(df_jbc, m2D:bool = False):
+def get_mask(df_jbc, plane2D:bool = False):
     """ """
     cols =  {'x':'Fx', 'y':'Fy', 'z':'Fz',
              'rx':'Mx', 'ry':'My', 'rz':'Mz'}
-    if m2D:
+    if plane2D:
         cols = {'x':'Fx', 'y':'Fy','rz':'Mz'}
     # remove rows with zeros
     dfjbc = df_jbc.rename(columns=cols) # , inplace=True
@@ -198,4 +198,127 @@ def get_dfdisp(dftemp, headdisp):
               'load_system', 'load_title',
               'node_name', *headdisp]
     return db.DataFrame(data=dftemp, columns=header, index=None)
-        
+#
+#
+#
+# ---------------------------------------------
+#
+# ---------------------------------------------
+#
+@dataclass
+class StaticSolver:
+    __slots__ = ['_plane', '_load']
+    
+    def __init__(self, plane: NamedTuple) -> None:
+        """
+        """
+        self._plane = plane
+    #
+    #
+    def load(self, load):
+        """ """
+        self._load = load
+    #
+    #
+    def Kglobal(self, jbc, Ka, Kg: list|bool = None):
+        """ """
+        with open("stfmx.f2u", "wb") as f:
+            pickle.dump(jbc, f)
+            pickle.dump(Ka, f)
+    #
+    def deflection(self, method: str):
+        """ """
+        #
+        file = open("stfmx.f2u", "rb")
+        df_jbc = pickle.load( file )
+        stf = pickle.load( file )
+        file.close()        
+        #
+        basic_load = self._load.basic()
+        df_nload  = basic_load.node_df()        
+        dfnload = self._load_update(df_nload)
+        #
+        solver = solver_np
+        if method == 'banded':
+            solver = solver_Mbanded
+        #
+        df_ndisp = self.solve(stf, dfnload, df_jbc, solver)
+        return df_ndisp
+    #
+    def solve(self, stf, dfnload, df_jbc, solver):
+        """ """
+        dfbool, dfzeros = self._mask(df_jbc)
+        jbcc = df_jbc.stack()
+        blgrp = dfnload.groupby(['load_name', 'load_number', 
+                                 'load_type','load_system'])
+        #       
+        dftemp = []
+        for key, litem in blgrp:
+            # map loading 
+            df1 = litem.set_index(litem['node_name'])
+            df2 = dfzeros.copy()
+            df2.loc[df2.index.isin(df1['node_name'])] = df1[self._plane.hforce]
+            # get load vector flatted
+            df2 = df2.stack()
+            nloads = df2[dfbool]
+            # Solve displcements
+            ndisp = iter(solver(stf, nloads))
+            # reshape vector in matrix form [row, col]
+            ndisp = [next(ndisp) if ieqnum != 0 else ieqnum
+                     for ieqnum in jbcc]
+            #
+            ndisp = to_matrix(ndisp, self._plane.ndof)
+            filldata = [[*key,  litem['load_title'].iloc[0],
+                        nname, *ndisp[x]]
+                        for x, nname in enumerate(df_jbc.index)]
+            #
+            dftemp.extend(filldata)
+        #
+        df_ndisp = self.df(dftemp)
+        return df_ndisp
+    #
+    #@property
+    def df(self, dftemp):
+        """displacement dataframe"""
+        db = DBframework()
+        header = ['load_name', 'load_number', 'load_type',
+                  'load_system', 'load_title',
+                  'node_name', *self._plane.hdisp]
+        return db.DataFrame(data=dftemp, columns=header, index=None)
+    #
+    def _load_update(self, df_nload):
+        """ """
+        dfnload = (df_nload.groupby(['load_name', 'load_number', 'load_type',
+                                     'load_title','load_system', 'node_name'])
+                   [self._plane.hforce].sum())
+        #
+        dfnload.reset_index(inplace=True)
+        return dfnload
+    #
+    def _mask(self, df_jbc):
+        """ """
+        #cols =  {'x':'Fx', 'y':'Fy', 'z':'Fz',
+        #         'rx':'Mx', 'ry':'My', 'rz':'Mz'}
+        #if self._plane.m2D:
+        #    cols = {'x':'Fx', 'y':'Fy','rz':'Mz'}
+        # remove rows with zeros
+        dfjbc = df_jbc.rename(columns=self._plane.colrename) # , inplace=True
+        dfjbc = dfjbc[df_jbc.any(axis=1)]
+        dfjbc = dfjbc.replace(0, np.nan)
+        dfjbc = dfjbc.notnull()
+        #
+        dfbool = dfjbc.stack()
+        # Copy dataframe 
+        #dfzeros = dfjbc.copy()
+        #dfzeros.iloc[:] = 0
+        #
+        dfjbc.iloc[:] = 0
+        #
+        return dfbool, dfjbc
+    #
+    # -----------------------------------------------------------
+    # Post-process
+    # -----------------------------------------------------------
+    #    
+#
+#

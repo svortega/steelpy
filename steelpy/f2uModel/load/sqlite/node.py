@@ -24,19 +24,19 @@ from steelpy.process.dataframe.main import DBframework
 #
 class NodeLoadItemSQL(Mapping):
     __slots__ = ['_name', '_labels', '_node', '_type', 
-                 '_bd_file']
+                 '_db_file']
     
-    def __init__(self, load_name: int|float, bd_file: str) -> None:
+    def __init__(self, load_name: int|float, db_file: str) -> None:
         """
         """
-        self._bd_file = bd_file
+        self._db_file = db_file
         self._name = load_name
-        self._node = NodeItemSQL(self._name, self._bd_file)
+        self._node = NodeItemSQL(self._name, self._db_file)
         #
         self._labels = []
         self._type = []        
         # create node table
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         with conn:        
             self._create_table(conn)
     #
@@ -45,7 +45,7 @@ class NodeLoadItemSQL(Mapping):
         """
         """
         # get load data
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         with conn:  
             node = check_nodes(conn, node_name)       
         try:
@@ -65,7 +65,7 @@ class NodeLoadItemSQL(Mapping):
         #    load_title = 'NULL'
         #
         #
-        bd_file = self._bd_file
+        bd_file = self._db_file
         conn = create_connection(bd_file)        
         #
         if re.match(r"\b(point|load|node)\b", load_type, re.IGNORECASE):
@@ -84,7 +84,7 @@ class NodeLoadItemSQL(Mapping):
         """
         """
         # get load data
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         with conn:  
             node = check_nodes(conn, node_name)
         #

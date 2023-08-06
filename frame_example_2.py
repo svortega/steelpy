@@ -1,8 +1,7 @@
 # Import steelpy modules
 from steelpy import Units
 from steelpy import f2uModel
-from steelpy import Trave3D
-from steelpy import Trave2D
+from steelpy import Trave2D, Trave3D
 #
 #
 units = Units()
@@ -348,9 +347,10 @@ plot = f2umodel.plot()
 # ----------------------------------------------------
 #
 #
+#frame = Trave3D()
 frame = Trave2D()
 frame.mesh = mesh
-results = frame.run_static()
-#results = frame.run_static(method='banded')
-results.print()
+frame.static(second_order=True)
+results = frame.solve()
+print(results)
 print('-->')

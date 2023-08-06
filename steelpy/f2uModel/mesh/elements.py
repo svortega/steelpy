@@ -5,8 +5,8 @@
 # Python stdlib imports
 from __future__ import annotations
 from collections.abc import Mapping
-#from typing import NamedTuple
-#from dataclasses import dataclass
+from typing import NamedTuple
+from dataclasses import dataclass
 #import re
 #
 
@@ -20,22 +20,39 @@ from .inmemory.elements import ElementsIM
 #
 #
 #
+#
 class Elements(Mapping):
     """
     """
-    __slots__ = ['_elements']
+    __slots__ = ['_elements', '_plane']
     
     def __init__(self, nodes, materials, sections,
+                 plane: NamedTuple, 
                  mesh_type:str, db_file:str|None=None):
         """
         """
+        self._plane = plane
+        #
         if mesh_type != "inmemory":
             self._elements = ElementsSQL(db_file=db_file,
-                                        db_system=mesh_type)
+                                         plane=self._plane, 
+                                         db_system=mesh_type)
         else:
             self._elements = ElementsIM(nodes=nodes,
-                                       materials=materials,
-                                       sections=sections)
+                                        materials=materials,
+                                        sections=sections)
+    #
+    @property
+    def plane(self) -> NamedTuple:
+        """ """
+        return self._plane
+    
+    @plane.setter
+    def plane(self, plane: NamedTuple):
+        """ """
+        self._plane = plane
+        self._elements.plane(self._plane)
+    #    
     #
     def __setitem__(self, element_number: int,
                     parameters: list[float]|dict[str, float]) -> None:

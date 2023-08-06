@@ -134,9 +134,18 @@ class Materials(Mapping):
         return output
 
     #
+    #
     @property
     def elastic(self):
         """
+        Linear elastic material
+        """
+        return self._material.elastic
+    
+    @property
+    def linear(self):
+        """
+        Linear elastic material
         """
         return self._material.elastic
     #

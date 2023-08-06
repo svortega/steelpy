@@ -4,7 +4,8 @@
 
 # Python stdlib imports
 from __future__ import annotations
-#from typing import NamedTuple
+#from dataclasses import dataclass
+from typing import NamedTuple
 #import re
 
 # package imports
@@ -42,13 +43,16 @@ class BasicLoadSQL(BasicLoadBasic):
       :name:  string node external name
     """
     __slots__ = ['_labels', '_title','_number', 'gravity',
-                 '_basic', 'db_file']
+                 '_basic', 'db_file', '_plane']
     #
-    def __init__(self, db_file:str):
+    def __init__(self, db_file:str, plane: NamedTuple) -> None:
         """
         """
         super().__init__()
+        #
         self.db_file = db_file
+        self._plane = plane
+        #
         self._basic: dict = {}
         conn = create_connection(self.db_file)
         with conn: 
@@ -75,6 +79,7 @@ class BasicLoadSQL(BasicLoadBasic):
             self._basic[load_name] = LoadTypeSQL(name=load_name,
                                                  number=load_number,
                                                  title=load_title,
+                                                 plane=self._plane, 
                                                  bd_file=self.db_file)
     #           
     #
@@ -131,24 +136,28 @@ class LoadTypeSQL(LoadTypeBasic):
     """
     """
     __slots__ = ['_node', '_beam', '_selfweight', '_wave', 
-                 'name', 'number', 'title', '_bd_file']
+                 'name', 'number', 'title', '_db_file']
 
-    def __init__(self, name: str, number: int, title: str, bd_file:str):
+    def __init__(self, name: str, number: int, title: str,
+                 plane: NamedTuple, bd_file:str):
         """
         """
         super().__init__(name, number, title)
-        #self.name = name
-        #self.number = number
-        #self.title = title        
-        self._bd_file = bd_file
+        #self.name = name       
+        self._db_file = bd_file
         #
         self._node = NodeLoadItemSQL(load_name=self.name,
-                                     bd_file=self._bd_file)
+                                     db_file=self._db_file)
+        #
         self._beam = BeamLoadItemSQL(load_name=self.name,
-                                     bd_file=self._bd_file)
-        self._selfweight = SelfWeight()
+                                     plane=plane, 
+                                     db_file=self._db_file)
+        #
         self._wave = WaveLoadItemSQL(load_name=self.name,
-                                     bd_file=self._bd_file)
+                                     plane=plane, 
+                                     db_file=self._db_file)
+        #
+        self._selfweight = SelfWeight()
     #
     #
 #

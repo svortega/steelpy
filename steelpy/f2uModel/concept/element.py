@@ -13,7 +13,7 @@ from operator import sub, add
 # package imports
 from steelpy.process.units.main import Units
 #import steelpy.process.io_module.text as common
-from steelpy.f2uModel.mesh.process.elements.bstiffness import Rmatrix
+from steelpy.f2uModel.mesh.process.elements.bstiffness import Rmatrix2
 #
 #
 #
@@ -409,20 +409,25 @@ class Beam(Element):
         uv = list(map(sub, node2[:3], node1[:3]))
         return [item / L for item in uv]        
     #
-    #@property
-    def T(self, m2D:bool = False):
+    #
+    def T3D(self):
         """
         Returns the transformation matrix for the member
         """
-        if m2D:
+        #if m2D:
             # Element length and orientation
             #node1,  node2 = self.nodes
             #Tlg = Rmatrix2D(node1, node2)
             #return Tlg
-            raise NotImplementedError()
-        else:        
-            #if self.type in ['beam', 'truss']:
-            return Rmatrix(*self.unit_vector, self.beta)    
+            #raise NotImplementedError()
+        #else:        
+        #if self.type in ['beam', 'truss']:
+        #return Rmatrix(*self.unit_vector, self.beta)
+        nodei, nodej = self.connectivity
+        L = self.length.value
+        #r3 = Rmatrix2(nodei, nodej, L=L)
+        #return Rmatrix(*self.unit_vector, self.beta)
+        return Rmatrix2(nodei, nodej, L=L)
 #
 #
 class ConceptElements(Mapping):

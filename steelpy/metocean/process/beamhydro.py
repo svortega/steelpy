@@ -11,7 +11,7 @@ from dataclasses import dataclass
 #
 import numpy as np
 from numpy.matlib import repmat
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 #
 from steelpy.process.dataframe.main import DBframework
 #
@@ -20,13 +20,15 @@ from steelpy.process.dataframe.main import DBframework
 #
 #
 @dataclass
-class BeamHydro:
-    __slots__ = ['_beam', 'surface',
+class BeamMorisonWave:
+    __slots__ = ['_beam', 'surface', 'rho', 
                  '_data', '_type']
-    def __init__(self, beam):
+    def __init__(self, beam, rho: float):
         """
+        rho : : Sea water density (1025)
         """
         self._beam = beam
+        self.rho = rho
     #
     def elevations(self, nelev:int):
         """ Elevation Range"""
@@ -105,18 +107,68 @@ class BeamHydro:
         # print(f'Anx ={np.min(Anx): 1.4e}, Any={np.min(Anz): 1.4e}, Anz={np.min(Any): 1.4e}')
         # print('========================================')
         #
-        return KinVel(Un, Vn, Wn, vn), KinAcc(Anx, Anz, Any)
+        return KinVel(Un, Vn, Wn, vn, self.rho), KinAcc(Anx, Anz, Any, self.rho)
     #
-    def local_uforce(self, Dh, At, cd, cm,
-                     kinvel, kinacc,
-                     Elev, dz):
+    def vn(self, kin, Vc):
+        """ Absolute Water velocity normal to the cylinder axis
+        
+        Vc : current velocity
+        """
+        # Absolute Water velocity normal to the cylinder axis
+        uvector = np.array(self._beam.unit_vector)
+        #
+        vn = Vc + np.sqrt(np.power(kin['ux'], 2) + np.power(kin['uz'], 2)
+                          - np.power(uvector[0] * kin['ux'] + uvector[1] * kin['uz'], 2))
+        return vn
+    #
+    def Un(self, kin, Vc):
+        """ Instantaneous undisturbed velocity resolved normal to the member including both wave and current
+        
+        kin :
+        Vc : current velocity
+        """
+        # Components of velocity local to the member
+        uvector = np.array(self._beam.unit_vector)
+        #
+        Un = Vc + kin['ux'] - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        Vn = kin['uz'] - uvector[1] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        Wn = - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        #
+        vn = self.vn(kin, Vc)
+        #
+        return KinVel(Un, Vn, Wn, vn, self.rho)
+    #
+    def An(self, kin):
+        """ Instantaneous undisturbed acceleration resolved normal to the member
+        
+        kin : 
+        """
+        # Components of acceleration local to the member
+        uvector = np.array(self._beam.unit_vector)
+        #
+        Anx = kin['ax'] - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
+        Anz = kin['az'] - uvector[1] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
+        Any = - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
+        #        
+        return KinAcc(Anx, Anz, Any, self.rho)
+    #
+    def dF(self, Dh, At, Cd, Cm,
+           kinvel, kinacc,
+           Elev, dz):
         """Components of the force per unit of cilinder length acting in
         the x, y and z dir are given by the generalized Morisson equation
-
+        
+        dF = Fn + Ft
+        
+        Dh : Hydrodynamic diametre
+        At : Cross sectional Area
+        Cd : Drag coefficient
+        Cm : Mass coefficient
+        
         """
         #
         #
-        dmx, dmy, dmz = kinacc.force(At, cm)
+        dmx, dmy, dmz = kinacc.FIn(At, Cm)
         # dmx = self.mass(At, cm, kinacc.Anx)
         # dmy = self.mass(At, cm, kinacc.Any)
         # dmz = self.mass(At, cm, kinacc.Anz)
@@ -125,7 +177,7 @@ class BeamHydro:
         # print(f'dmx ={np.max(dmx): 1.4e}, dmy={np.max(dmy): 1.4e}, dmz={np.max(dmz): 1.4e}')
         # print(f'dmx ={np.min(dmx): 1.4e}, dmy={np.min(dmy): 1.4e}, dmz={np.min(dmz): 1.4e}')
         #
-        ddx, ddy, ddz = kinvel.force(Dh, cd)
+        ddx, ddy, ddz = kinvel.FDn(Dh, Cd)
         # ddx = self.drag(Dh, cd, kinvel.Un, vn)
         # ddy = self.drag(Dh, cd, kinvel.Vn, vn)
         # ddz = self.drag(Dh, cd, kinvel.Wn, vn)
@@ -148,9 +200,15 @@ class BeamHydro:
         #
         return BeamUnitForce(fx, fy, fz, dz, Elev, self._beam.name)
     #
-    def udl(self, Vc, MG, Cd, Cm,
-            kinematics, nelev:int=10):
+    #def ft(self):
+    #    """ Component along the axis of the cylinder (a tangential component)"""
+    #    return None
+    #
+    def Fwave(self, Vc, MG, Cd, Cm,
+              kinematics, nelev:int=10):
         """
+        Wave force on a slender cilindrical element
+        
         Vc : Current velocity
         MG : Marine Growth
         Cd : Drag Coefficient
@@ -165,12 +223,14 @@ class BeamHydro:
         shape = kinematics['ax'].shape
         Vc = permute1(Vc, order=shape[0])
         #
-        kinvel, kinacc = self.local_kin(kinematics, Vc)
+        kinacc = self.An(kinematics)
+        kinvel = self.Un(kinematics, Vc)
+        #kinvel, kinacc = self.local_kin(kinematics, Vc)
         #
-        udl = self.local_uforce(Dh, At, Cd, Cm,
-                                kinvel, kinacc,
-                                Elev, dz)
-        return udl
+        return self.dF(Dh, At, Cd, Cm,
+                       kinvel, kinacc,
+                       Elev, dz)
+        #return udl
     #
 
 #
@@ -183,10 +243,12 @@ class BeamUnitForce(NamedTuple):
     dz: list
     elevation: list
     beam_name: str | int
-
     #
-    def line(self):
-        """get line loading
+    #
+    @property
+    def df(self):
+        """Dataframe of beam's partial linearly variable load
+        
         [load_title, 'beam', beam_name, 'line',  qx0,qy0,qz0, qx1,qy1,qz1, L0,L1, comment(optional)]"""
         #
         coords = self.qx.coords
@@ -198,7 +260,7 @@ class BeamUnitForce(NamedTuple):
         Fx, Fy, OTM = self.span_loading()
         #
         #
-        # FIXME: wave system to beam local system
+        # FIXME: wave system to beam local system (is this fixed already?)
         #
         qitem = self.qx.to_dataframe(name='qx').reset_index()
         qy = self._get_line(qname='qx', qitem=qitem)
@@ -207,6 +269,7 @@ class BeamUnitForce(NamedTuple):
         qitem = self.qz.to_dataframe(name='qz').reset_index()
         qx = self._get_line(qname='qz', qitem=qitem)
         #
+        # TODO: L1 and L2 should not be zero for all cases
         dftemp = []
         for x, row in enumerate(rows):
             for idx, wstep in enumerate(wlength):
@@ -217,7 +280,7 @@ class BeamUnitForce(NamedTuple):
                                    float(Fx[x, hstep, idx].values),
                                    float(OTM[x, hstep, idx].values), 
                                    row, wstep, col])
-        #
+        # setup df's columns
         header = ['element_type', 'element_name', 'load_type',
                   'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
                   'L0', 'L1', 'BS', 'OTM', 
@@ -267,7 +330,7 @@ class BeamUnitForce(NamedTuple):
         elev = self.elevation
         # data = qx.groupby(['x'])[name].agg(lambda x : x.tolist())
         qgrp = qitem.groupby(['x', 'length'])[['z', qname]]
-        #
+        # TODO : optimize
         load_1 = []
         for key, item in qgrp:
             load_2 = []
@@ -307,40 +370,48 @@ class KinVel(NamedTuple):
     Un : Kinematic components of velocity
     Vn : Kinematic components of velocity
     Wn : Kinematic components of velocity
-    vn : Water velocity normal to the cylinder axis
+    vn : Fluid velocity normal to the cylinder axis
     rho : Sea water density (1025)
     """
     Un: list
     Vn: list
     Wn: list
     vn : list
-    rho: float = 1025  #
+    rho: float
     #
-    def drag(self, D, cd, UX, vn):
-        """ """
+    def fdn(self, D, cd, UX, vn):
+        """
+        D  : Member diametre
+        cd : Drag coefficient
+        Ux : Instantaneus velocity resolved normal to the member
+        Vn : Fluid velocity normal to the cylinder axis
+        """
         # drag load per unit length
-        pdrag = 0.5 * self.rho * cd * D * UX * vn
+        Fdn = 0.5 * self.rho * cd * D * UX * vn
         #return pdrag * dz
         #bdrag = np.sum(ddrag, axis=2)
         #bdrag = ddrag.sum(dim='z')
         #return ddrag
-        return pdrag
+        return Fdn
     #
-    def force(self, Dt:float, Cd:float):
+    def FDn(self, Dt:float, Cd:float):
         """
-        Component of force per unit of cylinder length
+        Component of drag force per unit of cylinder length
 
-        D : Diametre tubular
+        Dt : Diametre tubular
         Cd : Drag coefficient
+        
+        Return:
+        FDn [x,y,z]
         """
         Dh = permute2(Dt, (self.Un.shape[0], self.Un.shape[2]), 1)
         cd = permute2(Cd, (self.Un.shape[0], self.Un.shape[2]), 1)
         #
-        ddx = self.drag(Dh, cd, self.Un, self.vn)
-        ddy = self.drag(Dh, cd, self.Vn, self.vn)
-        ddz = self.drag(Dh, cd, self.Wn, self.vn)
+        FDnx = self.fdn(Dh, cd, self.Un, self.vn)
+        FDny = self.fdn(Dh, cd, self.Vn, self.vn)
+        FDnz = self.fdn(Dh, cd, self.Wn, self.vn)
         #
-        return ddx, ddy, ddz
+        return FDnx, FDny, FDnz
 #
 #
 class KinAcc(NamedTuple):
@@ -353,12 +424,19 @@ class KinAcc(NamedTuple):
     Anx: list
     Any: list
     Anz: list
-    rho: float = 1025  #
+    rho: float
     #
-    def mass(self, at, cm, AX):
-        """ """
+    def fin(self, at, cm, An):
+        """
+        at : Cross sectional area
+        cm : Inertia coeffient
+        An : Instantaneus acceleration resolved normal to the member
+        
+        Retuns:
+        Fin : inertia load per unit length
+        """
         # inertia load per unit length
-        pinertia = self.rho * cm * at * AX
+        Fin = self.rho * cm * at * An
         # figure(4)
         # hold all
         # plot(pinertia(:),Z(:),'.-','LineWidth',1)
@@ -370,22 +448,25 @@ class KinAcc(NamedTuple):
         # dinertia = pinertia * dz
         # binertia = dinertia.sum(dim='z')
         # return dinertia
-        return pinertia
+        return Fin
     #
-    def force(self, At:float, Cm:float):
+    def FIn(self, At:float, Cm:float):
         """
-        Component of force per unit of cylinder length
+        Component of inertia force per unit of cylinder length normal to the member
 
         At : Area tubular
         Cm : Mass coefficient
+        
+        Returns
+        FIn [x,y,z]
         """
         at = permute2(At, (self.Anx.shape[0], self.Anx.shape[2]), 1)
         cm = permute2(Cm, (self.Anx.shape[0], self.Anx.shape[2]), 1)
         #
-        dmx = self.mass(at, cm, self.Anx)
-        dmy = self.mass(at, cm, self.Any)
-        dmz = self.mass(at, cm, self.Anz)
-        return dmx, dmy, dmz
+        FInx = self.fin(at, cm, self.Anx)
+        FIny = self.fin(at, cm, self.Any)
+        FInz = self.fin(at, cm, self.Anz)
+        return FInx, FIny, FInz
 #
 #
 #

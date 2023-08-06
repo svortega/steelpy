@@ -168,10 +168,10 @@ class WaveLoadItemIM(WaveLoadItem):
     def fer(self):
         """ Return Fix End Reactions (FER) global system"""
         #beams = self._f2u_beams
-        conn = create_connection(self._bd_file)       
+        #conn = create_connection(self._bd_file)       
         for load_name in set(self._labels):
-            with conn: 
-                bldf = self.get_wave_load(conn, load_name=load_name)
+            #with conn: 
+            #    bldf = self.get_wave_load(conn, load_name=load_name)
             #
             # TODO : select coordinate for design load
             #

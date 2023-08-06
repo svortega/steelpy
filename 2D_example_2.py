@@ -162,6 +162,7 @@ f2umodel.build()
 #
 frame = Trave2D()
 frame.mesh = mesh
-results = frame.run_static()
-results.print()
+frame.static()
+results = frame.solve()
+print(results)
 print('-->')

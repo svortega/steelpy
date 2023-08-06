@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 #
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 from steelpy import f2uModel
 from steelpy import Metocean
-from steelpy import Trave2D
+from steelpy import Trave2D, Trave3D
 from steelpy import Units
 #
 #
@@ -21,7 +21,7 @@ f2umodel = f2uModel(component="wave_test3")
 # ----------------------------------------------------
 #
 material = f2umodel.materials()
-matlinear = material.elastic()
+matlinear = material.linear()
 matlinear[1] = [345.0 * units.MPa]
 print(material)
 #
@@ -208,7 +208,8 @@ f2umodel.build()
 #
 frame = Trave2D()
 frame.mesh = mesh
-results = frame.run_static()
-results.print()
+frame.static()
+results = frame.solve()
+print(results)
 #
 print('-->')

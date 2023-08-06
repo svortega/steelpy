@@ -259,7 +259,7 @@ class Meshing:
                     try:
                         node_name = mnodes.get_node_name(point[:3])
                         node = mnodes[node_name]
-                        print(f'---> Load: {load_name} Point: {node_id} Node: {node.name}')
+                        print(f'---> Load: {CPname} Point: {node_name} Node: {node.name}')
                         mlb_node[node.name].load = [*pload[:6], pload[7]]
                     except IOError: # check if point load on a beam
                         for beam_name, beam in mbeams.items():

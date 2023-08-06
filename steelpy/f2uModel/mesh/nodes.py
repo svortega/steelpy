@@ -7,8 +7,9 @@
 from __future__ import annotations
 from array import array
 from collections.abc import Mapping
+from dataclasses import dataclass
 import itertools as it
-#from typing import NamedTuple
+from typing import NamedTuple
 #
 
 # package imports
@@ -22,16 +23,25 @@ from steelpy.process.dataframe.main import DBframework
 #
 #
 #
+#
+#
+#
 class Nodes(Mapping):
     """
     """
-    __slots__ = ['_nodes', '_jbc', '_db']
+    __slots__ = ['_nodes', '_jbc', '_db',
+                 '_plane']
     
-    def __init__(self, mesh_type:str,
+    def __init__(self, mesh_type:str, plane: NamedTuple, 
                  db_file:str|None):
         """
+        
+        plane2D : Analysis in 2D plane (False/True)
+        db_file : Database file name 
         """
-        #mesh_type = 'sqlite'
+        
+        self._plane = plane
+        #
         if mesh_type != "inmemory":
             self._nodes = NodeSQL(db_file=db_file,
                                   db_system=mesh_type)
@@ -40,6 +50,18 @@ class Nodes(Mapping):
         #
         self._jbc: array = array('I', [])
         self._db = DBframework()
+    #
+    #
+    @property
+    def plane(self) -> NamedTuple:
+        """ """
+        return self._plane
+    #
+    @plane.setter
+    def plane(self, plane: NamedTuple) -> None:
+        """ """
+        self._plane = plane
+    #
     #
     def __setitem__(self, node_name: int,
                     coordinates: list[float]|dict[str, float]) -> None:
@@ -123,19 +145,26 @@ class Nodes(Mapping):
         #
         for node_name, bd in supports.items():
             ind = self._nodes[bd.node].index
-            jbc[ind] = list(bd[:6])
+            jbc[ind] = bd[:6]
         #
         #jbc = self.jbc.transposed()
         #jbc = boundaries.transposed()
+        #jbc = list(it.chain.from_iterable(jbc))
+        #
+        #jbc = to_matrix(jbc, 6)
+        df_jbc = self._db.DataFrame(data=jbc,
+                                    columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])
+        jbc = df_jbc[self._plane.dof].values.tolist()
         jbc = list(it.chain.from_iterable(jbc))
+        #
         counter = it.count(start=1)
         jbc = [next(counter) if item == 0 else 0
                for item in jbc]
         # update jbc
         self._jbc = array('I', jbc)
         #
-        jbc = to_matrix(self._jbc, 6)
-        df_jbc = self._db.DataFrame(data=jbc, columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])
+        jbc = to_matrix(self._jbc, self._plane.ndof)
+        df_jbc = self._db.DataFrame(data=jbc, columns=self._plane.dof)
         node_name = list(self._nodes.keys())
         df_jbc['node_name'] = node_name
         df_jbc = df_jbc.set_index('node_name', drop=True)    

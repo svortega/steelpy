@@ -8,7 +8,7 @@ from __future__ import annotations
 #from collections.abc import Mapping
 #from collections import defaultdict
 #from dataclasses import dataclass
-#from typing import NamedTuple
+from typing import NamedTuple
 #import re
 #from operator import itemgetter
 #from itertools import groupby
@@ -32,7 +32,7 @@ from steelpy.f2uModel.mesh.sqlite.process_sql import (create_connection, create_
 #
 from steelpy.f2uModel.load.process.beam import LineBeam #, BeamLoad
 #
-import numpy as np
+#import numpy as np
 import pandas as pd
 from steelpy.process.dataframe.main import DBframework
 #
@@ -43,19 +43,20 @@ from steelpy.process.dataframe.main import DBframework
 #@dataclass
 class WaveLoadItemSQL(WaveLoadItem):
     """ """
-    __slots__ = ['_seastate','_bd_file', '_name',
-                 '_load', '_criterion']
+    __slots__ = ['_seastate','_db_file', '_name',
+                 '_load', '_criterion', '_plane']
 
-    def __init__(self, load_name: int|str, bd_file:str):
+    def __init__(self, load_name: int|str, plane: NamedTuple, db_file:str):
         """ """
         super().__init__(load_name=load_name)
         #
-        self._bd_file = bd_file
+        self._plane = plane
+        self._db_file = db_file
         #
         self._node_eq = BeamToNodeSQL(load_name=load_name, 
-                                      bd_file=bd_file)
+                                      db_file=self._db_file)
         #
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         with conn:        
             self._create_table(conn)
             self._create_node_table(conn)
@@ -224,15 +225,17 @@ class WaveLoadItemSQL(WaveLoadItem):
     def get_beam_load(self, wname, wload):
         """ """
         #
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         with conn:
             labels = self.get_elements(conn)
         #
         df_bload = None
         for idx, key in enumerate(labels):
-            beam = BeamItemSQL(key[1], self._bd_file)
-            udl = wload.wave_force(beam=beam)
-            df_load = udl.line()
+            beam = BeamItemSQL(key[1],
+                               plane=self._plane,
+                               db_file=self._db_file)
+            Fwave = wload.Fwave(beam=beam)
+            df_load = Fwave.df
             df_load['load_name'] = self._name
             df_load['load_title'] = wname
             #df_load['load_title'] = df_load.apply(lambda row: f"{wname}_{round(row.x, 2)}_{round(row.y, 2)}_{round(row.z, 2)}", axis=1)
@@ -264,7 +267,7 @@ class WaveLoadItemSQL(WaveLoadItem):
     def df(self, data):
         """ """
         #
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         #
         beams = data.groupby(['element_type']).get_group('beam')
         grpbeam = beams.groupby(['element_name', 'load_name'])
@@ -303,7 +306,7 @@ class WaveLoadItemSQL(WaveLoadItem):
     def fer(self):
         """ Return Fix End Reactions (FER) global system"""
         #beams = self._f2u_beams
-        conn = create_connection(self._bd_file)       
+        conn = create_connection(self._db_file)       
         for load_name in set(self._labels):
             with conn: 
                 bldf = self.get_wave_load(conn, load_name=load_name)
@@ -343,7 +346,9 @@ class WaveLoadItemSQL(WaveLoadItem):
             res = []
             for item in grpm.itertuples():
                 element_name = item.Index[0]
-                beam =  BeamItemSQL(element_name, self._bd_file)
+                beam =  BeamItemSQL(element_name,
+                                    plane=self._plane, 
+                                    db_file=self._db_file)
                 node1, node2 = beam.nodes
                 #
                 #for item in items.itertuples():
@@ -358,7 +363,7 @@ class WaveLoadItemSQL(WaveLoadItem):
                 gnload = load.fer_beam(L=beam.L)
                 # load local system to global 
                 gnload = [*gnload[4], *gnload[5]]
-                lnload = trnsload(gnload, beam.T())
+                lnload = trnsload(gnload, beam.T3D())
                 #
                 res.extend([[item.load_number, item.load_comment, 
                              'global', beam.number,
@@ -389,7 +394,7 @@ class WaveLoadItemSQL(WaveLoadItem):
     #
     def beam_load(self, steps:int = 10):
         """ """
-        conn = create_connection(self._bd_file)
+        conn = create_connection(self._db_file)
         #beamfun = defaultdict(list)
         beamfun = []
         for load_name in set(self._labels):
@@ -401,7 +406,9 @@ class WaveLoadItemSQL(WaveLoadItem):
             grpm = bldf.groupby(['element_name'])
             #
             for key, items in grpm:
-                beam = BeamItemSQL(key[0], self._bd_file)
+                beam = BeamItemSQL(key[0],
+                                   plane=self._plane, 
+                                   db_file=self._db_file)
                 mat = beam.material
                 sec = beam.section.properties()
                 Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)

@@ -6,11 +6,11 @@
 from __future__ import annotations
 #from array import array
 #from collections import Counter
-from collections.abc import Mapping
+#from collections.abc import Mapping
 from dataclasses import dataclass
 #from itertools import chain
 #import math
-#from typing import NamedTuple
+from typing import NamedTuple
 from operator import sub, add
 from operator import itemgetter
 #import os.path
@@ -31,14 +31,16 @@ from ..process.elements.beam import BeamBasic, BeamItemBasic
 
 
 class BeamSQL(BeamBasic):
-    __slots__ = ['_labels', '_number',  '_title', 'db_file']
+    __slots__ = ['_labels', '_number', '_title',
+                 'db_file', '_plane']
     
-    def __init__(self, db_file:str) -> None:
+    def __init__(self, db_file:str, plane: NamedTuple) -> None:
         """
         beam elements
         """
-        super().__init__()
+        super().__init__() 
         self.db_file = db_file
+        self._plane = plane
     #
     #
     def __setitem__(self, beam_name: int|str, parameters: list) -> None:
@@ -61,7 +63,9 @@ class BeamSQL(BeamBasic):
         """ """
         try:
             self._labels.index(beam_name)
-            return BeamItemSQL(beam_name, self.db_file)
+            return BeamItemSQL(beam_name=beam_name,
+                               plane=self._plane, 
+                               db_file=self.db_file)
         except ValueError:
             raise IndexError(' ** element {:} does not exist'.format(beam_name))    
     #
@@ -206,15 +210,14 @@ def update_element_item(conn, name, item, value):
 @dataclass
 class BeamItemSQL(BeamItemBasic):
     """ """
-    #__slots__ = ['name', 'db_file']
+    __slots__ = ['name', '_releases', 'type', 'db_file', '_plane']
     
-    def __init__(self, element_name:int, db_file:str) -> None:
+    def __init__(self, beam_name:int, plane: NamedTuple, db_file:str) -> None:
         """
         """
-        super().__init__(element_name)
-        #
+        super().__init__(beam_name)
+        self._plane = plane
         self.db_file = db_file
-        self.type: str = "beam"
     #
     @property
     def number(self) -> int:

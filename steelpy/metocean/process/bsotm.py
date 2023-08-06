@@ -4,7 +4,7 @@
 from __future__ import annotations
 # Python stdlib imports
 #import math
-from typing import NamedTuple
+#from typing import NamedTuple
 from dataclasses import dataclass
 #
 # package imports
@@ -14,7 +14,7 @@ import numpy as np
 #import matplotlib.pyplot as plt
 #
 #from steelpy.process.dataframe.main import DBframework
-from steelpy.metocean.process.beamhydro import BeamHydro
+from steelpy.metocean.process.beamhydro import BeamMorisonWave
 #
 
 
@@ -46,14 +46,15 @@ class BSOTM:
                  'condition', 'rho_w']
     def __init__(self, kinematics:list,
                  current:tuple, hydro:tuple,
-                 condition:int=1): # rho_w:float,
+                 rho_w:float,
+                 condition:int=1): # 
         """
         """
         self.kinematics = kinematics
         self.current = current
         self.hydro = hydro
         self.condition = condition
-        #self.rho_w = rho_w
+        self.rho_w = rho_w
     #
     #
     #
@@ -172,13 +173,13 @@ class BSOTM:
     # -----------------------------------------------
     #
     #
-    def wave_force(self, beam, nelev=5):
+    def Fwave(self, beam, nelev=5):
         """Calculation of wave forces on beam elements"""
         #beams = mesh.elements().beams()
         current = self.current.current
         #
         # process
-        beamhydro = BeamHydro(beam=beam)
+        Bwave = BeamMorisonWave(beam=beam, rho=self.rho_w)
         #
         #beam = beams[12]
         #uvector = np.array(beam.unit_vector)
@@ -232,7 +233,7 @@ class BSOTM:
         #dz = np.diff(Elev)
         # locating the middle point of each element
         #Z = Elev[:-1] + dz
-        Z = beamhydro.Z(nelev=nelev)
+        Z = Bwave.Z(nelev=nelev)
         #
         # -----------------------------------------
         # Hydro diametre & area
@@ -296,8 +297,8 @@ class BSOTM:
         #                             kinvel, kinacc,
         #                             Elev, dz)
         #
-        udl = beamhydro.udl(Vc=Vc, MG=mg, Cd=cd, Cm=cm,
-                            kinematics=kin, nelev=nelev)
+        #udl = Bwave.Fwave(Vc=Vc, MG=mg, Cd=cd, Cm=cm,
+        #                  kinematics=kin, nelev=nelev)
         #lineload = udl.line()
         #
         # ---------------------------------------
@@ -317,7 +318,9 @@ class BSOTM:
         #plt.show()
         #
         #return lineload
-        return udl
+        #return udl
+        return Bwave.Fwave(Vc=Vc, MG=mg, Cd=cd, Cm=cm,
+                           kinematics=kin, nelev=nelev)        
     #
     #
 #

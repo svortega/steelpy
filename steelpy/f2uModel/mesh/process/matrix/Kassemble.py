@@ -8,6 +8,8 @@ import time
 #from multiprocessing import Process, Manager
 
 # package imports
+from steelpy.process.math.operations import  remove_column_row
+#from steelpy.f2uModel.mesh.process import assemble_matrix
 import numpy as np
 
 #
@@ -22,8 +24,7 @@ import numpy as np
 # Solution using numpy
 #
 #
-def assemble_Kmatrix_np(elements, jbc, neq,
-                        m2D: bool=False):
+def assemble_Kmatrix_np(elements, jbc, neq, plane):
     """
     Asseable the element matrices
     -------------------------------------------------
@@ -34,11 +35,8 @@ def assemble_Kmatrix_np(elements, jbc, neq,
     print("** Processing Global [K] Matrix")
     start_time = time.time()
     #
-    #if m2D:
-    #    jbc = jbc[['x', 'y', 'rz']]
-    #
     nn = len(jbc)
-    Ka = form_Kmatrix_np(elements, nn, m2D=m2D)
+    Ka = form_Kmatrix_np(elements, nn, plane=plane)
     #
     #jbcc = list(it.chain.from_iterable(jbc))
     jbcc = jbc.stack().values
@@ -47,7 +45,7 @@ def assemble_Kmatrix_np(elements, jbc, neq,
                            if item == 0]))
     #
     for i in index:
-        Ka = remove_column_row(Ka, i, i) 
+        Ka = remove_column_row(Ka, i, i)
     #
     #
     #
@@ -73,31 +71,23 @@ def assemble_Kmatrix_np(elements, jbc, neq,
     return Ka
 #
 #
-def remove_column_row(a: list, row: float, col: int):
-    """ """
-    without_row = np.delete(a, row, axis=0)
-    return np.delete(without_row, col, axis=1)
-#
-#
-def form_Kmatrix_np(elements, nn:int,
-                    m2D:bool = False):
+def form_Kmatrix_np(elements, nn:int, plane):
     """
     Global system stiffness matrix 
     
     elements : 
     nn  : node number
-    m2D : Matrix 2D (False default --> 3D)
+    plane : Plane information (default --> 3D)
     :return
     Ka : global stiffness matrix
     """
     #nodal degrees of freedom per node 
-    ndof:int = 6
-    if m2D:
-        ndof:int = 3
+    ndof = plane.ndof
     Ka = np.zeros((nn*ndof, nn*ndof), dtype=np.float64)
     for key, element in elements.items():
         # TODO : check applicable to all element type
-        keg = np.array(element.K(m2D=m2D))
+        #keg = element.K
+        keg = getattr(element, 'K')
         idof, jdof = element.DoF
         # node and corresponding dof (start, finish), used to define the
         # elements of the system stiffness and force matrices
@@ -109,25 +99,6 @@ def form_Kmatrix_np(elements, nn:int,
         Ka[njqi:njqj, niqi:niqj] += keg[ndof:2*ndof, :ndof]       # 3rd
         Ka[njqi:njqj, njqi:njqj] += keg[ndof:2*ndof, ndof:2*ndof] # 4th
     return Ka
-#
-#
-def remove_column_of_zeros_and_shift_row(a, row, col):
-    """ """
-    without_row = np.delete(a, row, axis=0)
-    without_row_and_col = np.delete(without_row, col, axis=1)
-    z = np.zeros((1, len(without_row_and_col[0])))
-    without_col_shifted_row = np.append(z, without_row_and_col, axis=0)
-    return without_col_shifted_row
-#
-#
-def swap_col(arr, start_index, last_index):
-    """ """
-    arr[:, [start_index, last_index]] = arr[:, [last_index, start_index]]
-#
-#
-def swap_row(arr, start_index, last_index):
-    """ """
-    arr[[start_index, last_index],:] = arr[[last_index, start_index],:]
 #
 #
 #

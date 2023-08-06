@@ -161,12 +161,12 @@ class BeamItemIM(BeamItemBasic):
     """
     __slots__ = ['name', 'index', '_cls']
 
-    def __init__(self, cls, element_name: int|str) -> None:
+    def __init__(self, cls, beam_name: int|str) -> None:
         """
         """
-        super().__init__(element_name=element_name)
+        super().__init__(beam_name=beam_name)
         self._cls = cls
-        self.index: int = cls._labels.index(element_name)
+        self.index: int = cls._labels.index(beam_name)
         #self.name: int|str = element_name
     #
     @property
@@ -178,12 +178,12 @@ class BeamItemIM(BeamItemBasic):
         """"""
         self._cls._number[ self.index ] = value
     #
-    @property
-    def type(self)-> str:
-        """
-        """
-        return self._cls._type[self.index]
-
+    #@property
+    #def type(self)-> str:
+    #    """
+    #    """
+    #    return self._cls._type[self.index]
+    #
     #
     @property
     def connectivity(self) -> list:

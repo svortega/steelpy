@@ -15,7 +15,9 @@ from steelpy.process.dataframe.main import DBframework
 
 #
 class LoadCombinationBasic(Mapping):
-    #
+    __slots__ = ['_labels', '_title', '_number',
+                 '_index', '_basic', '_combination', '_metocean']
+    
     def __init__(self):
         """
         """
