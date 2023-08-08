@@ -15,7 +15,7 @@ from steelpy.design.clamp.OTH88283 import OTH88283
 from steelpy.design.clamp.process.shell import ClampShell
 from steelpy.design.clamp.process.neoprene import Neoprene
 from steelpy.design.clamp.process.bolts import Bolts
-from steelpy.codes.api.main import API_design
+from steelpy.design.codes.api.main import API_design
 from steelpy.sections.main import Sections
 from steelpy.material.main import Materials
 

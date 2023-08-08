@@ -7,7 +7,7 @@ import datetime
 
 # package imports
 from steelpy.utils.units.main import Units
-from steelpy.codes.piping.process import MainPipe, pipe_section
+from steelpy.design.codes.piping.process import MainPipe, pipe_section
 
 
 #

@@ -6,15 +6,15 @@
 #from steelpy.codes.aisc.aisc360 import AISC_360_16
 #from steelpy.codes.aisc.aisc335 import AISC_335_89
 #from steelpy.codes.iso.ISO19902 import ISOCodeCheck
-from steelpy.codes.piping.pipeline import PipelineDesign
+from steelpy.design.codes.piping.pipeline import PipelineDesign
 #from steelpy.codes.api.wsd_22ed import APIwsd22ed
-from steelpy.codes.dnv.pannel import CodeCheckPanel
+from steelpy.design.codes.dnv.pannel import CodeCheckPanel
 #
 #from steelpy.process.units.main import Units
 #from steelpy.material.material import Material
 #from steelpy.sections.tubular import Tubular
 
-from steelpy.codes.api.main import API_design
+from steelpy.design.codes.api.main import API_design
 
 class CodeCheck:
     """

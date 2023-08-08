@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple, Union, NamedTuple
 from steelpy.material.main import Materials
 from steelpy.sections.main import Sections
 from steelpy.utils.units.main import Units
-from steelpy.codes.dnv.DVNRPC201 import DNVRPC201
+from steelpy.design.codes.dnv.DVNRPC201 import DNVRPC201
 
 #
 #

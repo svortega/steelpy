@@ -6,7 +6,7 @@ from __future__ import annotations
 #from typing import NamedTuple, Dict, List, Tuple, Union
 
 # package imports
-from steelpy.codes.api.main import API_design
+from steelpy.design.codes.api.main import API_design
 from steelpy.utils.units.main import Units
 ##from steelpy.design.beam.process import BeamDesignParameters
 from steelpy.f2uModel.load.process.actions import Actions
