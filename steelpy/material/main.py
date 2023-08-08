@@ -5,6 +5,7 @@
 # Python stdlib imports
 from __future__ import annotations
 from collections.abc import Mapping
+import re
 #
 
 # package imports
@@ -63,9 +64,9 @@ class Materials(Mapping):
             properties = properties[1:]
         #
         # set material default plastic
-        if 'curve' == material_type:
+        if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
             raise NotImplementedError('--> Mat type not yet implemented')
-        elif 'elastic' == material_type:
+        elif re.match(r"\b(elastic|linear(\_elastic)?)\b", material_type, re.IGNORECASE):
             properties = get_isomat_prop(properties)
         else:
             raise IOError(' material type {:} not recognised'

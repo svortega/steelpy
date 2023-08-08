@@ -12,7 +12,7 @@ f2umodel = f2uModel(component="test1")
 # Material input
 # ----------------------------------------------------
 #
-f2umodel.materials([10, 'elastic', 345.0 * units.MPa])
+f2umodel.materials([10, 'linear', 345.0 * units.MPa])
 print(f2umodel.materials())
 #
 #
@@ -38,18 +38,19 @@ mesh = f2umodel.mesh()
 # Node input
 # ----------------------------------------------------
 #
-storeyHeight = 4.0
-bayWidth = 6.0
+basePoint = 0.0 * units.m
+storeyHeight = 4.0 * units.m
+bayWidth = 6.0 * units.m
 #
 # nodes corrdinates [node_id, x, y, z=0]
 #
-mesh.nodes([(1, 0.0,          0.0),
-            (2, bayWidth,     0.0),
-            (3, 2.0*bayWidth, 0.0),
-            (4, 0.0,          storeyHeight),
+mesh.nodes([(1, basePoint,    basePoint),
+            (2, bayWidth,     basePoint),
+            (3, 2.0*bayWidth, basePoint),
+            (4, basePoint,    storeyHeight),
             (5, bayWidth,     storeyHeight),
             (6, 2.0*bayWidth, storeyHeight),
-            (7, 0.0,          2.0*storeyHeight),
+            (7, basePoint,    2.0*storeyHeight),
             (8, bayWidth,     2.0*storeyHeight),
             (9, 2.0*bayWidth, 2.0*storeyHeight)])
 #
@@ -60,9 +61,10 @@ print(mesh.nodes())
 # boundary Input
 # ----------------------------------------------------
 #
-mesh.boundaries([[1, 'support', 'fixed'],
-                 [2, 'support', 'fixed'],
-                 [3, 'support', 'fixed']])
+# [id, type, fixity]
+mesh.boundaries([[1, 'node', 'fixed'],
+                 [2, 'node', 'fixed'],
+                 [3, 'node', 'fixed']])
 #
 print(mesh.boundaries())
 #
@@ -71,8 +73,8 @@ print(mesh.boundaries())
 # ----------------------------------------------------
 #
 # Example:
-# Elements[number] = [beam, material, section, node1, node2, roll_angle]
-# Elements[number] = [plate, material, section, node1, node2, node3, node4]
+# Elements[number] = [id, beam, material, section, node1, node2, roll_angle]
+# Elements[number] = [id, plate, material, section, node1, node2, node3, node4]
 #
 #
 mesh.elements([(1,  'beam',  1, 4, 10, 20, 0),
@@ -133,14 +135,15 @@ basic = load.basic()
 #                [9, 'line', 0, -1000, 'udl_2'],
 #                [10, 'line', 0, -1000, 'udl_2']])
 #
-#
+nullLoad = 0 * units.N
+pointLoad = -1_000 * units.N
 basic[11] = 'Buckling Example'
-basic[11].node([[4, 'load', 0, -1_000, 'buckling_1'],
-                [5, 'load', 0, -1_000, 'buckling_2'],
-                [6, 'load', 0, -1_000, 'buckling_3'],
-                [7, 'load', 0, -1_000, 'buckling_4'],
-                [8, 'load', 0, -1_000, 'buckling_5'],
-                [9, 'load', 0, -1_000, 'buckling_6']])
+basic[11].node([[4, 'load', nullLoad, pointLoad, 'buckling_1'],
+                [5, 'load', nullLoad, pointLoad, 'buckling_2'],
+                [6, 'load', nullLoad, pointLoad, 'buckling_3'],
+                [7, 'load', nullLoad, pointLoad, 'buckling_4'],
+                [8, 'load', nullLoad, pointLoad, 'buckling_5'],
+                [9, 'load', nullLoad, pointLoad, 'buckling_6']])
 #
 print(basic)
 #

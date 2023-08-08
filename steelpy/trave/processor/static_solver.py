@@ -207,6 +207,7 @@ def get_dfdisp(dftemp, headdisp):
 #
 @dataclass
 class StaticSolver:
+    """ Linear static solver class"""
     __slots__ = ['_plane', '_load']
     
     def __init__(self, plane: NamedTuple) -> None:
@@ -216,12 +217,12 @@ class StaticSolver:
     #
     #
     def load(self, load):
-        """ """
+        """Input load"""
         self._load = load
     #
     #
-    def Kglobal(self, jbc, Ka, Kg: list|bool = None):
-        """ """
+    def Kglobal(self, jbc, Ka, Kg: list|bool = None) -> None:
+        """Input global stiffness matrix"""
         with open("stfmx.f2u", "wb") as f:
             pickle.dump(jbc, f)
             pickle.dump(Ka, f)

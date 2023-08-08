@@ -35,7 +35,7 @@ material = f2umodel.materials()
 #matlinear = material.elastic([[1, 345.0 * units.MPa],
 #                              [3, 345.0 * units.MPa, 490.0 * units.MPa, 205000.0 * units.MPa, 77200.0 * units.MPa]])
 #
-matlinear = material.elastic()
+matlinear = material.linear()
 matlinear[1] = [345.0 * units.MPa]
 matlinear[3] = [345.0 * units.MPa, 490.0 * units.MPa, 205000.0 * units.MPa, 77200.0 * units.MPa]
 #
@@ -114,10 +114,10 @@ nodes = mesh.nodes()
 #nodes[3] = [4 , 3 , 0 ]
 #nodes[4] = [4 , 0 , 0 ]
 #
-nodes[10] = [0 , 0 , 0 ]
-nodes[20] = [0 , 5 , 0 ]
-nodes[30] = [10, 5 , 0 ]
-nodes[40] = [10, 0 , 0 ]
+nodes[10] = [0 * units.m, 0 * units.m, 0 * units.m]
+nodes[20] = [0 * units.m, 5 * units.m, 0 * units.m]
+nodes[30] = [10* units.m, 5 * units.m, 0 * units.m]
+nodes[40] = [10* units.m, 0 * units.m, 0 * units.m]
 #
 print(nodes)
 #
@@ -136,7 +136,7 @@ boundary = mesh.boundaries()
 #boundary.supports([[1, 'fixed'],
 #                   [4, [1,1,1,1,1,1]]])
 #
-supports = boundary.supports()
+supports = boundary.nodes()
 # supports[node_number] =  boundary/parameters
 #supports[1] = 'fixed'
 #supports[4] = [1,1,1,1,1,1]
@@ -256,7 +256,7 @@ blbeam = basic[22].beam()
 #blbeam[2].line = [0, 0, -10_000, 0, 0, -10_000,
 #                  0, 0, 'validation']
 #
-blbeam[25].point = [5, 0, -100_000, 0,
+blbeam[25].point = [5, 0 * units.N, -100_000 * units.N, 0 * units.N,
                     'validation_point']
 #
 #blbeam[2].line = [0, 2, -480_000, 'snow load on roof']

@@ -40,7 +40,7 @@ class Boundaries:
         b_number = self._set_item(b_name=boundary_name, 
                                   b_type=boundary_type)
         #
-        if re.match(r"\b(support(s)?|constrain(s)?)\b", boundary_type, re.IGNORECASE):
+        if re.match(r"\b(node(s)?|support(s)?|constrain(s)?)\b", boundary_type, re.IGNORECASE):
             if isinstance(values[1], str):
                 self._nodes[boundary_name] = values[1]
             else:
@@ -68,18 +68,17 @@ class Boundaries:
         else:
             raise IOError(f' boundary type {boundary_type} not recognised')
     #
-    #@property
-    #def node(self):
-    #    """"""
-    #    return self._nodes
     #
-    #@node.setter
     def supports(self, values:list|None=None):
+        """"""
+        return self.nodes(values)
+    #
+    def nodes(self, values:list|None=None):
         """"""
         if isinstance(values, list):
             for value in values:
                 node_name = value[0]
-                boundary_type = "support"
+                boundary_type = "node"
                 b_number = self._set_item(b_name=node_name, 
                                           b_type=boundary_type)
                 #

@@ -13,7 +13,7 @@ f2umodel = f2uModel(component="test1")
 # Material input
 # ----------------------------------------------------
 # [elastic, Fy, Fu, E, G, Poisson, density, alpha]
-f2umodel.materials([10, 'elastic', 345.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa])
+f2umodel.materials([10, 'linear', 345.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa])
 print(f2umodel.materials())
 #
 #
@@ -39,16 +39,17 @@ mesh = f2umodel.mesh()
 # Node input
 # ----------------------------------------------------
 #
-storeyHeight1 = 6.0
-storeyHeight2 = 3.0
-bayWidth = 4.0
+storeyBase = 0.0 * units.m
+storeyHeight1 = 6.0 * units.m
+storeyHeight2 = 3.0 * units.m
+bayWidth = 4.0 * units.m
 #
 # nodes corrdinates [node_id, x, y, z=0]
 #
-mesh.nodes([(1, 0.0,   0.0),
-            (2, 0.0, storeyHeight1),
+mesh.nodes([(1, storeyBase,   storeyBase),
+            (2, storeyBase, storeyHeight1),
             (3, bayWidth, storeyHeight2),
-            (4, bayWidth,   0.0)])
+            (4, bayWidth,   storeyBase)])
 #
 print(mesh.nodes())
 #
@@ -57,8 +58,9 @@ print(mesh.nodes())
 # boundary Input
 # ----------------------------------------------------
 #
-mesh.boundaries([[1, 'support', 'fixed'],
-                 [4, 'support', 'fixed']])
+# [id, type, fixity]
+mesh.boundaries([[1, 'node', 'fixed'],
+                 [4, 'node', 'fixed']])
 #
 print(mesh.boundaries())
 #
@@ -123,11 +125,15 @@ basic = load.basic()
 #                [10, 'line', 0, -1000, 'udl_2']])
 #
 #
+nullLoad = 0 * units.N
+pointLoad = -1_000 * units.N
 basic[11] = 'example'
-basic[11].node([[2, 'load', 400_000, 0, 'nodex_1'],
-                [3, 'load', 200_000, 0, 'nodex_2']])
+basic[11].node([[2, 'load', 400_000 * units.N, nullLoad, 'nodex_1'],
+                [3, 'load', 200_000 * units.N, nullLoad, 'nodex_2']])
 
-basic[11].beam([2, 'line', 0, -48_000, 'udly_1'])
+#
+nullUDL= 0 * units.N / units.m
+basic[11].beam([2, 'line', nullUDL, -48_000 * units.N/units.m, 'udly_1'])
 #
 print(basic)
 #

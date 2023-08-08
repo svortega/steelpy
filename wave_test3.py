@@ -42,20 +42,20 @@ mesh = f2umodel.mesh()
 #
 # Node input
 nodes = mesh.nodes()
-nodes[10] = [0, -100, 0 ]
-nodes[20] = [0, -75 , 0 ]
-nodes[30] = [0, -50 , 0 ]
-nodes[40] = [0, -25 , 0 ]
-nodes[50] = [0,  0, 0 ]
-nodes[60] = [0,  25, 0 ]
-nodes[70] = [0, 50, 0 ]
+nodes[10] = [0 * units.m, -100* units.m, 0 * units.m]
+nodes[20] = [0 * units.m, -75 * units.m, 0 * units.m]
+nodes[30] = [0 * units.m, -50 * units.m, 0 * units.m]
+nodes[40] = [0 * units.m, -25 * units.m, 0 * units.m]
+nodes[50] = [0 * units.m,  0 * units.m, 0 * units.m]
+nodes[60] = [0 * units.m,  25* units.m, 0 * units.m]
+nodes[70] = [0 * units.m, 50* units.m, 0 * units.m]
 print(nodes)
 #
 #
 # boundary Input
 boundary = mesh.boundaries()
 #
-supports = boundary.supports()
+supports = boundary.nodes()
 supports[10] = 'fixed'
 supports[20] = 'pinned'
 supports[30] = 'pinned'
