@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 steelpy
+# Copyright (c) 2015-2023 steelpy
 
 # Python stdlib imports
 from __future__ import annotations
@@ -6,10 +6,8 @@ import math
 #import datetime
 
 # package imports
-from steelpy.process.units.main import Units
-#from steelpy.metocean.main import Stoke5
-#from steelpy.metocean.regular.main import Stokes5
-from steelpy.process.math.rootsearch import GoalSeeker
+from steelpy.utils.units.main import Units
+from steelpy.utils.math.rootsearch import GoalSeeker
 #
 #
 def ellipse_section(D, t, fo):

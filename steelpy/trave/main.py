@@ -18,7 +18,7 @@ from .processor.static_solver import StaticSolver
 #
 from .processor.operations import ElementProcess
 #
-#
+from .beam.main import Beam
 #
 #
 #

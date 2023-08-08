@@ -180,9 +180,9 @@ elements = mesh.elements()
 #
 beams = elements.beams()
 # beam[number] = [material, section, node1, node2, roll_angle]
-beams[15] = [10, 20, 1, 2, 0]
-beams[25] = [20, 30, 1, 2, 0]
-beams[35] = [30, 40, 1, 2, 0]
+beams[15] = [10, 20, 1, 2]
+beams[25] = [20, 30, 1, 2]
+beams[35] = [30, 40, 1, 2]
 #
 print(elements)
 #

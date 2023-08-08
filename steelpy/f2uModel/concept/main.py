@@ -7,12 +7,12 @@ from __future__ import annotations
 
 # package imports
 from ..concept.joint import Connection
-from ..concept.element import ConceptElements
 from ..concept.boundary import ConceptBoundaries
-from ..concept.load import ConceptLoad
+from ..load.main import ConceptLoad
 #
-from ..mesh.inmemory.geometry import Releases
-from ..mesh.inmemory.nodes import NodesIM
+from .elements.beam import ConceptBeam
+from .process.geometry import Releases
+from .elements.points import NodesIM
 
 
 
@@ -51,8 +51,8 @@ class Concepts:
         #
         self._boundaries = ConceptBoundaries()
         #
-        self._beams = ConceptElements(element_type="beam", points=self._points,
-                                      materials=materials, sections=sections)
+        self._beams = ConceptBeam(element_type="beam", points=self._points,
+                                  materials=materials, sections=sections)
 
         #self.truss = Elements(element_type='truss', points = self.points,
         #                      materials=mesh.materials, sections=mesh.sections)

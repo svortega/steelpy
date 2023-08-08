@@ -7,7 +7,7 @@ import math
 import re
 
 # package imports
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 from steelpy.codes.piping.PD8010_2015_1 import PD8010_2015_1
 from steelpy.codes.piping.PD8010_2015_2 import PD8010_2015_2
 from steelpy.codes.piping.process import expansion_flexibility, PD8010_buckling

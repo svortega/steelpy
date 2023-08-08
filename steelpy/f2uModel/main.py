@@ -11,7 +11,7 @@ import os
 from .mesh.main import Mesh
 from .concept.main import Concepts
 from .properties.main import Properties
-from .concept.meshing import Meshing
+from .process.meshing import Meshing
 from .plot.main import PlotModel
 # 
 from steelpy.sections.main import Sections
@@ -64,8 +64,7 @@ class f2uModel:
                  '_mesh', '_concept', '_concept_flag']
                  # '_nodes', '_meshing', '_boundaries',  'sets', '_load', '_results',
 
-    def __init__(self, component:str|int,
-                 mesh_type:str='sqlite') -> None:
+    def __init__(self, component:str|int) -> None:
         """
         mesh_type : sqlite/inmemory
         """
@@ -73,7 +72,8 @@ class f2uModel:
         print('{:}'.format(52*'-'))
         #
         self.component: str|int = component
-        self.type: str = 'substructure'        
+        self.type: str = 'substructure'
+        self.mesh_type:str = 'sqlite'
         #
         #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         filename = component + "_f2u.db"
@@ -82,19 +82,18 @@ class f2uModel:
         #directory = os.path.dirname(path)
         #
         #self.db_file:str = component + "_f2u.db"
-        if mesh_type != "ttt": #"inmemory":
-            try: # remove file if exist
-                os.remove(self.db_file)
-            except FileNotFoundError:
-                pass
+        #if mesh_type != "ttt": #"inmemory":
+        try: # remove file if exist
+            os.remove(self.db_file)
+        except FileNotFoundError:
+            pass
         #
-        self.mesh_type = mesh_type
         # set main components
         #mesh_type2 = 'sqlite'
-        self._materials = Materials(mesh_type=mesh_type,
+        self._materials = Materials(mesh_type=self.mesh_type,
                                     db_file=self.db_file)
 
-        self._sections = Sections(mesh_type=mesh_type,
+        self._sections = Sections(mesh_type=self.mesh_type,
                                   db_file=self.db_file)
 
         self._mesh = Mesh(materials=self._materials,

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 # package imports
 # steelpy.f2uModel.mesh
 from .sqlite.elements import ElementsSQL
-from .inmemory.elements import ElementsIM
+#from .inmemory.elements import ElementsIM
 #
 # steelpy.f2uModel.mesh
 #from .process.elements import BeamBasic
@@ -33,14 +33,14 @@ class Elements(Mapping):
         """
         self._plane = plane
         #
-        if mesh_type != "inmemory":
-            self._elements = ElementsSQL(db_file=db_file,
-                                         plane=self._plane, 
-                                         db_system=mesh_type)
-        else:
-            self._elements = ElementsIM(nodes=nodes,
-                                        materials=materials,
-                                        sections=sections)
+        #if mesh_type != "inmemory":
+        self._elements = ElementsSQL(db_file=db_file,
+                                     plane=self._plane, 
+                                     db_system=mesh_type)
+        #else:
+        #    self._elements = ElementsIM(nodes=nodes,
+        #                                materials=materials,
+        #                                sections=sections)
     #
     @property
     def plane(self) -> NamedTuple:

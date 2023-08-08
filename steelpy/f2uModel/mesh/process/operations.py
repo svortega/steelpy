@@ -8,7 +8,7 @@ import time
 #from multiprocessing import Process, Manager
 
 # package imports
-from steelpy.process.math.operations import  remove_column_row
+from steelpy.utils.math.operations import remove_column_row
 import numpy as np
 
 #

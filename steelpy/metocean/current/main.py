@@ -11,7 +11,7 @@ from typing import NamedTuple
 import re
 
 # package imports
-from steelpy.process.units.main import Number
+from steelpy.utils.units.main import Number
 import numpy as np
 #
 #

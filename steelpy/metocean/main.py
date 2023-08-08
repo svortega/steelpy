@@ -12,7 +12,7 @@ import re
 #from steelpy.metocean.irregular.main import WaveIrregular
 from steelpy.metocean.regular.main import RegularWaves
 #from steelpy.metocean.irregular.spectrum import Sprectrum
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 #from steelpy.metocean.interface.wave import RegularWaves, IregularWaves
 #from steelpy.metocean.interface.wind import Winds
 from steelpy.metocean.current.main import Current

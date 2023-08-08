@@ -17,8 +17,8 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import matplotlib.cm as cm
 import numpy as np
 
-from steelpy.process.units.main import Units
-from steelpy.process.geometry.euclid import Point3
+from steelpy.utils.units.main import Units
+from steelpy.utils.geometry.euclid import Point3
 
 #
 class PlotItems(Enum):

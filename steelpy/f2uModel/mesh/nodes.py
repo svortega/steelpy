@@ -15,11 +15,11 @@ from typing import NamedTuple
 # package imports
 # steelpy.f2uModel.mesh
 from .sqlite.nodes import NodeSQL
-from .inmemory.nodes import NodesIM
+#from .inmemory.nodes import NodesIM
 from .process.nodes import node_renumbering
 #
-from steelpy.process.math.operations import zeros, to_matrix
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.math.operations import zeros, to_matrix
+from steelpy.utils.dataframe.main import DBframework
 #
 #
 #
@@ -42,11 +42,11 @@ class Nodes(Mapping):
         
         self._plane = plane
         #
-        if mesh_type != "inmemory":
-            self._nodes = NodeSQL(db_file=db_file,
-                                  db_system=mesh_type)
-        else:
-            self._nodes = NodesIM()
+        #if mesh_type != "inmemory":
+        self._nodes = NodeSQL(db_file=db_file,
+                              db_system=mesh_type)
+        #else:
+        #    self._nodes = NodesIM()
         #
         self._jbc: array = array('I', [])
         self._db = DBframework()

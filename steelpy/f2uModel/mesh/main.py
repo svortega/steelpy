@@ -13,12 +13,12 @@ import re
 # steelpy.f2uModel
 from ..load.main import Load
 # steelpy.f2uModel.mesh
-from .inmemory.sets import Groups
+from .sqlite.sets import Groups
 from .nodes import Nodes
 from .boundaries import Boundaries
 from .elements import Elements
 #
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 from steelpy.f2uModel.mesh.process.main import Kmatrix, Gmatrix, Mmatrix
 #
 #

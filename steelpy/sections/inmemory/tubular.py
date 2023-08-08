@@ -12,11 +12,11 @@ import math
 #
 
 # package imports
-from steelpy.process.io_module.text import search_line
+from steelpy.utils.io_module.text import search_line
 from ..process.operations import ShapeProperty #, get_sect_properties
 from ..process.stress import BeamStress
 from .operations import SectionBasic, ShapeBasic
-#from steelpy.process.dataframe.main import DBframework
+#from steelpy.utils.dataframe.main import DBframework
 
 #import pandas as pd
 #import numpy as np

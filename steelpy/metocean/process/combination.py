@@ -15,7 +15,7 @@ from typing import NamedTuple
 #from math import prod
 
 # package imports
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 # steelpy.f2uModel.load
 from steelpy.metocean.process.bsotm import BSOTM
 #import pandas as pd

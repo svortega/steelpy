@@ -11,11 +11,11 @@ import re
 from typing import NamedTuple,  List, Union, Iterable
 
 # package imports
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 from ..process.print_report import print_isomat
 #from ..process.operations import get_isomat_prop_df
 #
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 
 #
 #

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 # steelpy.trave3D.postprocessor
 #from .operations import get_reactions
 from .output import  Node, Beam
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 
 #
 #

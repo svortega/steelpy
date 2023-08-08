@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020 steelpy
+# Copyright (c) 2019-2023 steelpy
 
 # Python stdlib imports
 #import math
@@ -6,7 +6,7 @@
 from typing import ClassVar # NamedTuple, List, 
 
 # package imports
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 #from steelpy.f2uModel.material.main import Materials
 #from steelpy.sections.tubular import Tubular
 #from steelpy.f2uModel.sections.main import Sections

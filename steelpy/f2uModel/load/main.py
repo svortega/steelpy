@@ -11,13 +11,13 @@ from typing import NamedTuple
 # package imports
 # steelpy.f2uModel.load
 #from .inmemory.main import LoadingInmemory
-from .inmemory.basic_load import BasicLoad
-from .inmemory.combination import LoadCombination
+from .concept.main import BasicLoadConcept, LoadCombConcept
+#from .concept.combination import LoadCombConcept
 #from .inmemory.timehistory import TimeHistory
 #
 #from .sqlite.main import LoadingSQL
-from .sqlite.basic_load import BasicLoadSQL
-from .sqlite.combination import LoadCombSQL
+from .sqlite.main import BasicLoadSQL, LoadCombSQL
+#from .sqlite.combination import LoadCombSQL
 
 #
 #
@@ -36,16 +36,16 @@ class Load:
         self._plane = plane
         self._number = []
         self._labels = []
-        if mesh_type != "inmemory":
+        #if mesh_type != "inmemory":
             #self._load = LoadingSQL(db_file=db_file,
             #                        db_system=mesh_type)
-            self._basic = BasicLoadSQL(db_file, plane=self._plane)
-            self._combination = LoadCombSQL(db_file, plane=self._plane)
-        else:
-            #self._load = LoadingInmemory(nodes=nodes,
-            #                             elements=elements)
-            self._basic = BasicLoad(nodes=nodes, elements=elements)
-            self._combination = LoadCombination(basic_load=self._basic)
+        self._basic = BasicLoadSQL(db_file, plane=self._plane)
+        self._combination = LoadCombSQL(db_file, plane=self._plane)
+        #else:
+        #    #self._load = LoadingInmemory(nodes=nodes,
+        #    #                             elements=elements)
+        #    self._basic = BasicLoad(nodes=nodes, elements=elements)
+        #    self._combination = LoadCombination(basic_load=self._basic)
 
     #
     @property
@@ -174,4 +174,48 @@ class Load:
         output += self._combination.__str__()
         return output
 #
+#
+#
+class ConceptLoad:
+    
+    __slots__ = ["_basic", "_combination", 'th', '_mass']
+    
+    def __init__(self, points, beams) -> None:
+        """
+        """
+        self._basic = BasicLoadConcept(points=points, beams=beams)
+        #self.th = TimeHistory()
+        self._combination = LoadCombConcept(basic_load=self._basic)
+        self._mass = LoadCombConcept(basic_load=self._basic)
+    #
+    #@property
+    def basic(self):
+        """
+        """
+        return self._basic
+    #
+    #@property
+    def combination(self):
+        """
+        """
+        return self._combination
+    #
+    #@property
+    #def time_history(self):
+    #    """
+    #    """
+    #    return self.th
+    #
+    def mass(self):
+        """
+        """
+        return self._mass
+    #
+        #
+    def __str__(self) -> str:
+        """ """
+        output = "\n"
+        output += self._basic.__str__()
+        output += self._combination.__str__()
+        return output
 #

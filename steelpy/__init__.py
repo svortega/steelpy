@@ -3,18 +3,18 @@
 # TODO: host until sure no longer needed
 #
 from steelpy.codes.main import CodeCheck
-from steelpy.formulas.main import Formulas
+from steelpy.roarks.main import RoarksFormulas
 from steelpy.design.main import ClampDesign as Clamp
 from steelpy.metocean.main import Metocean
-from steelpy.trave.main import Trave2D, Trave3D
-from steelpy.beam.main import Beam #, SimpleBeam
+from steelpy.trave.main import Trave2D, Trave3D, Beam
+#from steelpy.beam.main import Beam #, SimpleBeam
 from steelpy.f2uModel.main import f2uModel
 #
 from steelpy.material.main import Materials
 from steelpy.sections.main import Sections
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 
-from steelpy.process.spreadsheet.main import Spreadsheet
+from steelpy.utils.spreadsheet.main import Spreadsheet
 #from steelpy.vibration.main import Vibration
 
 # constants

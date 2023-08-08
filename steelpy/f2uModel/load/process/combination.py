@@ -11,7 +11,7 @@ from collections.abc import Mapping
 
 # package imports
 #import pandas as pd
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 
 #
 class LoadCombinationBasic(Mapping):

@@ -6,7 +6,7 @@
 from typing import ClassVar # NamedTuple, List, 
 
 # package imports
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 from steelpy.material.main import Materials
 
 #-------------------------------------------------

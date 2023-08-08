@@ -8,7 +8,7 @@ from typing import NamedTuple, Iterator
 
 
 # package imports
-from ..mesh.inmemory.boundary import BoundaryNodes
+from .elements.boundary import BoundaryNodes
 #
 #
 class Boundary:

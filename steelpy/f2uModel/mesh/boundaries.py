@@ -10,7 +10,7 @@ import re
 
 # package imports
 from steelpy.f2uModel.mesh.sqlite.boundary import BoundaryNodeSQL
-from steelpy.f2uModel.mesh.inmemory.boundary import BoundaryNodes
+#from steelpy.f2uModel.mesh.inmemory.boundary import BoundaryNodes
 #
 #
 #
@@ -27,10 +27,10 @@ class Boundaries:
         self._type:list[str|int] = []
         self._number:list[int] = []
         #
-        if mesh_type != "inmemory":
-            self._nodes = BoundaryNodeSQL(db_file=db_file)
-        else:
-            self._nodes = BoundaryNodes()
+        #if mesh_type != "inmemory":
+        self._nodes = BoundaryNodeSQL(db_file=db_file)
+        #else:
+        #    self._nodes = BoundaryNodes()
     #
     def __setitem__(self, boundary_name: int|str,
                     values: list|dict) -> None:

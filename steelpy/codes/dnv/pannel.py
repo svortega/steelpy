@@ -8,7 +8,7 @@ from typing import Dict, List, Tuple, Union, NamedTuple
 # package imports
 from steelpy.material.main import Materials
 from steelpy.sections.main import Sections
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 from steelpy.codes.dnv.DVNRPC201 import DNVRPC201
 
 #

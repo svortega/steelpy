@@ -11,7 +11,7 @@ import re
 
 #
 # package imports
-from steelpy.process.units.main import Number, Units
+from steelpy.utils.units.main import Number, Units
 from steelpy.metocean.hydrodynamic.operations import BasicProperty, get_list
 import numpy as np
 

@@ -10,14 +10,14 @@ from collections.abc import Mapping
 from typing import NamedTuple
 
 # package imports
-from steelpy.process.geometry.L3D import DistancePointLine3D, LineLineIntersect3D
+from steelpy.utils.geometry.L3D import DistancePointLine3D, LineLineIntersect3D
 from steelpy.f2uModel.mesh.process.elements.bstiffness import (beam3D_Klocal, 
                                                                Rmatrix, Rmatrix2, 
                                                                beam3D_K)
 from steelpy.f2uModel.mesh.process.elements.bgeometry import kg_beam
 from steelpy.f2uModel.mesh.process.elements.bmass import beam_mass
 #
-from steelpy.process.math.operations import remove_column_row
+from steelpy.utils.math.operations import remove_column_row
 #
 import numpy as np
 from numpy.linalg import inv

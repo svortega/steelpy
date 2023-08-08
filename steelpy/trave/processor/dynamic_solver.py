@@ -8,7 +8,7 @@ import copy
 import pickle
 #
 # package imports
-from steelpy.process.math.operations import zeros, matrix_full
+from steelpy.utils.math.operations import zeros, matrix_full
 from ..processor.jacobi import jacobi
 #from ..processor.static_solver import BAK, UDUt
 #

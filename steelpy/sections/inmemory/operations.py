@@ -13,7 +13,7 @@ import re
 # package imports
 #
 from ..process.operations import get_sect_properties,  get_Isection
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 import numpy as np
 #
 #

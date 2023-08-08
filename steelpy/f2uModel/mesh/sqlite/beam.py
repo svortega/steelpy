@@ -82,10 +82,10 @@ class BeamSQL(BeamBasic):
         sections = cur.fetchall()
         sections = {item[0]:item[1] for item in sections}
         #
-        #try:
-        roll_angle = parameters[4]
-        #except IndexError:
-        #    roll_angle = 0.0
+        try:
+            roll_angle = parameters[4]
+        except IndexError:
+            roll_angle = 0.0
         #
         #if (title := parameters[5]) == "NULL":
         #    title = None

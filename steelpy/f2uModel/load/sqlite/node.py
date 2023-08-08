@@ -17,7 +17,7 @@ from ..process.nodes import (NodeLoadBasic, NodeItem,
                              get_nodal_load, PointNode)
 
 #
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 # ---------------------------------
 #   
 #

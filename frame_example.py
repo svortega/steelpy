@@ -2,7 +2,7 @@ from steelpy import Trave3D
 from steelpy import Units
 from steelpy import f2uModel
 
-f2umodel = f2uModel(component='test2', mesh_type="inmemory") #
+f2umodel = f2uModel(component='test2')
 units = Units()
 #
 material = f2umodel.materials()
@@ -18,9 +18,9 @@ mesh = f2umodel.mesh()
 #
 # nodes corrdinates [x, y, z]
 nodes = mesh.nodes()
-nodes[1] = [0, 0, 0]
-nodes[2] = [3, 0, 0]
-nodes[3] = [6, 0, 0]
+nodes[1] = [0 * units.m, 0 * units.m, 0 * units.m]
+nodes[2] = [3 * units.m, 0 * units.m, 0 * units.m]
+nodes[3] = [6 * units.m, 0 * units.m, 0 * units.m]
 # boundary nodes
 boundary = mesh.boundaries()
 supports = boundary.supports()
@@ -50,24 +50,23 @@ basic[111] = 'wind load'
 #basic[111].node = [[2, 'load', 0, -1000, 0, 'test1'],
 #                   [3, 'load', 0, -1000, 0, 'test2']]
 #
-basic[111].node[3].load = [0, -1000, 0, 'ytest']
-basic[111].node[3].load = [0, 0, -1000, 'ztest']
+blnode = basic[111].node()
+blnode[3].load = [0 * units.N, -1000 * units.N, 0 * units.N, 'ytest']
+blnode[3].load = [0 * units.N, 0* units.N, -1000 * units.N, 'ztest']
 #
-node2 = basic[111].node[2]
-node2.load = [-1000, 0, 0, 'xtest']
-node2.mass = [0, -9.81, 0, 'ymass_test']
-node2.mass = [0, 0, -9.81, 'zmass_test']
+blnode[2].load = [-1000, 0, 0, 'xtest']
+#blnode[2].mass = [0, -9.81, 0, 'ymass_test']
+#blnode[2].mass = [0, 0, -9.81, 'zmass_test']
 #
-node3 = basic[111].node[3]
-node3.load = [-1000, 0, 0, 'xtest3']
+blnode[3].load = [-1000, 0, 0, 'xtest3']
 #
 #
-basic[111].beam[1].point = [3.0, 0, -1000, 0, 'test']
-basic[111].beam[1].line = [0, -1_000, 0, 'wind_1']
-basic[111].beam[2].line = [0, 0, -1_000, 'wind_2']
+blbeam =  basic[111].beam()
+blbeam[1].point = [3.0* units.m, 0 * units.N, -1000 * units.N, 0 * units.N, 'test']
+blbeam[1].line = [0 * units.N / units.m, -1_000 * units.N / units.m, 0 * units.N / units.m, 'wind_1']
+blbeam[2].line = [0 * units.N / units.m, 0 * units.N / units.m, -1_000 * units.N / units.m, 'wind_2']
 #
-beam_load = basic[111].beam[2]
-beam_load.line = [0, -2_000, 0, 'wind_3']
+blbeam[2].line = [0 * units.N / units.m, -2_000 * units.N / units.m, 0 * units.N / units.m, 'wind_3']
 #
 #
 #basic[111].beam = [[1, 'point', 3.0, 0, -1000, 0, 'test'],
@@ -95,6 +94,7 @@ f2umodel.build()
 #
 frame = Trave3D()
 frame.mesh = mesh
-results = frame.run_static(method = 'banded')
-results.print()
+frame.static()
+results = frame.solve()
+print(results)
 print('-->')

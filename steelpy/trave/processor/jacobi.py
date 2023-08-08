@@ -8,7 +8,7 @@ import sys
 #from array import array
 #
 # package imports
-from steelpy.process.math.operations import to_matrix, zeros, mtxmul, trnsload
+from steelpy.utils.math.operations import to_matrix, zeros, mtxmul, trnsload
 #
 #
 #

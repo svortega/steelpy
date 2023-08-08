@@ -9,8 +9,8 @@ import math
 
 #
 # package imports
-from steelpy.process.math.operations import zeros, transposeM #, matAbd, trns_3Dv, to_matrix, zeros_vector# FIXME
-from steelpy.process.math.vector import Vector
+from steelpy.utils.math.operations import zeros, transposeM #, matAbd, trns_3Dv, to_matrix, zeros_vector# FIXME
+from steelpy.utils.math.vector import Vector
 #
 import numpy as np
 #import numpy.linalg as la

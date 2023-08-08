@@ -8,8 +8,8 @@ import datetime
 
 
 # package imports
-from steelpy.process.units.main import Units
-from steelpy.process.math.rootsearch import GoalSeeker
+from steelpy.utils.units.main import Units
+from steelpy.utils.math.rootsearch import GoalSeeker
 from steelpy.codes.piping.ASME_B313 import ASME
 from steelpy.codes.piping.DNV_F101 import DNV
 from steelpy.codes.piping.process import MainPipe, pipe_section

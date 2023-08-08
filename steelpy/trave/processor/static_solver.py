@@ -13,9 +13,8 @@ from typing import NamedTuple
 #import time
 #
 # package imports
-from steelpy.process.math.operations import to_matrix
-#from steelpy.trave.processor.operations import ElementProcess
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.math.operations import to_matrix
+from steelpy.utils.dataframe.main import DBframework
 #
 import numpy as np
 #from scipy.linalg import cholesky_banded, cho_solve_banded

@@ -8,7 +8,7 @@ from __future__ import annotations
 # package imports
 from .basic_load import BasicLoadSQL
 from .combination import LoadCombSQL
-from steelpy.f2uModel.mesh.process.process_sql import create_connection, create_table
+from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
 #
 #
 #

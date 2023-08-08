@@ -7,7 +7,7 @@ from __future__ import annotations
 
 # package imports
 from steelpy.codes.api.main import API_design
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 ##from steelpy.design.beam.process import BeamDesignParameters
 from steelpy.f2uModel.load.process.actions import Actions
 from steelpy.sections.process.stress import BeamStress

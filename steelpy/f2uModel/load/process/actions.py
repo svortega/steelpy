@@ -11,7 +11,7 @@ from typing import NamedTuple
 # package imports
 #
 #from steelpy.process.units.main import Units
-from steelpy.process.io_module.text import match_line
+from steelpy.utils.io_module.text import match_line
 # steelpy.f2uModel.load.process
 from .operations import (check_list_units, 
                          check_list_number, 

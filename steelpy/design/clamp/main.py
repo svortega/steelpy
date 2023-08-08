@@ -6,7 +6,7 @@ import datetime
 #from typing import ClassVar # NamedTuple, List, 
 
 # package imports
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 from steelpy.design.clamp.ISO19902 import ISO19902
 from steelpy.design.clamp.OTH88283 import OTH88283
 

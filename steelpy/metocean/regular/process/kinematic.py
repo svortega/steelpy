@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.matlib import repmat
 import xarray as xr
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 #
 #
 

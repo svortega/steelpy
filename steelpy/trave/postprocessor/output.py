@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import NamedTuple
 #
 # package imports
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 #
 #
 #

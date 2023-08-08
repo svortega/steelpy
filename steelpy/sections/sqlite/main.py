@@ -29,7 +29,7 @@ from ..inmemory.tee import TeeBasic
 from ..inmemory.angle import AngleBasic
 from ..inmemory.operations import SectionBasic
 #
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 
 #
 class SectionSQL(SectionBasic):

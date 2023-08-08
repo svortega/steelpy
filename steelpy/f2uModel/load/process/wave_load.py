@@ -15,7 +15,7 @@ from typing import NamedTuple
 # package imports
 #import pandas as pd
 # steelpy
-from .beam import BeamLoadItem
+from steelpy.trave.beam.load.beam import BeamLoadItem
 #from ....process.math.operations import zeros, trns_3Dv #, zeros_vector , linspace
 #from ....process.math.vector import Vector
 #from steelpy.formulas.beam.main import BasicCalcs

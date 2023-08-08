@@ -5,9 +5,9 @@
 from __future__ import annotations
 
 # package imports
-import steelpy.process.io_module.text as common
-from steelpy.process.units.buckingham import Number
-#from steelpy.process.units.main import Units
+import steelpy.utils.io_module.text as common
+from steelpy.utils.units.buckingham import Number
+#from steelpy.utils.units.main import Units
 
 # --------------------------------------------------------------------
 #                            Modify material

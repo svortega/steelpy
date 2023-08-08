@@ -9,10 +9,10 @@ from typing import NamedTuple
 import itertools as it
 #
 # package imports
-from steelpy.formulas.main import BeamBasic
-from steelpy.process.math.operations import zeros, to_matrix, mtxmul, linspace
+from steelpy.trave.beam.main import BeamBasic
 from steelpy.trave.postprocessor.main import Results
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.math.operations import zeros, to_matrix, mtxmul, linspace
+from steelpy.utils.dataframe.main import DBframework
 #
 import numpy as np
 #

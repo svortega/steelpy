@@ -4,7 +4,7 @@
 # Python stdlib imports
 
 # package imports
-from steelpy.process.units.main import Units
+from steelpy.utils.units.main import Units
 
 #
 # *******************************************

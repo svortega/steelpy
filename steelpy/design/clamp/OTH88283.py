@@ -5,8 +5,8 @@ import math
 #import datetime
 
 # package imports
-from steelpy.process.math.rootsearch import GoalSeeker
-from steelpy.process.units.main import Units
+from steelpy.utils.math.rootsearch import GoalSeeker
+from steelpy.utils.units.main import Units
 #from steelpy.sections.tee import Tee
 
 #-------------------------------------------------

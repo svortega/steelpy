@@ -19,22 +19,22 @@ from typing import NamedTuple
 #from steelpy.f2uModel.load.process.basic_load import BasicLoadBasic, LoadTypeBasic
 from steelpy.f2uModel.load.sqlite.beam import BeamToNodeSQL #, BeamLoadItemSQL 
 #from steelpy.f2uModel.load.sqlite.node import  NodeLoadItemSQL
-from steelpy.process.math.operations import linspace
+from steelpy.utils.math.operations import linspace
 #
 # steelpy.f2uModel.load
 from steelpy.f2uModel.load.process.wave_load import WaveLoadItem
-from steelpy.process.math.operations import trnsload
+from steelpy.utils.math.operations import trnsload
 #
 from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 # steelpy.f2uModel
 from steelpy.f2uModel.mesh.sqlite.process_sql import (create_connection, create_table,
                                                        get_load_data, check_element)
 #
-from steelpy.f2uModel.load.process.beam import LineBeam #, BeamLoad
+from steelpy.trave.beam.load.beam import LineBeam #, BeamLoad
 #
 #import numpy as np
 import pandas as pd
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 #
 #
 #

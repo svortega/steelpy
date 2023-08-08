@@ -11,17 +11,18 @@ import re
 
 # package imports
 from steelpy.f2uModel.mesh.sqlite.process_sql import  check_nodes
-# steelpy.f2uModel.load
-from ..process.beam import (LineBeam, PointBeam,
-                            BeamDistMaster,
-                            BeamLoadItem, BeamLoad)
+# 
+from steelpy.trave.beam.load.beam import (LineBeam, PointBeam,
+                                          BeamDistMaster,
+                                          BeamLoadItem, BeamLoad)
+
 from ..process.nodes import NodeLoadBasic, PointNode
 # steelpy.
 from steelpy.f2uModel.mesh.sqlite.process_sql import (create_connection, create_table,
                                                        get_load_data, check_element)
 from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 #
-from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 #
 # ---------------------------------
 #

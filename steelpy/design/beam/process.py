@@ -8,8 +8,8 @@ from typing import NamedTuple, Tuple, ClassVar, Union, List
 # package imports
 #from steelpy.material.material import Materials
 #from steelpy.sections.shape import Sections
-#from steelpy.process.units.main import Units
-from steelpy.process.io_module.text import match_line
+#from steelpy.utils.units.main import Units
+from steelpy.utils.io_module.text import match_line
 
 
 #
