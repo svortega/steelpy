@@ -67,7 +67,7 @@ def assemble_Kmatrix_np(elements, jbc, neq, plane):
     #    pickle.dump(aa, f)
     #
     uptime = time.time() - start_time
-    print("** [K] assembly Finish Process Time: {:1.4e} sec".format(uptime))
+    print("** [K] assembly Finish Time: {:1.4e} sec".format(uptime))
     return Ka
 #
 #

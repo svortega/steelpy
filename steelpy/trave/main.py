@@ -12,11 +12,11 @@ from __future__ import annotations
 #from steelpy.f2uModel.mesh.main import MeshPlane
 # steelpy.trave3D
 #from .preprocessor.mass import form_mass
-from .processor.dynamic_solver import eigen, trnsient
-from .processor.static_solver import StaticSolver
+from .processor.dynamic import eigen, trnsient
+from .processor.static import StaticSolver
 #from .postprocessor.main import Results
 #
-from .processor.operations import ElementProcess
+from .postprocessor.main import PostProcess
 #
 from .beam.main import Beam
 #
@@ -31,7 +31,7 @@ class TraveItem:
     of 3-d framed structures
     """
     __slots__ = ['_mesh', '_load', '_f2u', '_results', 
-                 '_process', '_plane2D']
+                 '_postprocess', '_plane2D']
     
     def __init__(self, log: bool = False) -> None:
         """
@@ -42,6 +42,8 @@ class TraveItem:
         #
         print (f"-- module : Trave{plane} version 2.50")
         print ('{:}'.format(52 * '-'))
+        #
+        #self._postprocess = None
     #
     @property
     def mesh(self):
@@ -50,106 +52,56 @@ class TraveItem:
         return self._mesh
     
     @mesh.setter
-    def mesh(self, value):
+    def mesh(self, mesh):
         """
         """
-        self._mesh = value
+        self._mesh = mesh
         self._mesh.plane(self._plane2D)
         #
-        #
-        
+        self._postprocess = PostProcess(mesh=self._mesh)
+    #
+    #
     #
     def static(self, method:str|None=None,
                second_order: bool = False):
         """
-        Solves the static system
+        Solves the static system by the Direct Stiffness Method (DSM)
+        
         method : banded, frontal
         second_order : Second order (True/False)
         """
-        # get mesh
-        mesh = self._mesh
-        elements = self._mesh.elements()
-        boundaries = self._mesh.boundaries()        
-        # loading
-        load =  mesh.load()
-        #basic_load = load.basic()
-        #df_nload = basic_load.node_df()
         #
         # ------------------------------
+        # Get K matrix
+        # ------------------------------
+        mesh = self._mesh
+        K = mesh.K(solver=method) 
+        jbc = mesh.jbc()
         #
-        static = StaticSolver(plane=mesh._plane)
-        #
-        self._process = ElementProcess(elements=elements,
-                                       boundaries=boundaries, 
-                                       #load=load, 
-                                       plane=mesh._plane)        
+        # ------------------------------
+        # Get load vector
+        # ------------------------------        
+        # 
+        load =  mesh.load()
+        basic_load = load.basic()
+        df_nload = basic_load.node_df()
         #
         # ------------------------------
         # Static solution
         # ------------------------------
-        # get K
-        K = mesh.K(solver=method)
-        # get displacements
-        #df_ndisp = solve_deflections(df_nload, method, m2D=self._m2D)
-        #
-        jbc = mesh.jbc()
-        static.Kglobal(jbc=jbc, Ka=K)
-        static.load(load)
-        df_ndisp = static.deflection(method=method)
-        # ------------------------------
-        # get beam end node forces
-        # ------------------------------
-        #
-        #elements = mesh.elements()
-        #
-        #df_nforce = beam_end_force(elements, df_ndisp, m2D=self._m2D)
-        #
-        #self._elements.elements(elements)
-        #df_nforce = self._elements.end_force(df_ndisp)
+        #        
+        static = StaticSolver(plane=mesh._plane,
+                              method=method)
+        #      
+        Udf = static.solve(Kg=K, Fn=df_nload, jbc=jbc)
         #
         # -----------------------------------
-        # get beam force along lenght
+        # Postprocess
         # -----------------------------------
-        #df_membf = beam_int_force(elements, 
-        #                          basic_load,
-        #                          df_ndisp=df_ndisp, 
-        #                          df_nforce=df_nforce,
-        #                          df_nload=df_nload, 
-        #                          m2D=self._m2D)
         #
-        self._process.input(load, df_ndisp)
-        #results = self._process.internal_force(df_ndisp, beam_steps= 10)
+        self._postprocess.Un(Udf)
         #
-        # -----------------------------------
-        # Updating load combinations
-        # -----------------------------------
-        # get load combinations
-        #load_combination = load.combination()
-        #df_comb = load_combination.to_basic()
-        #
-        #(df_nload, df_ndisp,
-        # df_nforce, df_membf) = comb_update(df_comb, df_nload, df_ndisp,
-        #                                    df_nforce, df_membf, m2D=self._m2D)
-        #
-        # -------------------------------------
-        # node reactions
-        # -------------------------------------
-        #
-        #boundaries = mesh.boundaries()
-        #
-        #df_reactions = get_reactions(boundaries, df_nforce, m2D=self._m2D)
-        #
-        # -------------------------------------
-        # Results
-        # -------------------------------------        
-        #
-        #results = Results(mesh=mesh, postprocess=df_process)
-        #results.postprocess(df_ndisp, df_nforce,
-        #                    df_membf, df_reactions)
-        #
-        # -----------------------------------
-        #print("-->")
-        #return results
+        #print('-->')
     #
     def dynamic(self):
         """ """
@@ -158,14 +110,18 @@ class TraveItem:
     #
     def solve(self, beam_steps: int= 10):
         """ """
-        results = self._process.internal_force(beam_steps=beam_steps)
+        #
+        # -------------------------------------
+        # Results
+        # -------------------------------------        
+        #        
+        results = self._postprocess.results(beam_steps=beam_steps)
         return results
 #
 #
 class Trave3D(TraveItem):
     """
-    A program for static & dynamic analysis
-    of 3-d framed structures
+    A program for static & dynamic analysis of 3D framed structures
     """
     __slots__ = ['_mesh', '_load', '_f2u', '_results', '_plane']
     
@@ -227,8 +183,7 @@ class Trave3D(TraveItem):
 #
 class Trave2D(TraveItem):
     """
-    A program for static & dynamic analysis
-    of 3-d framed structures
+    A program for static & dynamic analysis of 2D framed structures
     """
     __slots__ = ['_mesh', '_load', '_f2u', '_results', '_plane']
     

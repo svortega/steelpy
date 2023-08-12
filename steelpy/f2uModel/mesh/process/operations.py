@@ -66,7 +66,7 @@ def assemble_matrix(elements, jbc, neq, ndof: int, mitem: str):
         Ka = remove_column_row(Ka, i, i)
     #
     uptime = time.time() - start_time
-    print(f"** [{mitem}] assembly Finish Process Time: {uptime:1.4e} sec")
+    print(f"** [{mitem}] assembly Finish Time: {uptime:1.4e} sec")
     return Ka
 #
 #

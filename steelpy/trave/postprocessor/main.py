@@ -10,8 +10,7 @@ from dataclasses import dataclass
 
 #
 # package imports
-# steelpy.trave3D.postprocessor
-#from .operations import get_reactions
+from steelpy.trave.postprocessor.operations import ElementProcess
 from .output import  Node, Beam
 from steelpy.utils.dataframe.main import DBframework
 
@@ -23,29 +22,31 @@ from steelpy.utils.dataframe.main import DBframework
 # --------------------
 #
 #
-#
-@dataclass
-class Results:
-    __slots__ = ['node', 'beam', 'shell']
+class PostProcess:
+    __slots__ = ['_mesh', '_process', '_Un']
     
-    def __init__(self, noderes, nodereac, beamres, plane) -> None:
+    def __init__(self, mesh) -> None:
         """
         """
-        self.node:tuple = Node(results=noderes, 
-                               reac=nodereac,
-                               plane=plane)
-        #
-        self.beam:tuple = Beam(results=beamres, plane=plane)
+        self._mesh = mesh
+        #self._plane = self._mesh._plane
+        #elements = self._mesh.elements()
+        #boundaries = self._mesh.boundaries()
+        self._process = ElementProcess(mesh=mesh)
     #
-    def __str__(self) -> str:
+    #def mesh(self, mesh):
+    #    """ """
+    #    self._mesh = mesh
+    #    self._plane = self._mesh._plane
+    #
+    def Un(self, Udf):
         """ """
-        output = "\n"
-        output += self.node.__str__()
-        output += self.beam.__str__()
-        return output
+        self._Un = Udf
     #
     #
-    def reactions(self):
+    def results(self, beam_steps):
         """ """
-        pass
-#
+        res = self._process.results(Un=self._Un,
+                                    beam_steps=beam_steps)
+        #print('-->')
+        return res

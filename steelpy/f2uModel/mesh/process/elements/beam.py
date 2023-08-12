@@ -51,8 +51,26 @@ class BeamBasic(Mapping):
     #
     def __str__(self) -> str:
         """ """
-        print('beam basic')
-        1/0
+        lenght = ' m'
+        space = " "
+        #
+        output = "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += f"{30*space}BEAM ELEMENTS\n"
+        output += "\n"
+        output += "\n"
+        output += (f"Beam {7*space}Node1    Node2 {4*space}Material {5*space}Section")
+        output += (f" {4*space}Beta {3*space}Len[{lenght}] {2*space}Title")
+        output += "\n"
+        output += "{:}\n".format(80*".")
+        output += "\n"
+        for beam_name in self._labels:
+            beam = self.__getitem__(beam_name)
+            output += beam.__str__()
+        #print('beam basic')
+        #1/0
+        return output
 #
 #
 #

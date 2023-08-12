@@ -333,6 +333,11 @@ class ElementType(Mapping):
         return value in self._cls_type._labels
     #
     #
+    def __str__(self) -> str:
+        """ """
+        #print('--')
+        return self._cls_type.__str__()
+    #
     #
     @property
     def df(self):

@@ -70,6 +70,8 @@ class BeamSQL(BeamBasic):
             raise IndexError(' ** element {:} does not exist'.format(beam_name))    
     #
     #
+    #
+    #
     def push_beam(self, conn, beam_name: int|str, parameters):
         """ """
         cur = conn.cursor()
@@ -339,7 +341,7 @@ class BeamItemSQL(BeamItemBasic):
         #       .format(self.name, *self.connectivity,
         #               self.material, self.section, self.beta,
         #               self.length, title)
-        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}"\
+        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}\n"\
                .format(self.name, *self.connectivity,
                        self.material.name, self.section.name,
                        self.beta, self.L, title)

@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 steelpy
+# Copyright (c) 2015-2023 steelpy
 
 # Python stdlib imports
 import datetime
