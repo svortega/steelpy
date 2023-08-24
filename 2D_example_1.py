@@ -88,8 +88,13 @@ mesh.elements([(1,  'beam',  1, 4, 10, 20, 0),
                (9, 'beam',  7, 8, 10, 20, 0),
                (10, 'beam',  8, 9, 10, 20, 0)])
 #
+# ----------------------------------------------------
+# mesh data
+# ----------------------------------------------------
+#
 print(mesh.elements().beams())
 #
+mesh.plot()
 #
 # ----------------------------------------------------
 # Load input
@@ -160,17 +165,14 @@ f2umodel.build()
 # Plot mesh
 # ----------------------------------------------------
 #
-#plot = f2umodel.plot()
-#plot.mesh()
-#plot.basic_load(name=22)
+plot = mesh.plot()
+plot.frame()
+#plot.material()
 #
+# Loading
 #
-#from steelpy.beam.frame2D.process.assembleK import assembleKa, get_Kf
-#nodes = mesh.nodes()
-#beams = mesh.elements().beams()
-#boundaries = mesh.boundaries()
-#Ka, KlStorageFrame, TlgStorageFrame = assembleKa(nodes, frameElements=beams)
-#kf = get_Kf(Ka, nodes, boundaries)
+plotload = plot.load()
+plotload.basic()
 #
 # ----------------------------------------------------
 # Structural Analysis

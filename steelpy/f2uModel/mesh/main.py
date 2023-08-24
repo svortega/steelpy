@@ -18,6 +18,9 @@ from .nodes import Nodes
 from .boundaries import Boundaries
 from .elements import Elements
 #
+from steelpy.f2uModel.plot.main import PlotMesh
+#from steelpy.f2uModel.plot.main import PlotFrame
+#
 from steelpy.utils.dataframe.main import DBframework
 from steelpy.f2uModel.mesh.process.main import Kmatrix, Gmatrix, Mmatrix
 #
@@ -127,13 +130,16 @@ class Mesh:
     """
     __slots__ = ['_nodes', '_elements', '_load', 'data_type',
                  '_eccentricities', '_boundaries', '_groups',
-                 'db_file', '_df', '_Kmatrix', '_plane']
+                 'db_file', '_df', '_Kmatrix', '_plane', #'_plot',
+                 '_materials', '_sections']
 
     def __init__(self, materials, sections,
                  mesh_type:str="sqlite",
                  db_file:str|None = None):
         """
         """
+        self._materials = materials
+        self._sections = sections
         #self._plane = Plane3D()
         self._plane = MeshPlane(plane2D=False)
         #self._ndof = 6
@@ -147,8 +153,8 @@ class Mesh:
                                       db_file=self.db_file)
         #
         self._elements = Elements(nodes=self._nodes,
-                                  materials=materials,
-                                  sections=sections,
+                                  materials=self._materials,
+                                  sections=self._sections,
                                   plane=self._plane,
                                   mesh_type=mesh_type,
                                   db_file=self.db_file)
@@ -164,6 +170,8 @@ class Mesh:
         self._df = DBframework()
         self._Kmatrix:bool = False
         #self._plane2D:bool = False
+        # mesh
+        #self._plot = PlotMesh(mesh=self)
     #
     def nodes(self, values:None|list|tuple=None,
               df=None):
@@ -272,7 +280,7 @@ class Mesh:
         #
         return self._load
     #
-    @property
+    #@property
     def groups(self):
         """
         """
@@ -349,4 +357,14 @@ class Mesh:
                      plane=self._plane.ndof, solver=solver)
         return Ma
     #
+    # --------------------
+    # Plotting
+    # --------------------
     #
+    #@property
+    def plot(self, figsize:tuple = (10, 10)):
+        """ """
+        #print('--')
+        #self._plot.figsize = figsize
+        #return self._plot
+        return PlotMesh(mesh=self, figsize=figsize)

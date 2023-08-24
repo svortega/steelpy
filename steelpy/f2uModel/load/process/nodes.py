@@ -85,6 +85,7 @@ class NodeLoadBasic(Mapping):
         """
         """
         items = list(dict.fromkeys(self._labels))
+        #items = set(self._labels)
         return iter(items)
 
     def __contains__(self, value) -> bool:

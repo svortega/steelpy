@@ -13,7 +13,9 @@ f2umodel = f2uModel(component="test1")
 # Material input
 # ----------------------------------------------------
 # [elastic, Fy, Fu, E, G, Poisson, density, alpha]
-f2umodel.materials([10, 'linear', 345.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa])
+f2umodel.materials([[10, 'linear', 345.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa],
+                    [15, 'linear', 245.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa]])
+#
 print(f2umodel.materials())
 #
 #
@@ -21,8 +23,9 @@ print(f2umodel.materials())
 # Section Input
 # ----------------------------------------------------
 #
-f2umodel.sections([20, 'ub', 240*units.mm, 6.2*units.mm, 120*units.mm, 9.8*units.mm])
-#f2umodel.sections([20, 'Tubular', 300 * units.mm, 10 * units.mm])
+f2umodel.sections([[20, 'ub', 240*units.mm, 6.2*units.mm, 120*units.mm, 9.8*units.mm],
+                   [25, 'Tubular', 300 * units.mm, 10 * units.mm]])
+#
 print(f2umodel.sections())
 #
 #
@@ -74,8 +77,14 @@ print(mesh.boundaries())
 #
 #
 mesh.elements([(1,  'beam',  1, 2, 10, 20, 0),
-               (2,  'beam',  2, 3, 10, 20, 0),
+               (2,  'beam',  2, 3, 15, 25, 0),
                (3,  'beam',  3, 4, 10, 20, 0)])
+#
+#
+#
+# ----------------------------------------------------
+# mesh data
+# ----------------------------------------------------
 #
 print(mesh.elements().beams())
 #
@@ -128,8 +137,10 @@ basic = load.basic()
 nullLoad = 0 * units.N
 pointLoad = -1_000 * units.N
 basic[11] = 'example'
-basic[11].node([[2, 'load', 400_000 * units.N, nullLoad, 'nodex_1'],
-                [3, 'load', 200_000 * units.N, nullLoad, 'nodex_2']])
+basic[11].node([[2, 'load', 400_000 * units.N, nullLoad, nullLoad,
+                 100_000 * units.N * units.m, 100_000 * units.N * units.m,
+                 'nodex_1'],
+                [3, 'load', 200_000 * units.N, nullLoad, nullLoad, 'nodex_2']])
 
 #
 nullUDL= 0 * units.N / units.m
@@ -137,30 +148,38 @@ basic[11].beam([2, 'line', nullUDL, -48_000 * units.N/units.m, 'udly_1'])
 #
 print(basic)
 #
+#for key, items in basic.items():
+#    key, items
+#    for key2, items2 in items.node().items():
+#        key2, items2
+#        for items3 in items2.load:
+#            print(items3)
 #
 #
 # ----------------------------------------------------
-# Meshing input
+# Meshing
 # ----------------------------------------------------
 #
 #
 f2umodel.build()
 #
 # ----------------------------------------------------
-# Plot mesh
+# Plotting
 # ----------------------------------------------------
 #
-#plot = f2umodel.plot()
-#plot.mesh()
-#plot.basic_load(name=22)
+# Structure
+#
+plot = mesh.plot()
+#plot.frame()
+#plot.material()
+#plot.section()
+#
+# Loading
+#
+plotload = plot.load()
+plotload.basic()
 #
 #
-#from steelpy.beam.frame2D.process.assembleK import assembleKa, get_Kf
-#nodes = mesh.nodes()
-#beams = mesh.elements().beams()
-#boundaries = mesh.boundaries()
-#Ka, KlStorageFrame, TlgStorageFrame = assembleKa(nodes, frameElements=beams)
-#kf = get_Kf(Ka, nodes, boundaries)
 #
 # ----------------------------------------------------
 # Structural Analysis

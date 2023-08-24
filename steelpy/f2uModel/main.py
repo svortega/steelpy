@@ -12,7 +12,7 @@ from .mesh.main import Mesh
 from .concept.main import Concepts
 from .properties.main import Properties
 from .process.meshing import Meshing
-from .plot.main import PlotModel
+#from .plot.main import PlotModel
 # 
 from steelpy.sections.main import Sections
 from steelpy.material.main import Materials
@@ -117,7 +117,7 @@ class f2uModel:
         #self._material_default: bool = None
         #self._section_default: bool = None
         #self._set_dafault: bool = None
-        self._plot = PlotModel(mesh=self._mesh)
+        #self._plot = PlotModel(mesh=self._mesh)
         #self._plot._concept = self._concept
     #
     def materials(self, values:None|list=None,
@@ -183,7 +183,7 @@ class f2uModel:
         self._concept = Concepts(materials=self._materials,
                                  sections=self._sections,
                                  properties= self._properties)
-        self._plot._concept = self._concept
+        #self._plot._concept = self._concept
         self._concept_flag = True
         return self._concept
 
@@ -231,9 +231,9 @@ class f2uModel:
         return self._mesh
     #
     #@property
-    def plot(self):
-        """ """
-        return self._plot
+    #def plot(self):
+    #    """ """
+    #    return self._plot
 #
 #
 #

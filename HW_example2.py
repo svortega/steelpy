@@ -306,7 +306,11 @@ for idx, key in enumerate(metcases):
 #
 #
 #
-# -----------------------------------
+#
+# ----------------------------------------------------
+# Meshing
+# ----------------------------------------------------
+#
 #
 mesh = f2u_model.build()
 #
@@ -321,6 +325,23 @@ print(elements)
 #
 load = mesh.load()
 print(load)
+#
+# ----------------------------------------------------
+# Plotting
+# ----------------------------------------------------
+#
+plot = mesh.plot()
+plot.frame()
+#plot.material()
+#
+# Loading
+#
+#plotload = plot.load()
+#plotload.basic()
+#
+# ----------------------------------------------------
+# Structural Analysis
+# ----------------------------------------------------
 #
 frame = Trave2D()
 frame.mesh = mesh
