@@ -572,6 +572,7 @@ def get_isomat_prop(properties):
             set_prop[x] = properties[x].convert(set_units[x]).value
         except AttributeError:
             set_prop[x] = properties[x]
+            raise IOError("units required")
         except IndexError:
             pass
     # check if Fu

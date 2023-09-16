@@ -34,23 +34,24 @@ from steelpy.f2uModel.plot.plot3D import (set_equal_aspect_3D,
 #
 #
 class PlotBasic:
-    __slots__ = ['_mesh', 'figsize']
+    __slots__ = ['figsize']
     
-    def __init__(self, mesh, figsize:tuple = (10, 10)):
+    def __init__(self, figsize:tuple = (10, 10)):
         """
         """
-        self._mesh = mesh
+        #self._cls = cls
         self.figsize = figsize
     #
     #
-    def init_plot(self):
+    def init_plot(self, lims: list):
         """ """
         #beams = self._mesh._elements.beams()
-        nodes = self._mesh.nodes()
-        lims = nodes.get_maxmin()
+        #nodes = self._cls._nodes
+        #lims = nodes.get_maxmin()
         #
-        mbc = self._mesh.boundaries()
-        supports = mbc.supports()       
+        #mbc = self._cls._boundaries
+        #supports = mbc.supports()
+        #supports = mbc._nodes
         #
         fig, ax = init_frame_plot([lims[0][0], lims[1][0]],
                                   [lims[0][1], lims[1][1]],
@@ -70,24 +71,47 @@ class PlotBasic:
         #axin.axis('off')        
         #
         #ax = init_frame(beams, ax)
-        ax = init_nodes(nodes, supports, ax)
+        #ax = init_nodes(nodes, supports, ax)
         #ax.grid()
         return fig, ax    
     #
-    def init_frame(self):
+    def init_frame(self, elements, lims:list):
         """ """
-        beams = self._mesh._elements.beams()
-        fig, ax = self.init_plot()
+        beams = elements.beams()
+        fig, ax = self.init_plot(lims)
         ax = init_frame(beams, ax)
         return fig, ax
     #
     #
+    def materials(self, materials, elements, lims:list):
+        """ """
+        beams = elements.beams()
+        #materials = self._mesh._materials
+        #
+        fig, ax = self.init_plot(lims)
+        #ax = init_frame(beams, ax)
+        ax = add_materials(beams, materials, fig, ax)
+        plt.legend(fontsize=12,
+                   numpoints=1, 
+                   bbox_to_anchor=(0, 0))
+        plt.show()
+    #
+    def sections(self, sections, elements, lims:list):
+        """ """
+        beams = elements.beams()
+        #sections = self._mesh._sections
+        fig, ax = self.init_plot(lims)
+        ax = add_sections(beams, sections, fig, ax)
+        plt.legend(fontsize=12,
+                   numpoints=1, 
+                   bbox_to_anchor=(0, 0))
+        plt.show()
+    #    
 #
 #
 # --------------------
 # Concept
 # --------------------
-#
 #
 #
 # --------------------
@@ -96,17 +120,17 @@ class PlotBasic:
 #
 #
 class PlotFrame(PlotBasic):
-    __slots__ = ['_mesh', 'figsize']
+    __slots__ = ['figsize']
     
-    def __init__(self, mesh, figsize:tuple = (10, 10)):
+    def __init__(self, figsize:tuple = (10, 10)):
         """
         """
         #self._mesh = mesh
         #self.figsize = figsize
-        super().__init__(mesh, figsize)
+        super().__init__(figsize)
     #
     #
-    def frame(self, f_size:float = 10):
+    def frame(self, nodes, elements, supports, f_size:float = 10):
         """ """
         def callback(label):
             """ """
@@ -116,16 +140,17 @@ class PlotFrame(PlotBasic):
                 #ln.figure.canvas.draw_idle()
             fig.canvas.draw()
         #
-        beams = self._mesh._elements.beams()
-        nodes = self._mesh.nodes()
+        beams = elements.beams()
+        #nodes = self._cls._nodes
         #lims = nodes.get_maxmin()
         #
-        mbc = self._mesh.boundaries()
-        supports = mbc.supports()
+        #mbc = self._cls._boundaries
+        #supports = mbc.supports()
+        #supports = mbc._nodes
         #
-        #fig, ax = self.init_plot()
-        #ax = init_frame(beams, ax)
-        fig, ax = self.init_frame()
+        lims = nodes.get_maxmin()
+        fig, ax = self.init_frame(elements, lims)
+        ax = init_nodes(nodes, supports, ax)
         #
         s3 = add_beams(nodes, beams, ax, f_size)
         s2 = add_nodes(nodes, ax, f_size)
@@ -151,30 +176,6 @@ class PlotFrame(PlotBasic):
         #else:
         return ax        
         
-    #
-    def materials(self):
-        """ """
-        beams = self._mesh._elements.beams()
-        materials = self._mesh._materials
-        #
-        fig, ax = self.init_plot()
-        #ax = init_frame(beams, ax)
-        ax = add_materials(beams, materials, fig, ax)
-        plt.legend(fontsize=12,
-                   numpoints=1, 
-                   bbox_to_anchor=(0, 0))
-        plt.show()
-    #
-    def sections(self):
-        """ """
-        beams = self._mesh._elements.beams()
-        sections = self._mesh._sections
-        fig, ax = self.init_plot()
-        ax = add_sections(beams, sections, fig, ax)
-        plt.legend(fontsize=12,
-                   numpoints=1, 
-                   bbox_to_anchor=(0, 0))
-        plt.show()
     #
     #
     #
@@ -487,6 +488,51 @@ def init_nodes(nodes, supports, ax):
     #
     return ax
 #
+#
+def init_points(nodes, supports, ax):
+    """ """
+    node_id = set(nodes.keys())
+    supp_id = set(supports.keys())
+    node_id = node_id - supp_id
+    #
+    # -----------------
+    # nodes
+    # -----------------
+    marker = 'o'
+    for name in node_id:
+    #for key, node in nodes.items():
+        node = nodes[name]
+        xyz = node[:3]
+        ax.scatter(*xyz, s=50,
+                   **args_scatter(color='orange',
+                                  marker=marker,
+                                  edgecolors='k'))
+    #
+    # -----------------
+    # supports
+    # -----------------
+    for name in  supp_id:
+        bc = supports[name]
+        bcn = bc[:6]
+        if all(bcn):
+            if sum(bcn) == 0:
+                continue
+            marker ='s'
+            #marker ='_'
+        else:
+            marker ='^'
+        #
+        node = nodes[name]
+        xyz = node[:3]
+        ax.scatter(*xyz, s=50,
+                   **args_scatter(color='m',
+                                  marker=marker,
+                                  #l_width=3, 
+                                  edgecolors='k'))
+    #
+    return ax 
+#
+#
 # -------------------------
 #
 def add_beams(nodes, beams, ax, f_size:float =10):
@@ -551,7 +597,11 @@ def add_beams(nodes, beams, ax, f_size:float =10):
         # ----- Beam index -----
         #if verbosity:
         coord = [0,0,0]
-        mid_length = beam.L * 0.50
+        try:
+            mid_length = beam.L.value * 0.50
+        except AttributeError:
+            mid_length = beam.L * 0.50
+        #
         normalized = get_vnorm(n1, n2)
         #
         coord[0] = n1.x + normalized[0] * mid_length

@@ -95,7 +95,7 @@ print(mesh.elements().beams())
 #
 #
 # ----------------------------------------------------
-# Basic Load
+# Basic Load (global system default)
 #
 # loading
 load = mesh.load()
@@ -137,14 +137,21 @@ basic = load.basic()
 nullLoad = 0 * units.N
 pointLoad = -1_000 * units.N
 basic[11] = 'example'
-basic[11].node([[2, 'load', 400_000 * units.N, nullLoad, nullLoad,
+basic[11].node([[2, 'load',
+                 400_000 * units.N, nullLoad, nullLoad,
                  100_000 * units.N * units.m, 100_000 * units.N * units.m,
                  'nodex_1'],
-                [3, 'load', 200_000 * units.N, nullLoad, nullLoad, 'nodex_2']])
+                [3, 'load',
+                 -1 * 200_000 * units.N, nullLoad, nullLoad, 'nodex_2']])
 
 #
 nullUDL= 0 * units.N / units.m
-basic[11].beam([2, 'line', nullUDL, -48_000 * units.N/units.m, 'udly_1'])
+basic[11].beam([[2, 'line',
+                nullUDL, -50_000 * units.N/units.m, nullUDL,
+                nullUDL, -50_000 * units.N/units.m, 20_000 * units.N/units.m,
+                'udly_1'],
+                [1, 'point', 3* units.m, 10 * units.kN, 'point_1']])
+#
 #
 print(basic)
 #
@@ -161,7 +168,7 @@ print(basic)
 # ----------------------------------------------------
 #
 #
-f2umodel.build()
+mesh.build()
 #
 # ----------------------------------------------------
 # Plotting
@@ -176,7 +183,7 @@ plot = mesh.plot()
 #
 # Loading
 #
-plotload = plot.load()
+plotload = load.plot()
 plotload.basic()
 #
 #

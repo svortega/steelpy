@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -21,9 +21,9 @@ from steelpy.f2uModel.load.concept.wave_load import WaveLoadItemIM
 #
 class BasicLoadConcept(BasicLoadBasic):
     __slots__ = ['_load', '_labels', '_title', '_number',
-                 'f2u_points', 'f2u_beams']
+                 'f2u_points', 'f2u_elements']
 
-    def __init__(self, points, beams):
+    def __init__(self, points, elements):
         """
         """
         super().__init__()
@@ -31,7 +31,7 @@ class BasicLoadConcept(BasicLoadBasic):
         self._load: dict = {}
         # FIXME: reduce dependency
         self.f2u_points = points
-        self.f2u_beams = beams
+        self.f2u_elements= elements
     #
     def __setitem__(self, load_name: int, load_title: str) -> None:
         """
@@ -51,7 +51,7 @@ class BasicLoadConcept(BasicLoadBasic):
                                                      number=load_number,
                                                      title=load_title,
                                                      points=self.f2u_points,
-                                                     beams=self.f2u_beams)
+                                                     beams=self.f2u_elements._beams)
             self._number.append(load_number)
 
     def __getitem__(self, load_name: str|int):
@@ -178,6 +178,7 @@ class LoadTypesConcept:
                 self.f2u_beams[values]
                 self._beam_id = values
             except IndexError:
+                1 / 0
                 raise IOError(f'Beam {values} not found')
             
         else:

@@ -49,9 +49,9 @@ data = ws.to_df()
 print(data)
 # update data name
 bc = data[["NodeNo", "x", "y", "z", "Support Fixity"]].copy()
-bc.rename(columns={"NodeNo": "name", "Support Fixity": "support"},
+bc.rename(columns={"NodeNo": "name", "Support Fixity": "boundary"},
           inplace=True)
-#bc['units'] = "metre"
+bc['type'] = "support"
 bc["x"] *= units.m
 bc["y"] *= units.m
 bc["z"] *= units.m
@@ -116,7 +116,8 @@ memb.insert(6, column="section", value=sect["name"])
 #
 print(memb)
 #
-concept.beams(df=memb)
+elements = concept.elements()
+elements.beams(df=memb)
 #beams = concept.beams()
 #beams.df = memb
 #
@@ -312,31 +313,37 @@ for idx, key in enumerate(metcases):
 # ----------------------------------------------------
 #
 #
-mesh = f2u_model.build()
+mesh = concept.mesh()
+#
+#
+#
 #
 nodes = mesh.nodes()
 print(nodes)
 #
-boundary = mesh.boundaries()
-print(boundary)
+bds = mesh.boundaries()
+print("boundaries")
+print(bds)
 #
+print("")
 elements = mesh.elements()
 print(elements)
 #
-load = mesh.load()
-print(load)
+loadm = mesh.load()
+print("Load")
+print(loadm.basic())
 #
 # ----------------------------------------------------
 # Plotting
 # ----------------------------------------------------
 #
-plot = mesh.plot()
-plot.frame()
+#plot = mesh.plot()
+#plot.frame()
 #plot.material()
 #
 # Loading
 #
-#plotload = plot.load()
+#plotload = load.plot()
 #plotload.basic()
 #
 # ----------------------------------------------------

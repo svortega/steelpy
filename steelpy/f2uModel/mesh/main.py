@@ -161,8 +161,10 @@ class Mesh:
         # groups
         self._groups = Groups()
         #
+        #self._load:Load|None = None
         self._load = Load(nodes=self._nodes,
                           elements=self._elements,
+                          boundaries=self._boundaries, 
                           plane=self._plane,
                           mesh_type=mesh_type,
                           db_file=self.db_file)
@@ -172,6 +174,12 @@ class Mesh:
         #self._plane2D:bool = False
         # mesh
         #self._plot = PlotMesh(mesh=self)
+    #
+    #
+    #
+    # --------------------
+    # Mesh items
+    # -------------------- 
     #
     def nodes(self, values:None|list|tuple=None,
               df=None):
@@ -250,10 +258,26 @@ class Mesh:
         #
         return self._boundaries
     #
+    def groups(self):
+        """
+        """
+        return self._groups
+    #
+    #
+    #
+    # --------------------
+    # Load
+    # -------------------- 
+    #
     def load(self, values:None|list|tuple=None,
              df=None):
         """
         """
+        #
+        #self._load = Load(plane=self._plane,
+        #                  mesh_type=self.data_type,
+        #                  db_file=self.db_file)
+        #
         if isinstance(values, (list, tuple)):
             if isinstance(values[0], (list,tuple)):
                 for item in values:
@@ -279,12 +303,11 @@ class Mesh:
             pass
         #
         return self._load
+    #    
     #
-    #@property
-    def groups(self):
-        """
-        """
-        return self._groups
+    # --------------------
+    # Mesh Operations
+    # --------------------
     #
     def renumbering(self):
         """
@@ -297,8 +320,18 @@ class Mesh:
         #        self._boundaries.node[ node ] = 'free'
         print("** End Renumbering Nodes")
     #
+    def build(self):
+        """ """
+        self._sections.get_properties()
+        #
+        #for key, item in self._mesh.items():
+        self._load._basic.wave_process()
+        # TODO : remove second _load for simplification
+        self._load._basic.FER(elements= self._elements)        
+        #
+    #
     # --------------------
-    # Mesh Operations
+    # Matrix Operations
     # --------------------
     #
     def plane(self, plane2D: bool) -> None:
@@ -361,10 +394,11 @@ class Mesh:
     # Plotting
     # --------------------
     #
-    #@property
     def plot(self, figsize:tuple = (10, 10)):
         """ """
         #print('--')
         #self._plot.figsize = figsize
         #return self._plot
-        return PlotMesh(mesh=self, figsize=figsize)
+        return PlotMesh(cls=self, figsize=figsize)
+    #
+    #

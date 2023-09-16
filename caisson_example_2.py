@@ -49,8 +49,11 @@ point[44] = [2.7*units.m, -39.0*units.m, 0*units.m]
 point[55] = [2.7*units.m, -64.0*units.m, 0*units.m]
 #
 # -----------------------------------
+#
+elements = concept.elements()
+#
 # Start beam modelling
-beam = concept.beams()
+beam = elements.beams()
 # set material & section default
 material.default = "MAT345"
 #
@@ -97,22 +100,19 @@ beam["bm17"] = elevation[5], point[55]
 #
 # -----------------------------------
 # Define boundary conditions
+#
+#concept.boundaries([[point, node1, type, boundary/parameters],
+#                     line, node1, node2, type, boundary/parameters])
 boundary = concept.boundaries()
+supports = boundary.supports()
 #
-boundary["sp1"] = elevation[1]
-boundary["sp1"].support = "fixed"
+supports['fixed'] = 'fixed'
+supports['fixed'].points = elevation[1]
+supports['fixed'].points = point[22]
+supports['fixed'].points = point[33]
+supports['fixed'].points = point[44]
+supports['fixed'].points = point[55]
 #
-boundary["sp2"] = point[22]
-boundary["sp2"].support = "fixed"
-#
-boundary["sp3"] = point[33]
-boundary["sp3"].support = 'fixed'
-#
-boundary["sp4"] = point[44]
-boundary["sp4"].support = 'fixed'
-#
-boundary["sp5"] = point[55] 
-boundary["sp5"].support = 'fixed'
 #
 #
 # -----------------------------------
@@ -185,8 +185,33 @@ basic[1].beam.line = {'qx': 90 * units.kN / units.m, "name":"wave_7"}
 #basic[3].beam = beam["bm3"]
 #basic[3].beam.point_load["crane_1"] = {'fx':-100 * units.kN,  # beam point axial load
 #                                       'd1': 3 * units.m}   # 2.5m from node 1
-##
-mesh = f2u_model.build()
+#
+# ----------------------------------------------------
+# Plotting
+# ----------------------------------------------------
+#
+# Structure
+#
+#plot = concept.plot()
+#plot.frame()
+#plot.material()
+#plot.section()
+#
+# Loading
+#
+#plotload = load.plot()
+#plotload.basic()
+#
+#
+# ----------------------------------------------------
+# Meshing
+# ----------------------------------------------------
+#
+#
+mesh = concept.mesh()
+#
+#
+#
 #
 print("Materials")
 print(material)
@@ -209,6 +234,10 @@ loadm = mesh.load()
 print("Load")
 print(loadm.basic())
 #
+#
+# ----------------------------------------------------
+# Structural Analysis
+# ----------------------------------------------------
 #
 #
 frame = Trave3D()

@@ -408,7 +408,7 @@ class NodeLoadSQL(NodeLoadBasic):
         #
         with conn:
             cur = conn.cursor()
-            cur.execute("SELECT tb_Load.name, tb_Load.type, \
+            cur.execute("SELECT tb_Load.*, \
                         tb_Nodes.name, \
                         tb_LoadNode.title, tb_LoadNode.system, \
                         tb_LoadNode.fx, tb_LoadNode.fy, tb_LoadNode.fz, \
@@ -419,12 +419,13 @@ class NodeLoadSQL(NodeLoadBasic):
                         AND tb_Load.name = {:};".format(self._name))
         rows = cur.fetchall()
         #
-        cols = ['load_name', 'load_type', 'node_name',
+        cols = ['load_number','load_name', 'load_title', 'load_type',
+                'node_name',
                 'load_comment', 'load_system',
                 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
         df = db.DataFrame(data=rows, columns=cols)
         #df = db.read_sql_query("SELECT * FROM tb_LoadNode", conn)
-        df = df[['load_name', 'load_type', 'load_comment', 'load_system',
+        df = df[['load_name', 'load_type', 'load_number', 'load_system', 'load_comment',
                  'node_name', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']]
         return df
         

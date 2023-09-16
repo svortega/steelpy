@@ -19,74 +19,103 @@ import matplotlib.pyplot as plt
 #
 #
 #
+# Frame
 #
-#
-class PlotConcept:
-    __slots__ = ['_mesh']
+class PlotMain:
+    __slots__ = ['_cls', '_frame', '_load']
     
-    def __init__(self, cls):
+    def __init__(self, cls, figsize):
         """
         """
-        self._mesh = cls
+        self._cls = cls
+        self._frame = PlotFrame(figsize=figsize)
     #
-    def concept(self, verbosity:bool=False, show=True):
-        """ """
-        plot_num = 2
-        points = self._concept.points
-        lims = points._get_maxmin
-        ax = init_3D_plot([lims[0][0], lims[1][0]],
-                          [lims[0][1], lims[1][1]],
-                          [lims[0][2], lims[1][2]])        
-        add_items_concept(self._concept, ax, plot_num, 
-                          verbosity=False)
-        #
-        basic = self._concept.load.basic[1]
-        elements =  self._concept.beam
-        add_concept_load(ax, elements, points, basic)        
-        #
-        if show:
-            #plt.draw()
-            plt.show()
-        else:
-            return ax
-#
-#
-#
-class PlotMesh:
-    __slots__ = ['_mesh', '_frame', '_load']
-    
-    def __init__(self, mesh, figsize):
-        """
-        """
-        self._mesh = mesh
-        self._frame = PlotFrame(mesh=self._mesh, figsize=figsize)
-        self._load = PlotLoad(mesh=self._mesh, figsize=figsize)
-    #
-    def frame(self, show=True):
-        """ plot mesh element, nodes & boundary"""
-        #print('--')
-        #
-        ax = self._frame.frame()
-        #
-        if show:
-            plt.show()
-        else:
-            return ax        
     #
     def material(self):
         """plot material"""
-        self._frame.materials()
+        nodes = self._cls._nodes
+        lims = nodes.get_maxmin()
+        materials = self._cls._materials
+        elements = self._cls._elements
+        self._frame.materials(materials, elements, lims)
     #
     #
     def section(self):
         """plot material"""
-        self._frame.sections()    
+        nodes = self._cls._nodes
+        lims = nodes.get_maxmin()
+        sections = self._cls._sections
+        elements = self._cls._elements
+        self._frame.sections(sections, elements, lims)    
+    #    
+#
+#
+class PlotConcept(PlotMain):
+    __slots__ = ['_cls', '_frame', '_load']
+    
+    def __init__(self, cls, figsize):
+        """
+        """
+        #self._cls = mesh
+        #self._frame = PlotFrame(figsize=figsize)
+        super().__init__(cls, figsize)
     #
-    def load(self):
-        """ """
-        return self._load
     #
     #
+    def frame(self, show=True):
+        """ plot mesh element, nodes & boundary"""
+        #print('--')
+        elements = self._cls._elements
+        nodes = self._cls._nodes
+        #
+        mbc = self._cls._boundaries.supports()
+        supports = mbc._nodes        
+        #
+        ax = self._frame.frame(nodes, elements, supports)
+        #
+        if show:
+            plt.show()
+        else:
+            return ax    
+#
+#
+class PlotMesh(PlotMain):
+    __slots__ = ['_cls', '_frame', '_load']
+    
+    def __init__(self, cls, figsize):
+        """
+        """
+        #self._mesh = mesh
+        #self._frame = PlotFrame(figsize=figsize)
+        #self._load = PlotLoad(mesh=self._mesh, figsize=figsize)
+        super().__init__(cls, figsize)
+    #
+    def frame(self, show=True):
+        """ plot mesh element, nodes & boundary"""
+        #print('--')
+        elements = self._cls._elements
+        nodes = self._cls._nodes
+        #lims = nodes.get_maxmin()
+        #
+        mbc = self._cls._boundaries
+        supports = mbc.supports()        
+        #
+        ax = self._frame.frame(nodes, elements, supports)
+        #
+        if show:
+            plt.show()
+        else:
+            return ax
+    #
+    #def load(self):
+    #    """ """
+    #    return self._load
+    #
+    #
+#
+#
+#
+# Load
 #
 #
 #

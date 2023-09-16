@@ -4,7 +4,7 @@
 # Python stdlib imports
 from __future__ import annotations
 #from dataclasses import dataclass
-from array import array
+#from array import array
 from collections import Counter
 from collections.abc import Mapping
 #from math import dist
@@ -25,17 +25,17 @@ from .beam import BeamSQL, get_connectivity
 #
 #
 class ElementsSQL(Mapping):
-    __slots__ = ['db_file', '_labels', '_type', '_number', 
-                 '_beams', '_plane']
+    __slots__ = ['_type', '_labels',
+                 '_beams', '_plane', 'db_file'] # '_number', 
     
     def __init__(self, db_file:str, plane: NamedTuple, 
                  db_system:str="sqlite") -> None:
         """
         """
         self.db_file = db_file
-        self._labels: array = array('I', [])
+        self._labels:list = []
         #self._number: array = array('i', [])
-        self._type: list = []
+        self._type:list = []
         # create node table
         conn = create_connection(self.db_file)
         with conn:        
@@ -44,8 +44,16 @@ class ElementsSQL(Mapping):
         # TODO: 
         self._plane = plane
         self._beams = BeamSQL(db_file=db_file,
+                              labels=self._labels,
+                              element_type=self._type, 
                               plane=self._plane)
     #
+    #
+    #@property
+    #def _labels(self):
+    #    """ """
+    #    labels = self._beams._labels
+    #    return labels    
     #
     def plane(self, plane: NamedTuple):
         """ """
@@ -63,8 +71,8 @@ class ElementsSQL(Mapping):
         except ValueError:
             element_type = parameters[0]
             # default
-            self._labels.append(element_name)
-            self._type.append(element_type)
+            #self._labels.append(element_name)
+            #self._type.append(element_type)
             #
             if re.match(r"\b(shell(s)?|plate(s)?)\b", element_type, re.IGNORECASE):
                 #return self._curve[mat_number]
@@ -81,6 +89,8 @@ class ElementsSQL(Mapping):
         try:
             index = self._labels.index(element_name)
             element_type = self._type[index]
+            # FIXME
+            #element_type = self._beams._type[index]
         except ValueError:
             raise KeyError('Invalid element name : {:}'.format(element_name))        
         #
@@ -282,9 +292,9 @@ class ElementsSQL(Mapping):
         except AttributeError:
             pass
         #
-        #return self._beams
-        return ElementType(item_type='beam',
-                           cls_type=self._beams, cls=self)
+        return self._beams
+        #return ElementType(item_type='beam',
+        #                   cls_type=self._beams, cls=self)
 #
 #
 class ElementType(Mapping):

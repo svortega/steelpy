@@ -4,7 +4,6 @@
 
 # Python stdlib imports
 from __future__ import annotations
-from array import array
 from collections.abc import Mapping
 from collections import defaultdict
 from operator import sub, add
@@ -34,7 +33,6 @@ import numpy as np
 class LineBeam(NamedTuple):
     """
     """
-    # FIXME: start 1 instead zero
     qx0: float
     qy0: float
     qz0: float
@@ -68,7 +66,7 @@ class LineBeam(NamedTuple):
         return q load in local beam system
 
         retunr:
-        [qx0, qy0, qz0, qx1, qy2, qz2]
+        [qx0, qy0, qz0, qx1, qy1, qz1]
         """
         # local nodal loading
         #nload = [self.qx0, self.qy0, self.qz0, 0, 0, 0,
@@ -425,71 +423,6 @@ class PointBeam(NamedTuple):
     #
 #
 #
-# ---------------------------------
-#
-class BeamDistMaster(Mapping):
-    
-    def __init__(self) -> None:
-        """
-        """
-        self._index: int
-        self._labels: list[str|int] = []
-        self._title: list[str] = []
-        self._load_id: list[str|int] = []
-        self._complex: array = array("I", [])
-        # 0-global/ 1-local
-        #self._system_flag: int = 0
-        self._system: array = array("I", [])
-    #
-    def __len__(self) -> int:
-        return len(self._labels)
-    #
-    def __contains__(self, value) -> bool:
-        return value in self._labels
-    #
-    def __iter__(self):
-        """
-        """
-        items = list(set(self._labels))
-        return iter(items)
-    #
-    def __str__(self) -> str:
-        """ """
-        output = ""
-        beams = list(dict.fromkeys(self._labels))
-        #beams = list(set(self._labels))
-        for beam in beams:
-            items = self.__getitem__(beam)
-            for item in items:
-                output += item.__str__()
-        #print('---')
-        return output
-    #
-    #
-    def _get_line_load(self):
-        """ return line load in correct format"""
-        print('-->')
-        1/0
-    #
-    #
-    #
-    #
-    #@property
-    #def coordinate_system(self):
-    #    if self._system_flag != 0:
-    #        return "local"
-    #    return "global"
-    #
-    #@coordinate_system.setter
-    #def coordinate_system(self, system:str|int):
-    #    """
-    #    Coordinate system for load : global or local (member)
-    #    """
-    #    self._system_flag = 0
-    #    if system in ['local', 'member', 1]:
-    #        self._system_flag = 1    
-#
-#
 #
 # ---------------------------------
 #
@@ -665,10 +598,11 @@ class BeamLoad:
             title = 'NULL'
             point = get_beam_node_load(point_load)
         #
-        try:
+        # get system local = 1
+        try: # Local system
             1 / self._system_flag
             return [*point, 1, title]
-        except ZeroDivisionError:
+        except ZeroDivisionError: # global to local system
             pload = [*point[:6], 0, 0, 0, 0, 0, 0]
             pload = trnsload(pload, self._beam.T3D())
             return [*pload[:6], point[6], 1, title]

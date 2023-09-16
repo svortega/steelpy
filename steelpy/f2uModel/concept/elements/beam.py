@@ -47,7 +47,7 @@ class Element:
 
     #
     @property
-    def connectivity(self) -> list:
+    def nodes(self) -> list:
         """
         """
         #conn = self._cls._connectivity[self.index]
@@ -121,7 +121,7 @@ class SegmentedBeam:
     def length(self):
         """ """
         index = self._get_index()
-        return self._cls._segment[index[0]] * self._cls.f2u_units.m
+        return self._cls._segment[index[0]] #* self._cls.f2u_units.m
 
     @length.setter
     def length(self, item):
@@ -347,21 +347,21 @@ class Beam(Element):
         return self._steps
     #
     @property
-    def length(self) -> Units:
+    def L(self) -> Units:
         """
         """
-        _nodes = self.connectivity
+        _nodes = self.nodes
         length = math.dist([_nodes[0].x, _nodes[0].y, _nodes[0].z], 
                            [_nodes[1].x, _nodes[1].y, _nodes[1].z])
-        return length * self._cls.f2u_units.m
+        return length #* self._cls.f2u_units.m
     #
     def find_coordinate(self, node_distance:float, node_end:int=0) -> tuple:
         """
         """
-        _node = self.connectivity
+        _node = self.nodes
         _nodeNo3 = [0, 0, 0]
         #
-        if math.isclose(node_distance.value, 0, rel_tol=0.01):
+        if math.isclose(node_distance, 0, rel_tol=0.01):
         #if distance <= 0.0001:
             _nodeNo3[0] = _node[node_end].x
             _nodeNo3[1] = _node[node_end].y
@@ -393,7 +393,7 @@ class Beam(Element):
     def unit_vector(self) -> list[float]:
         """
         """
-        node1, node2 = self.connectivity
+        node1, node2 = self.nodes
         #dx = _node2.x.value - _node1.x.value
         #dy = _node2.y.value - _node1.y.value
         #dz = _node2.z.value - _node1.z.value
@@ -423,8 +423,8 @@ class Beam(Element):
         #else:        
         #if self.type in ['beam', 'truss']:
         #return Rmatrix(*self.unit_vector, self.beta)
-        nodei, nodej = self.connectivity
-        L = self.length.value
+        nodei, nodej = self.nodes
+        L = self.L #.value
         #r3 = Rmatrix2(nodei, nodej, L=L)
         #return Rmatrix(*self.unit_vector, self.beta)
         return Rmatrix2(nodei, nodej, L=L)
@@ -435,33 +435,34 @@ class ConceptBeam(Mapping):
     element[name] = [name, connectivity, material, section, type, group]
     connectivity[number] = [name, node1, node2,..., nodei]
     """
-    __slots__ = ['_labels', '_number','_type', '_connectivity', '_element', '_element_type',
+    __slots__ = ['_labels', '_number','_type', '_connectivity', '_beam_type',
                  '_sections', '_materials', '_mesh', '_releases',  '_roll_angle', 
                  '_direction_cosines', '_eccentricities', '_offset_index', 
                  '_segment', '_step_label', 
-                 'f2u_points', 'f2u_materials', 'f2u_sections', 'f2u_units']
+                 'f2u_points', 'f2u_materials', 'f2u_sections'] # 'f2u_units'
 
     
-    def __init__(self, element_type:str, points, 
-                 materials, sections) -> None: # properties
+    def __init__(self, beam_type:str,
+                 points, materials, sections,
+                 labels, element_type) -> None: # properties
         """
         Manages f2u elements
         """
         #global f2u_materials, f2u_sections, f2u_units, f2u_points
         self.f2u_materials = materials
         self.f2u_sections = sections
-        self.f2u_units = Units()
+        #self.f2u_units = Units()
         self.f2u_points = points
         #
-        self._element_type = element_type
+        self._beam_type = beam_type
+        self._labels = labels
+        self._type = element_type
         #
-        self._labels:list[str|int] = []
         self._sections:list[str|int] = []
         self._materials:list[str|int] = []
         self._roll_angle:list[float] = []
         self._number:list[int] = []
         #
-        self._type: list[str] = []
         self._connectivity: list = []
         self._segment:list[float] = []
         self._step_label:list[str|int] = []
@@ -472,6 +473,15 @@ class ConceptBeam(Mapping):
         #self._eccentricities: List = []
         #self._releases: List = []        
     #
+    #
+    def _get_labels(self):
+        """ """
+        idx = [x for x, item in enumerate(self._type)
+               if item == self._beam_type]
+        labels = [self._labels[x] for x in idx]
+        return labels    
+    #
+    #
     def __setitem__(self, element_name: int|str, 
                     parameters: list[float]|dict[str,float]) -> None:
         """
@@ -479,14 +489,15 @@ class ConceptBeam(Mapping):
         """
         try:
             index = self._labels.index(element_name)
-            raise Exception('{:} {:} already exist'.format(self._element_type, element_name))
+            raise Exception(f'{element_name} already exist')
         except ValueError:
             # default
             self._labels.append(element_name)
-            self._roll_angle.append(0.0)
             index = self._labels.index(element_name)
+            self._type.append(self._beam_type)
+            #
+            self._roll_angle.append(0.0)
             self._number.append(index)
-            self._type.append(self._element_type)
             # set connectivity
             try:
                 node_1 = self.f2u_points.get_point_name(parameters[0])
@@ -551,7 +562,7 @@ class ConceptBeam(Mapping):
             _index = self._labels.index(element_name)
             # remove element form node's set
             for _item in self._connectivity[_index]:
-                _node = f2u_points[_item]
+                _node = self.f2u_points[_item]
                 try:
                     _node.sets.elements.remove(element_name)
                 except ValueError:
@@ -580,7 +591,7 @@ class ConceptBeam(Mapping):
             #    1/0
             # delete empty nodes
             for _node_number in _nodes_empty:
-                del f2u_points[_node_number]
+                del self.f2u_points[_node_number]
             #
             # FIXME: number should be updated according new index
             self._number.pop(i)

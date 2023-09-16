@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
@@ -18,10 +18,13 @@ import re
 #from ....process.math.operations import linspace
 # steelpy.f2uModel.load
 from ..process.nodes import NodeLoadMaster
+from ..process.beam import  BeamDistMaster
 from ..concept.node import NodeLoadIM
 
-from steelpy.trave.beam.load.beam import (LineBeam, PointBeam, BeamDistMaster,
+from steelpy.trave.beam.load.beam import (LineBeam, PointBeam, 
                                           BeamLoadItem, BeamLoad)
+
+from steelpy.utils.dataframe.main import DBframework
 
 #from ..process.operations import (check_point_dic, check_list_units,
 #                                  check_beam_dic, #get_beam_point_load, 
@@ -140,8 +143,8 @@ class BeamDistributedIM(BeamDistMaster):
     """
     __slots__ = ['_type', '_labels', '_load_name',
                  '_index', '_complex', '_L', 
-                 '_L1', '_qx1', '_qy1', '_qz1', 
-                 '_L2', '_qx2', '_qy2', '_qz2',
+                 '_L0', '_qx0', '_qy0', '_qz0', 
+                 '_L1', '_qx1', '_qy1', '_qz1',
                  '_system', '_title'] #'_system_flag',
 
     def __init__(self, load_name:str|int) -> None:
@@ -151,15 +154,15 @@ class BeamDistributedIM(BeamDistMaster):
         #self._L: array = array("f", [])
         self._load_name = load_name
         # ens 1
+        self._L0: array = array("f", [])
+        self._qx0: array = array("f", [])
+        self._qy0: array = array("f", [])
+        self._qz0: array = array("f", [])
+        # end 2
         self._L1: array = array("f", [])
         self._qx1: array = array("f", [])
         self._qy1: array = array("f", [])
         self._qz1: array = array("f", [])
-        # end 2
-        self._L2: array = array("f", [])
-        self._qx2: array = array("f", [])
-        self._qy2: array = array("f", [])
-        self._qz2: array = array("f", [])
         #
     #
     def __setitem__(self, element_name: int|str,
@@ -181,16 +184,16 @@ class BeamDistributedIM(BeamDistMaster):
         #Lbeam =  line_load.pop(0)
         #self._L.append(Lbeam)
         # end 1
-        self._qx1.append(line_load[0])
-        self._qy1.append(line_load[1])
-        self._qz1.append(line_load[2])
+        self._qx0.append(line_load[0])
+        self._qy0.append(line_load[1])
+        self._qz0.append(line_load[2])
         # end 2
-        self._qx2.append(line_load[3])
-        self._qy2.append(line_load[4])
-        self._qz2.append(line_load[5])
+        self._qx1.append(line_load[3])
+        self._qy1.append(line_load[4])
+        self._qz1.append(line_load[5])
         # distance from ends
-        self._L1.append(line_load[6])
-        self._L2.append(line_load[7])
+        self._L0.append(line_load[6])
+        self._L1.append(line_load[7])
         #
         self._system.append(line_load[8])
         self._title.append(line_load[9])
@@ -203,9 +206,9 @@ class BeamDistributedIM(BeamDistMaster):
         
         udl_list: list = []
         for index in index_list:
-            udl_list.append(LineBeam(self._qx1[index], self._qy1[index], self._qz1[index],
-                                      self._qx2[index], self._qy2[index], self._qz2[index],
-                                      self._L1[index], self._L2[index],
+            udl_list.append(LineBeam(self._qx0[index], self._qy0[index], self._qz0[index],
+                                      self._qx1[index], self._qy1[index], self._qz1[index],
+                                      self._L0[index], self._L1[index],
                                       self._labels[index], self._title[index],  
                                       self._load_id[index], 
                                       self._system[index], self._complex[index]))
@@ -238,15 +241,15 @@ class BeamDistributedIM(BeamDistMaster):
         for index in index_list:
             #self._L.pop(index)
             #
+            self._L0.pop(index)
+            self._qx0.pop(index)
+            self._qy0.pop(index)
+            self._qz0.pop(index)
+            #
             self._L1.pop(index)
             self._qx1.pop(index)
             self._qy1.pop(index)
             self._qz1.pop(index)
-            #
-            self._L2.pop(index)
-            self._qx2.pop(index)
-            self._qy2.pop(index)
-            self._qz2.pop(index)
             #
             self._labels.pop(index)
             self._title.pop(index)
@@ -274,20 +277,52 @@ class BeamDistributedIM(BeamDistMaster):
     #        items.append(reactions)
     #
     #    return items
+    #
+    @property
+    def df(self):
+        """ """
+        #
+        db = DBframework()
+        #
+        data = {'load_name': self._load_id,
+                'load_type': ['basic' for item in self._labels],
+                'load_number': [idx + 1 for idx, item in enumerate(self._labels)],
+                'load_system': self._system, #['global' if item == 0 else 'local'
+                                #for item in self._system],
+                'load_comment': self._title,
+                'element_name':self._labels, 
+                'L0':self._L0, 'qx0':self._qx0, 'qy0':self._qy0, 'qz0':self._qz0, 
+                'L1':self._L1, 'qx1':self._qx1, 'qy1':self._qy1, 'qz1':self._qz1}        
+        #
+        cols = ['load_name',  'load_type',
+                'load_number', 'load_system',
+                'load_comment', 
+                'element_name',
+                'L0', 'qx0', 'qy0', 'qz0',
+                'L1', 'qx1', 'qy1', 'qz1']
+        df = db.DataFrame(data=data, columns=cols)
+        #
+        #df = df[['load_name', 'load_type', 'load_number', 'load_system', 'load_comment',
+        #         'element_name',
+        #        'L0', 'qx0', 'qy0', 'qz0',
+        #        'L1', 'qx1', 'qy1', 'qz1']]
+        #       
+        #print('--->')
+        return df
 #
 #
 class BeamPointIM(NodeLoadMaster):
     __slots__ = ['_title', '_labels', '_load_name',
                  '_index', '_complex',  
                  '_fx', '_fy', '_fz', '_mx', '_my', '_mz',
-                 '_L1', '_type']
+                 '_L0', '_type']
     
     def __init__(self, load_name:str|int) -> None:
         """
         """
         super().__init__("point")
         self._load_name = load_name
-        self._L1: array = array('f', [])
+        self._L0: array = array('f', [])
     #
     def __setitem__(self, element_name:str|int,
                     point_load: list|dict) -> None:
@@ -308,7 +343,7 @@ class BeamPointIM(NodeLoadMaster):
         self._my.append(point_load[4])
         self._mz.append(point_load[5])
         #
-        self._L1.append(point_load[6])
+        self._L0.append(point_load[6])
         #
         self._system.append(point_load[7])
         self._title.append(point_load[8])
@@ -324,7 +359,7 @@ class BeamPointIM(NodeLoadMaster):
         for index in index_list:
             points.append(PointBeam(self._fx[index], self._fy[index], self._fz[index],
                                     self._mx[index], self._my[index], self._mz[index],
-                                    self._L1[index],
+                                    self._L0[index],
                                     self._labels[index], self._title[index],
                                     self._load_id[index],
                                     self._system[index], self._complex[index]))
@@ -341,7 +376,7 @@ class BeamPointIM(NodeLoadMaster):
         
         for _index in indexes:
             #self._L.pop(_index)
-            self._L1.pop(_index)
+            self._L0.pop(_index)
             #
             self._fx.pop(_index)
             self._fy.pop(_index)
@@ -360,6 +395,38 @@ class BeamPointIM(NodeLoadMaster):
     #    """
     #    items = point2node(self, elements, materials, sections)
     #    return items
+    #
+    @property
+    def df(self):
+        """ """
+        #
+        db = DBframework()
+        #
+        data = {'load_name': self._load_id,
+                'load_type': ['basic' for item in self._labels],
+                'load_number': [idx + 1 for idx, item in enumerate(self._labels)],
+                'load_system': self._system, #['global' if item == 0 else 'local'
+                                #for item in self._system],
+                'load_comment': self._title,
+                'element_name':self._labels, 
+                'L0':self._L0, 'Fx':self._fx, 'Fy':self._fy, 'Fz':self._fz, 
+                'Mx':self._mx, 'My':self._my, 'Mz':self._mz}
+        #
+        cols = ['load_name',  'load_type',
+                'load_number', 'load_system',
+                'load_comment', 
+                'element_name',
+                'L0', 'Fx', 'Fy', 'Fz',
+                'Mx', 'My', 'Mz']
+        df = db.DataFrame(data=data, columns=cols)
+        #
+        #df = df[['load_name', 'load_type', 'load_number', 'load_system', 'load_comment',
+        #         'element_name',
+        #         'L0', 'Fx', 'Fy', 'Fz',
+        #         'Mx', 'My', 'Mz']]
+        #       
+        #print('--->')
+        return df    
 #
 #
 class BeamToNodeIM(NodeLoadIM):
@@ -384,6 +451,34 @@ class BeamToNodeIM(NodeLoadIM):
             super().__setitem__(node_number, point_load)
     #
     #
+    @property
+    def df(self):
+        """nodes in dataframe format"""
+        #
+        db = DBframework()
+        #
+        data = {'load_name': self._load_id,
+                'load_type': ['basic' for item in self._labels],
+                #'load_number': [idx + 1 for idx, item in enumerate(self._labels)],
+                'load_system': self._system, #['global' if item == 0 else 'local'
+                           #for item in self._system],
+                'load_comment': self._title,
+                'element_name': self._beam, 
+                'node_name':self._labels, 
+                'Fx':self._fx, 'Fy':self._fy, 'Fz':self._fz, 
+                'Mx':self._mx, 'My':self._my, 'Mz':self._mz}      
+        #
+        cols = ['load_name', 'load_type', 
+                'load_system', 'load_comment', 
+                'element_name', 'node_name', 
+                'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+        #
+        df = db.DataFrame(data=data, columns=cols)
+        #
+        df = df[['load_name', 'load_type', 'load_comment', 'load_system',
+                 'element_name', 'node_name',
+                 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']]
+        return df     
     #
     #
 #

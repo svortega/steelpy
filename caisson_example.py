@@ -41,8 +41,10 @@ point[4] = {"x":4*units.m, "y":0*units.m}
 #print(point[4])
 #
 # -----------------------------------
+elements = concept.elements()
+#
 # Start beam modelling
-beam = concept.beams()
+beam = elements.beams()
 # set material & section default
 material.default = "MAT45"
 section.default = "TUB500"
@@ -66,12 +68,13 @@ beam["bm3"] = point[3], point[4]
 # -----------------------------------
 # Define boundary conditions
 boundary = concept.boundaries()
+supports = boundary.supports()
+#
+supports['fixed'] = 'fixed'
 # define boundary via coordinades with list = [x, y, z=0]
-boundary["sp1"] = [0*units.m, 0*units.m]
-boundary["sp1"].support = "fixed"
+supports['fixed'].points = [0*units.m, 0*units.m]
 # define beam via concept Points = point
-boundary["sp2"] = point[4]
-boundary["sp2"].support = 'fixed'
+supports['fixed'].points = point[4]
 #
 #
 # -----------------------------------
@@ -121,8 +124,30 @@ basic[3].beam.point = {'fx':-100 * units.kN,  # beam point axial load
 #basic[4].selfweight.y = -1
 #
 #
+# ----------------------------------------------------
+# Plotting
+# ----------------------------------------------------
 #
-mesh = f2u_model.build()
+# Structure
+#
+plot = concept.plot()
+plot.frame()
+#plot.material()
+#plot.section()
+#
+# Loading
+#
+#plotload = load.plot()
+#plotload.basic()
+#
+#
+# ----------------------------------------------------
+# Meshing
+# ----------------------------------------------------
+#
+#
+mesh = concept.mesh()
+#
 #
 print("Materials")
 print(material)
@@ -148,6 +173,9 @@ print("Load")
 print(load.basic())
 #
 #
+# ----------------------------------------------------
+# Structural Analysis
+# ----------------------------------------------------
 #
 frame = Trave3D()
 frame.mesh = mesh

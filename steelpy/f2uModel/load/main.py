@@ -18,6 +18,7 @@ from .concept.main import BasicLoadConcept, LoadCombConcept
 #from .sqlite.main import LoadingSQL
 from .sqlite.main import BasicLoadSQL, LoadCombSQL
 #from .sqlite.combination import LoadCombSQL
+from steelpy.f2uModel.plot.main import PlotLoad
 
 #
 #
@@ -25,15 +26,21 @@ class Load:
     """
     """
     __slots__ = ['_labels', '_number', '_df_nodal',
-                 '_basic', '_combination', '_plane']
+                 '_basic', '_combination', '_plane',
+                 '_elements', '_nodes', '_boundaries']
 
-    def __init__(self, nodes, elements,
+    def __init__(self, nodes, elements, boundaries, 
                  plane: NamedTuple, 
                  mesh_type: str,
                  db_file: str | None = None):
         """
         """
+        # mesh components
+        self._nodes = nodes
+        self._elements = elements
+        self._boundaries = boundaries
         self._plane = plane
+        #
         self._number = []
         self._labels = []
         #if mesh_type != "inmemory":
@@ -46,7 +53,16 @@ class Load:
         #    #                             elements=elements)
         #    self._basic = BasicLoad(nodes=nodes, elements=elements)
         #    self._combination = LoadCombination(basic_load=self._basic)
-
+    #
+    #
+    def __str__(self) -> str:
+        """ """
+        output = "\n"
+        output += self._basic.__str__()
+        output += self._combination.__str__()
+        return output
+    #
+    # ----------------------------
     #
     @property
     def plane(self) -> NamedTuple:
@@ -62,7 +78,9 @@ class Load:
         self._basic._plane = self._plane
         self._combination._plane = self._plane
 
-    # @basic.setter
+    #
+    # ----------------------------
+    #
     def basic(self, values: None|list|tuple = None,
               df = None):
         """
@@ -116,7 +134,8 @@ class Load:
         return self._basic
 
     #
-    # @property
+    # ----------------------------
+    #
     def combination(self, values: None | list = None,
                     df = None):
         """
@@ -154,11 +173,15 @@ class Load:
         return self._combination
 
     #
+    # ----------------------------
+    #
     def time_history(self):
         """
         """
         return self.th
 
+    #
+    # ----------------------------
     #
     def mass(self):
         """
@@ -167,23 +190,32 @@ class Load:
         return self._mass
 
     #
-    def __str__(self) -> str:
+    #
+    # --------------------
+    # Plotting
+    # --------------------
+    #
+    #@property
+    def plot(self, figsize:tuple = (10, 10)):
         """ """
-        output = "\n"
-        output += self._basic.__str__()
-        output += self._combination.__str__()
-        return output
+        return PlotLoad(cls=self, figsize=figsize)
 #
 #
 #
 class ConceptLoad:
     
-    __slots__ = ["_basic", "_combination", 'th', '_mass']
+    __slots__ = ["_basic", "_combination", 'th', '_mass',
+                 '_nodes', '_elements', '_boundaries']
     
-    def __init__(self, points, beams) -> None:
+    def __init__(self, points, elements, boundaries) -> None:
         """
         """
-        self._basic = BasicLoadConcept(points=points, beams=beams)
+        self._nodes = points
+        self._elements = elements
+        self._boundaries = boundaries
+        #
+        self._basic = BasicLoadConcept(points=self._nodes,
+                                       elements=self._elements)
         #self.th = TimeHistory()
         self._combination = LoadCombConcept(basic_load=self._basic)
         self._mass = LoadCombConcept(basic_load=self._basic)
@@ -218,4 +250,13 @@ class ConceptLoad:
         output += self._basic.__str__()
         output += self._combination.__str__()
         return output
+    #
+    # --------------------
+    # Plotting
+    # --------------------
+    #
+    #@property
+    def plot(self, figsize:tuple = (10, 10)):
+        """ """
+        return PlotLoad(cls=self, figsize=figsize)    
 #

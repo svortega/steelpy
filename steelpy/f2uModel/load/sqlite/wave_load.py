@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
@@ -72,20 +72,20 @@ class WaveLoadItemSQL(WaveLoadItem):
                                 element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
                                 title TEXT,\
                                 system INTEGER NOT NULL,\
-                                L_end1 DECIMAL,\
+                                L0 DECIMAL,\
+                                qx0 DECIMAL,\
+                                qy0 DECIMAL,\
+                                qz0 DECIMAL,\
+                                qx0i DECIMAL,\
+                                qy0i DECIMAL,\
+                                qz0i DECIMAL,\
+                                L1 DECIMAL,\
                                 qx1 DECIMAL,\
                                 qy1 DECIMAL,\
                                 qz1 DECIMAL,\
                                 qx1i DECIMAL,\
                                 qy1i DECIMAL,\
                                 qz1i DECIMAL,\
-                                L_end2 DECIMAL,\
-                                qx2 DECIMAL,\
-                                qy2 DECIMAL,\
-                                qz2 DECIMAL,\
-                                qx2i DECIMAL,\
-                                qy2i DECIMAL,\
-                                qz2i DECIMAL,\
                                 BS DECIMAL,\
                                 OTM DECIMAL,\
                                 x DECIMAL,\
@@ -99,8 +99,8 @@ class WaveLoadItemSQL(WaveLoadItem):
         #
         sql = 'INSERT INTO tb_WaveLoad(load_number, element_number,\
                                         title, system,\
-                                        L_end1, qx1, qy1, qz1, qx1i, qy1i, qz1i,\
-                                        L_end2, qx2, qy2, qz2, qx2i, qy2i, qz2i,\
+                                        L0, qx0, qy0, qz0, qx0i, qy0i, qz0i,\
+                                        L1, qx1, qy1, qz1, qx1i, qy1i, qz1i,\
                                         BS, OTM,\
                                         x, y, z)\
                                         VALUES(?,?,?,?,\
@@ -131,16 +131,16 @@ class WaveLoadItemSQL(WaveLoadItem):
         #
         cols = ['load_name', 'element_name', 'number', 'load_number', 'element_number', 
                 'load_comment', 'load_system',
-                'L_end1', 'qx1', 'qy1', 'qz1', 'qx1i', 'qy1i', 'qz1i',
-                'L_end2', 'qx2', 'qy2', 'qz2', 'qx2i', 'qy2i', 'qz2i',
+                'L0', 'qx0', 'qy0', 'qz0', 'qx0i', 'qy0i', 'qz0i',
+                'L1', 'qx1', 'qy1', 'qz1', 'qx1i', 'qy1i', 'qz1i',
                 'BS', 'OTM',
                 'x', 'y', 'z']        
         df = db.DataFrame(data=rows, columns=cols)
         df = df[['load_name', 'load_number', 
                  'load_comment', 'load_system',
                  'element_name', 'element_number', 
-                 'L_end1', 'qx1', 'qy1', 'qz1',
-                 'L_end2', 'qx2', 'qy2', 'qz2',
+                 'L0', 'qx0', 'qy0', 'qz0',
+                 'L1', 'qx1', 'qy1', 'qz1',
                  'BS', 'OTM',
                  'x', 'y', 'z']]
         return df
@@ -353,9 +353,9 @@ class WaveLoadItemSQL(WaveLoadItem):
                 #
                 #for item in items.itertuples():
                 #
-                data = [item.qx1, item.qy1, item.qz1,
-                        item.qx2, item.qy2, item.qz2,
-                        item.L_end1, item.L_end2,
+                data = [item.qx0, item.qy0, item.qz0,
+                        item.qx1, item.qy1, item.qz1,
+                        item.L0, item.L1,
                         element_name, item.load_comment,
                         item.load_name, item.load_system,
                         1, 'Line Load']
@@ -414,9 +414,9 @@ class WaveLoadItemSQL(WaveLoadItem):
                 Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
                 #
                 for item in items.itertuples():
-                    data = [item.qx1, item.qy1, item.qz1,
-                            item.qx2, item.qy2, item.qz2,
-                            item.L_end1, item.L_end2,
+                    data = [item.qx0, item.qy0, item.qz0,
+                            item.qx1, item.qy1, item.qz1,
+                            item.L0, item.L1,
                             item.element_name, item.load_comment,
                             item.load_name, item.load_system,
                             1, 'Line Load']

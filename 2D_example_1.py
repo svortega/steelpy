@@ -159,7 +159,7 @@ print(basic)
 # ----------------------------------------------------
 #
 #
-f2umodel.build()
+mesh.build()
 #
 # ----------------------------------------------------
 # Plot mesh
@@ -171,7 +171,7 @@ plot.frame()
 #
 # Loading
 #
-plotload = plot.load()
+plotload = load.plot()
 plotload.basic()
 #
 # ----------------------------------------------------

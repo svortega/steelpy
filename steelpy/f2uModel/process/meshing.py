@@ -1,28 +1,38 @@
 #
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 from dataclasses import dataclass
 #from typing import Tuple
+import os
 
 # package imports
 from steelpy.utils.units.main import Units
 from steelpy.utils.geometry.L3D import DistancePointLine3D
-#from steelpy.f2uModel.mesh.main import Mesh
+from steelpy.f2uModel.mesh.main import Mesh
 #
 #
 class Meshing:
     __slots__ = ["_mesh", "concept"]
     
-    def __init__(self, concept, mesh) -> None:
+    def __init__(self, concept, component:str, mesh_type:str) -> None:
         """
         """
         self.concept = concept
-        self._mesh = mesh
+        #
+        filename = component + "_f2u.db"
+        path = os.path.abspath(filename)
+        db_file = path        
+        #
+        self._mesh = Mesh(materials=concept._materials,
+                          sections=concept._sections,
+                          mesh_type=mesh_type,
+                          db_file=db_file)
         #print('--')
     #
     def get_mesh(self) -> None:
@@ -33,7 +43,7 @@ class Meshing:
         self._set_boundary()
         self._set_load()
         print('-- Meshing Completed')
-        #return self._mesh
+        return self._mesh
     #
     def _set_mesh(self):
         """ """
@@ -41,11 +51,12 @@ class Meshing:
         mesh = self._mesh
         melements = mesh.elements()
         #elem_number = elements.get_number()
-        cbeams = self.concept.beams()
+        celements = self.concept.elements()
+        cbeams = celements.beams()
         #
         for key, beam in cbeams.items():
-            total_length = beam.length
-            p1, p2 = beam.connectivity
+            total_length = beam.L
+            p1, p2 = beam.nodes
             node_res = self._get_node_name(p1[:3])
             node_end = self._get_node_name(p2[:3])
             for step in beam.step:
@@ -53,7 +64,7 @@ class Meshing:
                 step._mesh = mnumber
                 print(f"concept: {key} --> element: {mnumber}")
                 try:
-                    1/step.length.value
+                    1/step.length #.value
                     total_length -= step.length
                     coord = beam.find_coordinate(step.length)
                     new_node = self._get_node_name(coord)
@@ -93,33 +104,43 @@ class Meshing:
         msupports = mboundaries.supports()
         # concepts
         cboundary = self.concept.boundaries()
-        cbeams = self.concept.beams()
+        csupports = cboundary.supports()
+        celements = self.concept.elements()
+        cbeams = celements.beams()
         #
-        missing = []
+        # FIXME : check if new loops this works properly
+        #
+        missing = defaultdict(list)
         # find existing nodes
-        for key, value in cboundary.items():
-            support = value.support
-            point = value.point
-            try:
-                node_id = mnodes.get_node_name(point)
-                msupports[node_id] = [*support[:6], key]
-                print(f"Boundary: {key}  @ Node: {node_id}")
-            except IOError:
-                missing.append(key)
+        for key, value in csupports.items():
+            #support = value.support
+            support = value.points
+            for point in support.points:
+                try:
+                    node_id = mnodes.get_node_name(point)
+                    msupports[node_id] = [*support[:6], key]
+                    print(f"Boundary: {key}  @ Node: {node_id}")
+                except IOError:
+                    missing[key].append(point)
         #
         # if missing boundaries, find if coordinates along members
-        if missing:
+        #if missing:
+        for boundary, points, in missing.items():
+            missing_found = [item.name for item in points] #defaultdict(list)
             for key, cbeam in cbeams.items():
-                p1, p2 = cbeam.connectivity
+                p1, p2 = cbeam.nodes
+                #p1, p2 = cbeam.connectivity
                 point_line = DistancePointLine3D(p1[:3], p2[:3])
-                missing_found = []
-                for boundary in missing:
-                    Pb = cboundary[boundary].point
-                    # Fixme : what format?
-                    Pb = [Pb[0].value, Pb[1].value, Pb[2].value]
+                #for boundary, points, in missing.items():
+                #Pb = cboundary[boundary].point
+                # Fixme : what format?
+                #Pb = [Pb[0].value, Pb[1].value, Pb[2].value]
+                for point in points:
+                    Pb = point[:3]
                     if point_line.is_on_segment(Pb):
+                        missing_found.remove(point.name)
                         left_dist = point_line.left_dist
-                        missing_found.append(boundary)
+                        #missing_found[boundary].append(idx)
                         total_length = 0
                         step_no = len(cbeam.step)
                         for step in cbeam.step:
@@ -130,13 +151,15 @@ class Meshing:
                             if total_length < left_dist:
                                 continue
                             # get node coordinate
-                            coord = cbeam.find_coordinate(left_dist*units.m)
+                            coord = cbeam.find_coordinate(left_dist) #*units.m
                             new_node = self._get_node_name(coord)
                             # set boundary
-                            support = cboundary[boundary].support
-                            if support:
-                                msupports[new_node] = support
-                                print(f"Boundary: {boundary} on Beam: {key} @ Node: {new_node}")
+                            #support = cboundary[boundary].support
+                            #support = csupports[boundary]
+                            #if support:
+                            msupports[new_node] = boundary
+                            print(f"Boundary: {boundary} on Beam: {key} @ Node: {new_node}")
+                            #
                             # existing element
                             mnodes = beam.connectivity
                             node_end = mnodes[-1]
@@ -156,13 +179,21 @@ class Meshing:
                             cbeams[key].step[step_no]._mesh = mnumber
                             print(f"concept: {key} --> element: {mnumber}")
                             break
-                        continue
+                        #continue
+                    if not missing_found:
+                        break
                 #
-                for item in missing_found:
-                    missing.remove(item)
-                # TODO: capture if missing not empty
-                if not missing:
+                if not missing_found:
                     break
+                #
+                #for item in reversed(missing_found):
+                #    #for item in reversed(items):
+                #    #missing.remove(item)
+                #    missing[boundary].pop(item)
+                # TODO: capture if missing not empty
+                #if not missing[boundary]:
+                #    #del missing[boundary]
+                #    break
         #print(' end meshing boundary')
     #
     def _set_load(self):
@@ -178,7 +209,8 @@ class Meshing:
         mlbasic = mload.basic()
         # Concept
         Concept = self.concept
-        Cbeams = self.concept.beams()
+        Celements = Concept.elements()
+        Cbeams = Celements.beams()
         Cloads = Concept.load()
         Clbasic = Cloads.basic()
         CPoints = Concept.points()
@@ -193,7 +225,7 @@ class Meshing:
             # TODO : update linefit
             for bname, CBloads in Clb_item.beams.items():
                 cbeam = Cbeams[bname]
-                Lc = cbeam.length.value
+                Lc = cbeam.L #.value
                 #print(f'---> Load: {load_name} Beam: {bname} L: {Lb:4.2f}')
                 # Beam line load process
                 for lbload in CBloads.line:

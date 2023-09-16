@@ -11,7 +11,7 @@ import os
 from .mesh.main import Mesh
 from .concept.main import Concepts
 from .properties.main import Properties
-from .process.meshing import Meshing
+#from .process.meshing import Meshing
 #from .plot.main import PlotModel
 # 
 from steelpy.sections.main import Sections
@@ -61,7 +61,7 @@ class f2uModel:
     __slots__ = ['component', 'type', 'data',
                  'db_file', '_plot', 'mesh_type',
                  '_materials', '_sections', '_properties',
-                 '_mesh', '_concept', '_concept_flag']
+                 '_mesh', '_concept']
                  # '_nodes', '_meshing', '_boundaries',  'sets', '_load', '_results',
 
     def __init__(self, component:str|int) -> None:
@@ -95,30 +95,19 @@ class f2uModel:
 
         self._sections = Sections(mesh_type=self.mesh_type,
                                   db_file=self.db_file)
-
-        self._mesh = Mesh(materials=self._materials,
-                          sections=self._sections,
-                          mesh_type=self.mesh_type,
-                          db_file=self.db_file)
+        #
+        self._mesh:dict = {}
+        #self._mesh = Mesh(materials=self._materials,
+        #                  sections=self._sections,
+        #                  mesh_type=self.mesh_type,
+        #                  db_file=self.db_file)
         #
         self._properties = Properties()
         #
-        # set concepts
-        #self._concept = Concepts(materials=self._materials,
-        #                         sections=self._sections,
-        #                         properties= self._properties)
-        self._concept_flag = False
-        #
-        #self._meshing = Meshing(concept=self._concept,
-        #                        mesh_type=mesh_type,
-        #                        db_file=self.db_file)
-        #
-        # start defaults
-        #self._material_default: bool = None
-        #self._section_default: bool = None
-        #self._set_dafault: bool = None
-        #self._plot = PlotModel(mesh=self._mesh)
-        #self._plot._concept = self._concept
+        self._concept:Concepts|None = None
+        #self._concept_flag = False
+    #
+    # -------------------
     #
     def materials(self, values:None|list=None,
                   df=None):
@@ -134,16 +123,6 @@ class f2uModel:
         try:
             df.columns
             self._materials.df = df
-            #group = df.groupby("type")
-            # Elastic type
-            #try:
-            #    elastic = group.get_group("elastic")
-            #    #elastic = get_isomat_prop_df(elastic)
-            #    #elastic = elastic.drop_duplicates(['name'])
-            #    self._materials.elastic(df=df)
-            #except KeyError:
-            #    # nonlin = group.get_group("plastic")
-            #    raise IOError('Material type not valid')
         except AttributeError:
             pass
         #
@@ -177,58 +156,68 @@ class f2uModel:
         """
         return self._properties
     #
-    def concept(self):
+    # -------------------
+    #
+    def concept(self, name:str|None = None):
         """
         """
-        self._concept = Concepts(materials=self._materials,
+        if not name:
+            name = self.component
+        #
+        self._concept = Concepts(name=name, 
+                                 materials=self._materials,
                                  sections=self._sections,
-                                 properties= self._properties)
-        #self._plot._concept = self._concept
-        self._concept_flag = True
+                                 properties= self._properties,
+                                 mesh_type=self.mesh_type)
         return self._concept
 
     #
-    def groups(self):
+    #
+    def mesh(self, name:str|None = None):
         """ """
-        return self.sets
+        if not name:
+            name = self.component
+        
+        self._mesh[name] = Mesh(materials=self._materials,
+                                sections=self._sections,
+                                mesh_type=self.mesh_type,
+                                db_file=self.db_file)        
+        
+        return self._mesh[name]
     #
-    def mesh(self):
-        """ """
-        #self._mesh = Mesh(materials=self._materials,
-        #                  sections=self._sections,
-        #                  mesh_type=self.mesh_type,
-        #                  db_file=self.db_file)
-        return self._mesh
+    # -------------------
     #
-    #
-    #
-    def build(self) -> None:
+    def build(self, name:str|None = None) -> None:
         """
         """
         #
-        #
+        if not name:
+            name = self.component        
         #
         self._sections.get_properties()
         #
-        if self._concept_flag:
-            meshing = Meshing(concept=self._concept,
-                              mesh=self._mesh)
-            meshing.get_mesh()
-            self._mesh.renumbering()
-            #mesh._load._basic.FER()
-            #return mesh
-            #_sql.write_concept(self._concept)
+        if self._concept:
+            self._mesh[name] = self._concept.mesh()
+        #    meshing = Meshing(concept=self._concept,
+        #                      component=name, 
+        #                      mesh_type=self.mesh_type)
+        #    self._mesh[name] = meshing.get_mesh()
+        #    self._mesh[name].renumbering()
+        #    #mesh._load._basic.FER()
+        #    #return mesh
+        #    #_sql.write_concept(self._concept)
         #
         # check wave load case
         #
-        self._mesh._load._basic.wave_process()
-        #
-        # TODO : remove second _load for simplification
-        self._mesh._load._basic.FER(elements= self._mesh._elements)        
+        for key, item in self._mesh.items():
+            item.build()
+            #item._load._basic.wave_process()
+            # TODO : remove second _load for simplification
+            #item._load._basic.FER(elements= item._elements)        
         #
         #
         print('end meshing')
-        return self._mesh
+        return self._mesh[name]
     #
     #@property
     #def plot(self):

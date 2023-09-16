@@ -13,10 +13,10 @@ import re
 from steelpy.f2uModel.mesh.sqlite.process_sql import  check_nodes
 # 
 from steelpy.trave.beam.load.beam import (LineBeam, PointBeam,
-                                          BeamDistMaster,
                                           BeamLoadItem, BeamLoad)
 
 from ..process.nodes import NodeLoadBasic, PointNode
+from ..process.beam import BeamDistMaster
 # steelpy.
 from steelpy.f2uModel.mesh.sqlite.process_sql import (create_connection, create_table,
                                                        get_load_data, check_element)
@@ -287,20 +287,20 @@ class BeamDistributedSQL(BeamDistMaster):
                                 element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
                                 title TEXT,\
                                 system INTEGER NOT NULL,\
-                                L_end1 DECIMAL,\
+                                L0 DECIMAL,\
+                                qx0 DECIMAL,\
+                                qy0 DECIMAL,\
+                                qz0 DECIMAL,\
+                                qx0i DECIMAL,\
+                                qy0i DECIMAL,\
+                                qz0i DECIMAL,\
+                                L1 DECIMAL,\
                                 qx1 DECIMAL,\
                                 qy1 DECIMAL,\
                                 qz1 DECIMAL,\
                                 qx1i DECIMAL,\
                                 qy1i DECIMAL,\
-                                qz1i DECIMAL,\
-                                L_end2 DECIMAL,\
-                                qx2 DECIMAL,\
-                                qy2 DECIMAL,\
-                                qz2 DECIMAL,\
-                                qx2i DECIMAL,\
-                                qy2i DECIMAL,\
-                                qz2i DECIMAL);"
+                                qz1i DECIMAL);"
         #
         #bd_file = self._bd_file
         #conn = create_connection(bd_file)
@@ -325,8 +325,8 @@ class BeamDistributedSQL(BeamDistMaster):
         #
         sql = 'INSERT INTO tb_LoadBeamLine(load_number, element_number,\
                                             title, system,\
-                                            L_end1, qx1, qy1, qz1, qx1i, qy1i, qz1i,\
-                                            L_end2, qx2, qy2, qz2, qx2i, qy2i, qz2i)\
+                                            L0, qx0, qy0, qz0, qx0i, qy0i, qz0i,\
+                                            L1, qx1, qy1, qz1, qx1i, qy1i, qz1i)\
                                             VALUES(?,?,?,?,\
                                                    ?,?,?,?,?,?,?,\
                                                    ?,?,?,?,?,?,?)'
@@ -340,8 +340,8 @@ class BeamDistributedSQL(BeamDistMaster):
         #
         sql = 'INSERT INTO tb_LoadBeamLine(load_number, element_number,\
                                             title, system,\
-                                            L_end1, qx1, qy1, qz1, qx1i, qy1i, qz1i,\
-                                            L_end2, qx2, qy2, qz2, qx2i, qy2i, qz2i)\
+                                            L0, qx0, qy0, qz0, qx0i, qy0i, qz0i,\
+                                            L1, qx1, qy1, qz1, qx1i, qy1i, qz1i)\
                                             VALUES(?,?,?,?,\
                                                    ?,?,?,?,?,?,?,\
                                                    ?,?,?,?,?,?,?)'
@@ -372,6 +372,44 @@ class BeamDistributedSQL(BeamDistMaster):
                     row[5], 0, "Line Load"]    # system, load_complex, load_type
             beam_line.append(LineBeam._make(data))
         return beam_line
+    #
+    @property
+    def df(self):
+        """ """
+        db = DBframework()
+        conn = create_connection(self._bd_file)
+        #
+        with conn:
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Load.*, \
+                        tb_Elements.name, \
+                        tb_LoadBeamLine.title, tb_LoadBeamLine.system,\
+                        tb_LoadBeamLine.L0, tb_LoadBeamLine.qx0, tb_LoadBeamLine.qy0, tb_LoadBeamLine.qz0, \
+                        tb_LoadBeamLine.L1, tb_LoadBeamLine.qx1, tb_LoadBeamLine.qy1, tb_LoadBeamLine.qz1 \
+                        FROM tb_Load, tb_Elements, tb_LoadBeamLine \
+                        WHERE tb_LoadBeamLine.load_number = tb_Load.number\
+                        AND tb_LoadBeamLine.element_number = tb_Elements.number \
+                        AND tb_Load.name = {:};".format(self._name))            
+        rows = cur.fetchall()
+        #
+        #beam_load = []
+        #for row in rows:
+        #    data = [*row[:2]]
+        #
+        cols = ['load_number','load_name', 'load_title', 'load_type',
+                'element_name',
+                'load_comment', 'load_system',
+                'L0', 'qx0', 'qy0', 'qz0',
+                'L1', 'qx1', 'qy1', 'qz1']
+        df = db.DataFrame(data=rows, columns=cols)
+        #
+        df = df[['load_name', 'load_type', 'load_number', 'load_system', 'load_comment',
+                 'element_name',
+                'L0', 'qx0', 'qy0', 'qz0',
+                'L1', 'qx1', 'qy1', 'qz1']]
+        #       
+        #print('--->')
+        return df 
     #
     #
 #
@@ -429,7 +467,7 @@ class BeamPointSQL(NodeLoadBasic):
                                     element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
                                     title TEXT,\
                                     system INTEGER NOT NULL,\
-                                    L_end1 DECIMAL,\
+                                    L0 DECIMAL,\
                                     fx DECIMAL,\
                                     fy DECIMAL,\
                                     fz DECIMAL,\
@@ -467,7 +505,7 @@ class BeamPointSQL(NodeLoadBasic):
         #
         sql = 'INSERT INTO tb_LoadBeamPoint(load_number, element_number,\
                                             title, system, \
-                                            L_end1, fx, fy, fz, mx, my, mz,\
+                                            L0, fx, fy, fz, mx, my, mz,\
                                             fxi, fyi, fzi, mxi, myi, mzi)\
                                             VALUES(?,?,?,?,?,\
                                                    ?,?,?,?,?,?,?,\
@@ -501,6 +539,40 @@ class BeamPointSQL(NodeLoadBasic):
                     row[5], 0, "Point Load"]    # system, load_complex, load_type
             beam_line.append(PointBeam._make(data))
         return beam_line
+    #
+    @property
+    def df(self):
+        """ """
+        db = DBframework()
+        conn = create_connection(self._bd_file)
+        #
+        with conn:
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Load.*, \
+                        tb_Elements.name, \
+                        tb_LoadBeamPoint.title, tb_LoadBeamPoint.system,\
+                        tb_LoadBeamPoint.L0, tb_LoadBeamPoint.fx, tb_LoadBeamPoint.fy, tb_LoadBeamPoint.fz, \
+                        tb_LoadBeamPoint.mx, tb_LoadBeamPoint.my, tb_LoadBeamPoint.mz \
+                        FROM tb_Load, tb_Elements, tb_LoadBeamPoint \
+                        WHERE tb_LoadBeamPoint.load_number = tb_Load.number\
+                        AND tb_LoadBeamPoint.element_number = tb_Elements.number \
+                        AND tb_Load.name = {:};".format(self._name))            
+        rows = cur.fetchall()
+        #
+        cols = ['load_number','load_name', 'load_title', 'load_type',
+                'element_name',
+                'load_comment', 'load_system',
+                'L0', 'Fx', 'Fy', 'Fz',
+                'Mx', 'My', 'Mz']
+        df = db.DataFrame(data=rows, columns=cols)
+        #
+        df = df[['load_name', 'load_type', 'load_number', 'load_system', 'load_comment',
+                 'element_name',
+                 'L0', 'Fx', 'Fy', 'Fz',
+                 'Mx', 'My', 'Mz']]
+        #       
+        #print('--->')
+        return df
 #    
 #
 class BeamToNodeSQL(NodeLoadBasic):

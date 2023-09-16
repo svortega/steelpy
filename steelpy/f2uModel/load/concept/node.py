@@ -17,7 +17,7 @@ from ..process.nodes import (NodeLoadMaster, NodeItem,
 class NodeLoadItemIM(Mapping):
     __slots__ = ['_title', '_labels', '_type', '_number',
                  '_f2u_nodes', #'_load_name',
-                 '_load', '_displacement', '_mass', 'node_load']
+                 '_load', '_displacement', '_mass', '_node']
 
     def __init__(self, load_name, load_title, nodes) -> None:
         """
@@ -27,7 +27,7 @@ class NodeLoadItemIM(Mapping):
         #self._load_name = load_name
         #self._number = []
         #
-        self.node_load = NodeItemIM(load_name=load_name,
+        self._node = NodeItemIM(load_name=load_name,
                                     load_title=load_title)        
         self._f2u_nodes = nodes
     #
@@ -41,13 +41,13 @@ class NodeLoadItemIM(Mapping):
         #
         if re.match(r"\b(point|load|node)\b", load_type, re.IGNORECASE):
             #self.node_load._load = node_load[1:]
-            self.node_load._load[node_name] = node_load[1:]
+            self._node._load[node_name] = node_load[1:]
         
         elif re.match(r"\b(mass)\b", load_type, re.IGNORECASE):
-            self.node_load._mass[node_name] = node_load[1:]
+            self._node._mass[node_name] = node_load[1:]
         
         elif re.match(r"\b(disp(lacement)?)\b", load_type, re.IGNORECASE):
-            self.node_load._displacement[node_name] = node_load[1:]
+            self._node._displacement[node_name] = node_load[1:]
         
         else:
             raise IOError(f'node load type {load_type} not recognized')
@@ -64,7 +64,7 @@ class NodeLoadItemIM(Mapping):
             if not node_number in self._labels:
                 self._labels.append(node_number)
             #
-            return self.node_load(node_number)
+            return self._node(node_number)
         except KeyError:
             raise IOError(f"Node {node_number} not found")
 
@@ -86,7 +86,7 @@ class NodeLoadItemIM(Mapping):
     def __str__(self, units: str = "si") -> str:
         """ """
         output = ""
-        output += self.node_load.__str__()
+        output += self._node.__str__()
         return output
     #
     #
@@ -106,7 +106,7 @@ class NodeLoadItemIM(Mapping):
     def load(self):
         """
         """
-        return self.node_load._load
+        return self._node._load
     #
     #@load.setter
     #def load(self, value):

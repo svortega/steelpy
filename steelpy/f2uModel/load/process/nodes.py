@@ -9,13 +9,13 @@ from typing import NamedTuple
 from collections.abc import Mapping
 
 # package imports
-import pandas as pd
+#import pandas as pd
 # steelpy.f2uModel.load.process
 from .operations import (check_list_units,
                          check_list_number,
                          check_point_dic)
 
-
+from steelpy.utils.dataframe.main import DBframework
 # from steelpy.f2uModel.load.sqlite.node import NodeLoadSQL
 
 #
@@ -225,13 +225,15 @@ class NodeLoadMaster(NodeLoadBasic):
     @property
     def df(self):
         """nodes in dataframe format"""
+        db = DBframework()
         # TODO : merge nodes
-        title = []
+        #title = []
         data = {'load_name': self._load_id,
                 'load_type': ['basic' for item in self._labels],
+                'load_number': [idx + 1 for idx, item in enumerate(self._labels)],
+                'load_system': self._system, #['global' if item == 0 else 'local'
+                           #for item in self._system],
                 'load_comment': self._title,
-                'system': ['global' if item == 0 else 'local'
-                           for item in self._system], 
                 'node_name':self._labels, 
                 'Fx':self._fx, 'Fy':self._fy, 'Fz':self._fz, 
                 'Mx':self._mx, 'My':self._my, 'Mz':self._mz}
@@ -247,8 +249,11 @@ class NodeLoadMaster(NodeLoadBasic):
             data.update({'element_name': self._beam})
         except AttributeError:
             pass
+        #      
         #
-        df_nload = pd.DataFrame(data=data, index=None)
+        df_nload = db.DataFrame(data=data, index=None)
+        #df = df[['load_name', 'load_type', 'load_number', 'load_system', 'load_comment',
+        #         'node_name', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']]          
         return df_nload
 
     @df.setter

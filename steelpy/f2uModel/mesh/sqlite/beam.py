@@ -31,16 +31,20 @@ from ..process.elements.beam import BeamBasic, BeamItemBasic
 
 
 class BeamSQL(BeamBasic):
-    __slots__ = ['_labels', '_number', '_title',
-                 'db_file', '_plane']
+    __slots__ = ['_labels', '_title', '_type', 
+                 'db_file', '_plane', '_beam_type']
     
-    def __init__(self, db_file:str, plane: NamedTuple) -> None:
+    def __init__(self, db_file:str,
+                 labels, element_type, 
+                 plane: NamedTuple) -> None:
         """
         beam elements
         """
-        super().__init__() 
+        super().__init__(labels=labels) 
         self.db_file = db_file
         self._plane = plane
+        self._type:list = element_type
+        self._beam_type:str = 'beam'
     #
     #
     def __setitem__(self, beam_name: int|str, parameters: list) -> None:
@@ -53,6 +57,7 @@ class BeamSQL(BeamBasic):
         except ValueError:
             # default
             self._labels.append(beam_name)
+            self._type.append(self._beam_type)
             # push to SQL
             conn = create_connection(self.db_file)
             with conn:
@@ -111,7 +116,7 @@ class BeamSQL(BeamBasic):
         beam_number = cur.lastrowid
         push_connectivity(conn, beam_number, parameters[:2])
     #
-    @property
+    #@property
     def get_connectivities(self):
         """ """
         conn = create_connection(self.db_file)

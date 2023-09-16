@@ -199,14 +199,17 @@ def get_line_coord(axis:str, n1, n2, q0, q1, L0, L1, normalized):
     z[4] = z[0]
     return x, y, z
 #
-def plot_lload(ax, x, y, z):
+def plot_lload(ax, x, y, z,
+               color:str = 'palegreen',
+               edgecolor:str = 'lightgrey'):
     """ """
     verts = [list(zip( x, y, z))]
     tri = Poly3DCollection(verts)
-    tri.set_color('palegreen')
+    tri.set_color(color)
     tri.set_alpha(0.50)
-    tri.set_edgecolor('lightgrey')
-    return ax.add_collection3d(tri)
+    tri.set_edgecolor(edgecolor)
+    ax.add_collection3d(tri)
+    #return ax.add_collection3d(tri)
 #
 # --------------------
 #

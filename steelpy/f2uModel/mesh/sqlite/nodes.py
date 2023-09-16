@@ -159,22 +159,22 @@ class NodeSQL(NodeBasic):
         tol: absolte tolerance in metres (0.010 m default)
         """
         # check if point already exist
-        try:
-            #system = self.system # get_coordinate_system(self.system)
-            #if isinstance(coordinates, system):
-            return coordinates.name
-        except AttributeError:
-            # get index of x coord location in existing database
-            coord = self._get_coordinates(coordinates)
-            #
-            items = self._iscloseSQL(key='*', item='x', value=coord[0],
-                                     abs_tol=tol, rel_tol=rel_tol)
-            # check if y and z coord match
-            if items:
-                for item in items:
-                    if isclose(coord[1], item[4], abs_tol=tol, rel_tol=rel_tol):
-                        if isclose(coord[2], item[5], abs_tol=tol, rel_tol=rel_tol):
-                            return item[1]
+        #try:
+        #    #system = self.system # get_coordinate_system(self.system)
+        #    #if isinstance(coordinates, system):
+        #    return coordinates.name
+        #except AttributeError:
+        # get index of x coord location in existing database
+        coord = self._get_coordinates(coordinates)
+        #
+        items = self._iscloseSQL(key='*', item='x', value=coord[0],
+                                 abs_tol=tol, rel_tol=rel_tol)
+        # check if y and z coord match
+        if items:
+            for item in items:
+                if isclose(coord[1], item[4], abs_tol=tol, rel_tol=rel_tol):
+                    if isclose(coord[2], item[5], abs_tol=tol, rel_tol=rel_tol):
+                        return item[1]
         raise IOError('   error coordinate not found')
     #
     #

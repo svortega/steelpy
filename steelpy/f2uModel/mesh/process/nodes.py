@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 #
 # Python stdlib imports
@@ -426,6 +426,7 @@ def check_point_list(data, steps:int=6) -> list[float]:
                 new_data.append(data[x].value)
             except AttributeError:
                 new_data.append(data[x])
+                #raise IOError('units required')
         except IndexError:
             new_data.append(0.0)
     return new_data

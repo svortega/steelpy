@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 from __future__ import annotations
 # Python stdlib imports
@@ -7,13 +7,17 @@ from __future__ import annotations
 
 # package imports
 from ..concept.joint import Connection
-from ..concept.boundary import ConceptBoundaries
+from ..concept.boundary import ConceptBoundaries, BoundaryConcept
 from ..load.main import ConceptLoad
+from ..process.meshing import Meshing
+from ..concept.elements.sets import Groups
 #
-from .elements.beam import ConceptBeam
+#from .elements.beam import ConceptBeam
 from .process.geometry import Releases
 from .elements.points import NodesIM
+from .elements.main import ConceptElements
 
+from steelpy.f2uModel.plot.main import PlotConcept
 
 
 class Concepts:
@@ -34,26 +38,43 @@ class Concepts:
     
     Contact
     """
-    __slots__ = ['joints', '_beams', 'pile', '_points',
+    __slots__ = ['joints', '_beams', 'pile', '_nodes',
                  '_materials', '_sections', '_load',
                  'shells', 'membranes', 'solids', 'springs',
-                 '_hinges', '_boundaries', '_properties', '_name']
+                 '_hinges', '_boundaries', '_properties',
+                 '_name', 'data_type', '_groups', '_elements']
     
-    def __init__(self, materials, sections, properties): # load,
+    def __init__(self, name:str,
+                 materials, sections, properties,
+                 mesh_type:str): # load,
         """
         """
+        self._name = name
+        self.data_type = mesh_type
+        #
         self._materials = materials
         self._sections = sections
+        # Points
+        self._nodes = NodesIM()
+        # 
+        self.joints = Connection(points=self._nodes)
         #
-        self._points = NodesIM()
-        self.joints = Connection(points=self._points)
         self._hinges = Releases()
         #
-        self._boundaries = ConceptBoundaries()
+        #self._boundaries = ConceptBoundaries()
+        self._boundaries = BoundaryConcept(points=self._nodes)
         #
-        self._beams = ConceptBeam(element_type="beam", points=self._points,
-                                  materials=materials, sections=sections)
-
+        #self._beams = ConceptBeam(element_type="beam", points=self._points,
+        #                          materials=materials, sections=sections)
+        #
+        #
+        self._elements = ConceptElements(points=self._nodes,
+                                         materials=materials,
+                                         sections=sections)
+        #
+        # groups
+        self._groups = Groups()        
+        #
         #self.truss = Elements(element_type='truss', points = self.points,
         #                      materials=mesh.materials, sections=mesh.sections)
         #
@@ -69,8 +90,15 @@ class Concepts:
         #                       points=self.points, materials=mesh.materials)
         #
         #self._load = load
-        self._load = ConceptLoad(self._points, self._beams) # self._load,
+        self._load = ConceptLoad(points=self._nodes,
+                                 elements=self._elements,
+                                 boundaries=self._boundaries) # self._load,
     #
+    #
+    # --------------------
+    # Common
+    # --------------------
+    #    
     def materials(self, values: None|list|dict=None,
                   df=None):
         """
@@ -113,28 +141,94 @@ class Concepts:
         #
         return self._sections
     #
+    # --------------------
+    # Elements
+    # --------------------
+    #
     def points(self, values: None|list|dict=None,
                  df=None):
-        return self._points
+        return self._nodes
     #
-    def beams(self, values: None|list|dict = None,
-              df=None):
-        """ """
+    #def beams(self, values: None|list|dict = None,
+    #          df=None):
+    #    """ """
+    #    if values:
+    #        1/0
+    #        if isinstance(values, list):
+    #            1/0
+    #        else:
+    #            raise IOError('beam input not valid')
+    #    #
+    #    try:
+    #        df.columns
+    #        self._beams.df = df
+    #    except AttributeError:
+    #        pass
+    #
+    #    return self._beams
+    #
+    def boundaries(self, values: None|list|dict = None,
+                   df = None):
+        """
+        """
         if values:
-            1/0
             if isinstance(values, list):
                 1/0
+                for item in values:
+                    self._boundaries[item[0]] = item[1:]
             else:
-                raise IOError('beam input not valid')
+                raise IOError('boundary input not valid')
         #
         try:
             df.columns
-            self._beams.df = df
+            self._boundaries.df(df)
         except AttributeError:
             pass
-
-        return self._beams
+            
+        return self._boundaries
     #
+    def groups(self):
+        """
+        """
+        return self._groups
+    #    
+    #
+    def elements(self):
+        """ """
+        return self._elements
+    #
+    #
+    #@property
+    #def get_name(self):
+    #    """
+    #    """
+    #    return self._name
+    #
+    #
+    #def __delattr__(self, name:str) -> None:
+    #    """
+    #    """
+    #    _joints = []
+    #    if 'piles' in name:
+    #        _tobe_deleted = [key for key in self.piles.keys()]
+    #        for _item in _tobe_deleted:
+    #            for _element in self.piles[_item].elements:
+    #                _joints.extend(_element.connectivity)
+    #            del self.piles[_item]
+    #    #
+    #    # deleting redundant link joints
+    #    _joints = set(_joints)
+    #    for _number in _joints:
+    #        try:
+    #            del self.joints[_number]
+    #        except KeyError:
+    #            print('-->', _number)
+    #
+    #
+    # --------------------
+    # Loading
+    # --------------------
+    #    
     #
     def load(self, values: None|list|dict=None,
                  df=None):
@@ -163,49 +257,30 @@ class Concepts:
         #    yield self.piles[_name]
     #
     #
-    def boundaries(self, values: None|list|dict = None,
-                   df = None):
-        """
-        """
-        if values:
-            if isinstance(values, list):
-                1/0
-                for item in values:
-                    self._boundaries[item[0]] = item[1:]
-            else:
-                raise IOError('boundary input not valid')
+    # --------------------
+    # Operations
+    # --------------------
+    #    
+    #
+    def mesh(self):
+        """ Meshing"""
+        self._sections.get_properties()
         #
-        try:
-            df.columns
-            self._boundaries.df(df)
-        except AttributeError:
-            pass
-            
-        return self._boundaries
+        meshing = Meshing(concept=self,
+                          component=self._name, 
+                          mesh_type=self.data_type)
+        mesh = meshing.get_mesh()
+        mesh.renumbering()
+        mesh.build()        
+        return mesh
     #
-    #@property
-    #def get_name(self):
-    #    """
-    #    """
-    #    return self._name
+    # --------------------
+    # Plotting
+    # --------------------
     #
+    def plot(self, figsize:tuple = (10, 10)):
+        """ """
+        #print('--')
+        return PlotConcept(cls=self, figsize=figsize)
     #
-    #def __delattr__(self, name:str) -> None:
-    #    """
-    #    """
-    #    _joints = []
-    #    if 'piles' in name:
-    #        _tobe_deleted = [key for key in self.piles.keys()]
-    #        for _item in _tobe_deleted:
-    #            for _element in self.piles[_item].elements:
-    #                _joints.extend(_element.connectivity)
-    #            del self.piles[_item]
-    #    #
-    #    # deleting redundant link joints
-    #    _joints = set(_joints)
-    #    for _number in _joints:
-    #        try:
-    #            del self.joints[_number]
-    #        except KeyError:
-    #            print('-->', _number)
-    #
+    #    

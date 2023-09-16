@@ -12,7 +12,7 @@ import re
 from .process.operations import find_mat_type, get_isomat_prop, get_isomat_prop_df
 from .sqlite.isotropic import MaterialSQL
 from .inmemory.isotropic import MaterialIM
-
+from steelpy.utils.dataframe.main import DBframework
 
 #
 #
@@ -153,8 +153,7 @@ class Materials(Mapping):
     @property
     def df(self):
         """Data frame format"""
-        from steelpy.process.dataframe.dframe import DataFrame
-        df = DataFrame()
+        df = DBframework()
         matlin = self._material.elastic._getdata()
         return df(matlin)
     #

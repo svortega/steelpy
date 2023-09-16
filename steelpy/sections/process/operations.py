@@ -111,6 +111,7 @@ def get_sect_properties(properties:list[float], steps:int=10):
         except AttributeError:
             #sect_prop[x] = item
             sect_prop.append(item)
+            raise IOError('units required')
     return sect_prop
 #
 #
