@@ -153,14 +153,15 @@ class Materials(Mapping):
     @property
     def df(self):
         """Data frame format"""
-        df = DBframework()
-        matlin = self._material.elastic._getdata()
-        return df(matlin)
+        #df = DBframework()
+        #matlin = self._material._elastic._getdata()
+        #return df(matlin)
+        return self._material._elastic.df
     #
     @df.setter
     def df(self, df):
         """ """
-        group = df.groupby("type")
+        #group = df.groupby("type")
         #elastic = group.get_group("elastic")
         #elastic = get_isomat_prop_df(elastic)
         #self._material.elastic = elastic.values

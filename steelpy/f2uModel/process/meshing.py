@@ -20,7 +20,7 @@ from steelpy.f2uModel.mesh.main import Mesh
 class Meshing:
     __slots__ = ["_mesh", "concept"]
     
-    def __init__(self, concept, component:str, mesh_type:str) -> None:
+    def __init__(self, concept, component:str) -> None:
         """
         """
         self.concept = concept
@@ -29,21 +29,42 @@ class Meshing:
         path = os.path.abspath(filename)
         db_file = path        
         #
-        self._mesh = Mesh(materials=concept._materials,
-                          sections=concept._sections,
-                          mesh_type=mesh_type,
-                          db_file=db_file)
+        self._mesh = Mesh(db_file=db_file)
+                          #materials=concept._materials,
+                          #sections=concept._sections,
+                          #mesh_type=mesh_type,
+                          
         #print('--')
     #
     def get_mesh(self) -> None:
         """
         """
         print('-- Meshing Component')
+        self._set_properties()
         self._set_mesh()
         self._set_boundary()
         self._set_load()
         print('-- Meshing Completed')
         return self._mesh
+    #
+    def _set_properties(self):
+        """ """
+        # Materials
+        cmaterial = self.concept.materials()
+        dfmat = cmaterial.df
+        #
+        group = dfmat.groupby("type")
+        elastic = group.get_group("elastic")
+        self._mesh._materials._material._elastic.df = elastic
+        #self._mesh._materials.df = dfmat
+        #
+        # Sections
+        csections = self.concept.sections()
+        dfsect = csections.df
+        self._mesh._sections.df = dfsect
+        #
+        #print('-->')
+        #1 / 0
     #
     def _set_mesh(self):
         """ """

@@ -18,7 +18,7 @@ from .channel import ChannelSQLite
 from .box import BoxSQLite
 from .ibeam import IbeamSQLite
 from .solid import SolidSectionSQL
-from ..process.operations import get_sect_properties #, SectionBasic
+#from ..process.operations import get_sect_properties #, SectionBasic
 #
 from ..inmemory.tubular import TubularBasic
 from ..inmemory.solid import RectangleBasic, CircleBasic, Trapeziod

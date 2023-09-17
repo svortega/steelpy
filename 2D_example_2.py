@@ -7,26 +7,7 @@ from steelpy import Trave3D
 #
 units = Units()
 #
-f2umodel = f2uModel(component="test1")
-#
-# ----------------------------------------------------
-# Material input
-# ----------------------------------------------------
-# [elastic, Fy, Fu, E, G, Poisson, density, alpha]
-f2umodel.materials([[10, 'linear', 345.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa],
-                    [15, 'linear', 245.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa]])
-#
-print(f2umodel.materials())
-#
-#
-# ----------------------------------------------------
-# Section Input
-# ----------------------------------------------------
-#
-f2umodel.sections([[20, 'ub', 240*units.mm, 6.2*units.mm, 120*units.mm, 9.8*units.mm],
-                   [25, 'Tubular', 300 * units.mm, 10 * units.mm]])
-#
-print(f2umodel.sections())
+f2umodel = f2uModel(component="example2D_2")
 #
 #
 # ----------------------------------------------------
@@ -36,6 +17,26 @@ print(f2umodel.sections())
 # ----------------------------------------------------
 #
 mesh = f2umodel.mesh()
+#
+#
+# ----------------------------------------------------
+# Material input
+# ----------------------------------------------------
+# [elastic, Fy, Fu, E, G, Poisson, density, alpha]
+mesh.materials([[10, 'linear', 345.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa],
+                    [15, 'linear', 245.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa]])
+#
+print(mesh.materials())
+#
+#
+# ----------------------------------------------------
+# Section Input
+# ----------------------------------------------------
+#
+mesh.sections([[20, 'ub', 240*units.mm, 6.2*units.mm, 120*units.mm, 9.8*units.mm],
+                   [25, 'Tubular', 300 * units.mm, 10 * units.mm]])
+#
+print(mesh.sections())
 #
 #
 # ----------------------------------------------------
@@ -176,15 +177,15 @@ mesh.build()
 #
 # Structure
 #
-plot = mesh.plot()
+#plot = mesh.plot()
 #plot.frame()
 #plot.material()
 #plot.section()
 #
 # Loading
 #
-plotload = load.plot()
-plotload.basic()
+#plotload = load.plot()
+#plotload.basic()
 #
 #
 #

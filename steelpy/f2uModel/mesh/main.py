@@ -10,6 +10,7 @@ import re
 #
 
 # package imports
+from steelpy.f2uModel.process.main import BasicModel
 # steelpy.f2uModel
 from ..load.main import Load
 # steelpy.f2uModel.mesh
@@ -17,6 +18,9 @@ from .sqlite.sets import Groups
 from .nodes import Nodes
 from .boundaries import Boundaries
 from .elements import Elements
+#
+from steelpy.sections.main import Sections
+from steelpy.material.main import Materials
 #
 from steelpy.f2uModel.plot.main import PlotMesh
 #from steelpy.f2uModel.plot.main import PlotFrame
@@ -124,7 +128,7 @@ class MeshPlane(NamedTuple):
         return cols    
 #
 #
-class Mesh:
+class Mesh(BasicModel):
     """
     mesh[beam_name] = [number, element1, element2, elementn]
     """
@@ -133,19 +137,32 @@ class Mesh:
                  'db_file', '_df', '_Kmatrix', '_plane', #'_plot',
                  '_materials', '_sections']
 
-    def __init__(self, materials, sections,
+    def __init__(self, # materials, sections,
                  mesh_type:str="sqlite",
                  db_file:str|None = None):
         """
         """
-        self._materials = materials
-        self._sections = sections
-        #self._plane = Plane3D()
-        self._plane = MeshPlane(plane2D=False)
-        #self._ndof = 6
+        #
+        #super().__init__()
         #
         self.db_file = db_file
         self.data_type = mesh_type
+        #
+        #
+        #self._plane = Plane3D()
+        self._plane = MeshPlane(plane2D=False)
+        #self._ndof = 6        
+        #
+        #self._materials = materials
+        #self._sections = sections
+        #
+        self._materials = Materials(mesh_type=mesh_type,
+                                    db_file=self.db_file)
+    
+        self._sections = Sections(mesh_type=mesh_type,
+                                  db_file=self.db_file)        
+        #
+        #
         self._nodes = Nodes(mesh_type=mesh_type,
                             plane=self._plane,
                             db_file=self.db_file)
@@ -218,25 +235,25 @@ class Mesh:
         return self._nodes
 
     #
-    def elements(self, values:None|list|tuple=None,
-                 df=None):
-        """
-        """
-        if isinstance(values, (list, tuple)):
-            if isinstance(values[0], (list,tuple)):
-                for value in values:
-                    self._elements[value[0]] = value[1:]
-            else:
-                self._elements[values[0]] = values[1:]
-        #
-        #
-        # dataframe input
-        try:
-            df.columns   
-            self._elements.df(df)
-        except AttributeError:
-            pass
-        return self._elements
+    #def elements(self, values:None|list|tuple=None,
+    #             df=None):
+    #    """
+    #    """
+    #    if isinstance(values, (list, tuple)):
+    #        if isinstance(values[0], (list,tuple)):
+    #            for value in values:
+    #                self._elements[value[0]] = value[1:]
+    #        else:
+    #            self._elements[values[0]] = values[1:]
+    #    #
+    #    #
+    #    # dataframe input
+    #    try:
+    #        df.columns   
+    #        self._elements.df(df)
+    #    except AttributeError:
+    #        pass
+    #    return self._elements
     #
     def boundaries(self, values:None|list|tuple=None,
                    df=None):
@@ -258,10 +275,10 @@ class Mesh:
         #
         return self._boundaries
     #
-    def groups(self):
-        """
-        """
-        return self._groups
+    #def groups(self):
+    #    """
+    #    """
+    #    return self._groups
     #
     #
     #
@@ -269,40 +286,40 @@ class Mesh:
     # Load
     # -------------------- 
     #
-    def load(self, values:None|list|tuple=None,
-             df=None):
-        """
-        """
-        #
-        #self._load = Load(plane=self._plane,
-        #                  mesh_type=self.data_type,
-        #                  db_file=self.db_file)
-        #
-        if isinstance(values, (list, tuple)):
-            if isinstance(values[0], (list,tuple)):
-                for item in values:
-                    if re.match(r"\b(basic(\_)?(load)?)\b", item[0], re.IGNORECASE):
-                        self._load.basic(item[1:])
-                    elif re.match(r"\b(comb(ination)?(\_)?(load)?)\b", item[0], re.IGNORECASE):
-                        self._load.combination(item[1:])
-                    else:
-                        raise IOError(f'load {item[0]}')
-            else:
-                if re.match(r"\b(basic(\_)?(load)?)\b", values[0], re.IGNORECASE):
-                    self._load.basic(values[1:])
-                elif re.match(r"\b(comb(ination)?(\_)?(load)?)\b", values[0], re.IGNORECASE):
-                    self._load.combination(values[1:])
-                else:
-                    raise IOError(f'load {values[0]}')                
-        #
-        # dataframe input
-        try:
-            df.columns
-            #self._boundaries.df(df)
-        except AttributeError:
-            pass
-        #
-        return self._load
+    #def load(self, values:None|list|tuple=None,
+    #         df=None):
+    #    """
+    #    """
+    #    #
+    #    #self._load = Load(plane=self._plane,
+    #    #                  mesh_type=self.data_type,
+    #    #                  db_file=self.db_file)
+    #    #
+    #    if isinstance(values, (list, tuple)):
+    #        if isinstance(values[0], (list,tuple)):
+    #            for item in values:
+    #                if re.match(r"\b(basic(\_)?(load)?)\b", item[0], re.IGNORECASE):
+    #                    self._load.basic(item[1:])
+    #                elif re.match(r"\b(comb(ination)?(\_)?(load)?)\b", item[0], re.IGNORECASE):
+    #                    self._load.combination(item[1:])
+    #                else:
+    #                    raise IOError(f'load {item[0]}')
+    #        else:
+    #            if re.match(r"\b(basic(\_)?(load)?)\b", values[0], re.IGNORECASE):
+    #                self._load.basic(values[1:])
+    #            elif re.match(r"\b(comb(ination)?(\_)?(load)?)\b", values[0], re.IGNORECASE):
+    #                self._load.combination(values[1:])
+    #            else:
+    #                raise IOError(f'load {values[0]}')                
+    #    #
+    #    # dataframe input
+    #    try:
+    #        df.columns
+    #        #self._boundaries.df(df)
+    #    except AttributeError:
+    #        pass
+    #    #
+    #    return self._load
     #    
     #
     # --------------------

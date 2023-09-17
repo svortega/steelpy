@@ -6,7 +6,14 @@ from steelpy import Trave2D, Trave3D
 #
 units = Units()
 #
-f2umodel = f2uModel(component="test1")
+f2umodel = f2uModel(component="Frame2")
+# ----------------------------------------------------
+# ----------------------------------------------------
+# Mesh 
+# ----------------------------------------------------
+# ----------------------------------------------------
+#
+mesh = f2umodel.mesh()
 #
 # ----------------------------------------------------
 # Material input
@@ -18,7 +25,7 @@ f2umodel = f2uModel(component="test1")
 #                                [3, 'elastic', 345.0 * units.MPa, 490.0 * units.MPa,
 #                                205000.0 * units.MPa, 77200.0 * units.MPa]])
 #
-material = f2umodel.materials()
+material = mesh.materials()
 #
 # material.elastic([mat_name, Fy, Fu, E, G, Poisson, density, alpha])
 # material.elastic([[1, 345.0 * units.MPa],
@@ -67,7 +74,7 @@ print(matlinear.df)
 #                             [50, 'tee', 150 * units.mm, 6 * units.mm, 150 * units.mm, 6 * units.mm]])
 #
 #
-section = f2umodel.sections()
+section = mesh.sections()
 #
 # section[number] = [section_type, *parameters]
 #
@@ -89,13 +96,6 @@ print(section)
 #
 #print(section.df)
 #
-# ----------------------------------------------------
-# ----------------------------------------------------
-# Mesh 
-# ----------------------------------------------------
-# ----------------------------------------------------
-#
-mesh = f2umodel.mesh()
 #
 #
 # ----------------------------------------------------
@@ -136,7 +136,7 @@ boundary = mesh.boundaries()
 #boundary.supports([[1, 'fixed'],
 #                   [4, [1,1,1,1,1,1]]])
 #
-supports = boundary.nodes()
+supports = boundary.supports()
 # supports[node_number] =  boundary/parameters
 #supports[1] = 'fixed'
 #supports[4] = [1,1,1,1,1,1]
@@ -332,15 +332,14 @@ print(load)
 # Meshing input
 # ----------------------------------------------------
 #
-f2umodel.build()
+mesh.build()
 #
 # ----------------------------------------------------
 # Plot mesh
 # ----------------------------------------------------
 #
-plot = f2umodel.plot()
-#plot.mesh()
-#plot.basic_load(name=22)
+plot = mesh.plot()
+plot.frame()
 #
 # ----------------------------------------------------
 # Structural Analysis

@@ -15,6 +15,7 @@ from .operations import SectionSQLite
 from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection
 from ..process.operations import get_sect_prop_df
 #
+from steelpy.utils.dataframe.main import DBframework
 #
 # ----------------------------------------
 #      Standard Sections Profiles
@@ -193,14 +194,11 @@ class TubularSQL(SectionSQLite):
     @property
     def df(self):
         """ """
-        #from steelpy.process.dataframe.dframe import DataFrame
-        #df = DataFrame()
-        import pandas as pd
+        db = DBframework()
         #
         conn = create_connection(self.db_file)
         #with conn:
-        df = pd.read_sql_query("SELECT * FROM tb_Sections", conn)          
-        #1 / 0
+        df = db.read_sql_query("SELECT * FROM tb_Sections", conn)          
         return df 
     
     @df.setter

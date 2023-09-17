@@ -236,6 +236,10 @@ class Sections(Mapping):
         #
         self._sections._type.extend(df['type'].tolist())
         self._sections._labels.extend(df['name'].tolist())
+        for item in df['name']:
+            mnumber = next(self._sections.get_number())
+            self._sections._number.append(mnumber)
+            self._sections._title.append(None)
         #
         #print('-->')
     #    if section.items():

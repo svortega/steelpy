@@ -16,7 +16,7 @@ from steelpy.utils.io_module.text import search_line
 from ..process.operations import ShapeProperty #, get_sect_properties
 from ..process.stress import BeamStress
 from .operations import SectionBasic, ShapeBasic
-#from steelpy.utils.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 
 #import pandas as pd
 #import numpy as np
@@ -114,7 +114,6 @@ class TubularIM(SectionBasic):
     @property
     def df(self):
         """ """
-        from steelpy.process.dataframe.main import DBframework
         df = DBframework()
         #stype = ['tubular' for _ in self._labels]
         data = {"Number": self._number,
@@ -129,8 +128,11 @@ class TubularIM(SectionBasic):
     @df.setter
     def df(self, df):
         """ """
-        mnumber = [next(self.get_number()) for _ in df.name]
-        self._number.extend(mnumber)
+        for item in df.name:
+            mnumber =  next(self.get_number())
+            self._number.append(mnumber)
+        #mnumber = [next(self.get_number()) for _ in df.name]
+        #self._number.extend(mnumber)
         self._title.extend(['NULL' for _ in df.name])
         self._labels.extend(df.name.tolist())
         self._type.extend(df.type.tolist())
@@ -145,6 +147,10 @@ class TubularIM(SectionBasic):
             dtype = df['tw'].apply(lambda x: x.convert('metre').value)
             self._tw.extend(dtype.tolist())
         #print('-->')
+    #
+    #
+    #
+    #
 
 #
 #
@@ -527,9 +533,11 @@ class TubularBasic(ShapeBasic):
         self.thickness = value    
     #     
     #
-    def _dimension(self) -> str:
-        """ Print section dimensions"""
-        return "{:<9s} {:1.4e} {:1.4e}\n"\
-               .format(self.type, self.d, self.t)
     #
+    #
+    def _data_df(self):
+        """ """
+        return {'type': self.type,
+                'diameter': self.d,
+                'wall_thickness': self.t}
 #

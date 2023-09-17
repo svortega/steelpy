@@ -7,24 +7,6 @@ from steelpy import Trave2D
 units = Units()
 #
 f2umodel = f2uModel(component="test1")
-#
-# ----------------------------------------------------
-# Material input
-# ----------------------------------------------------
-#
-f2umodel.materials([10, 'linear', 345.0 * units.MPa])
-print(f2umodel.materials())
-#
-#
-# ----------------------------------------------------
-# Section Input
-# ----------------------------------------------------
-#
-f2umodel.sections([20, 'ub', 240*units.mm, 6.2*units.mm, 120*units.mm, 9.8*units.mm])
-#f2umodel.sections([20, 'Tubular', 300 * units.mm, 10 * units.mm])
-print(f2umodel.sections())
-#
-#
 # ----------------------------------------------------
 # ----------------------------------------------------
 # Mesh 
@@ -32,6 +14,24 @@ print(f2umodel.sections())
 # ----------------------------------------------------
 #
 mesh = f2umodel.mesh()
+#
+# ----------------------------------------------------
+# Material input
+# ----------------------------------------------------
+#
+mesh.materials([10, 'linear', 345.0 * units.MPa])
+print(mesh.materials())
+#
+#
+# ----------------------------------------------------
+# Section Input
+# ----------------------------------------------------
+#
+mesh.sections([20, 'ub', 240*units.mm, 6.2*units.mm, 120*units.mm, 9.8*units.mm])
+#f2umodel.sections([20, 'Tubular', 300 * units.mm, 10 * units.mm])
+print(mesh.sections())
+#
+#
 #
 #
 # ----------------------------------------------------

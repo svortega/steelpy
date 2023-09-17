@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 # Python stdlib imports
@@ -386,6 +386,8 @@ class Node(NamedTuple):
         output += self.deflection.__str__()
         output += self.reaction.__str__()
         return output
+#
+#
 #
 class Beam(NamedTuple):
     """ """

@@ -11,8 +11,8 @@ from dataclasses import dataclass
 #
 # package imports
 from steelpy.trave.postprocessor.operations import ElementProcess
-from .output import  Node, Beam
-from steelpy.utils.dataframe.main import DBframework
+#from .output import  Node, Beam
+#from steelpy.utils.dataframe.main import DBframework
 
 #
 #

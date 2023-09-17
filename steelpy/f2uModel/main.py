@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -14,8 +14,8 @@ from .properties.main import Properties
 #from .process.meshing import Meshing
 #from .plot.main import PlotModel
 # 
-from steelpy.sections.main import Sections
-from steelpy.material.main import Materials
+#from steelpy.sections.main import Sections
+#from steelpy.material.main import Materials
 #
 #from steelpy.material.process.operations import get_isomat_prop_df
 #
@@ -60,7 +60,7 @@ class f2uModel:
     """
     __slots__ = ['component', 'type', 'data',
                  'db_file', '_plot', 'mesh_type',
-                 '_materials', '_sections', '_properties',
+                 '_properties', # '_materials', '_sections', 
                  '_mesh', '_concept']
                  # '_nodes', '_meshing', '_boundaries',  'sets', '_load', '_results',
 
@@ -90,11 +90,11 @@ class f2uModel:
         #
         # set main components
         #mesh_type2 = 'sqlite'
-        self._materials = Materials(mesh_type=self.mesh_type,
-                                    db_file=self.db_file)
+        #self._materials = Materials(mesh_type=self.mesh_type,
+        #                            db_file=self.db_file)
 
-        self._sections = Sections(mesh_type=self.mesh_type,
-                                  db_file=self.db_file)
+        #self._sections = Sections(mesh_type=self.mesh_type,
+        #                          db_file=self.db_file)
         #
         self._mesh:dict = {}
         #self._mesh = Mesh(materials=self._materials,
@@ -165,10 +165,9 @@ class f2uModel:
             name = self.component
         #
         self._concept = Concepts(name=name, 
-                                 materials=self._materials,
-                                 sections=self._sections,
-                                 properties= self._properties,
-                                 mesh_type=self.mesh_type)
+                                 #materials=self._materials,
+                                 #sections=self._sections,
+                                 properties= self._properties)
         return self._concept
 
     #
@@ -178,10 +177,10 @@ class f2uModel:
         if not name:
             name = self.component
         
-        self._mesh[name] = Mesh(materials=self._materials,
-                                sections=self._sections,
-                                mesh_type=self.mesh_type,
-                                db_file=self.db_file)        
+        self._mesh[name] = Mesh(mesh_type=self.mesh_type,
+                                db_file=self.db_file)
+                                # materials=self._materials,
+                                # sections=self._sections,        
         
         return self._mesh[name]
     #
@@ -194,7 +193,7 @@ class f2uModel:
         if not name:
             name = self.component        
         #
-        self._sections.get_properties()
+        #self._sections.get_properties()
         #
         if self._concept:
             self._mesh[name] = self._concept.mesh()

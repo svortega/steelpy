@@ -155,7 +155,7 @@ class StaticSolver:
             # map loading 
             df1 = litem.set_index(litem['node_name'])
             df2 = dfzeros.copy()
-            df2.loc[df2.index.isin(df1['node_name'])] = df1[self._plane.hforce]
+            df2.loc[df2.index.isin(df1['node_name'])] = df1[self._plane.hforce] #.astype('float64')
             # get load vector flatted
             df2 = df2.stack()
             nloads = df2[dfbool]
@@ -198,7 +198,7 @@ class StaticSolver:
         # remove rows with zeros
         dfjbc = df_jbc.rename(columns=self._plane.colrename)
         dfjbc = dfjbc[df_jbc.any(axis=1)]
-        dfjbc = dfjbc.replace(0, np.nan)
+        dfjbc = dfjbc.replace(float(0.0), np.nan)
         dfjbc = dfjbc.notnull()
         #
         dfbool = dfjbc.stack()
@@ -206,7 +206,7 @@ class StaticSolver:
         #dfzeros = dfjbc.copy()
         #dfzeros.iloc[:] = 0
         #
-        dfjbc.iloc[:] = 0
+        dfjbc.iloc[:] = float(0.0)
         #
         return dfbool, dfjbc
     #

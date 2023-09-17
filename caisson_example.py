@@ -3,18 +3,20 @@ from steelpy import Units
 from steelpy import Trave3D
 #
 #
+# call units module
+units = Units()
 #
 # -----------------------------------
 # Start conceptual modelling
 # -----------------------------------
 f2u_model = f2uModel(component="caisson_1") # set name component
 #
-# call units module
-units = Units()
+concept = f2u_model.concept() # call conceptual model
+#
 #
 # -----------------------------------
 # define material
-material = f2u_model.materials()
+material = concept.materials()
 #
 # material[number] = [elastic, Fy, Fu, E, G, Poisson, density, alpha]
 material["MAT45"] = ['elastic', 345.0 * units.MPa]
@@ -23,7 +25,7 @@ print(material["MAT45"].Fy)
 #
 # -----------------------------------
 # Define sections
-section = f2u_model.sections()
+section = concept.sections()
 #
 # section[section_name] =  ['Tubular', Diametre, Wall_thickness]
 section["TUB500"] = ['Tubular', 500 * units.mm, 25 * units.mm]
@@ -31,7 +33,6 @@ section["TUB400"] = ['Tubular', 400 * units.mm, 15 * units.mm]
 #
 # -----------------------------------
 #
-concept = f2u_model.concept() # call conceptual model
 #
 # -----------------------------------
 # define points

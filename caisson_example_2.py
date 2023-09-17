@@ -9,14 +9,17 @@ units = Units()
 # -----------------------------------
 f2u_model = f2uModel(component="EA_PDQ_Caisson_C1")
 #
+#
+concept = f2u_model.concept()
+#
 # -----------------------------------
 # define material
-material = f2u_model.materials()
+material = concept.materials()
 material["MAT345"] = ['elastic', 345.0 * units.MPa]
 #
 # -----------------------------------
 # Define sections
-section = f2u_model.sections()
+section = concept.sections()
 # Caisson
 section["T1350x40"] = ['Tubular', 1350 * units.mm, 40 * units.mm]
 section["T1350x25"] = ['Tubular', 1350 * units.mm, 25 * units.mm]
@@ -31,7 +34,6 @@ section["T100x25"] = ['Tubular', 100 * units.mm, 25 * units.mm]
 #
 # -----------------------------------
 #
-concept = f2u_model.concept()
 #
 # define Elevations
 elevation = concept.points()

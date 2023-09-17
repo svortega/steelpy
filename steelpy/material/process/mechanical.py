@@ -489,18 +489,16 @@ class MaterialElastic(Mapping):
         """ raw data for dataframe"""
         #from steelpy.process.dataframe.dframe import DataFrame
         df = DBframework()
-
         matype = ['elastic' for _ in self._labels]
-        data = {"Name": self._labels,
-                "Number":self._number,
+        data = {"name": self._labels,
+                "number":self._number,
                 "type" : matype,
                 "Fy":self._Fy, "Fu":self._Fy,
                 "E":self._E , "G": self._G,
                 "poisson": self._poisson, 
                 "density":self._density,
                 "alpha" : self._alpha,
-                "Title":self._title, }
-        #
+                "title":self._title, }
         #print('-->')
         return df.DataFrame(data)
     

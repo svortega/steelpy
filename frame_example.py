@@ -2,19 +2,21 @@ from steelpy import Trave3D
 from steelpy import Units
 from steelpy import f2uModel
 
-f2umodel = f2uModel(component='test2')
+
 units = Units()
+f2umodel = f2uModel(component='test2')
+mesh = f2umodel.mesh()
+
 #
-material = f2umodel.materials()
+material = mesh.materials()
 material[1] = ['elastic', 345.0 * units.MPa]
 print(material)
 #
-section = f2umodel.sections()
+section = mesh.sections()
 section[1] = ['tubular', 500 * units.mm, 25 * units.mm]
 print(section)
 #
 #
-mesh = f2umodel.mesh()
 #
 # nodes corrdinates [x, y, z]
 nodes = mesh.nodes()
@@ -90,7 +92,7 @@ print(load)
 #            for item in items:
 #                print( item )
 #
-f2umodel.build()
+mesh.build()
 #
 frame = Trave3D()
 frame.mesh = mesh

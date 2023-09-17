@@ -214,6 +214,8 @@ class SectionBasic(Mapping):
             #
             self._labels.append(shape_name)
             self._type.append(shape_type)
+            mnumber = next(self.get_number())
+            self._number.append(mnumber)            
             #
             if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b",
                         shape_type, re.IGNORECASE):
@@ -316,12 +318,50 @@ class SectionBasic(Mapping):
     def df(self):
         """ """
         db = DBframework()
-        header = ['number', 'name', 'title', 'diameter', 'wall_thickness',
-                  'height', 'web_thickness',
-                  'top_flange_width', 'top_flange_thickness',
-                  'bottom_flange_width', 'bottom_flange_thickness']
-        1 / 0
-        return db
+        #header = ['number', 'name', 'title', 'type', 
+        #          'diameter', 'wall_thickness',
+        #          'height', 'web_thickness',
+        #          'top_flange_width', 'top_flange_thickness',
+        #          'bottom_flange_width', 'bottom_flange_thickness',
+        #          'fillet_radius',
+        #          'SA_inplane', 'SA_outplane',
+        #          'shear_stress', 'build', 'compactness']
+        #
+        datadf = {'number': self._number,
+                  'name' : self._labels,
+                  'title' : self._title,
+                  'type': self._type, 
+                  'diameter': [None for item in self._labels],
+                  'wall_thickness': [None for item in self._labels],
+                  'height': [None for item in self._labels],
+                  'web_thickness': [None for item in self._labels],
+                  'top_flange_width': [None for item in self._labels],
+                  'top_flange_thickness': [None for item in self._labels],
+                  'bottom_flange_width': [None for item in self._labels],
+                  'bottom_flange_thickness': [None for item in self._labels],
+                  'fillet_radius': [None for item in self._labels],
+                  'SA_inplane': [1.0 for item in self._labels],
+                  'SA_outplane': [1.0 for item in self._labels],
+                  'shear_stress': ['maximum' for item in self._labels],
+                  'build': ['welded' for item in self._labels],
+                  'compactness': [None for item in self._labels]}        
+        #
+        #sec_df = db.DataFrame(data)
+        #
+        #for row in sec_df.itertuples():
+        #    section = self.__getitem__(shape_name=row.name)
+        #    data = section._data_df()
+        #    sec_df[data.keys()].iloc[row.Index] =  data.values()
+        #    #for key, item in data.items():
+        #    #    sec_df[key].iloc[row.Index] = item
+        #
+        for idx, name in enumerate(self._labels):
+            section = self.__getitem__(shape_name=name)
+            data = section._data_df()
+            for key, item in data.items():
+                datadf[key][idx] = item
+        #
+        return db.DataFrame(datadf)
 #
 #
 #-------------------------------------------------
