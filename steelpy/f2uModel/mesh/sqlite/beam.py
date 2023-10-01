@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
@@ -75,8 +75,6 @@ class BeamSQL(BeamBasic):
             raise IndexError(' ** element {:} does not exist'.format(beam_name))    
     #
     #
-    #
-    #
     def push_beam(self, conn, beam_name: int|str, parameters):
         """ """
         cur = conn.cursor()
@@ -116,7 +114,7 @@ class BeamSQL(BeamBasic):
         beam_number = cur.lastrowid
         push_connectivity(conn, beam_number, parameters[:2])
     #
-    #@property
+    #
     def get_connectivities(self):
         """ """
         conn = create_connection(self.db_file)
@@ -124,6 +122,83 @@ class BeamSQL(BeamBasic):
             nodes = get_nodes_connec(conn)
         return nodes
     #
+    #
+    @property
+    def df(self):
+        """ """
+        print('--->')
+        1 / 0
+    
+    @df.setter
+    def df(self, df):
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Materials.name, tb_Materials.number FROM tb_Materials;")
+            materials = cur.fetchall()
+            materials = {item[0]:item[1] for item in materials}
+            #
+            #cur = conn.cursor()
+            cur.execute("SELECT tb_Sections.name, tb_Sections.number FROM tb_Sections;")
+            sections = cur.fetchall()
+            sections = {item[0]:item[1] for item in sections}
+        #
+        df['material_number'] = df['material_id'].apply(lambda x: materials[str(x)])
+        df['section_number'] = df['section_id'].apply(lambda x: sections[str(x)])
+        #
+        if not df.columns.isin(['title']).any():
+            df['title'] = ""
+            
+        #
+        # Elements
+        #
+        mheader = ['name', 'title', 'type',
+                  'material_number', 'section_number',
+                  'roll_angle']
+        members = df[mheader]
+        #
+        with conn:
+            members.to_sql('tb_Elements', conn,
+                           index_label=mheader, 
+                           if_exists='append', index=False)
+        #
+        # Connectivity
+        #
+        with conn:        
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Elements.name, tb_Elements.number FROM tb_Elements;")
+            elements = cur.fetchall()
+            elements = {item[0]:item[1] for item in elements}
+            #
+            cur.execute("SELECT tb_Nodes.name, tb_Nodes.number FROM tb_Nodes;")
+            nodes = cur.fetchall()
+            nodes = {item[0]:item[1] for item in nodes}
+        #
+        nheader = ['element_number', 'node_number', 'node_end']
+        df['element_number'] = df['name'].apply(lambda x: elements[str(x)])
+        #
+        df['node_number'] = df['node_1'].apply(lambda x: elements[str(x)])
+        df['node_end'] = int(1)
+        nodeconn = df[nheader]
+        with conn:        
+            nodeconn.to_sql('tb_Connectivity', conn,
+                            index_label=nheader, 
+                            if_exists='append', index=False)
+            
+        #
+        df['node_number'] = df['node_2'].apply(lambda x: elements[str(x)])
+        df['node_end'] = int(2)
+        nodeconn = df[nheader]
+        with conn:        
+            nodeconn.to_sql('tb_Connectivity', conn,
+                            index_label=nheader, 
+                            if_exists='append', index=False)        
+        #
+        #print('--->')
+        self._labels.extend(df['name'].tolist())
+        self._type.extend(df['type'].tolist())
+        #1 / 0
 #
 #
 def get_nodes_connec(conn):

@@ -5,7 +5,7 @@
 from __future__ import annotations
 #from dataclasses import dataclass
 #from array import array
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Mapping
 #from math import dist
 from typing import NamedTuple
@@ -21,6 +21,7 @@ from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_t
 #from steelpy.f2uModel.mesh.operations.elements  import (beam_Klocal, trans_3d_beam, Rmatrix)
 #from steelpy.f2uModel.mesh.operations.elements import BeamElementSQL
 from .beam import BeamSQL, get_connectivity
+from steelpy.utils.dataframe.main import DBframework
 
 #
 #
@@ -165,7 +166,7 @@ class ElementsSQL(Mapping):
         """ """
         _table_elements = "CREATE TABLE IF NOT EXISTS tb_Elements(\
                             number INTEGER PRIMARY KEY NOT NULL,\
-                            name INTEGER NOT NULL,\
+                            name TEXT NOT NULL,\
                             title TEXT,\
                             type TEXT NOT NULL,\
                             material_number INTEGER NOT NULL REFERENCES tb_Materials(number),\
@@ -289,12 +290,36 @@ class ElementsSQL(Mapping):
         # dataframe input
         try:
             df.columns
+            self._beams.df = df
         except AttributeError:
             pass
         #
         return self._beams
         #return ElementType(item_type='beam',
         #                   cls_type=self._beams, cls=self)
+    #
+    @property
+    def df(self):
+        """nodes in dataframe format"""
+        #print('elements df out')
+        conn = create_connection(self.db_file)
+        with conn:        
+            data = get_elements(conn)
+        #
+        header = ['name', 'number', 'type', 'material', 'section',
+                  'node_1', 'node_2', 'node_3', 'node_4', 
+                  'roll_angle', 'title']        
+        return data[header]
+
+    @df.setter
+    def df(self, df):
+        """nodes in dataframe format"""
+        try:
+            df.columns
+            1 / 0
+            #self._nodes.df =df
+        except AttributeError:
+            raise IOError('Node df not valid')    
 #
 #
 class ElementType(Mapping):
@@ -421,3 +446,45 @@ def update_element_item(conn, name, item, value):
 #    return data
 #
 #
+def get_elements(conn):
+    """ """
+    db = DBframework()
+    cur = conn.cursor()
+    cur.execute ("SELECT tb_Elements.name, tb_Elements.number, tb_Elements.type,\
+                tb_Materials.name, tb_Sections.name, tb_Elements.roll_angle, tb_Elements.title\
+                FROM tb_Elements, tb_Materials, tb_Sections\
+                WHERE tb_Elements.material_number = tb_Materials.number \
+                AND tb_Elements.section_number = tb_Sections.number;")
+    rows = cur.fetchall()
+    header = ['name', 'number', 'type', 'material', 'section', 'roll_angle', 'title']
+    membdf = db.DataFrame(data=rows, columns=header)
+    membdf.set_index('name', inplace=True)
+    #
+    connodes = get_connectivities(conn)
+    conndf = db.DataFrame(data=connodes, columns=['name', 'nodes', 'end'])
+    conndf = conndf.pivot(index='name', columns='end', values='nodes')
+    #conndf.reset_index(inplace=True)
+    #conndf.set_index('name')
+    #conndf.rename(columns={1: 'node_1', 2: 'node_2'}, inplace=True)
+    #
+    membdf = membdf.join(conndf)
+    membdf.reset_index(inplace=True)
+    membdf.rename(columns={1: 'node_1', 2: 'node_2'}, inplace=True)
+    membdf[['node_3', 'node_4']] = None
+    #
+    return membdf
+#
+def get_connectivities(conn):
+    """ """
+    cur = conn.cursor()
+    cur.execute("SELECT tb_Elements.name, tb_Nodes.name, tb_Connectivity.node_end \
+                FROM tb_Elements, tb_Nodes, tb_Connectivity \
+                WHERE tb_Connectivity.element_number = tb_Elements.number \
+                AND tb_Nodes.number = tb_Connectivity.node_number;")
+    connodes = cur.fetchall()
+    xxx = [x for i, j, x in sorted(connodes)]
+    #memb = defaultdict(list)
+    #for item in connodes:
+    #    memb[item[0]].append()
+    #return [x for _, x in sorted(connodes)]
+    return connodes

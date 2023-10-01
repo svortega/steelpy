@@ -221,7 +221,7 @@ def get_section(conn, section_name: int|str):
         return Trapeziod(name=row[0], depth=d, width=wb,
                          a=wt, c=c, type=shape_type)    
     
-    elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b", shape_type, re.IGNORECASE):
+    elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
         return IbeamBasic(name=row[0], 
                           d=row[5], tw=row[6],
                           bft=row[7], tft=row[8],

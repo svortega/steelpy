@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
@@ -9,7 +9,7 @@ import re
 #
 
 # package imports
-from .process.operations import find_mat_type, get_isomat_prop, get_isomat_prop_df
+from .process.operations import find_mat_type, get_isomat_prop #, get_isomat_prop_df
 from .sqlite.isotropic import MaterialSQL
 from .inmemory.isotropic import MaterialIM
 from steelpy.utils.dataframe.main import DBframework
@@ -161,18 +161,15 @@ class Materials(Mapping):
     @df.setter
     def df(self, df):
         """ """
-        #group = df.groupby("type")
-        #elastic = group.get_group("elastic")
-        #elastic = get_isomat_prop_df(elastic)
-        #self._material.elastic = elastic.values
         try:
             df.columns
             group = df.groupby("type")
+            #
             # Elastic type
             try:
                 elastic = group.get_group("elastic")
                 # df = df.drop_duplicates(['name'], keep='first')
-                self._material.elastic(df=df)
+                self._material.elastic(df=elastic)
             except KeyError:
                 # nonlin = group.get_group("plastic")
                 raise IOError('Material type not valid')

@@ -9,7 +9,8 @@ from __future__ import annotations
 # package imports
 #
 from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection #, create_table
-from ..process.operations import ShapeProperty
+from ..process.operations import ShapeProperty, get_sect_prop_df
+from steelpy.utils.dataframe.main import DBframework
 
 #
 class SectionSQLite:
@@ -130,7 +131,7 @@ class SectionSQLite:
             row = self._get_section(conn, section_name)
         return row[1:]
     #
-    def _get_section(self, conn, section_number:int):
+    def _get_section(self, conn, section_name:int):
         """
         """
         cur = conn.cursor()
@@ -140,12 +141,47 @@ class SectionSQLite:
         #            AND tb_SecProperties.number = tb_Sections.number;".format(section_number))
         #
         cur.execute("SELECT * from tb_Sections \
-                    WHERE tb_Sections.number = {:};".format(section_number))
+                    WHERE tb_Sections.name = {:};".format(section_name))
         row = cur.fetchone()
         #sections = PropertyOut(*row[1:])
         #conn.close()
         #print("--->")
         return row
+    #
+    #
+    #
+    @property
+    def df(self):
+        """ """
+        db = DBframework()
+        conn = create_connection(self.db_file)
+        #with conn:
+        df = db.read_sql_query("SELECT * FROM tb_Sections", conn)          
+        return df 
+    
+    @df.setter
+    def df(self, df):
+        """ """
+        # 
+        df = get_sect_prop_df(df)
+        conn = create_connection(self.db_file)
+        with conn:
+            df.to_sql('tb_Sections', conn,
+                         index_label=['name', 'type', 'title',
+                                      'diameter', 'wall_thickness',
+                                      'height', 'web_thickness',
+                                      'top_flange_width', 'top_flange_thickness',
+                                      'bottom_flange_width', 'bottom_flange_thickness',
+                                      'fillet_radius',
+                                      'SA_inplane', 'SA_outplane',
+                                      'shear_stress', 'build', 'compactness'], 
+                         if_exists='append', index=False)
+        #
+        self._labels.extend(df['name'].tolist())
+        # TODO : fix numbering
+        nitems = len(self._number) + 1
+        self._number.extend([item + nitems for item in df.index])
+        #print('-->')
 #
 def get_sections(conn, component_name):
     """

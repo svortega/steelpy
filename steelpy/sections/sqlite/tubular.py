@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2019 steelpy
 #
 
 # Python stdlib imports
@@ -89,11 +89,11 @@ class TubularSQL(SectionSQLite):
         """
         try:
             index = self._labels.index(shape_name)
-            number = self._number[index]
+            #number = self._number[index]
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        row = self.get_section(number)
+        row = self.get_section(shape_name)
         #
         return TubularBasic(name=row[0], 
                             diameter=row[3], thickness=row[4])    
@@ -191,43 +191,43 @@ class TubularSQL(SectionSQLite):
     #        raise AttributeError(f"Variable {attr} not found")
     #
     #
-    @property
-    def df(self):
-        """ """
-        db = DBframework()
-        #
-        conn = create_connection(self.db_file)
-        #with conn:
-        df = db.read_sql_query("SELECT * FROM tb_Sections", conn)          
-        return df 
-    
-    @df.setter
-    def df(self, df):
-        """ """
-        # TODO: naming seach 
-        #mnumber = [next(self.get_number()) for _ in df.name]
-        conn = create_connection(self.db_file)
-        #
-        df = get_sect_prop_df(df)
-        df = df.rename(columns={'d':'diameter', 'tw':'wall_thickness'})
-        df['title'] = None 
-        dfmat = df.reindex(columns=['name', 'title', 'type',
-                                    'diameter', 'wall_thickness'])
-        
-        #
-        # push material header
-        #dfmat = df[['name', 'type']].copy()
-        #dfmat['title'] = None        
-        with conn:
-            dfmat.to_sql('tb_Sections', conn,
-                         index_label=['name', 'title', 'type',
-                                      'diameter', 'wall_thickness'], 
-                         if_exists='append', index=False)        
-        #
-        self._labels.extend(dfmat['name'].tolist())
-        # TODO : fix numbering
-        nitems = len(self._number) + 1
-        self._number.extend([item + nitems for item in dfmat.index])
-        #print('---')
+    #@property
+    #def df(self):
+    #    """ """
+    #    db = DBframework()
+    #    conn = create_connection(self.db_file)
+    #    #with conn:
+    #    df = db.read_sql_query("SELECT * FROM tb_Sections", conn)          
+    #    return df 
+    #
+    #@df.setter
+    #def df(self, df):
+    #    """ """
+    #    # TODO: naming seach 
+    #    #mnumber = [next(self.get_number()) for _ in df.name]
+    #    #
+    #    df = get_sect_prop_df(df)
+    #    #df.rename(columns={'d':'diameter', 'tw':'wall_thickness'},
+    #    #          inplace=True)
+    #    df['title'] = None 
+    #    dfmat = df.reindex(columns=['name', 'title', 'type',
+    #                                'diameter', 'wall_thickness'])
+    #    
+    #    #
+    #    # push material header
+    #    #dfmat = df[['name', 'type']].copy()
+    #    #dfmat['title'] = None
+    #    conn = create_connection(self.db_file)
+    #    with conn:
+    #        dfmat.to_sql('tb_Sections', conn,
+    #                     index_label=['name', 'title', 'type',
+    #                                  'diameter', 'wall_thickness'], 
+    #                     if_exists='append', index=False)        
+    #    #
+    #    self._labels.extend(dfmat['name'].tolist())
+    #    # TODO : fix numbering
+    #    nitems = len(self._number) + 1
+    #    self._number.extend([item + nitems for item in dfmat.index])
+    #    #print('---')
 #
 #

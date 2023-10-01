@@ -4,7 +4,6 @@
 # Python stdlib imports
 from __future__ import annotations
 #from dataclasses import dataclass
-import os
 #
 # package imports
 # steelpy.f2uModel
@@ -64,29 +63,18 @@ class f2uModel:
                  '_mesh', '_concept']
                  # '_nodes', '_meshing', '_boundaries',  'sets', '_load', '_results',
 
-    def __init__(self, component:str|int) -> None:
+    def __init__(self, component:str|int|None = None) -> None:
         """
         mesh_type : sqlite/inmemory
         """
         print("-- module : fem2ufo Version 5.00dev")
         print('{:}'.format(52*'-'))
         #
-        self.component: str|int = component
+        if not component:
+            component = "f2u_model"
+        self.component = component
         self.type: str = 'substructure'
-        self.mesh_type:str = 'sqlite'
-        #
-        #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        filename = component + "_f2u.db"
-        path = os.path.abspath(filename)
-        self.db_file = path
-        #directory = os.path.dirname(path)
-        #
-        #self.db_file:str = component + "_f2u.db"
-        #if mesh_type != "ttt": #"inmemory":
-        try: # remove file if exist
-            os.remove(self.db_file)
-        except FileNotFoundError:
-            pass
+        #self.mesh_type:str = 'sqlite'
         #
         # set main components
         #mesh_type2 = 'sqlite'
@@ -109,47 +97,45 @@ class f2uModel:
     #
     # -------------------
     #
-    def materials(self, values:None|list=None,
-                  df=None):
-        """
-        """
-        if isinstance(values, list):
-            if isinstance(values[0], list):
-                for item in values:
-                    self._materials[item[0]] = item[1:]
-            else:
-                self._materials[values[0]] = values[1:]
-        #
-        try:
-            df.columns
-            self._materials.df = df
-        except AttributeError:
-            pass
-        #
-        return self._materials   
-
+    #def materials(self, values:None|list=None,
+    #              df=None):
+    #    """
+    #    """
+    #    if isinstance(values, list):
+    #        if isinstance(values[0], list):
+    #            for item in values:
+    #                self._materials[item[0]] = item[1:]
+    #        else:
+    #            self._materials[values[0]] = values[1:]
+    #    #
+    #    try:
+    #        df.columns
+    #        self._materials.df = df
+    #    except AttributeError:
+    #        pass
+    #    #
+    #    return self._materials   
     #
-    def sections(self, values:None|list=None,
-                 df=None):
-        """
-        """
-        #if values:
-        if isinstance(values, list):
-            if isinstance(values[0], list):
-                for item in values:
-                    self._sections[item[0]] = item[1:]
-            else:
-                self._sections[values[0]] = values[1:]
-        #
-        # dataframe input
-        try:
-            df.columns   
-            self._sections.df = df
-        except AttributeError:
-            pass            
-        #
-        return self._sections
-
+    #def sections(self, values:None|list=None,
+    #             df=None):
+    #    """
+    #    """
+    #    #if values:
+    #    if isinstance(values, list):
+    #        if isinstance(values[0], list):
+    #            for item in values:
+    #                self._sections[item[0]] = item[1:]
+    #        else:
+    #            self._sections[values[0]] = values[1:]
+    #    #
+    #    # dataframe input
+    #    try:
+    #        df.columns   
+    #        self._sections.df = df
+    #    except AttributeError:
+    #        pass            
+    #    #
+    #    return self._sections
     #
     def properties(self):
         """
@@ -172,16 +158,15 @@ class f2uModel:
 
     #
     #
-    def mesh(self, name:str|None = None):
+    def mesh(self, name:str|None = None,
+             sql_file:str|None = None):
         """ """
         if not name:
             name = self.component
         
-        self._mesh[name] = Mesh(mesh_type=self.mesh_type,
-                                db_file=self.db_file)
-                                # materials=self._materials,
-                                # sections=self._sections,        
-        
+        self._mesh[name] = Mesh(db_name=name,
+                                sql_file=sql_file)
+
         return self._mesh[name]
     #
     # -------------------

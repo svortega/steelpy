@@ -1,17 +1,17 @@
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 
 # Python stdlib imports
 from __future__ import annotations
-from array import array
+#from array import array
 #from collections.abc import Mapping
 import re
-from typing import NamedTuple
+#from typing import NamedTuple
 
 
 # package imports
 from steelpy.f2uModel.mesh.process.boundary import BoundaryItem, BoundaryNode
 from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table, check_nodes
-
+from steelpy.utils.dataframe.main import DBframework
 #
 #
 #
@@ -26,7 +26,9 @@ class BoundaryNodeSQL(BoundaryNode):
         super().__init__()
         self._db_file = db_file
         # create node table
-        self._create_table()
+        conn = create_connection(self._db_file)
+        with conn:        
+            self._create_table(conn)
     #
     def __setitem__(self, node_name: int,
                     fixity:list|tuple|dict|str) -> None:
@@ -72,7 +74,7 @@ class BoundaryNodeSQL(BoundaryNode):
         except ValueError:
             return False
     #
-    def _create_table(self) -> None:
+    def _create_table(self, conn) -> None:
         """ """
         _table_boundary = "CREATE TABLE IF NOT EXISTS tb_Boundaries(\
                             number INTEGER PRIMARY KEY NOT NULL,\
@@ -81,7 +83,7 @@ class BoundaryNodeSQL(BoundaryNode):
                             x DECIMAL, y DECIMAL, z DECIMAL,\
                             rx DECIMAL, ry DECIMAL, rz DECIMAL);"
         #
-        conn = create_connection(self._db_file)
+        #conn = create_connection(self._db_file)
         create_table(conn, _table_boundary)
     #
     #
@@ -100,9 +102,68 @@ class BoundaryNodeSQL(BoundaryNode):
         cur = conn.cursor()
         cur.execute(sql, project)
     #
-    def transposed(self):
-        """??? """
-        1 / 0
+    #
+    #
+    @property
+    def df(self):
+        """Boundary df"""
+        #print('nodes df in')
+        db = DBframework()
+        conn = create_connection(self._db_file)
+        return db.read_sql_query("SELECT * FROM tb_Boundaries", conn)
+        #return df
+    
+    @df.setter
+    def df(self, df):
+        """ """
+        #
+        columns = list(df.columns)
+        header = {}
+        for key in columns:
+            if re.match(r"\b(id|name|node(s)?)\b", key, re.IGNORECASE):
+                header[key] = 'name'
+            
+            elif re.match(r"\b(type)\b", key, re.IGNORECASE):
+                header[key] = 'type'
+            
+            elif re.match(r"\b(title)\b", key, re.IGNORECASE):
+                header[key] = 'title'
+            #
+            # displacement
+            elif re.match(r"\b((i)?(\_|\-|\s*)?x)\b", key, re.IGNORECASE):
+                header[key] = 'x'
+            
+            elif re.match(r"\b((i)?(\_|\-|\s*)?y)\b", key, re.IGNORECASE):
+                header[key] = 'y'               
+            
+            elif re.match(r"\b((i)?(\_|\-|\s*)?z)\b", key, re.IGNORECASE):
+                header[key] = 'z'
+            #
+            # rotation
+            elif re.match(r"\b((r)?(\_|\-|\s*)?x)\b", key, re.IGNORECASE):
+                header[key] = 'rx'
+            
+            elif re.match(r"\b((r)?(\_|\-|\s*)?y)\b", key, re.IGNORECASE):
+                header[key] = 'ry'               
+            
+            elif re.match(r"\b((r)?(\_|\-|\s*)?z)\b", key, re.IGNORECASE):
+                header[key] = 'rz'             
+        #
+        nodes = df[header.keys()].copy()
+        nodes.rename(columns=header, inplace=True)
+        #support.query("x != '' and y != '' and z != '' and rx != '' and ry != '' and rz != ''",
+        #              inplace=True)        
+        #
+        for row in nodes.itertuples():
+            #print(row)
+            fixity=[row.x, row.y, row.z,
+                    row.rx, row.ry, row.rz]
+            if any(fixity):
+                #print(fixity)
+                self.__setitem__(node_name=row.name,
+                                 fixity=fixity)
+        #
+        #
 #
 #
 def get_boundary(conn, node_number, item:str="*"):

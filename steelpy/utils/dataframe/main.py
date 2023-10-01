@@ -61,6 +61,12 @@ class DBframework:
         return self._df.read_sql_query
     #
     #
+    @property
+    def ExcelWriter(self):
+        """ """
+        return self._df.ExcelWriter
+    #
+    #
     #@property
     #def df(self):
     #    """ """
@@ -85,8 +91,7 @@ class DBframework:
         #
         df_columns = df.columns.tolist()
         max_len_in_lst = lambda lst: len(sorted(lst, reverse=True, key=len)[0])
-        align_center = lambda st, sz: "{0}{1}{0}".format(" " * (1 + (sz - len(st)) // 2), st)[:sz] if len(
-            st) < sz else st
+        align_center = lambda st, sz: "{0}{1}{0}".format(" " * (1 + (sz - len(st)) // 2), st)[:sz] if len(st) < sz else st
         align_right = lambda st, sz: "{0}{1} ".format(" " * (sz - len(st) - 1), st) if len(st) < sz else st
         max_col_len = max_len_in_lst(df_columns)
         max_val_len_for_col = dict([(col, max_len_in_lst(df.iloc[:, idx].astype('str')))

@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 
 
@@ -39,14 +39,11 @@ class Nodes(Mapping):
         plane2D : Analysis in 2D plane (False/True)
         db_file : Database file name 
         """
-        
+        #
         self._plane = plane
         #
-        #if mesh_type != "inmemory":
         self._nodes = NodeSQL(db_file=db_file,
                               db_system=mesh_type)
-        #else:
-        #    self._nodes = NodesIM()
         #
         self._jbc: array = array('I', [])
         self._db = DBframework()
@@ -189,14 +186,18 @@ class Nodes(Mapping):
     @property
     def df(self):
         """nodes in dataframe format"""
-        print('nodes df out')
-        1/0
+        #print('nodes df out')
+        return self._nodes.df       
+        #1/0
 
     @df.setter
-    def df(self, values):
+    def df(self, df):
         """nodes in dataframe format"""
-        print('nodes df out')
-        1/0
+        try:
+            df.columns
+            self._nodes.df =df
+        except AttributeError:
+            raise IOError('Node df not valid')
     #
     #
 #

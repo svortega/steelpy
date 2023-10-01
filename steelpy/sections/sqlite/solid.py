@@ -123,13 +123,13 @@ class SolidSectionSQL(SectionSQLite):
         """
         try:
             index = self._labels.index(shape_name)
-            number = self._number[index]
+            #number = self._number[index]
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
 
 
         shape_type = self._type[index]
-        row = self.get_section(number)
+        row = self.get_section(shape_name)
         
         if re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
             d = row[3]

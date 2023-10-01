@@ -217,7 +217,7 @@ class SectionBasic(Mapping):
             mnumber = next(self.get_number())
             self._number.append(mnumber)            
             #
-            if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b",
+            if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b",
                         shape_type, re.IGNORECASE):
                 # [d, tw, bf, tf, bfb, tfb, r, title]
                 properties =  get_Isection(properties)
@@ -261,7 +261,7 @@ class SectionBasic(Mapping):
         elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
             return self._solid[shape_name]
         
-        elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
             return self._ibeam[shape_name]
         
         elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):

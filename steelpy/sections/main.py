@@ -4,10 +4,9 @@
 # Python stdlib imports
 from __future__ import annotations
 from collections.abc import Mapping
-
+import re
 #
 # package imports
-import re
 #
 from .inmemory.main import SectionIM
 from .sqlite.main import SectionSQL
@@ -204,12 +203,32 @@ class Sections(Mapping):
         """ """
         # TODO: define if drop
         #df = df.drop_duplicates(['name'], keep='first')
-        group = df.groupby("type")
-        #
+        group = df.groupby("type", sort=False)
         for shape_type, section in group:
-            
-            if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe)\b",
+            if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b",
                         shape_type, re.IGNORECASE):
+                # Bottom Flange
+                try:
+                    section['bottom_flange_width'] =  section.apply(lambda x: x['top_flange_width']
+                                                                    if x['bottom_flange_width']== ""
+                                                                    else x['bottom_flange_width'], axis=1)
+                except KeyError:
+                    section['bottom_flange_width'] = section['top_flange_width']
+                #
+                try:
+                    section['bottom_flange_thickness'] =  section.apply(lambda x: x['top_flange_thickness']
+                                                                    if x['bottom_flange_thickness']== ""
+                                                                    else x['bottom_flange_thickness'], axis=1)
+                except KeyError:
+                    section['bottom_flange_thickness'] = section['top_flange_thickness']                
+                #
+                try:
+                    section['fillet_radius'] =  section.apply(lambda x: float(0.0)
+                                                                    if x['fillet_radius']== ""
+                                                                    else x['fillet_radius'], axis=1)
+                except KeyError:
+                    section['fillet_radius'] = float(0.0)                
+                #
                 self._sections._ibeam.df= section
             
             elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):

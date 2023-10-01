@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 
 # Python stdlib imports
 from __future__ import annotations
@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from math import isclose, dist
 from typing import NamedTuple
+import re
 
 # package imports
 #from steelpy.process.units.main import Units
@@ -14,7 +15,7 @@ from steelpy.f2uModel.mesh.process.nodes import (check_point_list, check_point_d
                                                  get_coordinate_system, NodeBasic)
 # steelpy
 from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
-
+from steelpy.utils.dataframe.main import DBframework
 
 
 #
@@ -54,7 +55,9 @@ class NodeSQL(NodeBasic):
         # create node table
         conn = create_connection(self.db_file)
         with conn:
-            new_node_table(conn)
+            self._create_table(conn)
+        #print('--> update labels?')
+        #1 / 0
     #
     # ---------------------------------
     #
@@ -90,6 +93,24 @@ class NodeSQL(NodeBasic):
     # ------------------
     # SQL ops
     # ------------------
+    #
+    def _create_table(self, conn) -> None:
+        """ """
+        # conn = create_connection(self.db_file)
+        _table_nodes = "CREATE TABLE IF NOT EXISTS tb_Nodes (\
+                        number INTEGER PRIMARY KEY NOT NULL,\
+                        name INTEGER NOT NULL,\
+                        type TEXT NOT NULL,\
+                        x DECIMAL NOT NULL,\
+                        y DECIMAL NOT NULL,\
+                        z DECIMAL NOT NULL,\
+                        r DECIMAL,\
+                        theta DECIMAL,\
+                        phi DECIMAL,\
+                        idx INTEGER NOT NULL);"
+        #
+        create_table(conn, _table_nodes)
+        
     #
     def _push_node(self, conn, node_name, coordinates):
         """
@@ -227,7 +248,85 @@ class NodeSQL(NodeBasic):
             #
             max_z = maxmin(head='max', col='z')
             min_z = maxmin(head='min', col='z')
-        return [max_x, max_y, max_z], [min_x, min_y, min_z]    
+        return [max_x, max_y, max_z], [min_x, min_y, min_z]
+    #
+    #
+    @property
+    def df(self):
+        """get node dataframe"""
+        #print('nodes df in')
+        db = DBframework()
+        conn = create_connection(self.db_file)
+        return db.read_sql_query("SELECT * FROM tb_Nodes", conn)
+        #return df
+    
+    @df.setter
+    def df(self, df):
+        """ """
+        columns = list(df.columns)
+        header = {}
+        for key in columns:
+            if re.match(r"\b(id|name|node(s)?)\b", key, re.IGNORECASE):
+                header[key] = 'name'
+            
+            elif re.match(r"\b(x(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
+                header[key] = 'x'
+                try:
+                    df[key] = df[key].apply(lambda x: x.value)
+                except AttributeError:
+                    pass
+            
+            elif re.match(r"\b(y(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
+                header[key] = 'y'
+                try:
+                    df[key] = df[key].apply(lambda x: x.value)
+                except AttributeError:
+                    pass                
+            
+            elif re.match(r"\b(z(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
+                header[key] = 'z'
+                try:
+                    df[key] = df[key].apply(lambda x: x.value)
+                except AttributeError:
+                    pass                
+            
+            #elif re.match(r"\b(title)\b", key, re.IGNORECASE):
+            #    #header.append(key)
+            #    header[key] = 'title'
+        #
+        #df.rename(columns=header, inplace=True)
+        #
+        nodes = df[header.keys()].copy()
+        #nodes[["x", "y", "z"]] = df[coord].values.tolist()
+        nodes['type'] = self._system
+        nodes[['r', 'theta', 'phi']] = None
+        #
+        nodes.rename(columns=header, inplace=True)
+        #
+        #for row in nodes.itertuples():
+        #    coordinates = self._get_coordinates([])
+        #    self._labels.append(node_name)
+        #
+        conn = create_connection(self.db_file)
+        #
+        # get row number
+        cur = conn.cursor()
+        sql = 'SELECT max(number) from tb_Nodes;'
+        if (idx := max(cur.execute(sql))[0]) == None:
+            idx = 0
+        #
+        nodes['idx'] = [item + idx for item in list(nodes.index)]
+        #
+        with conn:
+            nodes.to_sql('tb_Nodes', conn,
+                         index_label=['name', 'type',
+                                      'x', 'y', 'z', 'r',
+                                      'theta', 'phi', 'idx'], 
+                         if_exists='append', index=False)
+        #
+        #
+        self._labels.extend(nodes['name'].tolist())
+        #
 #
 #
 #
@@ -258,61 +357,45 @@ def get_nodes(conn):
     record = cur.fetchall()
     return record
 #
-def update_table(conn, nodes):
-    """ """
-    # drop table
-    sql = 'DROP TABLE tb_Nodes'
-    cur = conn.cursor()
-    cur.execute(sql)
-    #
-    new_node_table(conn)
-    push_nodes(conn, nodes)
+#def update_table(conn, nodes):
+#    """ """
+#    # drop table
+#    sql = 'DROP TABLE tb_Nodes'
+#    cur = conn.cursor()
+#    cur.execute(sql)
+#    #
+#    new_node_table(conn)
+#    push_nodes(conn, nodes)
 #
-def new_node_table(conn) -> None:
-    """ """
-    # conn = create_connection(self.db_file)
-    _table_nodes = "CREATE TABLE IF NOT EXISTS tb_Nodes (\
-                    number INTEGER PRIMARY KEY NOT NULL,\
-                    name INTEGER NOT NULL,\
-                    type TEXT NOT NULL,\
-                    x DECIMAL NOT NULL,\
-                    y DECIMAL NOT NULL,\
-                    z DECIMAL NOT NULL,\
-                    r DECIMAL,\
-                    theta DECIMAL,\
-                    phi DECIMAL,\
-                    idx INTEGER NOT NULL);"
-    #
-    create_table(conn, _table_nodes)
 #
-def push_nodes(conn, nodes):
-    """
-    Create a new project into the projects table
-    :param conn:
-    :param project:
-
-    :return: project id
-    """
-    project = nodes
-    #project = [item[1:] for item in nodes]
-    # number = len(self._labels) - 1
-    #if csystem == 'cylindrical':  # z, r, theta,
-    #    project = (node_name, csystem,
-    #               None, None, *coordinates, None)
-    #
-    #elif csystem == 'spherical':  # r, theta, phi
-    #    project = (node_name, csystem,
-    #               None, None, None, *coordinates)
-    #
-    #else:
-    #    project = (node_name, csystem,
-    #               *coordinates, None, None, None)
-    #
-    sql = 'INSERT INTO tb_Nodes(name, type,\
-                                x, y, z, r, theta, phi)\
-                                VALUES(?,?,?,?,?,?,?,?)'
-    cur = conn.cursor()
-    cur.executemany(sql, project)
+#def push_nodes(conn, nodes):
+#    """
+#    Create a new project into the projects table
+#    :param conn:
+#    :param project:
+#
+#    :return: project id
+#    """
+#    project = nodes
+#    #project = [item[1:] for item in nodes]
+#    # number = len(self._labels) - 1
+#    #if csystem == 'cylindrical':  # z, r, theta,
+#    #    project = (node_name, csystem,
+#    #               None, None, *coordinates, None)
+#    #
+#    #elif csystem == 'spherical':  # r, theta, phi
+#    #    project = (node_name, csystem,
+#    #               None, None, None, *coordinates)
+#    #
+#    #else:
+#    #    project = (node_name, csystem,
+#    #               *coordinates, None, None, None)
+#    #
+#    sql = 'INSERT INTO tb_Nodes(name, type,\
+#                                x, y, z, r, theta, phi)\
+#                                VALUES(?,?,?,?,?,?,?,?)'
+#    cur = conn.cursor()
+#    cur.executemany(sql, project)
 #
 #
 def update_colum(conn, colname: str, newcol: list):

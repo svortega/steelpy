@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -586,21 +586,37 @@ def get_isomat_prop_df(df):
 
     try:
         df["Fy"] = df["Fy"].apply(lambda x: x.convert('megapascal').value)
+    
+    except AttributeError:
+        pass
+    
     except KeyError:
         df["Fy"] = 280_000_000 #* units.Pa
 
     try:
         df["Fu"] = df["Fu"].apply(lambda x: x.convert('pascal').value)
+    
+    except AttributeError:
+        pass
+    
     except KeyError:
         df["Fu"] = df["Fy"]/0.75
 
     try:
         df["E"] = df["E"].apply(lambda x: x.convert('pascal').value)
+    
+    except AttributeError:
+        pass
+    
     except KeyError:
         df["E"] = 205_000_000_000 #* units.Pa
 
     try:
         df["G"] = df["G"].apply(lambda x: x.convert('pascal').value)
+    
+    except AttributeError:
+        pass
+    
     except KeyError:
         df["G"] = 80_770_000_000 #* units.Pa
 
@@ -611,11 +627,19 @@ def get_isomat_prop_df(df):
 
     try:
         df["density"] = df["density"].apply(lambda x: x.convert('kilogram/metre^3').value)
+    
+    except AttributeError:
+        pass
+    
     except KeyError:
         df["density"] = 7850 #* units.kilogram/units.metre**3
 
     try:
         df["alpha"] = df["alpha"].apply(lambda x: x.convert('kelvin').value)
+    
+    except AttributeError:
+        pass
+    
     except KeyError:
         df["alpha"] = 1.2E-5 #* units.kelvin
 

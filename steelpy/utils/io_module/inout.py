@@ -11,45 +11,40 @@ from collections import defaultdict
 
 
 #
-def check_input_file(file, file_extension=False):
+def check_input_file(file: str,
+                     file_extension:str|bool=False):
     """
     """
     if not file:
-        return False
+        raise IOError(f"*** file {file} no found")
     
-    _file_name = file.split(".")
+    file_name = file.split(".")
     
-    if len(_file_name) == 1:
+    if len(file_name) == 1:
         file_extension = file_extension.strip()
         file = file + '.' + file_extension
         extension = file_extension
     
     else:
         # check file extension
-        extension = _file_name[-1]
+        extension = file_name[-1]
         extension = str(extension).lower()
         extension = str(extension).strip()
         #
         if file_extension:
-            
             file_extension = file_extension.strip()
-        
             if file_extension != extension:
                 file = file.remove(extension, "")
                 file = file.strip()
                 file = file + '.' + file_extension
                 extension = file_extension
     try:
-        _input = open(file)
-        _file_out = file
-    
+        test_input = open(file)
+        file_out = file
     except IOError:
-        print("    *** I/O Error : file {:} no found"
-              .format(file))
-        
-        return False
+        raise IOError(f"*** file {file} no found")
     #
-    return _file_out
+    return file_out
 
 
 #

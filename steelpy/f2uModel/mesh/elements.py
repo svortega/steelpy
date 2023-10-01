@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import NamedTuple
 from dataclasses import dataclass
-#import re
+import re
 #
 
 # package imports
@@ -167,7 +167,30 @@ class Elements(Mapping):
             except ValueError:
                 continue
         #
-        return max(ibndm4) + 1    
+        return max(ibndm4) + 1
+    #
+    #
+    @property
+    def df(self):
+        """ """
+        #print('element out')
+        return self._elements.df
+    #
+    @df.setter
+    def df(self, df):
+        """ """
+        #
+        group = df.groupby("type", sort=False)
+        for memb_type, elements in group:
+            
+            if re.match(r"\b(beam(s)?)\b", memb_type, re.IGNORECASE):
+                elements.drop(['node_3', 'node_4'], axis=1, inplace=True)
+                self._elements._beams.df=elements
+            
+            else:
+                raise Exception(f"element type {memb_type} not valid")
+        #
+        #print('element in')       
 #
 #
 #

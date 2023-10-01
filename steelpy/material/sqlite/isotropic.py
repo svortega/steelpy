@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 #
 # Python stdlib imports
@@ -606,7 +606,7 @@ class MaterialElasticSQL(Mapping):
         # push elastic material
         dfel = df[['Fy', 'Fu', 'E', 'G',
                    'poisson', 'density' , 'alpha']].copy()
-        dfel['material_number'] = [int(mat_name[item]) for item in df.name]
+        dfel['material_number'] = [int(mat_name[str(item)]) for item in df.name]
         with conn:
             dfel.to_sql('tb_MatElastoPlastic', conn,
                         index_label=['material_number',

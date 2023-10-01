@@ -89,11 +89,11 @@ class BoxSQLite(SectionSQLite):
         """
         try:
             index = self._labels.index(shape_name)
-            number = self._number[index]
+            #number = self._number[index]
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        row = self.get_section(number)
+        row = self.get_section(shape_name)
         return BoxBasic(name=row[0], 
                         d=row[5], tw=row[6],
                         b=row[7], tb=row[8])        

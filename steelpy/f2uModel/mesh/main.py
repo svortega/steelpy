@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import NamedTuple
 #import pickle
 import re
+import os
 #
 
 # package imports
@@ -28,6 +29,7 @@ from steelpy.f2uModel.plot.main import PlotMesh
 from steelpy.utils.dataframe.main import DBframework
 from steelpy.f2uModel.mesh.process.main import Kmatrix, Gmatrix, Mmatrix
 #
+from steelpy.utils.io_module.inout import check_input_file
 #
 #
 #@dataclass
@@ -137,16 +139,22 @@ class Mesh(BasicModel):
                  'db_file', '_df', '_Kmatrix', '_plane', #'_plot',
                  '_materials', '_sections']
 
-    def __init__(self, # materials, sections,
-                 mesh_type:str="sqlite",
-                 db_file:str|None = None):
+    def __init__(self, db_name:str|None = None,
+                 sql_file:str|None = None):
         """
         """
         #
+        mesh_type:str="sqlite"
         #super().__init__()
         #
-        self.db_file = db_file
-        self.data_type = mesh_type
+        if sql_file:
+            #print('--')
+            sql_file = check_input_file(file=sql_file,
+                                        file_extension="db")
+            self.db_file = sql_file
+        else:
+            self.db_file = self._get_file(name=db_name)
+            self.data_type = mesh_type
         #
         #
         #self._plane = Plane3D()
@@ -193,6 +201,26 @@ class Mesh(BasicModel):
         #self._plot = PlotMesh(mesh=self)
     #
     #
+    def _get_file(self, name: str):
+        """ """
+        #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        filename = name + ".db"
+        path = os.path.abspath(filename)
+        #self.db_file = path
+        #directory = os.path.dirname(path)
+        #
+        #self.db_file:str = component + "_f2u.db"
+        #if mesh_type != "ttt": #"inmemory":
+        try: # remove file if exist
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        #
+        return path
+    #
+    def check_file(self, name: str):
+        """ """
+        pass
     #
     # --------------------
     # Mesh items
@@ -228,7 +256,7 @@ class Mesh(BasicModel):
         # dataframe input
         try:
             df.columns   
-            self._nodes.df(df)
+            self._nodes.df = df
         except AttributeError:
             pass
         #
@@ -268,8 +296,8 @@ class Mesh(BasicModel):
         #
         # dataframe input
         try:
-            df.columns   
-            self._boundaries.df(df)
+            df.columns
+            self._boundaries.df = df
         except AttributeError:
             pass 
         #
@@ -418,4 +446,38 @@ class Mesh(BasicModel):
         #return self._plot
         return PlotMesh(cls=self, figsize=figsize)
     #
+    #
+    # --------------------
+    # Tools
+    # --------------------
+    #
+    #
+    def to_excel(self, name: str|None = None):
+        """dump mesh in excel file"""
+        #from steelpy.utils.spreadsheet.main import Spreadsheet
+        #
+        if not name:
+            name = self.db_file.split('.')
+            name = f"{name[0]}.xlsx"
+        #
+        #
+        db = DBframework()
+        with db.ExcelWriter(name) as writer:
+            mat = self._materials.df
+            mat.to_excel(writer, sheet_name='Materials', index=False)
+            #
+            sect = self._sections.df
+            sect.to_excel(writer, sheet_name='Sections', index=False)
+            #
+            nodes = self._nodes.df
+            nodes.to_excel(writer, sheet_name='Nodes', index=False)
+            #
+            bound = self._boundaries.df
+            bound.to_excel(writer, sheet_name='Boundary', index=False)
+            #
+            memb = self._elements.df
+            memb.to_excel(writer, sheet_name='Elements', index=False)            
+        #
+        print('---')
+        1 / 0
     #
