@@ -17,6 +17,7 @@ from .ibeam import Ibeam
 from .solid import SolidSection
 #from ..process.operations import get_sect_properties
 from .operations import SectionBasic
+#from steelpy.utils.dataframe.main import DBframework
 
 # ---------------------------------
 #
@@ -71,8 +72,11 @@ class SectionIM(SectionBasic):
     #                                              d=properties[0], t=properties[1])
     #
     #
-    #
+    #@property
     #def df(self):
     #    """ """
-    #    pass
+    #    db = DBframework()
+    #    #        
+    #    print('mat df fixme')
+    #    1 / 0
 #

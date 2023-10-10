@@ -196,7 +196,7 @@ class Sections(Mapping):
         #    title.append(item.type)
         #    key
         #
-        return self._sections.df()
+        return self._sections.df
 
     @df.setter
     def df(self, df):

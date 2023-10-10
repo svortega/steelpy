@@ -43,10 +43,10 @@ class LoadingSQL:
     def _create_table(self):
         """ """
         table_load = "CREATE TABLE IF NOT EXISTS tb_Load(\
-                    number INTEGER PRIMARY KEY NOT NULL,\
-                    name TEXT NOT NULL,\
-                    title TEXT NOT NULL,\
-                    type TEXT NOT NULL);"
+                      number INTEGER PRIMARY KEY NOT NULL,\
+                      name NOT NULL,\
+                      title TEXT NOT NULL,\
+                      type TEXT NOT NULL);"
 
         table_comb_load = "CREATE TABLE IF NOT EXISTS tb_LoadCombIndex(\
                             number INTEGER PRIMARY KEY NOT NULL,\

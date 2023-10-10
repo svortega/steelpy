@@ -69,7 +69,7 @@ class BeamLoadItemSQL(BeamLoadItem):
         #self._beam_id = beam_name
         self._labels.append(beam_name)
         #
-        if re.match(r"\b(point|node)\b", str(beam_load[0]), re.IGNORECASE):
+        if re.match(r"\b(point|node|mass)\b", str(beam_load[0]), re.IGNORECASE):
             self._load(beam).point =  beam_load[1:]
             #self._load._point[beam_name] = beam_load[1:]
             
@@ -129,7 +129,13 @@ class BeamLoadItemSQL(BeamLoadItem):
                 self._node_eq._push_node_load(conn, res)
     #
     #
-    #
+    @property
+    def df(self):
+        """ beam load df"""
+        print(' beam load')
+        1 / 0
+    
+    @df.setter
     def df(self, data):
         """ """
         #
@@ -153,17 +159,18 @@ class BeamLoadItemSQL(BeamLoadItem):
             #
             line['load_number'] = load_data[0]
             line['beam_number'] = beam_data[0]
-            line['qx0i'] = 'NULL'
-            line['qy0i'] = 'NULL'
-            line['qz0i'] = 'NULL'
-            line['qx1i'] = 'NULL'
-            line['qy1i'] = 'NULL'
-            line['qz1i'] = 'NULL'
+            line['BS'] = 'NULL'
+            line['OTM'] = 'NULL'
+            line['x'] = 'NULL'
+            line['y'] = 'NULL'
+            line['z'] = 'NULL'
+            #line['qz1i'] = 'NULL'
             #
             line = line[['load_number', 'beam_number',
                          'load_title', 'load_system', 
-                         'L0', 'qx0', 'qy0', 'qz0', 'qx0i', 'qy0i', 'qz0i',
-                         'L1', 'qx1', 'qy1', 'qz1', 'qx1i', 'qy1i', 'qz1i']].values
+                         'L0', 'qx0', 'qy0', 'qz0',
+                         'L1', 'qx1', 'qy1', 'qz1',
+                         'BS', 'OTM', 'x', 'y', 'z']].values
             #line
             with conn:
                 self._load._line._push_load(conn, beam_name=beam_name, load=line)
@@ -218,6 +225,8 @@ class BeamDistributedSQL(BeamDistMaster):
     def __setitem__(self, beam_name: int|str, line_load: list) -> None:
         """
         """
+        load_source = line_load.pop(0)
+        #
         conn = create_connection(self._bd_file)
         with conn:  
             beam = check_element(conn, beam_name)        
@@ -237,7 +246,7 @@ class BeamDistributedSQL(BeamDistMaster):
         conn = create_connection(bd_file)
         with conn:
             self._push_beam_load(conn, beam_number, title,
-                                 system, line_load)
+                                 system, load_source, line_load)
         #print("-->")
     #
     def __getitem__(self, beam_name:int|str) -> list:
@@ -287,20 +296,20 @@ class BeamDistributedSQL(BeamDistMaster):
                                 element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
                                 title TEXT,\
                                 system INTEGER NOT NULL,\
+                                type TEXT NOT NULL,\
                                 L0 DECIMAL,\
                                 qx0 DECIMAL,\
                                 qy0 DECIMAL,\
                                 qz0 DECIMAL,\
-                                qx0i DECIMAL,\
-                                qy0i DECIMAL,\
-                                qz0i DECIMAL,\
                                 L1 DECIMAL,\
                                 qx1 DECIMAL,\
                                 qy1 DECIMAL,\
                                 qz1 DECIMAL,\
-                                qx1i DECIMAL,\
-                                qy1i DECIMAL,\
-                                qz1i DECIMAL);"
+                                BS DECIMAL,\
+                                OTM DECIMAL,\
+                                x DECIMAL,\
+                                y DECIMAL,\
+                                z DECIMAL);"
         #
         #bd_file = self._bd_file
         #conn = create_connection(bd_file)
@@ -308,6 +317,7 @@ class BeamDistributedSQL(BeamDistMaster):
     #
     def _push_beam_load(self, conn, beam_number:int,
                         load_title:str, load_system:int,
+                        load_source: str, 
                         udl:List[float]):
         """ """
         #beam = check_element(conn, beam_name)
@@ -316,35 +326,41 @@ class BeamDistributedSQL(BeamDistMaster):
         load_data = get_load_data(conn, self._name, load_type='basic')
         load_number = load_data[0]
         #
-        project = (load_number, beam_number,
-                   load_title, load_system,
-                   udl[6], *udl[:3],
-                   'NULL', 'NULL', 'NULL',
-                   udl[7], *udl[3:6],
-                   'NULL', 'NULL', 'NULL')
+        if load_source in ['wave']:
+            raise NotImplemented
+        else:
+            project = (load_number, beam_number,
+                       load_title, load_system,
+                       load_source, 
+                       udl[6], *udl[:3],
+                       udl[7], *udl[3:6],
+                       'NULL', 'NULL',
+                       'NULL', 'NULL', 'NULL',)
         #
         sql = 'INSERT INTO tb_LoadBeamLine(load_number, element_number,\
-                                            title, system,\
-                                            L0, qx0, qy0, qz0, qx0i, qy0i, qz0i,\
-                                            L1, qx1, qy1, qz1, qx1i, qy1i, qz1i)\
-                                            VALUES(?,?,?,?,\
+                                            title, system, type,\
+                                            L0, qx0, qy0, qz0,\
+                                            L1, qx1, qy1, qz1, \
+                                            BS, OTM, x, y, z)\
+                                            VALUES(?,?,?,?,?,\
                                                    ?,?,?,?,?,?,?,\
-                                                   ?,?,?,?,?,?,?)'
+                                                   ?,?,?,?,?,?)'
         cur = conn.cursor()
         cur.execute(sql, project)      
     #
     def _push_load(self, conn, beam_name: str, load: list):
         """ """
-        #
+        1 / 0
         self._labels.append(beam_name)
         #
         sql = 'INSERT INTO tb_LoadBeamLine(load_number, element_number,\
                                             title, system,\
-                                            L0, qx0, qy0, qz0, qx0i, qy0i, qz0i,\
-                                            L1, qx1, qy1, qz1, qx1i, qy1i, qz1i)\
+                                            L0, qx0, qy0, qz0,\
+                                            L1, qx1, qy1, qz1,\
+                                            BS, OTM, x, y, z)\
                                             VALUES(?,?,?,?,\
                                                    ?,?,?,?,?,?,?,\
-                                                   ?,?,?,?,?,?,?)'
+                                                   ?,?,?,?,?,?)'
         cur = conn.cursor()
         cur.executemany(sql, load)     
     #
@@ -367,10 +383,13 @@ class BeamDistributedSQL(BeamDistMaster):
         rows = cur.fetchall()
         beam_line = [] # defaultdict(list)
         for row in rows:
-            data = [*row[7:10], *row[14:17], row[6], row[13],
-                    beam_name, row[4], row[0], # name, title, load_name,
-                    row[5], 0, "Line Load"]    # system, load_complex, load_type
-            beam_line.append(LineBeam._make(data))
+            if row[6] in ['wave']:
+                raise NotImplemented
+            else:
+                data = [*row[8:11], *row[12:15], row[7], row[11],
+                        beam_name, row[4], row[0], # name, title, load_name,
+                        row[5], 0, "Line Load"]    # system, load_complex, load_type
+                beam_line.append(LineBeam._make(data))
         return beam_line
     #
     @property
@@ -433,6 +452,7 @@ class BeamPointSQL(NodeLoadBasic):
     def __setitem__(self, beam_name: int|str, point_load: list) -> None:
         """
         """
+        point_type = point_load.pop(0)
         # get load data
         # set element load
         self._labels.append(beam_name)
@@ -445,7 +465,8 @@ class BeamPointSQL(NodeLoadBasic):
         conn = create_connection(bd_file)
         with conn:
             self._push_beam_load(conn, beam_name, title,
-                                 system, point_load)
+                                 system, point_type,
+                                 point_load)
         # print("-->")
     #
     def __getitem__(self, beam_name:int|str)-> list:
@@ -462,31 +483,31 @@ class BeamPointSQL(NodeLoadBasic):
     def _create_table(self, conn) -> None:
         """ """
         _table_element_point = "CREATE TABLE IF NOT EXISTS tb_LoadBeamPoint(\
-                                    number INTEGER PRIMARY KEY NOT NULL,\
-                                    load_number INTEGER NOT NULL REFERENCES tb_Load(number),\
-                                    element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
-                                    title TEXT,\
-                                    system INTEGER NOT NULL,\
-                                    L0 DECIMAL,\
-                                    fx DECIMAL,\
-                                    fy DECIMAL,\
-                                    fz DECIMAL,\
-                                    mx DECIMAL,\
-                                    my DECIMAL,\
-                                    mz DECIMAL,\
-                                    fxi DECIMAL,\
-                                    fyi DECIMAL,\
-                                    fzi DECIMAL,\
-                                    mxi DECIMAL,\
-                                    myi DECIMAL,\
-                                    mzi DECIMAL);"
+                                number INTEGER PRIMARY KEY NOT NULL,\
+                                load_number INTEGER NOT NULL REFERENCES tb_Load(number),\
+                                element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
+                                title TEXT,\
+                                system INTEGER NOT NULL,\
+                                type TEXT NOT NULL,\
+                                L0 DECIMAL,\
+                                fx DECIMAL,\
+                                fy DECIMAL,\
+                                fz DECIMAL,\
+                                mx DECIMAL,\
+                                my DECIMAL,\
+                                mz DECIMAL,\
+                                x DECIMAL,\
+                                y DECIMAL,\
+                                z DECIMAL,\
+                                rx DECIMAL,\
+                                ry DECIMAL,\
+                                rz DECIMAL);"
         #
-        #bd_file = self._bd_file
-        #conn = create_connection(bd_file)
         create_table(conn, _table_element_point)
     #
     def _push_beam_load(self, conn, beam_name:int|str,
                         load_title: str, load_system: int,
+                        point_type: str, 
                         point_load:list[float]):
         """ """
         #print("-->")
@@ -497,19 +518,23 @@ class BeamPointSQL(NodeLoadBasic):
         load_number = load_data[0]
         #
         #
-        project = (load_number, beam_number,
-                   load_title, load_system,
-                   point_load[6], *point_load[:6],
-                   'NULL', 'NULL', 'NULL',
-                   'NULL', 'NULL', 'NULL')
+        if re.match(r"\b(force)\b", point_type, re.IGNORECASE):
+            project = (load_number, beam_number,
+                       load_title, load_system,
+                       point_type, 
+                       point_load[6], *point_load[:6],
+                       'NULL', 'NULL', 'NULL',
+                       'NULL', 'NULL', 'NULL')
+        else:
+            raise NotImplemented
         #
         sql = 'INSERT INTO tb_LoadBeamPoint(load_number, element_number,\
-                                            title, system, \
+                                            title, system, type, \
                                             L0, fx, fy, fz, mx, my, mz,\
-                                            fxi, fyi, fzi, mxi, myi, mzi)\
+                                            x, y, z, rx, ry, rz)\
                                             VALUES(?,?,?,?,?,\
                                                    ?,?,?,?,?,?,?,\
-                                                   ?,?,?,?,?)'
+                                                   ?,?,?,?,?,?)'
         cur = conn.cursor()
         cur.execute(sql, project)
     #
@@ -534,9 +559,10 @@ class BeamPointSQL(NodeLoadBasic):
         rows = cur.fetchall()
         beam_line = []
         for row in rows:
-            data = [*row[7:13], row[6],
-                    beam_name, row[4], row[0],  # name, title, load_name,
-                    row[5], 0, "Point Load"]    # system, load_complex, load_type
+            if row[6] in ['force']:
+                data = [*row[8:14], row[7],
+                        beam_name, row[4], row[0],  # name, title, load_name,
+                        row[5], 0, "Point Load"]    # system, load_complex, load_type
             beam_line.append(PointBeam._make(data))
         return beam_line
     #

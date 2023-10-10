@@ -108,10 +108,23 @@ class BoundaryNodeSQL(BoundaryNode):
     def df(self):
         """Boundary df"""
         #print('nodes df in')
-        db = DBframework()
         conn = create_connection(self._db_file)
-        return db.read_sql_query("SELECT * FROM tb_Boundaries", conn)
-        #return df
+        with conn:
+            cur = conn.cursor()
+            cur.execute ("SELECT tb_Nodes.name, \
+                         tb_Boundaries.* \
+                         FROM tb_Nodes, tb_Boundaries \
+                         WHERE tb_Boundaries.node_number = tb_Nodes.number;")
+            rows = cur.fetchall()
+        #
+        db = DBframework()
+        header = ['name', 'number', 'title', 'node_number',
+                  'ix', 'iy', 'iz', 'rx', 'ry', 'rz']
+        boundf = db.DataFrame(data=rows, columns=header)
+        #conn = create_connection(self._db_file)
+        #return db.read_sql_query("SELECT * FROM tb_Boundaries", conn)
+        header = ['name', 'ix', 'iy', 'iz', 'rx', 'ry', 'rz',  'title']        
+        return boundf[header]
     
     @df.setter
     def df(self, df):

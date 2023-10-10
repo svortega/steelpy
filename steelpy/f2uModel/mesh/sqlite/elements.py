@@ -306,7 +306,7 @@ class ElementsSQL(Mapping):
         with conn:        
             data = get_elements(conn)
         #
-        header = ['name', 'number', 'type', 'material', 'section',
+        header = ['name', 'type', 'material', 'section',
                   'node_1', 'node_2', 'node_3', 'node_4', 
                   'roll_angle', 'title']        
         return data[header]
@@ -450,13 +450,13 @@ def get_elements(conn):
     """ """
     db = DBframework()
     cur = conn.cursor()
-    cur.execute ("SELECT tb_Elements.name, tb_Elements.number, tb_Elements.type,\
+    cur.execute ("SELECT tb_Elements.name, tb_Elements.type,\
                 tb_Materials.name, tb_Sections.name, tb_Elements.roll_angle, tb_Elements.title\
                 FROM tb_Elements, tb_Materials, tb_Sections\
                 WHERE tb_Elements.material_number = tb_Materials.number \
                 AND tb_Elements.section_number = tb_Sections.number;")
     rows = cur.fetchall()
-    header = ['name', 'number', 'type', 'material', 'section', 'roll_angle', 'title']
+    header = ['name', 'type', 'material', 'section', 'roll_angle', 'title']
     membdf = db.DataFrame(data=rows, columns=header)
     membdf.set_index('name', inplace=True)
     #

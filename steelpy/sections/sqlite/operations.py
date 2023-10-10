@@ -131,7 +131,7 @@ class SectionSQLite:
             row = self._get_section(conn, section_name)
         return row[1:]
     #
-    def _get_section(self, conn, section_name:int):
+    def _get_section(self, conn, section_name:int|str):
         """
         """
         cur = conn.cursor()
@@ -140,8 +140,12 @@ class SectionSQLite:
         #            WHERE tb_Sections.number = {:} \
         #            AND tb_SecProperties.number = tb_Sections.number;".format(section_number))
         #
-        cur.execute("SELECT * from tb_Sections \
-                    WHERE tb_Sections.name = {:};".format(section_name))
+        if isinstance(section_name, str):
+            cur.execute(f"SELECT * from tb_Sections \
+                        WHERE tb_Sections.name = '{section_name}';")
+        else:
+            cur.execute(f"SELECT * from tb_Sections \
+                        WHERE tb_Sections.name = {section_name};")
         row = cur.fetchone()
         #sections = PropertyOut(*row[1:])
         #conn.close()

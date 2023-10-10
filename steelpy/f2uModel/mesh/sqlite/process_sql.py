@@ -49,7 +49,7 @@ def get_load_data(conn, load_name:int|str, load_type: str):
     """ """
     cur = conn.cursor()
     cur.execute("SELECT * FROM tb_Load \
-                 WHERE name = '{:}' AND type = '{:}'".format(load_name, load_type))
+                 WHERE name = {:} AND type = '{:}'".format(load_name, load_type))
     loads = cur.fetchone()
     return loads
 #
@@ -58,7 +58,7 @@ def check_nodes(conn, node_name: int|str):
     """check if node exist"""
     cur = conn.cursor()
     cur.execute("SELECT * FROM tb_Nodes \
-                 WHERE name = '{:}' ".format(node_name))
+                 WHERE name = {:} ".format(node_name))
     node = cur.fetchone()
     return node    
 #

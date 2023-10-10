@@ -214,8 +214,8 @@ class SectionBasic(Mapping):
             #
             self._labels.append(shape_name)
             self._type.append(shape_type)
-            mnumber = next(self.get_number())
-            self._number.append(mnumber)            
+            #mnumber = next(self.get_number())
+            #self._number.append(mnumber)            
             #
             if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b",
                         shape_type, re.IGNORECASE):
@@ -315,6 +315,7 @@ class SectionBasic(Mapping):
             n += 1
     #
     #
+    @property
     def df(self):
         """ """
         db = DBframework()
@@ -327,7 +328,9 @@ class SectionBasic(Mapping):
         #          'SA_inplane', 'SA_outplane',
         #          'shear_stress', 'build', 'compactness']
         #
-        datadf = {'number': self._number,
+        number = [x + 1 for x, item in enumerate(self._labels)]
+        #
+        datadf = {'number': number,
                   'name' : self._labels,
                   'title' : self._title,
                   'type': self._type, 

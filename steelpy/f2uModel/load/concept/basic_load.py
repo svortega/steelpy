@@ -8,11 +8,11 @@ from __future__ import annotations
 # package imports
 # steelpy.f2uModel.load
 from ..process.actions import SelfWeight
-from ..inmemory.beam import BeamLoadItemIM
-from ..inmemory.node import NodeLoadItemIM
+#from ..inmemory.beam import BeamLoadItemIM
+#from ..inmemory.node import NodeLoadItemIM
 from ..process.basic_load import BasicLoadBasic, LoadTypeBasic
 
-from steelpy.f2uModel.load.inmemory.wave_load import WaveLoadItemIM
+#from steelpy.f2uModel.load.inmemory.wave_load import WaveLoadItemIM
 
 #
 #
@@ -53,6 +53,7 @@ class BasicLoad(BasicLoadBasic):
         load_name :
         load_title :
         """
+        1 / 0
         try:
             self._labels.index(load_name)
             self._title.index(load_title)

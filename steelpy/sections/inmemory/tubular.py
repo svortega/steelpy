@@ -137,14 +137,14 @@ class TubularIM(SectionBasic):
         self._labels.extend(df.name.tolist())
         self._type.extend(df.type.tolist())
         try:
-            self._d.extend(df.d.tolist())
+            self._d.extend(df.diameter.tolist())
         except TypeError:
-            dtype = df['d'].apply(lambda x: x.convert('metre').value)
+            dtype = df['diameter'].apply(lambda x: x.convert('metre').value)
             self._d.extend(dtype.tolist())
         try:
-            self._tw.extend(df.tw.tolist())
+            self._tw.extend(df.wall_thickness.tolist())
         except TypeError:
-            dtype = df['tw'].apply(lambda x: x.convert('metre').value)
+            dtype = df['wall_thickness'].apply(lambda x: x.convert('metre').value)
             self._tw.extend(dtype.tolist())
         #print('-->')
     #

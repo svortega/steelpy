@@ -100,8 +100,8 @@ class BeamSQL(BeamBasic):
             title = None
         #
         project = (beam_name, title, 'beam', 
-                   materials[str(parameters[2])],
-                   sections[str(parameters[3])],
+                   materials[parameters[2]],
+                   sections[parameters[3]],
                    roll_angle)
         #
         sql = 'INSERT INTO tb_Elements(name, title, type, material_number, section_number,\
@@ -410,9 +410,10 @@ class BeamItemSQL(BeamItemBasic):
     #
     def __str__(self) -> str:
         """ """
+        beam_name = str(self.name)
         conn = create_connection(self.db_file)
         with conn:
-            data = get_beam_data(conn, self.name)
+            data = get_beam_data(conn, beam_name)
         #title =  data[-1]
         if (title := data[-1]) == None:
             title = ""
@@ -421,9 +422,10 @@ class BeamItemSQL(BeamItemBasic):
         #       .format(self.name, *self.connectivity,
         #               self.material, self.section, self.beta,
         #               self.length, title)
-        return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}\n"\
-               .format(self.name, *self.connectivity,
-                       self.material.name, self.section.name,
+        node1, node2 = self.connectivity
+        return "{:>8s} {:>8s} {:>8s} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}"\
+               .format(beam_name, str(node1), str(node2),
+                       str(self.material.name), str(self.section.name),
                        self.beta, self.L, title)
     #
     #

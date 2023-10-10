@@ -181,7 +181,7 @@ class BeamDistributedIM(BeamDistMaster):
         self._load_id.append(self._load_name)
         self._complex.append(0)
         #
-        #Lbeam =  line_load.pop(0)
+        Ltype =  line_load.pop(0)
         #self._L.append(Lbeam)
         # end 1
         self._qx0.append(line_load[0])
@@ -332,7 +332,7 @@ class BeamPointIM(NodeLoadMaster):
         self._load_id.append(self._load_name)
         self._complex.append(0)
         #
-        #Lbeam =  point_load.pop(0)
+        Ltype =  point_load.pop(0)
         #
         #self._L.append(Lbeam)
         #point_load = get_beam_point_load(point_load)

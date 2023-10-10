@@ -25,11 +25,11 @@ class Meshing:
         """
         self.concept = concept
         #
-        filename = component + "_f2u.db"
-        path = os.path.abspath(filename)
-        db_file = path        
+        #filename = component + "_f2u.db"
+        #path = os.path.abspath(filename)
+        #db_file = path        
         #
-        self._mesh = Mesh(db_file=db_file)
+        self._mesh = Mesh(db_name=component)
                           #materials=concept._materials,
                           #sections=concept._sections,
                           #mesh_type=mesh_type,
@@ -55,12 +55,14 @@ class Meshing:
         #
         group = dfmat.groupby("type")
         elastic = group.get_group("elastic")
+        elastic = elastic.drop_duplicates(subset=['name'], keep='first')  
         self._mesh._materials._material._elastic.df = elastic
         #self._mesh._materials.df = dfmat
         #
         # Sections
         csections = self.concept.sections()
         dfsect = csections.df
+        dfsect = dfsect.drop_duplicates(subset=['name'], keep='first')        
         self._mesh._sections.df = dfsect
         #
         #print('-->')

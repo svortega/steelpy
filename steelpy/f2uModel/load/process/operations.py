@@ -230,26 +230,44 @@ def check_list_units(data)->list[float]:
 #
 def check_point_dic(data)->list[float]:
     """
-    new_data: [fx, fy, fz, mx, my, mz, d1, title]
+    new_data: [fx, fy, fz, mx, my, mz, x, y, z, rx, ry, rz, d1, title]
     """
-    new_data = [0,0,0, 0,0,0, 0, 'NULL']
+    new_data = [0,0,0,0,0,0,  0, 'NULL'] # 0,0,0,0,0,0,
     for key, item in data.items():
+        # force
         if re.match(r"\b(fx|fa(xial)?)\b", key, re.IGNORECASE):
             new_data[0] = item.convert("newton").value
         elif re.match(r"\b(py|fy|in(_)?plane)\b", key, re.IGNORECASE):
             new_data[1] = item.convert("newton").value
         elif re.match(r"\b(pz|fz|out(_)?plane)\b", key, re.IGNORECASE):
             new_data[2] = item.convert("newton").value
+        # force & mass
         elif re.match(r"\b(mx|t(orsion)?)\b", key, re.IGNORECASE):
             new_data[3] = item.convert("newton*metre").value
         elif re.match(r"\b(my|out(_)?plane)\b", key, re.IGNORECASE):
             new_data[4] = item.convert("newton*metre").value
         elif re.match(r"\b(mz|in(_)?plane)\b", key, re.IGNORECASE):
             new_data[5] = item.convert("newton*metre").value
+        # displacement
+        #elif re.match(r"\b(x)\b", str(key), re.IGNORECASE):
+        #    new_data[6] = item.value
+        #elif re.match(r"\b(y)\b", str(key), re.IGNORECASE):
+        #    new_data[7] = item.value
+        #elif re.match(r"\b(z)\b", str(key), re.IGNORECASE):
+        #    new_data[8] = item.value
+        #
+        #elif re.match(r"\b(rx)\b", str(key), re.IGNORECASE):
+        #    new_data[9] = item.value
+        #elif re.match(r"\b(ry)\b", str(key), re.IGNORECASE):
+        #    new_data[10] = item.value
+        #elif re.match(r"\b(rz)\b", str(key), re.IGNORECASE):
+        #    new_data[11] = item.value
+        #
         elif re.match(r"\b((l|d(istance)?)(_)?(1|start))\b", key, re.IGNORECASE):
             new_data[6] = item.value
         elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
             new_data[7] = item
+        #        
     return new_data
 #
 #

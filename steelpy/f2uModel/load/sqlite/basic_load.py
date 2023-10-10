@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
@@ -19,8 +19,7 @@ from steelpy.f2uModel.load.sqlite.wave_load import WaveLoadItemSQL
 #from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
 # steelpy.f2uModel
 from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
-#
-#import pandas as pd
+from steelpy.utils.dataframe.main import DBframework
 #
 # ---------------------------------
 #
@@ -62,7 +61,7 @@ class BasicLoadSQL(BasicLoadBasic):
     def __setitem__(self, load_name:int|str, load_title:str) -> None:
         """
         """
-        load_name = str(load_name)
+        #load_name = load_name
         try:
             self._labels.index(load_name)
             raise Warning('    *** warning load name {:} already exist'
@@ -82,12 +81,11 @@ class BasicLoadSQL(BasicLoadBasic):
                                                  plane=self._plane, 
                                                  bd_file=self.db_file)
     #           
-    #
     def __getitem__(self, load_name: str|int):
         """
         """
         try:
-            load_name = str(load_name)
+            #load_name = load_name
             return self._basic[load_name]
         except KeyError:
             raise IOError("load case not defined")
@@ -102,7 +100,7 @@ class BasicLoadSQL(BasicLoadBasic):
     #
     def _push_basic_load(self, conn, load_name:int|str, load_title:str):
         """ """
-        load_name = str(load_name)
+        #load_name = str(load_name)
         project = (load_name, load_title, "basic")
         sql = 'INSERT INTO tb_Load(name, title, type) VALUES(?,?,?)'
         cur = conn.cursor()
@@ -112,10 +110,10 @@ class BasicLoadSQL(BasicLoadBasic):
     def _create_table(self, conn):
         """ """
         table_load = "CREATE TABLE IF NOT EXISTS tb_Load(\
-                    number INTEGER PRIMARY KEY NOT NULL,\
-                    name TEXT NOT NULL,\
-                    title TEXT NOT NULL,\
-                    type TEXT NOT NULL);"
+                      number INTEGER PRIMARY KEY NOT NULL,\
+                      name NOT NULL,\
+                      title TEXT NOT NULL,\
+                      type TEXT NOT NULL);"
 
         table_comb_load = "CREATE TABLE IF NOT EXISTS tb_LoadCombIndex(\
                             number INTEGER PRIMARY KEY NOT NULL,\
@@ -129,7 +127,89 @@ class BasicLoadSQL(BasicLoadBasic):
         create_table(conn, table_comb_load)
     #
     #
+    @property
+    def df(self):
+        """basic load df"""
+        print('basic load in')
+        db = DBframework()
+        #
+        conn = create_connection(self.db_file)
+        with conn:        
+            nodedf = node_load(conn, db)
+            memgdf = member_load(conn, db)
+        #
+        #for name in self._labels:
+        #    bload = self.__getitem__(name)
+        #    nodedf = bload._node.df
+        #    nodedf
+        1 / 0
+    
+    @df.setter
+    def df(self, value):
+        """basic load df"""
+        print('basic load out')
+        1 / 0    
     #
+#
+#
+def node_load(conn, db):
+    """ """
+    cur = conn.cursor()
+    cur.execute("SELECT tb_Load.name, tb_Load.title, tb_Load.type,\
+                 tb_Nodes.name, tb_LoadNode.* \
+                 FROM tb_Load, tb_Nodes, tb_LoadNode\
+                 WHERE tb_Load.number = tb_LoadNode.load_number \
+                 AND tb_Nodes.number = tb_LoadNode.node_number \
+                 AND tb_LoadNode.type = 'load' ")
+    rows = cur.fetchall()
+    #
+    cols = ['load_name', 'load_title', 'load_type', 'node_name', 
+            'number', 'load_number', 'element_name', 
+            'node_number','load_comment', 'load_system', 'type',
+            'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+            'x', 'y', 'z', 'rx', 'ry', 'rz']
+    nodedf = db.DataFrame(data=rows, columns=cols)        
+    #
+    nodedf = nodedf[['load_name', 'load_type', 'load_name',
+                     'load_system', 'load_comment', 'element_name',
+                     'node_name', 'type',
+                     'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                     'x', 'y', 'z', 'rx', 'ry', 'rz']]
+    #
+    #
+    return nodedf
+#
+#
+def member_load(conn, db):
+    """ """
+    cur = conn.cursor()
+    # line
+    cur.execute("SELECT tb_Load.name, tb_Load.title, tb_Load.type,\
+                 tb_Elements.name, tb_LoadBeamLine.* \
+                 FROM tb_Load, tb_Elements, tb_LoadBeamLine \
+                 WHERE tb_Load.number = tb_LoadBeamLine.load_number \
+                 AND tb_Elements.number = tb_LoadBeamLine.element_number \
+                 AND tb_LoadBeamLine.type = 'load' ")
+    rows = cur.fetchall()
+    #
+    cols = ['load_name', 'load_title', 'load_type', 'element_name', 
+            'number', 'load_number', 'element_number', 
+            'load_comment', 'load_system', 'type',
+            'L0', 'qx0', 'qy0', 'qz0',
+            'L1', 'qx1', 'qy1', 'qz1',
+            'BS', 'OTM', 'x', 'y', 'z']
+    membdf = db.DataFrame(data=rows, columns=cols)      
+    #
+    membdf = membdf[['load_name', 'load_type', 'load_name',
+                     'load_system', 'load_comment',
+                     'element_name', 'type', 
+                     'L0', 'qx0', 'qy0', 'qz0',
+                     'L1', 'qx1', 'qy1', 'qz1',
+                     'BS', 'OTM', 'x', 'y', 'z']].values    
+    #
+    return membdf
+#
+#
 #
 #
 class LoadTypeSQL(LoadTypeBasic):

@@ -60,13 +60,13 @@ class Nodes(Mapping):
         self._plane = plane
     #
     #
-    def __setitem__(self, node_name: int,
+    def __setitem__(self, node_name: int|str,
                     coordinates: list[float]|dict[str, float]) -> None:
         """
         """
         self._nodes[node_name] = coordinates
     #
-    def __getitem__(self, node_name:int):
+    def __getitem__(self, node_name:int|str):
         """
         """
         #print('<-- mat' )

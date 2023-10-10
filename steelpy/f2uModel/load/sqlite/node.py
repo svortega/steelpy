@@ -1,10 +1,9 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
 from collections.abc import Mapping
-#from array import array
 #from typing import NamedTuple
 import re
 
@@ -31,7 +30,8 @@ class NodeLoadItemSQL(Mapping):
         """
         self._db_file = db_file
         self._name = load_name
-        self._node = NodeItemSQL(self._name, self._db_file)
+        #self._node = NodeItemSQL(self._name, self._db_file)
+        self._node =  NodeLoadSQL(load_name, self._db_file)
         #
         self._labels = []
         self._type = []        
@@ -40,10 +40,11 @@ class NodeLoadItemSQL(Mapping):
         with conn:        
             self._create_table(conn)
     #
-    def __setitem__(self, node_name:int|str,
-                    node_load:list) -> None:
+    def __setitem__(self, node_name: int|str,
+                    node_load: list) -> None:
         """
         """
+        #1/0
         # get load data
         conn = create_connection(self._db_file)
         with conn:  
@@ -54,31 +55,25 @@ class NodeLoadItemSQL(Mapping):
             raise IOError(f"Node {node_name} not found")         
         #
         # set element load        
-        load_type = node_load.pop(0)
+        #load_type = node_load.pop(0)
         #load_number = next(self.get_number())
         self._labels.append(node_number)
         #
-        #if isinstance(node_load[-1], str):
-        #    load_title = node_load[-1]
-        #    node_load.pop()
+        #
+        #bd_file = self._db_file
+        #conn = create_connection(bd_file)
+        #
+        #if re.match(r"\b(point|load|node)\b", load_type, re.IGNORECASE):
+        self._node[node_number] = node_load
+        
+        #elif re.match(r"\b(mass)\b", load_type, re.IGNORECASE):
+        #    raise NotImplementedError(f'node mass')
+        
+        #elif re.match(r"\b(disp(lacement)?)\b", load_type, re.IGNORECASE):
+        #    raise NotImplementedError(f'node displacement')
+        
         #else:
-        #    load_title = 'NULL'
-        #
-        #
-        bd_file = self._db_file
-        conn = create_connection(bd_file)        
-        #
-        if re.match(r"\b(point|load|node)\b", load_type, re.IGNORECASE):
-            self._node._load[node_number] = node_load
-        
-        elif re.match(r"\b(mass)\b", load_type, re.IGNORECASE):
-            raise NotImplementedError(f'node mass')
-        
-        elif re.match(r"\b(disp(lacement)?)\b", load_type, re.IGNORECASE):
-            raise NotImplementedError(f'node displacement')
-        
-        else:
-            raise IOError(f'node load type {load_type} not recognized')        
+        #    raise IOError(f'node load type {load_type} not recognized')        
     #
     def __getitem__(self, node_name:int|str) :
         """
@@ -90,10 +85,11 @@ class NodeLoadItemSQL(Mapping):
         #
         try:
             node_number = node[0]
-            if not node_name in self._labels:
-                self._labels.append(node_name)
+            if not node_number in self._labels:
+                self._labels.append(node_number)
             #
-            return self._node(node_name)            
+            return self._node(node_number)
+            #return self._node[node_number]
         except TypeError:
             raise IOError(f"Node {node_name} not found")         
         #1 / 0
@@ -134,35 +130,37 @@ class NodeLoadItemSQL(Mapping):
         return output
     #    
     #
-    @property
-    def load(self):
-        """
-        """
-        return self._node._load    
+    #@property
+    #def load(self):
+    #    """
+    #    """
+    #    return self._node._load    
     #     
     #
     def _create_table(self, conn) -> None:
         """ """
-        _table_node_load = "CREATE TABLE IF NOT EXISTS tb_LoadNode(\
+        table_node_load = "CREATE TABLE IF NOT EXISTS tb_LoadNode(\
                             number INTEGER PRIMARY KEY NOT NULL,\
                             load_number INTEGER NOT NULL REFERENCES tb_Load(number),\
+                            element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
                             node_number INTEGER NOT NULL REFERENCES tb_Nodes(number),\
                             title TEXT,\
                             system TEXT,\
+                            type TEXT NOT NULL,\
                             fx DECIMAL,\
                             fy DECIMAL,\
                             fz DECIMAL,\
                             mx DECIMAL,\
                             my DECIMAL,\
                             mz DECIMAL,\
-                            fxi DECIMAL,\
-                            fyi DECIMAL,\
-                            fzi DECIMAL,\
-                            mxi DECIMAL,\
-                            myi DECIMAL,\
-                            mzi DECIMAL);"
+                            x DECIMAL,\
+                            y DECIMAL,\
+                            z DECIMAL,\
+                            rx DECIMAL,\
+                            ry DECIMAL,\
+                            rz DECIMAL);"
         #
-        create_table(conn, _table_node_load)
+        create_table(conn, table_node_load)
     #
     def get_group_nodes(self):
         """
@@ -188,6 +186,7 @@ class NodeLoadItemSQL(Mapping):
     #
     def get_sum_column(self, conn, node_name, load_number):
         """ """
+        1 / 0
         project = (node_name, load_number,)
         sql = 'SELECT SUM(fx), SUM(fy), SUM(fz), SUM(mx), SUM(my), SUM(mz)\
                FROM tb_LoadNode WHERE node_number = ? AND load_number = ?'
@@ -212,6 +211,47 @@ class NodeLoadItemSQL(Mapping):
             pass        
         #print('----')
     #
+    #
+    #
+    @property
+    def df(self):
+        """nodes in dataframe format"""
+        db = DBframework()
+        conn = create_connection(self._db_file)
+        #
+        with conn:
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Load.*, \
+                        tb_Nodes.name, \
+                        tb_LoadNode.title, tb_LoadNode.system, tb_LoadNode.type, \
+                        tb_LoadNode.fx, tb_LoadNode.fy, tb_LoadNode.fz, \
+                        tb_LoadNode.mx, tb_LoadNode.my, tb_LoadNode.mz, \
+                        tb_LoadNode.x, tb_LoadNode.y, tb_LoadNode.z, \
+                        tb_LoadNode.rx, tb_LoadNode.ry, tb_LoadNode.rz \
+                        FROM tb_Load, tb_Nodes, tb_LoadNode\
+                        WHERE tb_LoadNode.load_number = tb_Load.number\
+                        AND tb_LoadNode.node_number = tb_Nodes.number \
+                        AND tb_Load.name = {:};".format(self._name))
+            rows = cur.fetchall()
+        #
+        cols = ['load_number','load_name', 'load_title', 'load_type',
+                'node_name',
+                'load_comment', 'load_system', 'type', 
+                'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                'x', 'y', 'z', 'rx', 'ry', 'rz']
+        df = db.DataFrame(data=rows, columns=cols)
+        #df = db.read_sql_query("SELECT * FROM tb_LoadNode", conn)
+        df = df[['load_name', 'load_type', 'load_number', 'load_system', 'load_comment',
+                 'node_name', 'type', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                 'x', 'y', 'z', 'rx', 'ry', 'rz']]
+        return df
+    
+    @df.setter
+    def df(self, value):
+        """ """
+        print('node load')
+        1 / 0
+    #     
 #
 #
 # ---------------------------------
@@ -240,21 +280,20 @@ class NodeItemSQL(NodeItem):
         self._load = NodeLoadSQL(load_name, "load", self._bd_file)
         self._displacement = NodeLoadSQL(load_name, "displacement", self._bd_file)
         self._mass = NodeLoadSQL(load_name, "mass", self._bd_file)
-    #
+    # 
 #
 #
 class NodeLoadSQL(NodeLoadBasic):
     __slots__ = ['_labels', '_title', '_complex', 
                  '_system_flag', '_system', 
-                 '_bd_file', '_name', 'type']
+                 '_bd_file', '_name']
     
-    def __init__(self, load_name: str, load_type:str, bd_file: str) -> None:
+    def __init__(self, load_name: str,  bd_file: str) -> None:
         """
         """
         super().__init__()
         self._name = load_name
         self._bd_file = bd_file
-        self._type = load_type
     #
     #
     def __setitem__(self, node_name:int|str,
@@ -272,10 +311,11 @@ class NodeLoadSQL(NodeLoadBasic):
             raise IOError(f"Node {node_name} not found")         
         #
         self._labels.append(node_name)
+        load_type = point_load.pop(0)
         #
         if isinstance(point_load, dict):
             point_load = get_nodal_load(point_load)
-            title= point_load[-1]
+            title = point_load[-1]
             point_load.pop()
         elif isinstance(point_load[-1], str):
             title = point_load.pop()
@@ -286,53 +326,43 @@ class NodeLoadSQL(NodeLoadBasic):
         #
         # Push to database
         #
-        if re.match(r"\b(point|load|node)\b", self._type, re.IGNORECASE):
-            #point_load = get_nodal_load(point_load)
-            with conn:
-                self._push_load(conn, node_number, title, point_load)
+        #if re.match(r"\b(point|load|node)\b", self._type, re.IGNORECASE):
+        with conn:
+            self._push_load(conn=conn,
+                            node_number=node_number,
+                            load_title=title,
+                            node_load=point_load,
+                            load_type=load_type)
         
-        elif re.match(r"\b(mass)\b", self._type, re.IGNORECASE):
-            raise NotImplementedError(f'node mass')
-        
-        elif re.match(r"\b(disp(lacement)?)\b", self._type, re.IGNORECASE):
-            raise NotImplementedError(f'node displacement')
-        
-        else:
-            raise IOError(f'node load type {self._type} not recognized')    
+        #elif re.match(r"\b(mass)\b", self._type, re.IGNORECASE):
+        #    raise NotImplementedError(f'node mass')
+        #
+        #elif re.match(r"\b(disp(lacement)?)\b", self._type, re.IGNORECASE):
+        #    raise NotImplementedError(f'node displacement')
+        #
+        #else:
+        #    raise IOError(f'node load type {self._type} not recognized')    
     #
     def __getitem__(self, node_name:int|str) -> list:
         """
         """
         # get load data
         conn = create_connection(self._bd_file)
-        #with conn:
-        #    node = check_nodes(conn, node_name)
-        #
-        #try:
-        #    node_number = node[0]
-        #except TypeError:
-        #    raise IOError(f"Node {node_name} not found")
-        #
-        #indexes: list = [x for x, _item in enumerate(self._labels)
-        #                 if _item == node_name]
-        #
-        #load_type = [item for item in indexes]
-        #
         #
         # Get database
         #
-        if re.match(r"\b(point|load|node)\b", self._type, re.IGNORECASE):
-            with conn:
-                nload = self._get_load(conn, node_name)
+        #if re.match(r"\b(point|load|node)\b", self._type, re.IGNORECASE):
+        with conn:
+            nload = self._get_load(conn, node_name)
         
-        elif re.match(r"\b(mass)\b", self._type, re.IGNORECASE):
-            raise NotImplementedError(f'node mass')
-        
-        elif re.match(r"\b(disp(lacement)?)\b", self._type, re.IGNORECASE):
-            raise NotImplementedError(f'node displacement')
-        
-        else:
-            raise IOError(f'node load type {self._type} not recognized')         
+        #elif re.match(r"\b(mass)\b", self._type, re.IGNORECASE):
+        #    raise NotImplementedError(f'node mass')
+        #
+        #elif re.match(r"\b(disp(lacement)?)\b", self._type, re.IGNORECASE):
+        #    raise NotImplementedError(f'node displacement')
+        #
+        #else:
+        #    raise IOError(f'node load type {self._type} not recognized')         
         #
         #
         #_points: list = []
@@ -346,27 +376,43 @@ class NodeLoadSQL(NodeLoadBasic):
     #
     #
     def _push_load(self, conn, node_number: int,
-                        load_title:str, node_load: list[float]):
+                   load_title: str, node_load: list[float],
+                   load_type: str, system: str = "global"):
         """
         """
-        #beam = check_element(conn, beam_name)
-        #beam_number = beam[0]        
         #print("-->")
         load_data = get_load_data(conn, self._name, load_type='basic')
         load_number = load_data[0]        
         #
-        system = "global"
-        project = (load_number, node_number, load_title,
-                   system, *node_load,
-                   'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL')
+        if re.match(r"\b(point|load|node)\b", load_type, re.IGNORECASE):
+            project = (load_number, 'NULL', node_number,
+                       load_title, system, load_type,
+                       *node_load,
+                       'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL')
+
+        elif re.match(r"\b(mass)\b", load_type, re.IGNORECASE):
+            project = (load_number, 'NULL', node_number,
+                       load_title, system, load_type,
+                       'NULL', 'NULL', 'NULL',
+                       *node_load,
+                       'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL')
+
+        elif re.match(r"\b(disp(lacement)?)\b", load_type, re.IGNORECASE):
+            project = (load_number, 'NULL', node_number,
+                       load_title, system, load_type,
+                       'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL',
+                       *node_load)
+
+        else:
+            raise IOError(f'node load type {load_type} not recognized')
         #
         # print('-->')
         #
-        sql = 'INSERT INTO tb_LoadNode(load_number, node_number, \
-                                        title, system, \
+        sql = 'INSERT INTO tb_LoadNode(load_number, element_number, node_number, \
+                                        title, system, type, \
                                         fx, fy, fz, mx, my, mz,\
-                                        fxi, fyi, fzi, mxi, myi, mzi)\
-                                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                                        x, y, z, rx, ry, rz)\
+                                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
         cur = conn.cursor()
         cur.execute(sql, project)
         #print('-->')
@@ -391,42 +437,55 @@ class NodeLoadSQL(NodeLoadBasic):
         rows = cur.fetchall()
         node_load = []
         for row in rows:
-            #data = [*row[7:10], *row[14:17], row[6], row[13],
-            #        node_number, row[2], *row[4:6]]
-            data = [*row[5:11],                      # [fx, fy, fz, mx, my, mz]
-                    node_name, row[3], self._name,   # [name, title, load_name]
-                    0, 0, self._type]                # [system, load_complex, load_type]
-            # [fx, fy, fz, mx, my, mz, name, title, load_name, system, load_complex, load_type]
-            node_load.append(PointNode._make(data))
+            if row[6] in ['load', 'point', 'node']:
+                data = [*row[7:13],                      # [fx, fy, fz, mx, my, mz]
+                        node_name, row[4], self._name,   # [name, title, load_name]
+                        0, 0, 'load']                    # [system, load_complex, load_type]
+                #
+                # [fx, fy, fz, mx, my, mz, name, title, load_name, system, load_complex, load_type]
+                node_load.append(PointNode._make(data))
+            else:
+                1 / 0
         return node_load
     #
+    #
+    # -----------------------------------------
+    #
+    #
+    def __call__(self, node_id):
+        self._node_id = node_id
+        return self    
+    #
+    #
     @property
-    def df(self):
-        """nodes in dataframe format"""
-        db = DBframework()
-        conn = create_connection(self._bd_file)
-        #
-        with conn:
-            cur = conn.cursor()
-            cur.execute("SELECT tb_Load.*, \
-                        tb_Nodes.name, \
-                        tb_LoadNode.title, tb_LoadNode.system, \
-                        tb_LoadNode.fx, tb_LoadNode.fy, tb_LoadNode.fz, \
-                        tb_LoadNode.mx, tb_LoadNode.my, tb_LoadNode.mz \
-                        FROM tb_Load, tb_Nodes, tb_LoadNode\
-                        WHERE tb_LoadNode.load_number = tb_Load.number\
-                        AND tb_LoadNode.node_number = tb_Nodes.number \
-                        AND tb_Load.name = {:};".format(self._name))
-        rows = cur.fetchall()
-        #
-        cols = ['load_number','load_name', 'load_title', 'load_type',
-                'node_name',
-                'load_comment', 'load_system',
-                'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
-        df = db.DataFrame(data=rows, columns=cols)
-        #df = db.read_sql_query("SELECT * FROM tb_LoadNode", conn)
-        df = df[['load_name', 'load_type', 'load_number', 'load_system', 'load_comment',
-                 'node_name', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']]
-        return df
-        
+    def load(self):
+        """
+        """
+        1 / 0
+        try:
+            point_id = self._node_id
+            return self._load[point_id]
+        except :
+            raise IndexError
+
+    @load.setter
+    def load(self, node_load: list):
+        """
+        Point Load
+        """
+        node_name = self._node_id
+        #if isinstance(values, dict):
+        #    self._load[node_name] = values
+        #elif isinstance(values[0], list):
+        #    for value in values:
+        #        self._load[node_name] = value
+        #else:
+        #    self._load[node_name] = values
+        node_load.insert(0, 'load')
+        self.__setitem__(node_name, node_load)
+    #    
+    #
+    #
+
+    
 #

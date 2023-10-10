@@ -97,7 +97,7 @@ class SectionSQL(SectionBasic):
         """ """
         table_sections = "CREATE TABLE IF NOT EXISTS tb_Sections (\
                             number INTEGER PRIMARY KEY NOT NULL,\
-                            name TEXT NOT NULL,\
+                            name NOT NULL,\
                             title TEXT,\
                             type TEXT NOT NULL,\
                             diameter DECIMAL,\
@@ -116,7 +116,7 @@ class SectionSQL(SectionBasic):
                             compactness TEXT);"
         #
         table_properties = "CREATE TABLE IF NOT EXISTS tb_SecProperties (\
-                            number INTEGER PRIMARY KEY NOT NULL,\
+                            number INTEGER PRIMARY KEY NOT NULL REFERENCES tb_Sections(number),\
                             area DECIMAL,\
                             Zc DECIMAL,\
                             Yc DECIMAL,\
@@ -135,16 +135,18 @@ class SectionSQL(SectionBasic):
         create_table(conn, table_properties)
     #
     #
+    @property
     def df(self):
         """ """
-        #from steelpy.process.dataframe.dframe import DataFrame
-        #df = DataFrame()
-        #import pandas as pd
         db = DBframework()
         #
         conn = create_connection(self.db_file)
         with conn:
             df = db.read_sql_query("SELECT * FROM tb_Sections", conn)
+        #
+        df.drop(columns=['number'], inplace=True)
+        title = df.pop('title')
+        df.insert(len(df.columns), 'title', title)
         return df
 #
 #

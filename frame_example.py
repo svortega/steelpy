@@ -4,7 +4,7 @@ from steelpy import f2uModel
 
 
 units = Units()
-f2umodel = f2uModel(component='test2')
+f2umodel = f2uModel(component='frame1')
 mesh = f2umodel.mesh()
 
 #
@@ -23,13 +23,16 @@ nodes = mesh.nodes()
 nodes[1] = [0 * units.m, 0 * units.m, 0 * units.m]
 nodes[2] = [3 * units.m, 0 * units.m, 0 * units.m]
 nodes[3] = [6 * units.m, 0 * units.m, 0 * units.m]
-# boundary nodes
+#
+# boundary type
 boundary = mesh.boundaries()
+# supports[node_number] =  boundary/parameters
 supports = boundary.supports()
 supports[1] = [1,1,1,1,1,1]
 #supports[3] = [1,1,1,0,0,0]
 print(boundary)
-# elements [type, node1, node2, material, section]
+#
+# elements = [type, node1, node2, material, section]
 elements = mesh.elements()
 elements[1] = ['beam', 1, 2, 1, 1]
 elements[2] = ['beam', 2, 3, 1, 1]

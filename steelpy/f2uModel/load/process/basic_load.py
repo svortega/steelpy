@@ -249,7 +249,7 @@ class BasicLoadBasic(Mapping):
             # -------------------------------
             # nodal load
             # 
-            df2 = lcase._node.load.df
+            df2 = lcase._node.df
             if not df2.empty:
                 dftemp = update_df(dftemp, df2, lcase.number, lcase.title)
             #

@@ -491,6 +491,7 @@ class BeamLoad:
 
         """
         beam_name = self._beam.name
+        #1 / 0
         #beam_name = self._beam_id
         return self._line[beam_name]
 
@@ -510,15 +511,19 @@ class BeamLoad:
         #beam_name = self._beam_id
         #
         if isinstance(values, dict):
-            self._line[beam_name] = self._get_line(values)
+            load = self._get_line(values)
+            load.insert(0, 'load')
+            self._line[beam_name] = load
 
         elif isinstance(values[0], (list, tuple)):
             for item in values:
-                #value.insert(0, self._Lbeam)
-                self._line[beam_name] = self._get_line(item)
+                load =  self._get_line(item)
+                load.insert(0, 'load')
+                self._line[beam_name] = load
         else:
-            #values.insert(0, self._Lbeam)
-            self._line[beam_name] = self._get_line(values)
+            load =  self._get_line(values)
+            load.insert(0, 'load')
+            self._line[beam_name] = load
     #
     def _get_line(self, line_load: list|dict):
         """ get line load in beam local system"""
@@ -557,6 +562,7 @@ class BeamLoad:
         """ Concentrated force """
         beam_name = self._beam.name
         #beam_name = self._beam_id
+        #1 / 0
         return self._point[beam_name]
 
     @point.setter
@@ -568,17 +574,23 @@ class BeamLoad:
         #beam_name = self._beam_id
         #
         if isinstance(values, dict):
-            self._point[beam_name] = self._get_point(values)
+            load = self._get_point(values)
+            load.insert(0, 'force')
+            self._point[beam_name] = load
 
         elif isinstance(values[0], (list, tuple)):
             for item in values:
                 #value.insert(0, self._Lbeam)
                 #load = get_beam_point_load(load=values)
-                self._point[beam_name] = self._get_point(item)
+                load = self._get_point(item)
+                load.insert(0, 'force')
+                self._point[beam_name] = load
         else:
             #values.insert(0, self._Lbeam)
             #load = get_beam_point_load(load=values)
-            self._point[beam_name] = self._get_point(values)
+            load =  self._get_point(values)
+            load.insert(0, 'force')
+            self._point[beam_name] = load
     #
     def _get_point(self, point_load: list|dict):
         """ get point load in beam local system"""
@@ -806,10 +818,10 @@ class BeamLoad:
     #
     # ------------------
     #
-    def df(self, data):
-        """ """
-        print('====')
-        1/0
+    #def df(self, data):
+    #    """ """
+    #    print('====')
+    #    1/0
     #
     #
 #

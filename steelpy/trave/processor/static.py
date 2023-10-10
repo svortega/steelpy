@@ -1,12 +1,12 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 # Python stdlib imports
 from array import array
 from copy import copy
 from math import fsum
-import pickle
+#import pickle
 from dataclasses import dataclass
 from typing import NamedTuple
 #from itertools import chain

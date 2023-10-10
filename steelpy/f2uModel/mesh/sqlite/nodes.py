@@ -21,7 +21,7 @@ from steelpy.utils.dataframe.main import DBframework
 #
 class NodeSQL(NodeBasic):
     """
-    This is a fem2ufo model node class
+    steelpy model node class
 
 
     Parameters
@@ -99,7 +99,7 @@ class NodeSQL(NodeBasic):
         # conn = create_connection(self.db_file)
         _table_nodes = "CREATE TABLE IF NOT EXISTS tb_Nodes (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        name INTEGER NOT NULL,\
+                        name NOT NULL,\
                         type TEXT NOT NULL,\
                         x DECIMAL NOT NULL,\
                         y DECIMAL NOT NULL,\
@@ -257,8 +257,9 @@ class NodeSQL(NodeBasic):
         #print('nodes df in')
         db = DBframework()
         conn = create_connection(self.db_file)
-        return db.read_sql_query("SELECT * FROM tb_Nodes", conn)
-        #return df
+        nodes = db.read_sql_query("SELECT * FROM tb_Nodes", conn)
+        nodes.drop(columns=['number', 'idx'], inplace=True)
+        return nodes
     
     @df.setter
     def df(self, df):

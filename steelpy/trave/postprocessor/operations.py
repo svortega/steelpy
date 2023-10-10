@@ -157,7 +157,7 @@ class ElementProcess:
                                  J=section.J, Cw=section.Cw, 
                                  E=material.E, G=material.G)         
                 #
-                nodes = element.connectivity
+                #nodes = element.connectivity
                 # ---------------------------------------------
                 # displacement
                 gndisp = np.concatenate((ndisp.loc[nodes[0]],

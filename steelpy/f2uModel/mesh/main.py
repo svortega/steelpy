@@ -454,29 +454,36 @@ class Mesh(BasicModel):
     #
     def to_excel(self, name: str|None = None):
         """dump mesh in excel file"""
-        #from steelpy.utils.spreadsheet.main import Spreadsheet
         #
         if not name:
             name = self.db_file.split('.')
             name = f"{name[0]}.xlsx"
         #
+        #bload = self._load._basic.df
+        nload = self._load._basic._node.df
+        #eload = self._load._basic._beam.df        
         #
-        db = DBframework()
-        with db.ExcelWriter(name) as writer:
+        nodes = self._nodes.df
+        nodes.set_index('name', inplace=True)
+        bound = self._boundaries.df
+        bound.set_index('name', inplace=True)
+        #
+        nodes = nodes.join(bound)
+        nodes.reset_index(inplace=True)
+        #
+        #db = DBframework()
+        with self._df.ExcelWriter(name) as writer:
             mat = self._materials.df
             mat.to_excel(writer, sheet_name='Materials', index=False)
             #
             sect = self._sections.df
             sect.to_excel(writer, sheet_name='Sections', index=False)
             #
-            nodes = self._nodes.df
             nodes.to_excel(writer, sheet_name='Nodes', index=False)
-            #
-            bound = self._boundaries.df
-            bound.to_excel(writer, sheet_name='Boundary', index=False)
             #
             memb = self._elements.df
             memb.to_excel(writer, sheet_name='Elements', index=False)            
+        #
         #
         print('---')
         1 / 0

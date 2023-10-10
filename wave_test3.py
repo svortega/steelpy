@@ -15,12 +15,13 @@ units = Units()
 #
 f2umodel = f2uModel(component="wave_test3")
 #
+mesh = f2umodel.mesh()
 #
 # ----------------------------------------------------
 # Material input
 # ----------------------------------------------------
 #
-material = f2umodel.materials()
+material = mesh.materials()
 matlinear = material.linear()
 matlinear[1] = [345.0 * units.MPa]
 print(material)
@@ -30,7 +31,7 @@ print(material)
 # Section Input
 # ----------------------------------------------------
 #
-section = f2umodel.sections()
+section = mesh.sections()
 section[2] = ['Tubular', 500 * units.mm, 25 * units.mm]
 print(section)
 #
@@ -38,7 +39,6 @@ print(section)
 # Mesh Model
 # ----------------------------------------------------
 #
-mesh = f2umodel.mesh()
 #
 # Node input
 nodes = mesh.nodes()

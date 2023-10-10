@@ -7,7 +7,7 @@ from steelpy import Trave3D
 #
 units = Units()
 #
-f2umodel = f2uModel(component="example2D_2")
+f2umodel = f2uModel()
 #
 #
 # ----------------------------------------------------
@@ -16,7 +16,7 @@ f2umodel = f2uModel(component="example2D_2")
 # ----------------------------------------------------
 # ----------------------------------------------------
 #
-mesh = f2umodel.mesh()
+mesh = f2umodel.mesh(sql_file="example2D_2_f2u")
 #
 #
 #

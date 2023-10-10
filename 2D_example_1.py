@@ -148,9 +148,9 @@ basic[11].node([[2, 'load',
 #
 nullUDL= 0 * units.N / units.m
 basic[11].beam([[2, 'line',
-                nullUDL, -50_000 * units.N/units.m, nullUDL,
-                nullUDL, -50_000 * units.N/units.m, 20_000 * units.N/units.m,
-                'udly_1'],
+                 nullUDL, -50_000 * units.N/units.m, nullUDL,
+                 nullUDL, -50_000 * units.N/units.m, 20_000 * units.N/units.m,
+                 'udly_1'],
                 [1, 'point', 3* units.m, 10 * units.kN, 'point_1']])
 #
 #
@@ -187,7 +187,7 @@ print("Load")
 print(loadm.basic())
 #
 #
-mesh.to_excel()
+#mesh.to_excel()
 #
 # ----------------------------------------------------
 # Plotting

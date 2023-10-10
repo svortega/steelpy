@@ -113,7 +113,7 @@ class MaterialSQL(Mapping):
         """ """
         _table_materials = "CREATE TABLE IF NOT EXISTS tb_Materials (\
                             number INTEGER PRIMARY KEY,\
-                            name TEXT NOT NULL,\
+                            name NOT NULL,\
                             title TEXT,\
                             type TEXT NOT NULL);"
         #
@@ -533,7 +533,7 @@ class MaterialElasticSQL(Mapping):
         """ """
         _table_material = "CREATE TABLE IF NOT EXISTS tb_MatElastoPlastic(\
                             number INTEGER PRIMARY KEY,\
-                            material_number INTEGER NOT NULL,\
+                            material_number INTEGER NOT NULL REFERENCES tb_Materials(number),\
                             Fy DECIMAL NOT NULL,\
                             Fu DECIMAL NOT NULL,\
                             E DECIMAL NOT NULL,\
@@ -573,14 +573,25 @@ class MaterialElasticSQL(Mapping):
     @property
     def df(self):
         """ raw data for dataframe"""
-        #import pandas as pd
-        #from steelpy.process.dataframe.dframe import DataFrame
-        db = DBframework()
-        #
         conn = create_connection(self.db_file)
-        #with conn:
-        df = db.read_sql_query("SELECT * FROM tb_MatElastoPlastic", conn)
-        return df
+        with conn:
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Materials.name, tb_Materials.type, tb_Materials.title, \
+                        tb_MatElastoPlastic.*\
+                        FROM tb_Materials, tb_MatElastoPlastic\
+                        WHERE  tb_Materials.number = tb_MatElastoPlastic.material_number")
+            rows = cur.fetchall()            
+        
+        #
+        db = DBframework()
+        header = ['name', 'type', 'title',
+                  'number', 'material_number',
+                  'Fy', 'Fu', 'E', 'G', 'poisson', 'density', 'alpha']
+        matdf = db.DataFrame(data=rows, columns=header)        
+        #
+        header = ['name', 'type', 
+                  'Fy', 'Fu', 'E', 'G', 'poisson', 'density', 'alpha', 'title']        
+        return matdf[header]
     
     @df.setter
     def df(self, df):
