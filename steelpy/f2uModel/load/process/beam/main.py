@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
@@ -126,4 +126,7 @@ class BeamBasicItem(Mapping):
         return value in self._labels
 
     def __len__(self) -> int:
-        return len(self._labels)    
+        return len(self._labels)
+#
+#
+#

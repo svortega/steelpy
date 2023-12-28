@@ -1,11 +1,11 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
 from __future__ import annotations
 from collections.abc import Mapping
-from collections import defaultdict
+#from collections import defaultdict
 from operator import sub, add
 from dataclasses import dataclass
 from typing import NamedTuple
@@ -17,11 +17,11 @@ from steelpy.utils.units.buckingham import Number
 from steelpy.utils.math.operations import trnsload
 from steelpy.utils.math.operations import linspace
 # steelpy.
-from ....f2uModel.load.process.operations import(check_list_units,
-                                                 check_beam_dic,
-                                                 check_point_dic,
-                                                 get_beam_node_load,
-                                                 get_beam_udl_load)
+from steelpy.f2uModel.load.process.operations import(check_list_units,
+                                                     check_beam_dic,
+                                                     check_point_dic,
+                                                     get_beam_node_load,
+                                                     get_beam_udl_load)
 #
 # steelpy.
 from steelpy.trave.beam.pilkey.main import BeamTorsion, BeamAxial, BeamBending
@@ -57,9 +57,15 @@ class LineBeam(NamedTuple):
         Local  : 1
         Global : 0
         """
-        if self.system != 0:
-            return "local"
-        return "global"
+        #if self.system != 0:
+        #    return "local"
+        #return "global"
+        try:  # local system
+            1 / self.system
+        except TypeError:
+            return self.system.lower()
+        except ZeroDivisionError:
+            return 'global'
     #
     def local_system(self):
         """
@@ -266,9 +272,15 @@ class PointBeam(NamedTuple):
     #
     @property
     def coordinate_system(self):
-        if self.system != 0:
-            return "local"
-        return "global"    
+        #if self.system != 0:
+        #    return "local"
+        #return "global"
+        try:  # local system
+            1 / self.system
+        except TypeError:
+            return self.system.lower()
+        except ZeroDivisionError:
+            return 'global'
     #    
     @property
     def distance(self):
@@ -278,15 +290,13 @@ class PointBeam(NamedTuple):
     def local_system(self):
         """ """
         # local nodal loading
-        #pload = [self.fx, self.fy, self.fz, self.mx, self.my, self.mz]       
-        #
         try:  # local system
             1 / self.system
+        except TypeError:
+            if self.system.lower() == 'global':
+                raise IOError('line line should be in beam local system')
         except ZeroDivisionError:
-            # global system
-            #pload = trns_3Dv(pload, R)
             raise IOError('line line should be in beam local system')
-        #return pload[:6]
     #
     #
     def __str__(self, units:str="si") -> str:
@@ -427,42 +437,138 @@ class PointBeam(NamedTuple):
 # ---------------------------------
 #
 #
-class BeamLoadItem(Mapping):
-    __slots__ = ['_labels','_name',  '_load', 
-                 '_node_eq']
-
-    def __init__(self) -> None:
-        """
-        """
-        self._labels = []
-    #
-    #
-    def __contains__(self, value) -> bool:
-        return value in self._labels
-
-    def __len__(self) -> int:
-        return len(self._labels)
-
-    def __iter__(self):
-        """
-        """
-        items = list(dict.fromkeys(self._labels))
-        return iter(items)
-
-    #
-    def __str__(self, units: str = "si") -> str:
-        """ """
-        output = ""
-        output += self._load.__str__()
-        return output
-    #
-    
+#class BeamLoadItem(Mapping):
+#    __slots__ = ['_labels','_name',  '_load', 
+#                 '_node_eq', '_system_flag']
+#
+#    def __init__(self) -> None:
+#        """
+#        """
+#        self._labels = []
+#        self._system_flag = 0  # Global system default
+#    #
+#    #
+#    def __contains__(self, value) -> bool:
+#        return value in self._labels
+#
+#    def __len__(self) -> int:
+#        return len(self._labels)
+#
+#    def __iter__(self):
+#        """
+#        """
+#        items = list(dict.fromkeys(self._labels))
+#        return iter(items)
+#
+#    #
+#    def __str__(self, units: str = "si") -> str:
+#        """ """
+#        output = ""
+#        output += self._line.__str__(load_name=self._name)
+#        output += self._point.__str__(load_name=self._name)
+#        return output
+#    #
+#    #
+#    def _get_line(self, line_load: list|dict):
+#        """ get line load in beam local system"""
+#        #
+#        # update inputs
+#        if isinstance(line_load, dict):
+#            udl = check_beam_dic(line_load)
+#            title = udl.pop()
+#            
+#        elif isinstance(line_load[-1], str):
+#            title = line_load.pop()
+#            if isinstance(line_load[0], Number):
+#                udl = check_list_units(line_load)
+#            else:
+#                udl = get_beam_udl_load(line_load)
+#        else:
+#            title ='NULL'
+#            udl = get_beam_udl_load(line_load)
+#        #
+#        # get system local = 1
+#        try:
+#            1 / self._system_flag
+#            return [*udl, 1, title]
+#        except ZeroDivisionError:
+#            # local nodal loading
+#            nload = [*udl[:3], 0, 0, 0,
+#                     *udl[3:6], 0, 0, 0,]
+#            nload = trnsload(nload, self._beam.T3D())
+#            nload = [*nload[:3], *nload[6:9]] 
+#            return [*nload, *udl[6:], 1, title]
+#    #
+#    def _get_point(self, point_load: list|dict):
+#        """ get point load in beam local system"""
+#        # update inputs
+#        if isinstance(point_load, dict):
+#            point = check_point_dic(point_load)
+#            title = point.pop()
+#        
+#        elif isinstance(point_load[-1], str):
+#            title = point_load.pop()
+#            if isinstance(point_load[0], Number):
+#                point = check_list_units(point_load)
+#            else:
+#                point = get_beam_node_load(point_load)
+#        
+#        else:
+#            title = 'NULL'
+#            point = get_beam_node_load(point_load)
+#        #
+#        # get system local = 1
+#        try: # Local system
+#            1 / self._system_flag
+#            return [*point, 1, title]
+#        except ZeroDivisionError: # global to local system
+#            pload = [*point[:6], 0, 0, 0, 0, 0, 0]
+#            pload = trnsload(pload, self._beam.T3D())
+#            return [*pload[:6], point[6], 1, title]
+#    #
+#    def ferXX(self, beams):
+#        """ """
+#        """Beam reacition global system according to boundaries
+#        """
+#        b2n = []
+#        #beam = self._beam
+#        global_system = 0
+#        # line loadreactions
+#        for key, item in self._line.items():
+#            beam = beams[key]
+#            node1, node2 = beam.nodes
+#            #print(f'line load {key}')
+#            for bload in item:
+#                res = bload.fer_beam(L=beam.L)
+#                # local to global system
+#                gnload = [*res[4], *res[5]]
+#                lnload = trnsload(gnload, beam.T3D())
+#                b2n.append([bload.load_name, bload.title, global_system, 
+#                            beam.number, node1.number, lnload[:6], node2.number, lnload[6:]])
+#        # point load
+#        for key, item in self._point.items():
+#            beam = beams[key]
+#            node1, node2 = beam.nodes
+#            #print(f'point load {key}')
+#            for bload in item:
+#                res = bload.fer_beam(L=beam.L)
+#                gnload = [*res[4], *res[5]]
+#                lnload = trnsload(gnload, beam.T3D())
+#                #b2n.append([bload, item.name, item.title])
+#                #b2n.append(res)
+#                b2n.append([bload.load_name, bload.title, global_system, 
+#                            beam.number, node1.number, lnload[:6], node2.number, lnload[6:]])
+#        #
+#        #1 / 0
+#        #return [r1[:4], r1[4:]], [r2[:4], r2[4:]]
+#        return b2n
 #
 #
 #
 @dataclass
 class BeamLoad:
-    #__slots__ = ['_beam']
+    __slots__ = ['_line', '_point', 
+                 '_system_flag']
 
     def __init__(self): #, beams
         """
@@ -490,10 +596,10 @@ class BeamLoad:
         +  L0  +        +    L1    +
 
         """
-        beam_name = self._beam.name
+        #beam_name = self._beam.name
         #1 / 0
         #beam_name = self._beam_id
-        return self._line[beam_name]
+        return self._line #[beam_name]
 
     @line.setter
     def line(self, values: list):
@@ -514,7 +620,7 @@ class BeamLoad:
             load = self._get_line(values)
             load.insert(0, 'load')
             self._line[beam_name] = load
-
+    
         elif isinstance(values[0], (list, tuple)):
             for item in values:
                 load =  self._get_line(item)
@@ -560,10 +666,10 @@ class BeamLoad:
     @property
     def point(self):
         """ Concentrated force """
-        beam_name = self._beam.name
+        #beam_name = self._beam.name
         #beam_name = self._beam_id
         #1 / 0
-        return self._point[beam_name]
+        return self._point #[beam_name]
 
     @point.setter
     def point(self, values: list):
@@ -577,7 +683,7 @@ class BeamLoad:
             load = self._get_point(values)
             load.insert(0, 'force')
             self._point[beam_name] = load
-
+    
         elif isinstance(values[0], (list, tuple)):
             for item in values:
                 #value.insert(0, self._Lbeam)
@@ -824,6 +930,75 @@ class BeamLoad:
     #    1/0
     #
     #
+#
+# ---------------------------------
+#
+class BeamDistMaster(Mapping):
+    
+    def __init__(self) -> None:
+        """
+        """
+        self._index: int
+        self._labels: list[str|int] = []
+        self._title: list[str] = []
+        self._load_id: list[str|int] = []
+        self._complex: array = array("I", [])
+        # 0-global/ 1-local
+        #self._system_flag: int = 0
+        self._system: array = array("I", [])
+    #
+    def __len__(self) -> int:
+        return len(self._labels)
+    #
+    def __contains__(self, value) -> bool:
+        return value in self._labels
+    #
+    def __iter__(self):
+        """
+        """
+        items = list(set(self._labels))
+        return iter(items)
+    #
+    def __str__(self) -> str:
+        """ """
+        output = ""
+        beams = list(dict.fromkeys(self._labels))
+        #beams = list(set(self._labels))
+        for beam in beams:
+            items = self.__getitem__(beam)
+            for item in items:
+                output += item.__str__()
+        #print('---')
+        return output
+    #
+    #
+    #def _get_line_load(self):
+    #    """ return line load in correct format"""
+    #    print('-->')
+    #    1/0
+    #
+    #
+    #
+    #
+    #@property
+    #def coordinate_system(self):
+    #    if self._system_flag != 0:
+    #        return "local"
+    #    return "global"
+    #
+    #@coordinate_system.setter
+    #def coordinate_system(self, system:str|int):
+    #    """
+    #    Coordinate system for load : global or local (member)
+    #    """
+    #    self._system_flag = 0
+    #    if system in ['local', 'member', 1]:
+    #        self._system_flag = 1
+    #
+    #
+    # ------------------
+    #   
+#
 #
 #
 # ---------------------------------
