@@ -20,20 +20,8 @@ from steelpy.utils.dataframe.main import DBframework
 class Materials(Mapping):
     """This module stores material classes.
        -------------------------------
-       Nonlinear materials:
-       - Nonlinear elastic material
-       - Bilinear elastoplastic material
-         Yield criterion:
-          - von Mises
-          - Treca
-          - Morh-Coulomb
-          - Drucker-Prager
-         Hardering rules:
-          - Isotropic
-          - Kinematic
-          - Isotropic + Kinematic
-       - Multilinear plastic material
-       - Rigid-plastic material
+       Linear material:
+       - Isotropic
        
        -----------------------------
     """
@@ -120,7 +108,7 @@ class Materials(Mapping):
         output += "\n"
         output += f"{33 * space}MATERIAL PROPERTIES\n"
         output += "\n"
-        output += (f"Member ID      Fy [{stress}] Fu [{stress}] E  [{stress}] "
+        output += (f"Member ID      Fy [{stress}] Fu [{stress}] E  [{stress}] "\
                    f"G  [{stress}] Poisson    Rho[{density}]\n")
         output += "\n"
         output += "{:}\n".format(80 * ".")
@@ -162,7 +150,21 @@ class Materials(Mapping):
     def df(self, df):
         """ """
         try:
-            df.columns
+            columns = list(df.columns)
+            #
+            #header = {}
+            #for key in columns:
+            #    if re.match(r"\b(id|name|material(s)?)\b", key, re.IGNORECASE):
+            #        header[key] = 'name'
+            #    
+            #    elif re.match(r"\b(type)\b", key, re.IGNORECASE):
+            #        header[key] = 'type'
+            #    
+            #    elif re.match(r"\b(title)\b", key, re.IGNORECASE):
+            #        header[key] = 'title'
+            #    #
+            #    
+            #
             group = df.groupby("type")
             #
             # Elastic type

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2019 steelpy
 #
 
 # Python stdlib imports
@@ -47,16 +47,16 @@ class ShapeBasic:
                                 'sigma_x', 'sigma_y', 'sigma_z']]
                 stress = self._stress(stress=stress_df)
             except KeyError:
-                actions_df = df[['load_title', 'node_end',
+                actions_df = df[['node_end', # 'load_title', 
                                  'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                                  'B', 'Tw']]
                 stress = self._stress(actions=actions_df)
                 # -------------------------------------
-                header = ['load_name', 'load_title', 
+                header = ['load_name', 'load_level', 'load_system',
                           'element_name','node_end','stress_points', 'y', 'z']
                 # -------------------------------------
                 coord = stress.stress_point
-                items = [[row.load_name, row.load_title,
+                items = [[row.load_name, row.load_level, row.load_system, 
                           row.element_name, row.node_end,
                           x+1, coord.y[x], coord.z[x]]
                          for x in range(len(coord.y))

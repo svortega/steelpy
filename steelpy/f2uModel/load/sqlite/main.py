@@ -1,26 +1,26 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
 #from typing import NamedTuple, Dict, List, Iterable, Union
 
 # package imports
-from .basic_load import BasicLoadSQL
+from .load_case import BasicLoadSQL
 from .combination import LoadCombSQL
-from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
+from steelpy.utils.sqlite.utils import create_connection, create_table
 #
 #
 #
 class LoadingSQL:
-    __slots__ = ['_basic', '_combination', 'db_file']
+    __slots__ = ['_case', '_combination', 'db_file']
 
     def __init__(self, db_file: str,
                  db_system:str="sqlite"):
         """
         """
         self.db_file = db_file
-        self._basic = BasicLoadSQL(db_file)
+        self._case = BasicLoadSQL(db_file)
         self._combination = LoadCombSQL(db_file)
         # create node table
         conn = create_connection(self.db_file)
@@ -28,10 +28,10 @@ class LoadingSQL:
             self._create_table()
 
     @property
-    def basic(self):
+    def case(self):
         """
         """
-        return self._basic
+        return self._case
 
     #
     @property
@@ -58,5 +58,11 @@ class LoadingSQL:
         #conn = create_connection(self.db_file)
         create_table(conn, table_load)
         create_table(conn, table_comb_load)
+    #
+    #
+    def __str__(self) -> str:
+        """ """
+        self._case.__str__()
+        self._combination.__str__()
 #
 #

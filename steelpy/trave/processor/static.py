@@ -8,13 +8,14 @@ from copy import copy
 from math import fsum
 #import pickle
 from dataclasses import dataclass
-from typing import NamedTuple
+#from typing import NamedTuple
 #from itertools import chain
 import time
 #
 # package imports
 from steelpy.utils.math.operations import to_matrix
 from steelpy.utils.dataframe.main import DBframework
+from steelpy.f2uModel.mesh.main import MeshPlane
 #
 import numpy as np
 #from scipy.linalg import cholesky_banded, cho_solve_banded
@@ -91,13 +92,13 @@ class StaticSolver:
     """ Linear static solver class"""
     __slots__ = ['_plane',  '_method']
     
-    def __init__(self, plane: NamedTuple,
-                 method:str|None = None) -> None:
+    def __init__(self, plane2D: bool) -> None:
         """
         plane : Plane system (3D/2D)
         """
-        self._plane = plane
-        self._method = method
+        #self._plane = plane
+        #self._method = method
+        self._plane = MeshPlane(plane2D)
     #
     #
     #
@@ -107,7 +108,8 @@ class StaticSolver:
     #        pickle.dump(jbc, f)
     #        pickle.dump(Ka, f)
     #
-    def solve(self, Kg, Fn, jbc):
+    def solve(self, Kg, Fn, jbc,
+              method:str|None = None):
         """
         Linear Static Analysis (1st Order)
         
@@ -129,26 +131,26 @@ class StaticSolver:
         #stf = pickle.load( file )
         #file.close()
         #
-        dfnload = self._load_update(Fn)
+        #dfnload = self._load_update(Fn)
         #
         solver = solver_np
         #if self._method == 'banded':
         #    solver = solver_Mbanded
         #
-        Udf = self.DMS(Kg, dfnload, jbc, solver)
+        Udf = self.DSM(Kg, Fn, jbc, solver)
         #
         uptime = time.time() - start_time
         print(f"** Finish Time: {uptime:1.4e} sec")
         return Udf
     #
-    def DMS(self, stf, dfnload, df_jbc, solver):
+    def DSM(self, stf, dfnload, df_jbc, solver):
         """
         Direct Stiffness Method
         """
         dfbool, dfzeros = self._mask(df_jbc)
         jbcc = df_jbc.stack()
         blgrp = dfnload.groupby(['load_name', 'load_number', 
-                                 'load_type','load_system'])
+                                 'load_level','load_system'])
         #       
         dftemp = []
         for key, litem in blgrp:
@@ -179,19 +181,11 @@ class StaticSolver:
     def df(self, dftemp):
         """displacement dataframe"""
         db = DBframework()
-        header = ['load_name', 'load_number', 'load_type',
+        header = ['load_name', 'load_number', 'load_level',
                   'load_system', 'load_title',
                   'node_name', *self._plane.hdisp]
         return db.DataFrame(data=dftemp, columns=header, index=None)
     #
-    def _load_update(self, df_nload):
-        """ """
-        dfnload = (df_nload.groupby(['load_name', 'load_number', 'load_type',
-                                     'load_title','load_system', 'node_name'])
-                   [self._plane.hforce].sum())
-        #
-        dfnload.reset_index(inplace=True)
-        return dfnload
     #
     def _mask(self, df_jbc):
         """ """

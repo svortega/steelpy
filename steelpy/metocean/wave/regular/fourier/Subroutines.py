@@ -1,17 +1,17 @@
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 #
 # Python stdlib imports
 from array import array
-from dataclasses import dataclass
+#from dataclasses import dataclass
 #import cmath
 #import math
 #from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
-from steelpy.metocean.regular.fourier.solve import solver
-#from steelpy.metocean.regular.operations.waveops import zeros
+from steelpy.metocean.wave.regular.fourier.solve import solver
+#from steelpy.metocean.wave.regular.operations.waveops import zeros
 import numpy as np
 
 #

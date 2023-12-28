@@ -1,47 +1,50 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 #
 # Python stdlib imports
 from array import array
 from dataclasses import dataclass
-import math
-from typing import NamedTuple
+#import math
+#from typing import NamedTuple
 
 # package imports
-from steelpy.metocean.regular.process.waveops import WaveRegModule, WaveItem, get_wave_data
-from steelpy.metocean.regular.cnoidal.Solution import (Solve, hoverd, Ubar_h, eta_h, u_h, v_h,
-                                                       Alpha, Q_h, lambda_d, R_h)
+from steelpy.metocean.wave.regular.process.waveops import WaveRegModule, WaveItem, get_wave_data
+from steelpy.metocean.wave.regular.cnoidal.Solution import (Solve, hoverd, Ubar_h, eta_h, u_h, v_h,
+                                                            Alpha, Q_h, lambda_d, R_h)
 
 
 # from steelpy.metocean.regular.cnoidal.Elliptic import K, E
 # from steelpy.metocean.regular.cnoidal.Solution import hoverd, Ubar_h
+from steelpy.utils.dataframe.main import DBframework
+import numpy as np
+from numpy.matlib import repmat
 
-
+@dataclass
 class WaveCnoidal(WaveItem):
 
-    def __init__(self, H: float, d: float, title: str,
-                 T: float|None = None,
-                 Lw: float|None = None,
+    def __init__(self, H: float, d: float,
+                 T: float|None = None, Lw: float|None = None,
+                 title:str|None = None,
                  infinite_depth: bool = False,
                  current: float = 0.0, c_type: int = 1,
                  order: int = 5, nstep: int = 2,
-                 number: int = 40, accuracy: float = 1e-6) -> None:
+                 niter: int = 40, accuracy: float = 1e-6) -> None:
         """
         """
         super().__init__(H=H, Tw=T, d=d, title=title,
-                         order=order, nstep=nstep, niter=number,
+                         order=order, nstep=nstep, niter=niter,
                          accuracy=accuracy,
                          current=current, c_type=c_type,
                          infinite_depth=infinite_depth)
 
     #
-    def surface(self, surface_points: int = 36):
-        """Free surface (wave) profile
-        surface_points : Number of points on free surface (the program clusters them near crest)
-        """
-        self.__call__()
+    #def surface(self, surface_points: int = 36):
+    #    """Free surface (wave) profile
+    #    surface_points : Number of points on free surface (the program clusters them near crest)
+    #    """
+    #    self.__call__()
 
     def __call__(self):
         """ Solver """
@@ -49,20 +52,88 @@ class WaveCnoidal(WaveItem):
             self._z
         except AttributeError:
             self.order = 5
-            self.method = "Stokes method order {:}".format(self.order)
+            self.method = "Cnoidal method order {:}".format(self.order)
             #
             data = self.get_parameters()
-            CnoidalMain(*data)
+            Lw, h, alpha, delta, K, Kd, q1, m1_limit, m1, m, mm, c = CnoidalMain(*data)
             # self._z = z
             # self._Y = Y
             # self._B = B
             # self._Tanh = Tanh
             # self._wave_length = 2 * math.pi / z[1]
             # self._Highest = Highest
+            #
+            self._Lw = Lw
+            self.h = h
+            self.alpha = alpha
+            self.delta =  delta
+            self.epsilon = self.H / h
+            self.K = K
+            self.Kd = Kd
+            self.q1 = q1
+            self.m1_limit = m1_limit
+            self.m1 = m1
+            self.m = m
+            self.mm = mm
+            self.c = c
         # return z, Y, B, Tanh, L, Highest
         print('------')
-
-
+    #
+    def get_surface(self, surface_points:int = 36):
+        """ claculate wave surface """
+        x, etas, phase = get_surface(L=self._Lw, h=self.h, alpha=self.alpha, epsilon=self.epsilon ,
+                                     m=self.m, mm=self.mm,
+                                     m1=self.m1, m1_limit=self.m1_limit,
+                                     q1=self.q1, K=self.K, Kd=self.Kd,
+                                     norder=self.order, nprofiles=surface_points)
+        #
+        data = {'x': x ,
+                'eta': etas ,
+                'phase': phase}
+                #'z': [(1+item)*d for item in eta],
+                #'time': 0 * x}
+        #
+        #1 / 0
+        df = DBframework()
+        surface = df.DataFrame(data)        
+        #
+        if self.title:
+            surface['title'] = self.title
+        else:
+            surface['title'] = None
+        #surface['wave_number'] = self.number
+        surface['type'] = 'order_1'
+        #
+        self._surface = surface
+        #
+        return surface[['type', 'x', 'eta', 'phase']]
+    #
+    #
+    def get_kinematics(self, depth_points:int = 100,
+                       surface_points:int|None = None):
+        """get wave kinematics"""
+        surface = self._surface
+        if surface_points: #or not surface
+            surface = self.get_surface(surface_points)
+        #
+        #
+        dfkin = get_kinematic(L=self._Lw, h=self.h,
+                              alpha=self.alpha, delta=self.delta,
+                              m=self.m, mm=self.mm,
+                              m1=self.m1, m1_limit=self.m1_limit,
+                              q1=self.q1, K=self.K, Kd=self.Kd,
+                              c=self.c, surface=surface, 
+                              norder=self.order, nprofiles=depth_points)         
+        #
+        df = DBframework()
+        dfkin = df.DataFrame(dfkin)        
+        #
+        dfkin['type'] = 'order_1'
+        #       
+        #
+        return dfkin    
+#
+#
 #
 #
 #
@@ -152,7 +223,7 @@ def CnoidalMain(MaxH: float, case: str,
     """
     # current=0.31
     # inital values
-    pi = math.pi
+    pi = np.pi
     g = 9.80665  # m/s^2
     H = MaxH
     #
@@ -168,7 +239,7 @@ def CnoidalMain(MaxH: float, case: str,
             print("The dimensionless wavelength is less than 10.")
             raise Warning("Cnoidal theory should probably not be applied")
         #
-        m1 = 16. * math.exp(-math.sqrt(0.75 * H * L * L))
+        m1 = 16. * np.exp(-1*np.sqrt(0.75 * H * L * L))
         m = 1. - m1
     else:
         # if Period
@@ -176,7 +247,7 @@ def CnoidalMain(MaxH: float, case: str,
             print("The dimensionless period is less than 10.")
             raise Warning("Cnoidal theory should probably not be applied")
         #
-        m1 = 16. * math.exp(-math.sqrt(0.75 * H * T * T))
+        m1 = 16. * np.exp(-1*np.sqrt(0.75 * H * T * T))
         m = 1. - m1
         #
     norder = min(norder, 6)
@@ -216,13 +287,13 @@ def CnoidalMain(MaxH: float, case: str,
                / (0.0093407 * L * L * L + 0.0317567 * L * L + 0.078834 * L + 1))
     #
     # Evaluate all the global quantities
-    q = math.exp(-pi * Kd / K)
+    q = np.exp(-pi * Kd / K)
     h = hoverd(H, e, ee, m, mm, norder)
     epsilon = H / h
     alpha = Alpha(epsilon, m, mm, norder)
     delta = 4. / 3 * alpha * alpha
-    Ubar_d = Ubar_h(epsilon, e, m, mm, norder) * math.sqrt(h)
-    Q_d = Q_h(epsilon, m, mm, norder) * pow(h, 1.5)
+    Ubar_d = Ubar_h(epsilon, e, m, mm, norder) * np.sqrt(h)
+    Q_d = Q_h(epsilon, m, mm, norder) * np.power(h, 1.5)
     #
     if c_type == 1:
         c = ce + Ubar_d
@@ -251,8 +322,8 @@ def CnoidalMain(MaxH: float, case: str,
     print("# Solution summary:")
     Output(U2, m, L, H, T, c, ce, cs, Ubar_d, Q_d, R_d)
     #
-    surface_points = 2 * 18
-    nprofiles = 20
+    #surface_points = 2 * 18
+    #nprofiles = 20
     #
     # get_etas(L, h, alpha, delta, epsilon, m, mm, m1, m1_limit,
     #         q1, K, Kd, R_d, Method, surface_points, norder)
@@ -262,8 +333,8 @@ def CnoidalMain(MaxH: float, case: str,
     #        q1, K, Kd, R_d, c,
     #        Method, surface_points, nprofiles, norder)
     #
-    xx, etas = get_surface(L, h, alpha, epsilon,
-                           m, mm, m1, m1_limit, q1, K, Kd, norder, surface_points)
+    #xx, etas = get_surface(L, h, alpha, epsilon,
+    #                       m, mm, m1, m1_limit, q1, K, Kd, norder, surface_points)
     #
     # get_kinematic(etas, xx, L, h, alpha, delta,
     #              m, mm, m1, m1_limit, q1, K, Kd, c, nprofiles, norder)    
@@ -274,6 +345,7 @@ def CnoidalMain(MaxH: float, case: str,
     # fclose(Solution) 
     # return z, Y, B, Tanh
     print('--')
+    return L, h, alpha, delta, K, Kd, q1, m1_limit, m1, m, mm, c
 
 
 #
@@ -309,22 +381,24 @@ def get_surface(L, h, alpha, epsilon, m, mm, m1, m1_limit,
                 q1, K, Kd, norder, nprofiles):
     """ """
     #
-    pi = math.pi
+    #pi = np.pi
     npt = number_steps(nprofiles)
-    x = array('f', [0 for i in range(npt)])
+    x = np.zeros(npt) #np.array([0.0 for i in range(npt)])
     # xx =  array('f', [0 for i in range(npt)])
-    eta = array('f', [0 for i in range(npt)])
+    eta = np.zeros(npt) # np.array([0.0 for i in range(npt)])
+    phase = np.zeros(npt)
     print("")
     for ii in range(npt):
         # xx[ii] = (pi * (ii / nprofiles) / h)
         x[ii] = L * 0.5 * (ii / nprofiles)
+        phase[ii] = x[ii] / L * 360
         eta[ii] = eta_h(x[ii] / h, alpha, epsilon, m, mm, m1, m1_limit, q1, K, Kd, norder)
         eta_d = eta[ii] * h
         print("# x/d ={: 8.4f}, Phase ={: 6.1f} theta/d ={: 8.4f}"
-              .format(x[ii], x[ii] / L * 360, eta_d - 1))
+              .format(x[ii], phase[ii], eta_d - 1))
         # print("# x/d = {:8.4f}, Phase = {:6.1f}".format(x[ii], x[ii] * 180 / pi, eta[ii]))
-    print('---')
-    return x, eta
+    #print('---')
+    return x, eta, phase
 
 
 #
@@ -361,23 +435,30 @@ def summary(L, h, alpha, delta, epsilon, m, mm, m1, m1_limit,
 
 #
 #
-def get_kinematic(etas, xx,
-                  L, h, alpha, delta, m, mm, m1, m1_limit,
-                  q1, K, Kd, c, nprofiles, norder):
+def get_kinematic(L, h, alpha, delta, m, mm, m1, m1_limit,
+                  q1, K, Kd, c,
+                  surface,
+                  norder, nprofiles):
     """ """
-    pi = math.pi
+    etas = surface['eta'].to_numpy()
+    xx = surface['x'].to_numpy()
+    phase = surface['phase'].to_numpy()
+    #
+    depth_steps = np.arange(nprofiles + 1) / nprofiles
+    #
+    #pi = np.pi
     npt = len(etas)
     x = [xx[j] / h for j in range(npt)]
     # eta = [etas[j]  for j in range(npt)]
-    y = [[(i / nprofiles) * etas[j] for i in range(nprofiles + 1)]
+    z = [[(i / nprofiles) * etas[j] for i in range(nprofiles + 1)]
          for j in range(npt)]
     #
-    u = [[u_h(x[ii], y[ii][i], alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, norder)
-          * math.sqrt(h) + c
+    u = [[u_h(x[ii], z[ii][i], alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, norder)
+          * np.sqrt(h) + c
           for ii in range(npt)] for i in range(nprofiles + 1)]
     #
-    v = [[v_h(x[ii], y[ii][i], alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, norder)
-          * math.sqrt(h)
+    v = [[v_h(x[ii], z[ii][i], alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, norder)
+          * np.sqrt(h)
           for ii in range(npt)] for i in range(nprofiles + 1)]
     #
     # for ii, eta in enumerate(etas):
@@ -392,9 +473,16 @@ def get_kinematic(etas, xx,
         print("# X/d = {: 8.4f}, Phase = {: 6.1f}".format(x[ii] * h, h * x[ii] / L * 360))
         # print("# X/d = {: 8.4f}, Phase = {: 6.1f}".format(x[ii]*h, h*x[ii] * 180 / pi))
         for i in range(nprofiles + 1):
-            print(f'{y[ii][i] * h: 7.4f} {u[i][ii]: 7.4f} {v[i][ii]: 7.4f}')
+            print(f'{z[ii][i] * h: 7.4f} {u[i][ii]: 7.4f} {v[i][ii]: 7.4f}')
     #
+    #header = ['z', 'u', 'v']
+    #
+    dfkin = {'x': repmat(xx, depth_steps.size, 1).flatten('F'),
+             'phase': repmat(phase, depth_steps.size, 1).flatten('F')}
+    output =  {'z': z, 'u': u, 'v': v}
+    dfkin.update(output)
     print('---')
+    return dfkin
 
 
 #

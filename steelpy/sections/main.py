@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2023 fem2ufo
+# Copyright (c) 2019 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -29,15 +29,15 @@ class Sections(Mapping):
                                         db_system=mesh_type)
         else:
             self._sections = SectionIM()
-
+    #
+    # -----------------------------------------------
     #
     def __setitem__(self, shape_name: str | int,
                     properties: str|list) -> None:
         """
         """
-        self._sections[shape_name] = properties
+        self._sections[shape_name] = properties  
     
-    #
     def __getitem__(self, shape_name: str | int):
         """
         """
@@ -47,6 +47,22 @@ class Sections(Mapping):
             raise Exception(f" section name {shape_name} not found")    
 
     #
+    # -----------------------------------------------
+    #
+    #
+    def __delitem__(self, shape_name: str | int) -> None:
+        del self._sections[shape_name]
+
+    def __len__(self):
+        return len(self._sections)
+
+    def __iter__(self):
+        return iter(self._sections)
+
+    def __contains__(self, value):
+        return value in self._sections
+
+    #     
     def __str__(self, units: str = "si") -> str:
         """ """
         unit_sec = " m"
@@ -90,6 +106,7 @@ class Sections(Mapping):
         return output
 
     #
+    # -----------------------------------------------
     #
     @property
     def default(self):
@@ -116,6 +133,19 @@ class Sections(Mapping):
             # summary[key] = item._get_properties()
         # return summary
     #
+    def get_item_by_number(self, shape_name: str | int):
+        """
+        """
+        _items = {_item.number: key
+                  for key, _item in self._sections.items()}
+        try:
+            _name = _items[shape_name]
+            return self.__getitem__(_name)
+        except KeyError:
+            raise KeyError('Invalid section number')
+    #     
+    #
+    # -----------------------------------------------
     #
     def tubular(self, values:None|list=None,
                 df=None):
@@ -137,7 +167,7 @@ class Sections(Mapping):
             # properties = get_sect_properties(properties[1:])
             #
             self._sections._labels.extend(df.name.tolist())
-            self._sections._title.extend(['NULL' for _ in df.name])
+            self._sections._title.extend(df.title.tolist())
             self._sections._number.extend([next(self._sections.get_number())
                                            for _ in df.name])
             self._sections._type.extend(df.type.tolist())
@@ -150,30 +180,6 @@ class Sections(Mapping):
         return self._sections._tubular
     #
     #
-    #
-    def __getitem__(self, shape_name: str | int):
-        """
-        """
-        try:
-            return self._sections[shape_name]
-        except KeyError:
-            raise Exception(f" Section name {shape_name} not found")
-
-    #
-    def __delitem__(self, shape_name: str | int) -> None:
-        del self._sections[shape_name]
-
-    def __len__(self):
-        return len(self._sections)
-
-    def __iter__(self):
-        return iter(self._sections)
-
-    def __contains__(self, value):
-        return value in self._sections
-
-    #    
-    #
     ##
     #def push_df(self, values):
     #    """ """
@@ -183,116 +189,70 @@ class Sections(Mapping):
     #        except IOError:
     #            continue
     #
+    # -----------------------------------------------
     #
     @property
     def df(self):
         """ raw data for dataframe"""
-        #from steelpy.process.dataframe.dframe import DataFrame
-        #df = DataFrame()
-        #
-        #1/0
-        #title = []
-        #for key, item in self._sections.items():
-        #    title.append(item.type)
-        #    key
-        #
         return self._sections.df
 
     @df.setter
     def df(self, df):
         """ """
-        # TODO: define if drop
-        #df = df.drop_duplicates(['name'], keep='first')
-        group = df.groupby("type", sort=False)
-        for shape_type, section in group:
-            if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b",
-                        shape_type, re.IGNORECASE):
-                # Bottom Flange
-                try:
-                    section['bottom_flange_width'] =  section.apply(lambda x: x['top_flange_width']
-                                                                    if x['bottom_flange_width']== ""
-                                                                    else x['bottom_flange_width'], axis=1)
-                except KeyError:
-                    section['bottom_flange_width'] = section['top_flange_width']
-                #
-                try:
-                    section['bottom_flange_thickness'] =  section.apply(lambda x: x['top_flange_thickness']
-                                                                    if x['bottom_flange_thickness']== ""
-                                                                    else x['bottom_flange_thickness'], axis=1)
-                except KeyError:
-                    section['bottom_flange_thickness'] = section['top_flange_thickness']                
-                #
-                try:
-                    section['fillet_radius'] =  section.apply(lambda x: float(0.0)
-                                                                    if x['fillet_radius']== ""
-                                                                    else x['fillet_radius'], axis=1)
-                except KeyError:
-                    section['fillet_radius'] = float(0.0)                
-                #
-                self._sections._ibeam.df= section
-            
-            elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-                self._sections._tee.df= section
-            
-            elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
-                self._sections._tubular.df= section
-            
-            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b",
-                           shape_type, re.IGNORECASE):
-                self._sections._solid.df= section
-            
-            elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-                self._sections._box.df= section
-            
-            elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-                self._sections._channel.df= section
-            
-            elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-                self._sections._angle.df= section
-            
-            else:
-                raise Exception(" section item {:} not recognized".format(shape_type))
-        #
-        self._sections._type.extend(df['type'].tolist())
-        self._sections._labels.extend(df['name'].tolist())
-        for item in df['name']:
-            mnumber = next(self._sections.get_number())
-            self._sections._number.append(mnumber)
-            self._sections._title.append(None)
-        #
-        #print('-->')
-    #    if section.items():
-    #        tub = section[["name", "type", "d", "tw"]]
-    #        self.push_df(tub.values)
-    #        #
-    #    # section = group.get_group("ub")
-    #    # section = group.get_group("box")
-    #
-    #@df.setter
-    #def df(self, df):
-        #""" """
-        #
-        #section_number = [next(self.get_number()) for _ in df.name]
-        #
-        #self._labels.extend(material_number)
-        #self._number.extend(material_number)
-        #self._grade.extend([-1 for _ in df.name])
-        # Fill values
-        #self._title.extend(df.name.tolist())
+        self._sections.df = df
         #1 / 0
-    #
-    #
-    def get_item_by_number(self, shape_name: str | int):
-        """
-        """
-        _items = {_item.number: key
-                  for key, _item in self._sections.items()}
-        try:
-            _name = _items[shape_name]
-            return self.__getitem__(_name)
-        except KeyError:
-            raise KeyError('Invalid section number')
-    #    
+        ## TODO: define if drop
+        ##df = df.drop_duplicates(['name'], keep='first')
+        #group = df.groupby("type", sort=False)
+        #for shape_type, section in group:
+        #    if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b",
+        #                shape_type, re.IGNORECASE):
+        #        # Bottom Flange
+        #        try:
+        #            section['bottom_flange_width'] =  section.apply(lambda x: x['top_flange_width']
+        #                                                            if x['bottom_flange_width']== ""
+        #                                                            else x['bottom_flange_width'], axis=1)
+        #        except KeyError:
+        #            section['bottom_flange_width'] = section['top_flange_width']
+        #        #
+        #        try:
+        #            section['bottom_flange_thickness'] =  section.apply(lambda x: x['top_flange_thickness']
+        #                                                            if x['bottom_flange_thickness']== ""
+        #                                                            else x['bottom_flange_thickness'], axis=1)
+        #        except KeyError:
+        #            section['bottom_flange_thickness'] = section['top_flange_thickness']                
+        #        #
+        #        try:
+        #            section['fillet_radius'] =  section.apply(lambda x: float(0.0)
+        #                                                            if x['fillet_radius']== ""
+        #                                                            else x['fillet_radius'], axis=1)
+        #        except KeyError:
+        #            section['fillet_radius'] = float(0.0)                
+        #        #
+        #        self._sections._ibeam.df= section
+        #    
+        #    elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
+        #        self._sections._tee.df= section
+        #    
+        #    elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
+        #        self._sections._tubular.df= section
+        #    
+        #    elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b",
+        #                   shape_type, re.IGNORECASE):
+        #        self._sections._solid.df= section
+        #    
+        #    elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
+        #        self._sections._box.df= section
+        #    
+        #    elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
+        #        self._sections._channel.df= section
+        #    
+        #    elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
+        #        self._sections._angle.df= section
+        #    
+        #    else:
+        #        raise Exception(" section item {:} not recognized".format(shape_type))
+        #   
 #    
 # ---------------------------------
 #

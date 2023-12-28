@@ -5,7 +5,7 @@
 # Python stdlib imports
 from __future__ import annotations
 from array import array
-#from collections.abc import Mapping
+from collections.abc import Mapping
 #from collections import defaultdict
 #from operator import sub, add
 import re
@@ -14,25 +14,96 @@ import re
 
 # package imports
 # steelpy
-#from ....process.units.buckingham import Number
-#from ....process.math.operations import linspace
 # steelpy.f2uModel.load
 from ..process.nodes import NodeLoadMaster
-from ..process.beam import  BeamDistMaster
+#from ..process.beam import  BeamDistMaster
 from ..concept.node import NodeLoadIM
 
-from steelpy.trave.beam.load.beam import (LineBeam, PointBeam, 
-                                          BeamLoadItem, BeamLoad)
+from steelpy.f2uModel.load.process.beam.beam import (LineBeam, PointBeam, 
+                                                     BeamLoad) # BeamLoadItem, 
 
+from steelpy.utils.units.buckingham import Number
 from steelpy.utils.dataframe.main import DBframework
+from steelpy.utils.math.operations import trnsload
 
-#from ..process.operations import (check_point_dic, check_list_units,
-#                                  check_beam_dic, #get_beam_point_load, 
-#                                  get_beam_node_load, get_beam_udl_load)
+from ..process.operations import (check_point_dic, check_list_units,
+                                  check_beam_dic, #get_beam_point_load, 
+                                  get_beam_node_load, get_beam_udl_load)
+#
 #
 # ---------------------------------
 #
-class BeamLoadItemIM(BeamLoadItem):
+class BeamIMMaster(Mapping):
+    
+    def __init__(self) -> None:
+        """
+        """
+        self._index: int
+        self._labels: list[str|int] = []
+        self._title: list[str] = []
+        self._load_id: list[str|int] = []
+        self._complex: array = array("I", [])
+        # 0-global/ 1-local
+        #self._system_flag: int = 0
+        self._system: array = array("I", [])
+    #
+    def __len__(self) -> int:
+        return len(self._labels)
+    #
+    def __contains__(self, value) -> bool:
+        return value in self._labels
+    #
+    def __iter__(self):
+        """
+        """
+        items = list(set(self._labels))
+        return iter(items)
+    #
+    def __str__(self) -> str:
+        """ """
+        output = ""
+        beams = list(dict.fromkeys(self._labels))
+        #beams = list(set(self._labels))
+        for beam in beams:
+            items = self.__getitem__(beam)
+            for item in items:
+                output += item.__str__()
+        #print('---')
+        return output
+    #
+    #
+    #def _get_line_load(self):
+    #    """ return line load in correct format"""
+    #    print('-->')
+    #    1/0
+    #
+    #
+    #
+    #
+    #@property
+    #def coordinate_system(self):
+    #    if self._system_flag != 0:
+    #        return "local"
+    #    return "global"
+    #
+    #@coordinate_system.setter
+    #def coordinate_system(self, system:str|int):
+    #    """
+    #    Coordinate system for load : global or local (member)
+    #    """
+    #    self._system_flag = 0
+    #    if system in ['local', 'member', 1]:
+    #        self._system_flag = 1
+    #
+    #
+    # ------------------
+    #   
+#
+#
+#
+# ---------------------------------
+#
+class BeamLoadItemIM(BeamIMMaster):
     __slots__ = ['_labels', '_load', '_node_eq',
                  '_beam_id', '_f2u_beams']
 
@@ -44,7 +115,8 @@ class BeamLoadItemIM(BeamLoadItem):
         #self._load_name = load_name
         self._load = BeamLoadIM(load_name=load_name,
                                 load_title=load_title)
-        self._node_eq = BeamToNodeIM(load_name=load_name)
+        #
+        #self._node_eq = BeamToNodeIM(load_name=load_name)
         self._f2u_beams = beams
 
     #
@@ -68,7 +140,6 @@ class BeamLoadItemIM(BeamLoadItem):
         
         else:
             raise IOError(f'Beam lod type {beam_load[0]} not implemented')
-
     #
     def __getitem__(self, beam_name: int | str):
         """
@@ -83,6 +154,74 @@ class BeamLoadItemIM(BeamLoadItem):
         self._labels.append(beam_name)
         return self._load(beam=beam) # ,  beam_name=beam_name
     #
+    #
+    def __str__(self, units: str = "si") -> str:
+        """ """
+        output = ""
+        output += self._line.__str__(load_name=self._name)
+        output += self._point.__str__(load_name=self._name)
+        return output
+    #
+    # ----------------------------------------
+    #
+    def _get_line(self, line_load: list|dict):
+        """ get line load in beam local system"""
+        #
+        # update inputs
+        if isinstance(line_load, dict):
+            udl = check_beam_dic(line_load)
+            title = udl.pop()
+            
+        elif isinstance(line_load[-1], str):
+            title = line_load.pop()
+            if isinstance(line_load[0], Number):
+                udl = check_list_units(line_load)
+            else:
+                udl = get_beam_udl_load(line_load)
+        else:
+            title ='NULL'
+            udl = get_beam_udl_load(line_load)
+        #
+        # get system local = 1
+        try:
+            1 / self._system_flag
+            return [*udl, 1, title]
+        except ZeroDivisionError:
+            # local nodal loading
+            nload = [*udl[:3], 0, 0, 0,
+                     *udl[3:6], 0, 0, 0,]
+            nload = trnsload(nload, self._beam.T3D())
+            nload = [*nload[:3], *nload[6:9]] 
+            return [*nload, *udl[6:], 1, title]
+    #
+    def _get_point(self, point_load: list|dict):
+        """ get point load in beam local system"""
+        # update inputs
+        if isinstance(point_load, dict):
+            point = check_point_dic(point_load)
+            title = point.pop()
+        
+        elif isinstance(point_load[-1], str):
+            title = point_load.pop()
+            if isinstance(point_load[0], Number):
+                point = check_list_units(point_load)
+            else:
+                point = get_beam_node_load(point_load)
+        
+        else:
+            title = 'NULL'
+            point = get_beam_node_load(point_load)
+        #
+        # get system local = 1
+        try: # Local system
+            1 / self._system_flag
+            return [*point, 1, title]
+        except ZeroDivisionError: # global to local system
+            pload = [*point[:6], 0, 0, 0, 0, 0, 0]
+            pload = trnsload(pload, self._beam.T3D())
+            return [*pload[:6], point[6], 1, title]
+    #
+    # ----------------------------------------
     #
     def fer(self, beams):
         """ Return Fix End Reactions (FER) global system"""
@@ -103,14 +242,14 @@ class BeamLoadItemIM(BeamLoadItem):
 #
 #
 class BeamLoadIM(BeamLoad):
-    __slots__ = ['_system_flag','_beam_id', '_load_name',
+    __slots__ = ['_system_flag','_beam_id', 'load_name',
                  '_line', '_point', '_load_title', '_beam']
 
     def __init__(self, load_name:str|int, load_title:str):
         """
         """
         super().__init__()
-        self._load_name = load_name
+        self.load_name = load_name
         self._load_title = load_title
         self._line = BeamDistributedIM(load_name)
         self._point = BeamPointIM(load_name)
@@ -138,7 +277,7 @@ class BeamLoadIM(BeamLoad):
 # ---------------------------------
 # Beam Loading Calculation
 #
-class BeamDistributedIM(BeamDistMaster):
+class BeamDistributedIM(BeamIMMaster):
     """
     """
     __slots__ = ['_type', '_labels', '_load_name',
@@ -147,7 +286,7 @@ class BeamDistributedIM(BeamDistMaster):
                  '_L1', '_qx1', '_qy1', '_qz1',
                  '_system', '_title'] #'_system_flag',
 
-    def __init__(self, load_name:str|int) -> None:
+    def __init__(self, load_name:str|int) -> None: 
         """
         """
         super().__init__()
@@ -317,7 +456,7 @@ class BeamPointIM(NodeLoadMaster):
                  '_fx', '_fy', '_fz', '_mx', '_my', '_mz',
                  '_L0', '_type']
     
-    def __init__(self, load_name:str|int) -> None:
+    def __init__(self,  load_name:str|int) -> None:
         """
         """
         super().__init__("point")
@@ -483,3 +622,4 @@ class BeamToNodeIM(NodeLoadIM):
     #
 #
 #
+

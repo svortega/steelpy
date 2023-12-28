@@ -1,34 +1,34 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 # Python stdlib imports
 #from array import array
-#from dataclasses import dataclass
+from dataclasses import dataclass
 #import math
 #from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
-from steelpy.metocean.regular.stokes.subroutines import F, CDE, AB
-from steelpy.metocean.regular.process.inout import title_block, output
-from steelpy.metocean.regular.process.waveops import WaveRegModule, WaveItem, get_wave_data
+from steelpy.metocean.wave.regular.stokes.subroutines import F, CDE, AB
+from steelpy.metocean.wave.regular.process.inout import title_block, output
+from steelpy.metocean.wave.regular.process.waveops import WaveItem #, get_wave_data,WaveRegModule, 
 import numpy as np
 #
 #
-#@dataclass
+@dataclass
 class WaveStokes(WaveItem):
     
-    def __init__(self, H:float, d:float, title:str, 
-                 T:float|None=None,
-                 Lw:float|None=None,
+    def __init__(self, H:float, d:float,  
+                 T:float|None=None, Lw:float|None=None, 
+                 title:str|None = None,
                  infinite_depth:bool=False,
                  current:float = 0.0, c_type:int = 1,
                  order:int=5, nstep:int=2,
-                 number:int=40, accuracy:float=1e-6) -> None:
+                 niter:int=40, accuracy:float=1e-6) -> None:
         """
         """
         super().__init__(H=H, Tw=T, d=d, title=title,
-                         order=order, nstep=nstep, niter=number,
+                         order=order, nstep=nstep, niter=niter,
                          accuracy=accuracy, 
                          current=current, c_type=c_type,
                          infinite_depth=infinite_depth)
@@ -40,7 +40,7 @@ class WaveStokes(WaveItem):
             self._z
         except AttributeError:
             self.order = 5
-            self.method = "Stokes method order {:}".format(self.order)
+            self.method = f"Stokes method order {self.order}"
             #
             data = self.get_parameters()
             z, Y, B, Tanh = StokesMain(*data)
@@ -48,12 +48,42 @@ class WaveStokes(WaveItem):
             self._Y = Y
             self._B = B
             self._Tanh = Tanh
-            self._wave_length = 2 * np.pi / z[ 1 ]
+            self._Lw = 2 * np.pi / z[ 1 ]
             #self._Highest = Highest        
         #
 #
 #
-class StokesModule(WaveRegModule):
+@dataclass
+class WaveStokesX:
+    
+    def __init__(self) -> None:
+        """
+        """
+        self.order = 5
+        self.method = f"Stokes method order {self.order}"        
+    #
+    #
+    def solver(self, data):
+        """ Solver
+        data : [MaxH, case, T, L, c_type, current,  
+                order, nstep, niter, accuracy,
+                Height, finite_depth]
+        """
+        #try:
+        #    self._z
+        #except AttributeError:
+        #data = self.get_parameters()
+        z, Y, B, Tanh = StokesMain(*data)
+        self._z = z
+        self._Y = Y
+        self._B = B
+        self._Tanh = Tanh
+        #self._wave_length = 2 * np.pi / z[ 1 ]
+        #self._Highest = Highest        
+        #
+#
+#
+class StokesModule: #(WaveRegModule)
     __slots__ = [ 'order', 'nsteps', 'max_iter', 'accuracy',
                   '_labels', '_cases', 'c_type', '_current']
 

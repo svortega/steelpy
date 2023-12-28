@@ -178,9 +178,8 @@ print(load.basic())
 # Structural Analysis
 # ----------------------------------------------------
 #
-frame = Trave3D()
-frame.mesh = mesh
+frame = Trave3D(mesh=mesh)
 frame.static()
-results = frame.solve()
+results = frame.results()
 print(results)
 print('-->')

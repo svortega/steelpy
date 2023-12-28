@@ -1,13 +1,15 @@
 #
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
-#from contextlib import closing
-#import zipfile
+from __future__ import annotations
 import sqlite3 as sqlite3
 #from sqlite3 import Error
 #from datetime import datetime
+#
+
+# package imports
 #
 
 
@@ -43,30 +45,34 @@ def create_table(conn, create_table_sql):
 #
 #
 # ------------------------------------------------------------------
-# SQL
-#
-def get_load_data(conn, load_name:int|str, load_type: str):
-    """ """
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM tb_Load \
-                 WHERE name = {:} AND type = '{:}'".format(load_name, load_type))
-    loads = cur.fetchone()
-    return loads
 #
 #
 def check_nodes(conn, node_name: int|str):
     """check if node exist"""
     cur = conn.cursor()
-    cur.execute("SELECT * FROM tb_Nodes \
-                 WHERE name = {:} ".format(node_name))
+    if isinstance(node_name, str):
+        cur.execute(f"SELECT * FROM tb_Nodes \
+                      WHERE name = '{node_name}' ;")
+    else:
+        cur.execute(f"SELECT * FROM tb_Nodes \
+                      WHERE name = {node_name} ;")
     node = cur.fetchone()
     return node    
 #
 #
-def check_element(conn, element_name):
+def check_element(conn, element_name: int|str):
     """ """
     cur = conn.cursor()
-    cur.execute ("SELECT * FROM tb_Elements\
-                WHERE tb_Elements.name = {:};".format(element_name))
+    if isinstance(element_name, str):
+        cur.execute (f"SELECT * FROM tb_Elements \
+                       WHERE name = '{element_name}';")
+    else:
+        cur.execute (f"SELECT * FROM tb_Elements\
+                       WHERE name = {element_name};")
     row = cur.fetchone()
     return row
+#
+#
+# ------------------------------------------------------------------
+# 
+#

@@ -10,7 +10,7 @@ from typing import NamedTuple #, Tuple, List, Iterator, Dict, Union
 from collections.abc import Mapping
 
 # package imports
-from steelpy.metocean.hydrodynamic.operations import BasicProperty
+from steelpy.metocean.hydrodynamic.utils import BasicProperty
 
 
 #

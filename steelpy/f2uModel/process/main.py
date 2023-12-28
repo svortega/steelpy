@@ -20,9 +20,9 @@ class BasicModel:
                   df=None):
         """
         """
-        if isinstance(values, list):
+        if isinstance(values, (list, tuple)):
             #1/0
-            if isinstance(values[0], list):
+            if isinstance(values[0], (list, tuple)):
                 for item in values:
                     self._materials[item[0]] = item[1:]
             else:
@@ -36,7 +36,7 @@ class BasicModel:
                 if re.match(r"\b(id|name|material(s)?)\b", key, re.IGNORECASE):
                     header[key] = 'name'
                 
-                if re.match(r"\b(type)\b", key, re.IGNORECASE):
+                elif re.match(r"\b(type)\b", key, re.IGNORECASE):
                     header[key] = 'type'
                 
                 elif re.match(r"\b(fy|yield)\b", key, re.IGNORECASE):
@@ -63,6 +63,10 @@ class BasicModel:
             #
             mat = df[header.keys()].copy()
             mat.rename(columns=header, inplace=True)
+            try:
+                mat['Fu'].replace(to_replace=[''], value=[mat['Fy'] / 0.75], inplace=True)
+            except KeyError:
+                mat['Fu'] = mat['Fy'] / 0.75
             #
             self._materials.df = mat
         except AttributeError:
@@ -75,9 +79,9 @@ class BasicModel:
                  df=None):
         """
         """
-        if isinstance(values, list):
+        if isinstance(values, (list, tuple)):
             #1/0
-            if isinstance(values[0], list):
+            if isinstance(values[0], (list, tuple)):
                 for item in values:
                     self._sections[item[0]] = item[1:]
             else:
@@ -148,7 +152,11 @@ class BasicModel:
             #
             #
             sect = df[header.keys()].copy()
-            sect.rename(columns=header, inplace=True)            
+            sect.rename(columns=header, inplace=True)#
+            #
+            if not 'title' in sect:
+                sect['title'] = None
+            #
             self._sections.df = sect
         except AttributeError:
             pass
@@ -195,10 +203,10 @@ class BasicModel:
                 #
                 #
                 elif re.match(r"\b(material(s)?(\_|\s*)?(name|id)?)\b", key, re.IGNORECASE):
-                    header[key] = 'material_id'
+                    header[key] = 'material_name'
                 
                 elif re.match(r"\b(section(s)?(\_|\s*)?(name|id)?)\b", key, re.IGNORECASE):
-                    header[key] = 'section_id'
+                    header[key] = 'section_name'
                 #
                 #
                 elif re.match(r"\b((node|point|end)?(\_|\s*)?1)\b", key, re.IGNORECASE):

@@ -3,25 +3,31 @@
 #
 # Python stdlib imports
 from __future__ import annotations
-from dataclasses import dataclass
+#from dataclasses import dataclass
 from typing import NamedTuple
 #import pickle
-import re
+#import re
 import os
 #
 
 # package imports
 from steelpy.f2uModel.process.main import BasicModel
-# steelpy.f2uModel
-from ..load.main import Load
+# 
+from steelpy.f2uModel.load.main import MeshLoad
 # steelpy.f2uModel.mesh
 from .sqlite.sets import Groups
-from .nodes import Nodes
-from .boundaries import Boundaries
-from .elements import Elements
+#from .nodes import Nodes
+from steelpy.f2uModel.mesh.sqlite.nodes import NodeSQL
+from steelpy.f2uModel.mesh.sqlite.elements import ElementsSQL
+from steelpy.f2uModel.mesh.sqlite.boundary import BoundarySQL
+#from .boundaries import Boundaries
+#from .elements import Elements
+from datetime import datetime as dt
 #
 from steelpy.sections.main import Sections
 from steelpy.material.main import Materials
+#
+#from steelpy.f2uModel.mesh.sqlite.solution import UnSQL
 #
 from steelpy.f2uModel.plot.main import PlotMesh
 #from steelpy.f2uModel.plot.main import PlotFrame
@@ -30,6 +36,8 @@ from steelpy.utils.dataframe.main import DBframework
 from steelpy.f2uModel.mesh.process.main import Kmatrix, Gmatrix, Mmatrix
 #
 from steelpy.utils.io_module.inout import check_input_file
+#
+from steelpy.utils.sqlite.utils import create_connection, create_table
 #
 #
 #@dataclass
@@ -136,8 +144,8 @@ class Mesh(BasicModel):
     """
     __slots__ = ['_nodes', '_elements', '_load', 'data_type',
                  '_eccentricities', '_boundaries', '_groups',
-                 'db_file', '_df', '_Kmatrix', '_plane', #'_plot',
-                 '_materials', '_sections']
+                 'db_file', '_df', '_Kmatrix', '_plane', '_name',
+                 '_materials', '_sections', '_build', '_solution']
 
     def __init__(self, db_name:str|None = None,
                  sql_file:str|None = None):
@@ -147,14 +155,23 @@ class Mesh(BasicModel):
         mesh_type:str="sqlite"
         #super().__init__()
         #
+        self._build = True
         if sql_file:
             #print('--')
             sql_file = check_input_file(file=sql_file,
                                         file_extension="db")
             self.db_file = sql_file
+            self._build = False
+            # fixme: name
+            self._name = sql_file.split('.')[0]
         else:
             self.db_file = self._get_file(name=db_name)
             self.data_type = mesh_type
+            self._name = db_name
+            #
+            conn = create_connection(self.db_file)
+            with conn:
+                self._create_table(conn)            
         #
         #
         #self._plane = Plane3D()
@@ -170,35 +187,41 @@ class Mesh(BasicModel):
         self._sections = Sections(mesh_type=mesh_type,
                                   db_file=self.db_file)        
         #
+        # 
         #
-        self._nodes = Nodes(mesh_type=mesh_type,
-                            plane=self._plane,
-                            db_file=self.db_file)
-        self._boundaries = Boundaries(mesh_type=mesh_type,
-                                      db_file=self.db_file)
+        self._nodes = NodeSQL(db_system=mesh_type,
+                              plane=self._plane,
+                              db_file=self.db_file)
         #
-        self._elements = Elements(nodes=self._nodes,
-                                  materials=self._materials,
-                                  sections=self._sections,
-                                  plane=self._plane,
-                                  mesh_type=mesh_type,
-                                  db_file=self.db_file)
+        self._boundaries = BoundarySQL(db_system=mesh_type,
+                                       db_file=self.db_file)
+        #
+        self._elements = ElementsSQL(plane=self._plane,
+                                     db_system=mesh_type,
+                                     db_file=self.db_file)
+        # 
         # groups
         self._groups = Groups()
         #
         #self._load:Load|None = None
-        self._load = Load(nodes=self._nodes,
-                          elements=self._elements,
-                          boundaries=self._boundaries, 
-                          plane=self._plane,
-                          mesh_type=mesh_type,
-                          db_file=self.db_file)
+        #nodes=self._nodes,
+        #elements=self._elements,
+        #boundaries=self._boundaries,         
+        self._load = MeshLoad(plane=self._plane,
+                              mesh_type=mesh_type,
+                              db_file=self.db_file)
+        #
         # Ops
         self._df = DBframework()
         self._Kmatrix:bool = False
         #self._plane2D:bool = False
         # mesh
         #self._plot = PlotMesh(mesh=self)
+        #
+        # Solution
+        #self._solution =  UnSQL(load=self._load,
+        #                        db_file=self.db_file,)
+        #
     #
     #
     def _get_file(self, name: str):
@@ -263,25 +286,6 @@ class Mesh(BasicModel):
         return self._nodes
 
     #
-    #def elements(self, values:None|list|tuple=None,
-    #             df=None):
-    #    """
-    #    """
-    #    if isinstance(values, (list, tuple)):
-    #        if isinstance(values[0], (list,tuple)):
-    #            for value in values:
-    #                self._elements[value[0]] = value[1:]
-    #        else:
-    #            self._elements[values[0]] = values[1:]
-    #    #
-    #    #
-    #    # dataframe input
-    #    try:
-    #        df.columns   
-    #        self._elements.df(df)
-    #    except AttributeError:
-    #        pass
-    #    return self._elements
     #
     def boundaries(self, values:None|list|tuple=None,
                    df=None):
@@ -308,46 +312,36 @@ class Mesh(BasicModel):
     #    """
     #    return self._groups
     #
+    # ------------------
+    # SQL ops
+    # ------------------
     #
-    #
-    # --------------------
-    # Load
-    # -------------------- 
-    #
-    #def load(self, values:None|list|tuple=None,
-    #         df=None):
-    #    """
-    #    """
-    #    #
-    #    #self._load = Load(plane=self._plane,
-    #    #                  mesh_type=self.data_type,
-    #    #                  db_file=self.db_file)
-    #    #
-    #    if isinstance(values, (list, tuple)):
-    #        if isinstance(values[0], (list,tuple)):
-    #            for item in values:
-    #                if re.match(r"\b(basic(\_)?(load)?)\b", item[0], re.IGNORECASE):
-    #                    self._load.basic(item[1:])
-    #                elif re.match(r"\b(comb(ination)?(\_)?(load)?)\b", item[0], re.IGNORECASE):
-    #                    self._load.combination(item[1:])
-    #                else:
-    #                    raise IOError(f'load {item[0]}')
-    #        else:
-    #            if re.match(r"\b(basic(\_)?(load)?)\b", values[0], re.IGNORECASE):
-    #                self._load.basic(values[1:])
-    #            elif re.match(r"\b(comb(ination)?(\_)?(load)?)\b", values[0], re.IGNORECASE):
-    #                self._load.combination(values[1:])
-    #            else:
-    #                raise IOError(f'load {values[0]}')                
-    #    #
-    #    # dataframe input
-    #    try:
-    #        df.columns
-    #        #self._boundaries.df(df)
-    #    except AttributeError:
-    #        pass
-    #    #
-    #    return self._load
+    def _create_table(self, conn) -> None:
+        """ """
+        # conn = create_connection(self.db_file)
+        table = "CREATE TABLE IF NOT EXISTS tb_Main (\
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    name NOT NULL,\
+                    type TEXT NOT NULL,\
+                    units TEXT NOT NULL,\
+                    metocean TEXT, \
+                    geotechnical TEXT, \
+                    superelement DECIMAL, \
+                    date TEXT);"
+        #
+        create_table(conn, table)
+        #
+        #
+        table = 'INSERT INTO tb_Main(name, type, units,\
+                                    metocean, geotechnical, \
+                                    superelement, date)\
+                                    VALUES(?,?,?,?,?,?,?)'
+        #
+        time=dt.now().strftime('%Y-%m-%d')
+        data = (self._name, 'mesh', 'si', None, None, 0, time)
+        # push
+        cur = conn.cursor()
+        cur.execute(table, data)
     #    
     #
     # --------------------
@@ -367,12 +361,18 @@ class Mesh(BasicModel):
     #
     def build(self):
         """ """
+        # sections 
         self._sections.get_properties()
+        # hydro
+        #self._load._hydro.solve()
         #
-        #for key, item in self._mesh.items():
-        self._load._basic.wave_process()
-        # TODO : remove second _load for simplification
-        self._load._basic.FER(elements= self._elements)        
+        # FIXME : remove beam nodal load instead --> calculare node load
+        if self._build :
+            #for key, item in self._mesh.items():
+            # FIXME: Wave
+            self._load._hydro.process()
+            # TODO : remove second _load for simplification
+            self._load._basic.FER(elements= self._elements)        
         #
     #
     # --------------------
@@ -459,9 +459,6 @@ class Mesh(BasicModel):
             name = self.db_file.split('.')
             name = f"{name[0]}.xlsx"
         #
-        #bload = self._load._basic.df
-        nload = self._load._basic._node.df
-        #eload = self._load._basic._beam.df        
         #
         nodes = self._nodes.df
         nodes.set_index('name', inplace=True)
@@ -471,7 +468,32 @@ class Mesh(BasicModel):
         nodes = nodes.join(bound)
         nodes.reset_index(inplace=True)
         #
-        #db = DBframework()
+        # Loading section
+        #
+        bload = self._load._case._basic._beams.df
+        bload.rename(columns={'L0': 'a', 'L1': 'b', 'load_name': 'Load',
+                              'element_name': 'Beam', 'load_type': 'Type',
+                              'load_comment': 'Title',},
+                     inplace=True)
+        bload = bload[['Load', 'Beam', 'Type', 'a', 'b',
+                       'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                       'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
+                       'Title']]
+        #
+        nload = self._load._case._basic._nodes.df
+        nload.rename(columns={'load_name': 'Load',
+                              'node_name': 'Node',
+                              'element_name': 'Beam',
+                              'load_type': 'Type',
+                              'load_comment': 'Title',},
+                     inplace=True)
+        # remove element's node load
+        nload = nload[nload['Beam'].isnull()]
+        nload = nload[['Load', 'Node', 'Type',
+                       'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                       'x', 'y', 'z', 'rx', 'ry', 'rz', 'Title']]
+        #
+        #
         with self._df.ExcelWriter(name) as writer:
             mat = self._materials.df
             mat.to_excel(writer, sheet_name='Materials', index=False)
@@ -482,9 +504,21 @@ class Mesh(BasicModel):
             nodes.to_excel(writer, sheet_name='Nodes', index=False)
             #
             memb = self._elements.df
-            memb.to_excel(writer, sheet_name='Elements', index=False)            
+            memb.to_excel(writer, sheet_name='Elements', index=False)
+            #
+            #nload = self._load._basic._nodes.df
+            nload.to_excel(writer, sheet_name='Node_Load', index=False)
+            #
+            #bline = self._load._basic._beams.line.df
+            #bline.to_excel(writer, sheet_name='Beam_Line_Load', index=False)
+            #
+            #bpoint = self._load._basic._beams.point.df
+            #bpoint.to_excel(writer, sheet_name='Beam_Point_Load', index=False)
+            #
+            bload.to_excel(writer, sheet_name='Beam_Load', index=False)
         #
         #
-        print('---')
-        1 / 0
+        print(f'--- end writing excel {name}')
+        #1 / 0
+    #
     #

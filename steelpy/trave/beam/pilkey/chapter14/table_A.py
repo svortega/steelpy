@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2019 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations

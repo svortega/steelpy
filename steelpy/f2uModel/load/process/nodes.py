@@ -14,7 +14,7 @@ from collections.abc import Mapping
 from .operations import (check_list_units,
                          check_list_number,
                          check_point_dic)
-
+ 
 from steelpy.utils.dataframe.main import DBframework
 # from steelpy.f2uModel.load.sqlite.node import NodeLoadSQL
 
@@ -108,25 +108,25 @@ class NodeLoadBasic(Mapping):
         return output
     #
     #
-    def _get_point_load(self, point_load:str|dict):
-        """ return point load in correct format"""
-        #print('-->')
-        if isinstance(point_load, dict):
-            point_load = get_nodal_load(point_load)
-            self._title.append(point_load[-1])
-            point_load.pop()
-        elif isinstance(point_load[-1], str):
-            title = point_load.pop()
-            self._title.append(title)
-            point_load = get_nodal_load(point_load)
-        else:
-            try:
-                point_load[6]
-                self._title.append(point_load.pop())
-            except IndexError:
-                self._title.append("NULL")
-            point_load = get_nodal_load(point_load)
-        1/0
+    #def _get_point_load(self, point_load:str|dict):
+    #    """ return point load in correct format"""
+    #    #print('-->')
+    #    if isinstance(point_load, dict):
+    #        point_load = get_nodal_load(point_load)
+    #        self._title.append(point_load[-1])
+    #        point_load.pop()
+    #    elif isinstance(point_load[-1], str):
+    #        title = point_load.pop()
+    #        self._title.append(title)
+    #        point_load = get_nodal_load(point_load)
+    #    else:
+    #        try:
+    #            point_load[6]
+    #            self._title.append(point_load.pop())
+    #        except IndexError:
+    #            self._title.append("NULL")
+    #        point_load = get_nodal_load(point_load)
+    #    1/0
     #
     #
 

@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2019 steelpy
 #
 # 
 # Python stdlib imports
@@ -13,12 +13,12 @@ from typing import NamedTuple
 #from math import prod
 
 # package imports
-from steelpy.f2uModel.load.sqlite.basic_load import BasicLoadSQL
+from steelpy.f2uModel.load.sqlite.load_case import BasicLoadSQL
 # steelpy.f2uModel.load
 from ..process.operations import duplicates, indices
 from ..process.combination import LoadCombinationBasic
 # steelpy
-from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection
+from steelpy.utils.sqlite.utils import create_connection
 from steelpy.utils.dataframe.main import DBframework
 #
 #

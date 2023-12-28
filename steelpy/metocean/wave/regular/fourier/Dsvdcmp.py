@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 #
@@ -10,8 +10,8 @@ from array import array
 #from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
-from steelpy.metocean.regular.fourier.Dpythag import dpythag
-#from steelpy.metocean.regular.operations.waveops import zeros
+from steelpy.metocean.wave.regular.fourier.Dpythag import dpythag
+#from steelpy.metocean.wave.regular.operations.waveops import zeros
 
 import numpy as np
 

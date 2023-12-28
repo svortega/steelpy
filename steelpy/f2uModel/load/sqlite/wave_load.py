@@ -5,64 +5,142 @@
 # Python stdlib imports
 from __future__ import annotations
 #from array import array
-#from collections.abc import Mapping
+from collections.abc import Mapping
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool
 #from collections import defaultdict
-#from dataclasses import dataclass
+from dataclasses import dataclass
 from typing import NamedTuple
 #import re
+import os
 #from operator import itemgetter
 #from itertools import groupby
+from math import dist
+from operator import sub, add
 
 # package imports
 # steelpy.f2uModel
 #from steelpy.f2uModel.load.process.actions import SelfWeight
 #from steelpy.f2uModel.load.process.basic_load import BasicLoadBasic, LoadTypeBasic
-from steelpy.f2uModel.load.sqlite.beam import BeamToNodeSQL #, BeamLoadItemSQL 
+#from steelpy.f2uModel.load.sqlite.beam import BeamToNodeSQL #, BeamLoadItemSQL 
 #from steelpy.f2uModel.load.sqlite.node import  NodeLoadItemSQL
 from steelpy.utils.math.operations import linspace
 #
 # steelpy.f2uModel.load
-from steelpy.f2uModel.load.process.wave_load import WaveLoadItem
+from steelpy.f2uModel.load.process.wave_load import WaveData, MetoceanLoad
 from steelpy.utils.math.operations import trnsload
 #
-from steelpy.f2uModel.mesh.sqlite.beam import BeamItemSQL
-# steelpy.f2uModel
-from steelpy.f2uModel.mesh.sqlite.process_sql import (create_connection, create_table,
-                                                       get_load_data, check_element)
+from steelpy.f2uModel.mesh.sqlite.beam import (BeamItemSQL, get_connectivity, BeamSQL, 
+                                               get_beam_data, get_node, get_section)
 #
-from steelpy.trave.beam.load.beam import LineBeam #, BeamLoad
+# steelpy.f2uModel
+from steelpy.utils.sqlite.utils import (create_connection, create_table,
+                                        check_element)
+#
+from steelpy.f2uModel.load.process.beam.beam import LineBeam #, BeamLoad
 #
 #import numpy as np
 import pandas as pd
 from steelpy.utils.dataframe.main import DBframework
 #
 #
+from ..sqlite.utils import get_load_data
+#
 #
 #
 #
 #@dataclass
-class WaveLoadItemSQL(WaveLoadItem):
+class WaveLoadItemSQLXX(Mapping): #WaveLoadItem
     """ """
-    __slots__ = ['_seastate','_db_file', '_name',
-                 '_load', '_criterion', '_plane']
+    __slots__ = ['_db_file', '_name',
+                 '_load', '_plane', '_mg', 
+                 '_seastate', '_design_load', '_criterion']
 
-    def __init__(self, load_name: int|str, plane: NamedTuple, db_file:str):
+    def __init__(self, load_name: str|int,
+                 plane: NamedTuple, db_file:str):
         """ """
-        super().__init__(load_name=load_name)
+        #super().__init__()
         #
+        self._name = load_name
         self._plane = plane
         self._db_file = db_file
         #
-        self._node_eq = BeamToNodeSQL(load_name=load_name, 
-                                      db_file=self._db_file)
+        #self._node_eq = BeamToNodeSQL(load_name=load_name,
+        #                              db_file=self._db_file)
+        self._seastate:list = []
+        self._design_load:list = []
+        self._criterion:list = []
+        self._mg:list = []
         #
         conn = create_connection(self._db_file)
         with conn:        
             self._create_table(conn)
-            self._create_node_table(conn)
+            #self._create_node_table(conn)
+    #
+    @property
+    def _labels(self):
+        """ """
+        table = 'SELECT tb_Load.name FROM tb_Load'
+        conn = create_connection(self._db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table)
+            items = cur.fetchall()
+        return [item[0] for item in items]
     #
     #
+    # -----------------------------------------------
     #
+    def __setitem__(self, load_name: int|str,
+                    wave_load: list) -> None:
+        """
+        criterion : wave_comb, mg, design_load, criterion
+        """
+        #1 / 0
+        try:
+            self._labels.index(load_name)
+            self._seastate.append(wave_load[0])
+            self._mg.append(wave_load[1])
+            self._design_load.append(wave_load[2])
+            self._criterion.append(wave_load[3])            
+        except ValueError:
+            raise Exception(f'wave load case {load_name} missing')
+    
+    def __getitem__(self, load_name: int | str):
+        """
+        """
+        try:
+            index = self._labels.index(load_name)
+        except ValueError:
+            raise KeyError('Invalid load name : {:}'.format(load_name))
+        #
+        1 / 0
+        return WaveData(name=self._labels[index], 
+                        seastate=self._seastate[index],
+                        design_load=self._design_load[index],
+                        criterion=self._criterion[index])     
+    #    
+    #
+    #
+    # -----------------------------------------------
+    #
+    def __contains__(self, value) -> bool:
+        return value in self._labels
+
+    def __len__(self) -> int:
+        return len(self._labels)
+
+    def __iter__(self):
+        """
+        """
+        items = set(self._labels)
+        return iter(items)
+    #
+    # -----------------------------------------------   
+    #    
+    #
+    # -----------------------------------------------
+    #    
     #
     def _create_table(self, conn) -> None:
         """ """
@@ -117,7 +195,7 @@ class WaveLoadItemSQL(WaveLoadItem):
         #beam = check_element(conn, beam_name)
         #beam_number = beam[0]
         # beam line load
-        load_data = get_load_data(conn, self._name, load_type='basic')
+        load_data = get_load_data(conn, self._name, load_level='basic')
         load_number = load_data[0]
         #
         cur = conn.cursor()
@@ -159,6 +237,7 @@ class WaveLoadItemSQL(WaveLoadItem):
     #
     def _create_node_table(self, conn) -> None:
         """ """
+        1 / 0
         _table_element_point = "CREATE TABLE IF NOT EXISTS tb_LoadBeamToNode(\
                                 number INTEGER PRIMARY KEY NOT NULL,\
                                 load_number INTEGER NOT NULL REFERENCES tb_Load(number),\
@@ -185,7 +264,7 @@ class WaveLoadItemSQL(WaveLoadItem):
     def _push_node_load(self, conn,
                         node_load:list[float]):
         """ """
-        #
+        1 / 0
         sql = 'INSERT INTO tb_LoadBeamToNode(load_number, title, system, \
                                              element_number,\
                                              node_number, fx, fy, fz, mx, my, mz,\
@@ -430,6 +509,555 @@ class WaveLoadItemSQL(WaveLoadItem):
                 #
         #print('---')
         return beamfun
+#
+#
+class MetoceanLoadSQL(MetoceanLoad):
+    __slots__ = ['db_file', '_plane']
+    #
+    def __init__(self, db_file:str,
+                 plane: NamedTuple) -> None:
+        """
+        """
+        super().__init__()
+        #
+        self.db_file = db_file
+        self._plane = plane
+    #
+    #
+    #
+    # -----------------------------------------------
+    #
+    def __setitem__(self, name: int|str, condition) -> None:
+        """
+        """
+        try:
+            index = self._labels.index(name)
+            raise IOError(f"Load name {name} exist")
+        except ValueError:
+            self._labels.append(name)
+            self._condition.append(condition)
+        #
+        cases= ((name, condition.name, "basic", 'metocean'), )
+        conn = create_connection(self.db_file)
+        with conn:
+            self._push_basicload(conn, cases)
+        #
+    #
+    def __getitem__(self, name:int|str) :
+        """
+        """
+        try:
+            index = self._labels.index(name)
+            condition = self._condition[index]
+        except ValueError:
+            raise IOError(f"Load name {name} not found")
+        #
+        # get load data
+        #conn = create_connection(self._db_file)
+        #with conn:  
+        #    node = get_node(conn, node_name)
+        1 / 0
+    #
+    #
+    #@property
+    #def condition(self):
+    #    """ """
+    #    return self._condition
+    #
+    
+    #@condition.setter
+    #def condition(self, value):
+    #    """ """
+    #    cases = []
+    #    for key, item in value.items():
+    #        self._condition[key] = item
+    #        cases.append((key, f'MET_{key}', "basic", 'metocean'))
+    #    #
+    #    conn = create_connection(self.db_file)
+    #    with conn:        
+    #        self._push_basicload(conn, tuple(cases))
+    #    #print('-->')
+    #
+    # -----------------------------------------------
+    #
+    def _push_basicload(self, conn, cases: tuple):
+        """ """
+        #project = (load_name, load_title, "basic", 'metocean')
+        sql = 'INSERT INTO tb_Load(name, title, level, type) VALUES(?,?,?,?)'
+        cur = conn.cursor()
+        cur.executemany(sql, cases)
+    #
+    #
+    #
+    # -----------------------------------------------
+    # Process
+    #
+    def process(self):
+        """ """
+        print('-->')
+        conn = create_connection(self.db_file)
+        #with conn:
+        #    labels = self.get_elements(conn)
+        #    labels = [item[1] for item in labels]
+        #
+        # ------------------------------------------
+        # 
+        beams = BeamSQL(db_file=self.db_file,
+                        #labels=labels,
+                        plane=self._plane)        
+        #
+        # ------------------------------------------
+        #
+        for item in self._condition:
+            #sname =  f'MET_{key}'
+            #sload = item.load()
+            #self.get_beam_load(wnumber=item.number,
+            #                   title=sname,
+            #                   wload=sload)
+            #
+            df_bload = item.get_beam_load(beams)
+            #
+            # ------------------------------------------
+            # push data in database        
+            #
+            with conn:
+                df_bload.to_sql('tb_LoadBeamLine', conn,
+                                #index_label=header, 
+                                if_exists='append', index=False)            
+            #res.Fwave()
+        print('-->')
+        #1 / 0
+    #
+    #
+    def get_beam_loadXX(self, wnumber, title, wload):
+        """ """
+        #
+        conn = create_connection(self.db_file)
+        with conn:
+            labels = self.get_elements(conn)
+            labels = [item[1] for item in labels]
+        #
+        #
+        dftemp = []
+        #
+        # ------------------------------------------
+        # TODO: Multiprocess --> sqlite issue
+        #
+        #cpuno = os.cpu_count() - 1
+        #
+        #def myfunc(beam):
+        #    beam = BeamItemSQL(name,
+        #                       plane=self._plane,
+        #                       db_file=self.db_file)
+        #    Fwave = wload.Fwave(beam=beam)
+        #    return Fwave.solve()
+        #
+        #beams = [BeamItemWave(name,
+        #                      db_file=self.db_file)
+        #         for name in labels]
+        #
+        #with ProcessPoolExecutor(max_workers=cpuno) as executor:
+        #    for r in executor.map(myfunc, beams):
+        #        dftemp.append(r)
+        #
+        #engine = Engine(wload=wload)
+        #                plane=self._plane,
+        #                wload=wload)
+        #
+        #dftemp = engine.run(beams)
+        #
+        #with ProcessPoolExecutor(max_workers=cpuno) as executor:
+        #    for r in executor.map(engine, beams):
+        #        dftemp.append(r)
+        #
+        #try:
+        #    pool = Pool(cpuno)
+        #    engine = Engine(db_file=self.db_file,
+        #                    plane=self._plane,
+        #                    wload=wload)
+        #    dftemp = pool.map(engine, beams)
+        #finally:
+        #    pool.close()
+        #    pool.join()
+        #
+        # ------------------------------------------
+        #
+        #for beam in beams:
+        for name in labels:
+            # get beam 
+            beam = BeamItemSQL(name,
+                               plane=self._plane,
+                               db_file=self.db_file)
+            # solve beam forces
+            Fwave = wload.Fwave(beam=beam)
+            dftemp.extend(Fwave.solve())
+            #
+            #print('-->')
+        #
+        # ------------------------------------------
+        # create database
+        #
+        header = ['element_type', 'element_name', 'element_number', 
+                  'type',
+                  'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
+                  'L0', 'L1', 'BS', 'OTM', 
+                  'x', 'y', 'z']        
+        #
+        df = DBframework()
+        df_bload = df.DataFrame(data=dftemp, columns=header, index=None)        
+        #
+        header = ['load_number', 'element_number',
+                  'title', 'system', 'type',
+                  'L0', 'qx0', 'qy0', 'qz0',
+                  'L1', 'qx1', 'qy1', 'qz1',
+                  'BS', 'OTM', 'x', 'y', 'z']        
+        #
+        df_bload['load_number'] = wnumber
+        df_bload['title'] = title        
+        df_bload['system'] = 'local'
+        #df_bload.rename(columns={'load_type': 'type'}, inplace=True)
+        df_bload =  df_bload[header]
+        #
+        #
+        # ------------------------------------------
+        # select data in database        
+        #
+        #
+        #
+        # ------------------------------------------
+        # push data in database        
+        #
+        with conn:
+            df_bload.to_sql('tb_LoadBeamLine', conn,
+                            index_label=header, 
+                            if_exists='append', index=False)
+        1 / 0
+        return df_bload
+    #
+    # -----------------------------------------------
+    #
+    #def get_elements(self,conn):
+    #    """ """
+    #    cur = conn.cursor()
+    #    cur.execute ("SELECT * FROM tb_Elements;")
+    #    row = cur.fetchall()
+    #    return row
+    #
+    #    
+#
+#
+#
+class HydroLoadSQLXX(Mapping):
+    
+    __slots__ = ['db_file', '_plane', '_condition', '_labels']
+    
+    def __init__(self, plane: NamedTuple, db_file:str) -> None:
+        """
+        """
+        self._plane = plane
+        self.db_file = db_file
+        self._condition:dict = {}
+        self._labels:list = []
+    #
+    # -----------------------------------------------
+    #
+    def __setitem__(self, load_name: int|str,
+                    condition) -> None:
+        """
+        criterion : wave_comb, mg, design_load, criterion
+        """
+        try:
+            self._condition[load_name]
+            #index = self._labels.index(load_name)
+            raise IOError('Invalid load name : {:}'.format(load_name))
+        except KeyError:
+            self._labels.append(load_name)
+            self._condition[load_name] = condition
+    
+    def __getitem__(self, load_name: int | str):
+        """
+        """
+        #try:
+        #    index = self._labels.index(load_name)
+        #except ValueError:
+        #    raise KeyError('Invalid load name : {:}'.format(load_name))
+        #
+        #1 / 0
+        #print('-->')
+        return self._condition[load_name]
+    #
+    # -----------------------------------------------
+    #
+    def __contains__(self, value) -> bool:
+        return value in self._labels
+
+    def __len__(self) -> int:
+        return len(self._labels)
+
+    def __iter__(self):
+        """
+        """
+        return iter(self._labels)
+    #
+    # -----------------------------------------------
+    # Process
+    #
+    def process(self):
+        """ """
+        print('-->')
+        for key, item in self.items():
+            sname =  f'{key}_{item.name}'
+            sload = item.load()
+            self.get_beam_load(wnumber=item.number, title=sname,
+                               wload=sload)
+            #res.Fwave()
+        print('-->')
+        #1 / 0
+    #
+    #
+    def get_beam_load(self, wnumber, title, wload):
+        """ """
+        #
+        conn = create_connection(self.db_file)
+        with conn:
+            labels = self.get_elements(conn)
+            labels = [item[1] for item in labels]
+        #
+        #
+        dftemp = []
+        #
+        # ------------------------------------------
+        # TODO: Multiprocess --> sqlite issue
+        #
+        #cpuno = os.cpu_count() - 1
+        #
+        #def myfunc(beam):
+        #    beam = BeamItemSQL(name,
+        #                       plane=self._plane,
+        #                       db_file=self.db_file)
+        #    Fwave = wload.Fwave(beam=beam)
+        #    return Fwave.solve()
+        #
+        #beams = [BeamItemWave(name,
+        #                      db_file=self.db_file)
+        #         for name in labels]
+        #
+        #with ProcessPoolExecutor(max_workers=cpuno) as executor:
+        #    for r in executor.map(myfunc, beams):
+        #        dftemp.append(r)
+        #
+        #engine = Engine(wload=wload)
+        #                plane=self._plane,
+        #                wload=wload)
+        #
+        #dftemp = engine.run(beams)
+        #
+        #with ProcessPoolExecutor(max_workers=cpuno) as executor:
+        #    for r in executor.map(engine, beams):
+        #        dftemp.append(r)
+        #
+        #try:
+        #    pool = Pool(cpuno)
+        #    engine = Engine(db_file=self.db_file,
+        #                    plane=self._plane,
+        #                    wload=wload)
+        #    dftemp = pool.map(engine, beams)
+        #finally:
+        #    pool.close()
+        #    pool.join()
+        #
+        # ------------------------------------------
+        #
+        #for beam in beams:
+        for name in labels:
+            # get beam 
+            beam = BeamItemSQL(name,
+                               plane=self._plane,
+                               db_file=self.db_file)
+            # solve beam forces
+            Fwave = wload.Fwave(beam=beam)
+            dftemp.extend(Fwave.solve())
+            #
+            #df_load = Fwave.df
+            #df_load['load_number'] = wnumber
+            #df_load['title'] = title
+            #df_load['load_title'] = df_load.apply(lambda row: f"{wname}_{round(row.x, 2)}_{round(row.y, 2)}_{round(row.z, 2)}", axis=1)
+            #df_load['system'] = 'local'
+            #df_load.rename(columns={'load_type': 'type'}, inplace=True)
+            #df_load.drop(columns=['element_name'], inplace=True, axis=1)
+            #df_load =  df_load[header]
+            #try:
+            #    1/idx
+            #    df_bload = pd.concat([df_bload, df_load], ignore_index=True)
+            #except ZeroDivisionError:
+            #    df_bload = df_load
+            #
+            # process to select wave point based on user request
+            #
+            #Fx, Fy, OTM = udl.span_loading()
+            #indmax = Fx.argmax(dim='length').values
+            #vmax = Fx.idxmax(dim='length').values
+            #print('')
+            #print('Total combined force [kN-m]')
+            #print(f'Fx ={np.max(Fx) / 1000: 1.3e}, Fy={np.max(Fy) / 1000: 1.3e}, OTM={np.max(OTM)/1000: 1.3e}')
+            #print('---')
+            #
+            #Fx.sel(x=0).plot.line(hue='z')
+            #plt.show()
+            #
+            #print('-->')
+        #
+        # ------------------------------------------
+        # create database
+        #
+        header = ['element_type', 'element_name', 'element_number', 
+                  'type',
+                  'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
+                  'L0', 'L1', 'BS', 'OTM', 
+                  'x', 'y', 'z']        
+        #
+        df = DBframework()
+        df_bload = df.DataFrame(data=dftemp, columns=header, index=None)        
+        #
+        header = ['load_number', 'element_number',
+                  'title', 'system', 'type',
+                  'L0', 'qx0', 'qy0', 'qz0',
+                  'L1', 'qx1', 'qy1', 'qz1',
+                  'BS', 'OTM', 'x', 'y', 'z']        
+        #
+        df_bload['load_number'] = wnumber
+        df_bload['title'] = title        
+        df_bload['system'] = 'local'
+        #df_bload.rename(columns={'load_type': 'type'}, inplace=True)
+        df_bload =  df_bload[header]
+        #
+        #
+        # ------------------------------------------
+        # select data in database        
+        #
+        #
+        #
+        # ------------------------------------------
+        # push data in database        
+        #
+        with conn:
+            df_bload.to_sql('tb_LoadBeamLine', conn,
+                            index_label=header, 
+                            if_exists='append', index=False)
+        1 / 0
+        return df_bload
+    #
+    # -----------------------------------------------
+    #
+    def get_elements(self,conn):
+        """ """
+        cur = conn.cursor()
+        cur.execute ("SELECT * FROM tb_Elements;")
+        row = cur.fetchall()
+        return row
     #
     #
 #
+#
+@dataclass
+class Engine:
+    def __init__(self, wload):
+        #self.db_file = db_file
+        self.wload = wload
+        #self.plane = plane
+    
+    #def __call__(self, beam):
+    #    #beam = BeamItemSQL(name,
+    #    #                   plane=self.plane,
+    #    #                   db_file=self.db_file)
+    #    Fwave = self.wload.Fwave(beam=beam)
+    #    return Fwave.solve()
+    #
+    def myfuct(self, beam):
+        """ """
+        Fwave = self.wload.Fwave(beam=beam)
+        return Fwave.solve()        
+    #
+    def run(self, beams):
+        """ """
+        cpuno = os.cpu_count() - 1
+        #
+        dftemp = []
+        with ProcessPoolExecutor(max_workers=cpuno) as executor:
+            for r in executor.map(self.myfuct, beams):
+                dftemp.append(r)
+        #
+        return dftemp
+#
+#
+#
+@dataclass
+class BeamItemWave:
+    """ """
+    __slots__ = ['name', 'number', 'type', 'db_file',
+                 'nodes', 'unit_vector', 'section', 'connectivity']
+    
+    def __init__(self, name:int|str,
+                 db_file:str) -> None:
+        """
+        """
+        self.name = name
+        self.type: str = "beam"
+        self.db_file = db_file
+        #
+        self.connectivity = self._connectivity()
+        self.number = self._number()
+        self.nodes = self._nodes()
+        self.unit_vector =  self._unit_vector()
+        self.section = self._section()
+    #
+    #
+    def _connectivity(self) -> list:
+        """
+        """
+        conn = create_connection(self.db_file)
+        with conn:
+            connodes = get_connectivity(conn, self.name)
+        return connodes
+    #
+    def _number(self) -> int:
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:
+            data = get_beam_data(conn, self.name)
+        return data[1]    
+    #
+    def _nodes(self) -> list:
+        """
+        """
+        _nodes = []
+        conn = create_connection(self.db_file)
+        for _node in self.connectivity:
+            with conn:
+                _nodes.append(get_node(conn, node_name=_node))
+        return _nodes
+    #
+    def _unit_vector(self) -> list[ float ]:
+        """
+        """
+        nodes = self.connectivity
+        conn = create_connection(self.db_file)
+        with conn:
+            node1 = get_node(conn, node_name=nodes[0])
+            node2 = get_node(conn, node_name=nodes[1])
+        # direction cosines
+        L =  dist(node1[:3], node2[:3])
+        uv = list(map(sub, node2[:3], node1[:3]))
+        return [item / L for item in uv]       
+    #
+    def _section(self) -> list:
+        """
+        """
+        #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        conn = create_connection(self.db_file)
+        with conn:
+            data = get_beam_data(conn, self.name)
+            sect =  get_section(conn, data[5])
+        #
+        return sect
+    

@@ -38,6 +38,7 @@ class BoundaryNodes(BoundaryNode):
     def __init__(self) -> None:
         """
         """
+        self._labels: list[int|str] = []
         self._number : array = array('I', [])
         self._x : array = array('i', [])
         self._y : array = array('i', [])

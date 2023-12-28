@@ -94,10 +94,10 @@ class PlotLoad(PlotBasic):
             nodeload(ax, nodes, nload=item._node)
             # beam point load
             beampointload(ax, beams, nodes, 
-                          pointload=item._beam._load._point)
+                          pointload=item._beam._point)
             # beam line load
             beamlineload(ax, beams, nodes, 
-                         lineload=item._beam._load._line)
+                         lineload=item._beam._line)
 #
 #
 def add_mesh_load(ax, beams, nodes, basic):
@@ -115,7 +115,8 @@ def add_mesh_load(ax, beams, nodes, basic):
 def nodeload(ax, nodes, nload, scale:float = 1.0):
     """ """
     #scale = 0.000001
-    df_nload = nload._node._load.df # [['node_name', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']]
+    df_nload = nload.df
+    #df_nload = nload._node._load.df # [['node_name', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']]
     if df_nload.empty:
         return
     #
@@ -128,7 +129,7 @@ def nodeload(ax, nodes, nload, scale:float = 1.0):
     df_nload.fillna(0, inplace=True)
     #
     #df_nload.set_index('node_name')
-    grpnload = df_nload.groupby(['load_name', 'load_type', 'load_number',
+    grpnload = df_nload.groupby(['load_name', 'load_level', 'load_number',
                                  'load_system', 'load_comment',
                                  'node_name'])
     
@@ -147,7 +148,7 @@ def nodeload(ax, nodes, nload, scale:float = 1.0):
         x, y, z = node[:3]
         for nload in  nloads.itertuples():
             # nodal force
-            force = [ item * scale for item in nload[12:]]
+            force = [ item * scale for item in nload[20:]]
             if any(force[:3]):
                 Fx, Fy, Fz = force[:3]
                 ax.quiver(x, y, z, Fx, Fy, Fz, color='r')
@@ -206,7 +207,7 @@ def beamlineload(ax, beams, nodes, lineload,
     #
     df_bload.fillna(0, inplace=True)
     #
-    grpbload = df_bload.groupby(['load_name', 'load_type', 'load_number',
+    grpbload = df_bload.groupby(['load_name', 'load_level', 'load_number',
                                  'load_system', 'load_comment',
                                  'element_name'])
     #
@@ -281,7 +282,7 @@ def beampointload(ax, beams, nodes, pointload,
     df_bload[['Mxnorm', 'Mynorm', 'Mznorm']] = df_bload[['Mx', 'My', 'Mz']].apply(lambda x: x/colmax.max(), axis=0)
     df_bload.fillna(0, inplace=True)
     #
-    grpbload = df_bload.groupby(['load_name', 'load_type', 'load_number',
+    grpbload = df_bload.groupby(['load_name', 'load_level', 'load_number',
                                  'load_system', 'load_comment',
                                  'element_name'])    
     #

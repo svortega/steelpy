@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 # Python stdlib imports
@@ -7,6 +7,7 @@ from __future__ import annotations
 #import multiprocessing
 #import pickle
 #from dataclasses import dataclass
+#from datetime import datetime as dt
 
 # package imports
 #from steelpy.f2uModel.mesh.main import MeshPlane
@@ -18,8 +19,10 @@ from .processor.static import StaticSolver
 #
 from .postprocessor.main import PostProcess
 #
-from .beam.main import Beam
+#from .beam.main import Beam
 #
+#from steelpy.utils.sqlite.main import ClassMainSQL
+#from steelpy.utils.sqlite.utils import create_table
 #
 #
 #
@@ -30,10 +33,13 @@ class TraveItem:
     A program for static & dynamic analysis
     of 3-d framed structures
     """
-    __slots__ = ['_mesh', '_load', '_f2u', '_results', 
-                 '_postprocess', '_plane2D']
+    __slots__ = ['_plane2D', '_postprocess',
+                 'db_file', '_build', '_name']
+    #'_mesh', '_load', '_f2u','_results', 
     
-    def __init__(self, log: bool = False) -> None:
+    def __init__(self, mesh,
+                 sql_file: str|None = None, 
+                 log: bool = False) -> None:
         """
         """
         plane = "3D"
@@ -43,26 +49,46 @@ class TraveItem:
         print (f"-- module : Trave{plane} version 2.50")
         print ('{:}'.format(52 * '-'))
         #
-        #self._postprocess = None
-    #
-    @property
-    def mesh(self):
-        """
-        """
-        return self._mesh
-    
-    @mesh.setter
-    def mesh(self, mesh):
-        """
-        """
+        # -----------
+        # TODO : if not mesh, get file and open mesh class
         self._mesh = mesh
         self._mesh.plane(self._plane2D)
         #
-        self._postprocess = PostProcess(mesh=self._mesh)
+        #try:
+        #    self._name = f'{self._mesh._name}_res'
+        #except AttributeError:
+        #    self._name = None
+        
+        #super().__init__(name=name, sql_file=sql_file)
+        #
+        #self._postprocess = PostProcess(mesh=self._mesh,
+        #                                sql_file=self.db_file)
+        #
+        #if not name:
+        name = f'{self._mesh._name}_res'
+        #
+        self._postprocess = PostProcess(mesh=self._mesh,
+                                        name=name,
+                                        sql_file=sql_file)
+        
+    #
+    #@property
+    #def mesh(self):
+    #    """
+    #    """
+    #    return self._mesh
+    
+    #@mesh.setter
+    #def mesh(self, mesh):
+    #    """
+    #    """
+    #    self._mesh = mesh
+    #    self._mesh.plane(self._plane2D)
     #
     #
     #
-    def static(self, method:str|None=None,
+    def static(self, #mesh= None, 
+               method:str|None=None,
                second_order: bool = False):
         """
         Solves the static system by the Direct Stiffness Method (DSM)
@@ -71,52 +97,81 @@ class TraveItem:
         second_order : Second order (True/False)
         """
         #
-        # ------------------------------
-        # Get K matrix
-        # ------------------------------
-        mesh = self._mesh
-        K = mesh.K(solver=method) 
-        jbc = mesh.jbc()
+        static = StaticSolver(plane2D=self._plane2D)
         #
-        # ------------------------------
-        # Get load vector
-        # ------------------------------        
-        # 
-        load =  mesh.load()
-        basic_load = load.basic()
-        df_nload = basic_load.node_df()
-        #
-        # ------------------------------
-        # Static solution
-        # ------------------------------
-        #        
-        static = StaticSolver(plane=mesh._plane,
-                              method=method)
-        #      
-        Udf = static.solve(Kg=K, Fn=df_nload, jbc=jbc)
-        #
-        # -----------------------------------
-        # Postprocess
-        # -----------------------------------
-        #
-        self._postprocess.Un(Udf)
+        if self._mesh:
+            #self._mesh = mesh
+            #self._mesh.plane(self._plane2D)
+            #
+            # ------------------------------
+            # Get K matrix
+            # ------------------------------
+            #mesh = self._mesh
+            K = self._mesh.K(solver=method) 
+            jbc = self._mesh.jbc()
+            #
+            # ------------------------------
+            # Get load vector
+            # ------------------------------        
+            # 
+            #load =  mesh.load()
+            #basic_load = load.basic()
+            #Fn_df = self._mesh.load().case().Fn()
+            Fn_df = self._mesh._load._basic.Fn()
+            #
+            # ------------------------------
+            # Static solution
+            # ------------------------------
+            #
+            # plane=mesh._plane, method=method
+            #      
+            Udf = static.solve(Kg=K, Fn=Fn_df, jbc=jbc)
+            #
+            # -----------------------------------
+            # Postprocess
+            # -----------------------------------
+            #
+            #self._mesh.Un = Udf
+            #
+            self._postprocess.Un = Udf
+            #self._postprocess = PostProcess(mesh=self._mesh)
+        else:
+            return static
         #
         #print('-->')
     #
     def dynamic(self):
         """ """
-        pass
+        1 / 0
     #
     #
-    def solve(self, beam_steps: int= 10):
+    def results(self,
+                sql_file:str|None = None,
+                name:str|None = None,
+                beam_steps: int= 10):
         """ """
+        #1 / 0
+        #
+        #if mesh:
+        #    mesh.plane(self._plane2D)
+        #    self._postprocess = PostProcess(mesh=mesh)
         #
         # -------------------------------------
         # Results
         # -------------------------------------        
-        #        
-        results = self._postprocess.results(beam_steps=beam_steps)
+        #
+        #if not name:
+        #    name = f'{self._mesh._name}_res'
+        #
+        #
+        #postprocess = PostProcess(mesh=self._mesh,
+        #                          name=name,
+        #                          sql_file=sql_file)
+        #
+        #self._postprocess = PostProcess(mesh=self._mesh)
+        results = self._postprocess.results(beam_steps)
         return results
+    #   
 #
 #
 class Trave3D(TraveItem):
@@ -125,11 +180,12 @@ class Trave3D(TraveItem):
     """
     __slots__ = ['_mesh', '_load', '_f2u', '_results', '_plane']
     
-    def __init__(self) -> None:
+    def __init__(self, mesh = None,
+                 sql_file:str|None = None) -> None:
         """
         """
         self._plane2D=False
-        super().__init__()
+        super().__init__(mesh=mesh, sql_file=sql_file)
         #
         #print ("-- module : Trave3D version 2.50")
         #print ('{:}'.format(52 * '-'))
@@ -187,11 +243,12 @@ class Trave2D(TraveItem):
     """
     __slots__ = ['_mesh', '_load', '_f2u', '_results', '_plane']
     
-    def __init__(self) -> None:
+    def __init__(self, mesh = None,
+                 sql_file:str|None = None) -> None:
         """
         """
         self._plane2D=True
-        super().__init__()
+        super().__init__(mesh=mesh, sql_file=sql_file)
         #print ("-- module : Trave2D version 2.50")
         #print ('{:}'.format(52 * '-'))
         #self._results = Results()

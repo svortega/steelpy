@@ -64,7 +64,7 @@ class AngleSQLite(SectionSQLite):
             self._labels.index(shape_name)
             raise Exception('element {:} already exist'.format(shape_name))
         except ValueError:
-            self._labels.append(shape_name)
+            #self._labels.append(shape_name)
             #
             d = parameters[0]
             tw = parameters[1]
@@ -87,7 +87,7 @@ class AngleSQLite(SectionSQLite):
                        shear_stress, build,
                        compactness,)
             number = self.push_section(section)
-            self._number.append(number)
+            #self._number.append(number)
     #
     def __getitem__(self, shape_name: str | int):
         """

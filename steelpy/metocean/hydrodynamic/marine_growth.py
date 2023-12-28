@@ -1,9 +1,9 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
-from collections.abc import Mapping
+#from collections.abc import Mapping
 from dataclasses import dataclass
 from operator import itemgetter
 from typing import NamedTuple
@@ -11,33 +11,28 @@ import re
 
 #
 # package imports
-from steelpy.utils.units.main import Number, Units
-from steelpy.metocean.hydrodynamic.operations import BasicProperty, get_list
+from steelpy.utils.sqlite.utils import create_connection, create_table
+from steelpy.utils.units.main import Units #Number, 
+from steelpy.metocean.hydrodynamic.utils import BasicProperty, HydroBasic, get_list, HydroItem
 import numpy as np
 
 
-class MarineGrowth(Mapping):
+class MarineGrowth(HydroBasic):
     """
     """
-    __slots__ = ['_mg', '_rho_w'] #'f2u_units',
+    __slots__ = ['_mg', '_rho_w', 'db_file'] #'f2u_units',
                  #'_rhow', '_default']
     
-    def __init__(self, rho_w):
+    def __init__(self, rho_w, db_file: str):
         """
         """
-        #global f2u_units #, mg_default
-        #f2u_units = Units()
+        super().__init__(db_file)
         #
-        #self._default: None|str = None
         self._mg:dict = {}
         self._rho_w:float = rho_w # 1032.0 * f2u_units.kg / f2u_units.m**3
     #
-    def __getitem__(self, name: str|int):
-        """
-        """
-        return self._mg[name]
-    
-    def __setitem__(self, name:str|int, value) -> None:
+    #
+    def __setitem__(self, name:str|int, value: list|tuple|dict) -> None:
         """
         """
         #if re.match(r"\b(constant)\b", mg_type, re.IGNORECASE):
@@ -47,130 +42,306 @@ class MarineGrowth(Mapping):
         #else:
         #    raise IOError("marine growth type {:} not implemented".format(mg_type))
         #
-        #self._mg[mg_name].name = mg_name
+        mg_data = (name, 'profile', self._rho_w, None)
+        conn = create_connection(self.db_file)
+        with conn:
+            self._push_data(conn, mg_data)
+        #
+        mgitem = self.__getitem__(name)
         #
         #
-        if isinstance(value, list|tuple|dict):
-            data = self.get_data(value)
-        elif isinstance(value, Number):
-            data = self.get_data([value])
+        if isinstance(value, list|tuple):
+            if isinstance(value[0], list|tuple):
+                #mgtype = 'profile'
+                print('-->')
+                mgitem.profile = value
+            else:
+                1 / 0
+                data = self.get_mgdata(value)
+        elif isinstance(value, dict):
+            1 / 0
+            data = self.get_mgdata([value])
         else:
             raise IOError('data not valid')
         #
-        self._mg[name] = MGitem(name=name,
-                                density=data[0],
-                                thickness=data[1],
-                                profile=data[2])
+        #self._mg[name] = MGitem(name=name,
+        #                        density=data[0],
+        #                        thickness=data[1],
+        #                        profile=data[2])
+        #
+        #
+        #mg_data = (name, *data)
+        #conn = create_connection(self.db_file)
+        #with conn:
+        #    self._push_data(conn, mg_data)
+        #print('-->')
+    
+        
+    def __getitem__(self, name: str|int):
+        """
+        """
+        #
+        conn = create_connection(self.db_file)
+        with conn:
+            data = self._pull_data(conn, mg_name=name)        
+        #
+        if not data:
+            raise IOError(f'MG {name} not found')
+        #
+        return MGitem(name=name,
+                      db_file=self.db_file)
     #
     #
-    def get_data(self, values):
-        """ [density, thickness, constant/profile, tile] """
-        outval = [0, 0, 'profile', None]
-        mgprofile = outval[2]
+    def get_mgdata(self, values):
+        """ [title, density, constant/profile, thickness] """
+        outval = [None, self._rho_w, None, None]
+        #mgprofile = outval[2]
+        #
         if isinstance(values, dict):
             1/0
         else:
-            if isinstance(values[-1], str):
-                mgprofile = values.pop()
+            #if isinstance(values[-1], str):
+            #    mgprofile = values.pop()
             #
-            outval[0] = values[0].convert('kilogram/metre^3').value
+            outval[0] = values[0]
+            #
             try:
-                outval[1] = values[1].value
-                mgprofile = 'uniform'
+                outval[1] = values[1].convert('kilogram/metre^3').value
+            except IndexError:
+                pass
+            #
+            try:
+                outval[3] = values[2].value
+                #mgprofile = 'uniform'
+                outval[2] = 'uniform'
             except IndexError:
                 #outval[2] = 'profile'
                 pass
         #
-        if re.match(r"\b(constant|uniform|mean)\b", mgprofile, re.IGNORECASE):
-            outval[2] = 'uniform'
+        #if re.match(r"\b(constant|uniform|mean)\b", mgprofile, re.IGNORECASE):
+        #    outval[2] = 'uniform'
         #
         return outval
     #
     #
+    # ------------------
+    # SQL ops
+    # ------------------
     #
-    #def add_new(self, mg_name, mg_number=None):
-    #    """
-    #    """
-    #    if mg_number:
-    #        _number = mg_number
-    #    else:
-    #        _number = len(self._mg) + self.number        
-    #    self.__setitem__(mg_name, _number)
-    #    
+    def _create_table(self, conn) -> None:
+        """ """
+        # Main
+        table = "CREATE TABLE IF NOT EXISTS tb_MarineGrowth (\
+                        number INTEGER PRIMARY KEY NOT NULL, \
+                        name NOT NULL, \
+                        type TEXT NOT NULL, \
+                        water_density DECIMAL NOT NULL, \
+                        title TEXT);"
+        create_table(conn, table)
+        # Profile
+        table = "CREATE TABLE IF NOT EXISTS tb_MarineGProfile (\
+                        number INTEGER PRIMARY KEY NOT NULL,\
+                        mg_number NOT NULL REFERENCES tb_MarineGrowth(number),\
+                        elevation DECIMAL NOT NULL,\
+                        thickness DECIMAL NOT NULL);"
+        create_table(conn, table)
     #
-    def __len__(self) -> int:
-        return len(self._mg)
-
-    def __iter__(self):
+    def _push_data(self, conn, mg_data):
         """
+        Create a new project into the projects table
         """
-        return iter(self._mg)
-    
-    def __contains__(self, value) -> bool:
-        return value in self._mg
+        cur = conn.cursor()
+        table = 'INSERT INTO tb_MarineGrowth(name, type, water_density, title) \
+                 VALUES(?,?,?,?)'
+        # push
+        cur = conn.cursor()
+        cur.execute(table, mg_data)
     #
+    def _pull_data(self, conn, mg_name: str|int,
+                  item: str = "*"):
+        """ """
+        #
+        project = (mg_name,)
+        sql = 'SELECT {:} FROM tb_MarineGrowth WHERE name = ?'.format(item)
+        cur = conn.cursor()
+        cur.execute(sql, project)
+        data = cur.fetchone()
+        return data
+    #
+    # ------------------
     #
     def df(self, df, columns:dict|None=None):
         """ """
-        units = Units()
+        #units = Units()
         grpname = df.groupby(['name'])
         for key, item in grpname:
-            try:
-                value = item["density"].max()
-            except KeyError:
-                value = self._rho_w * units.kg / units.m**3
+            #try:
+            #    value = item["density"].max()
+            #except KeyError:
+            #    value = self._rho_w * units.kg / units.m**3
             #
-            self.__setitem__(name=key[0], value=value)
-            profile = item[["zlevel", "thickness"]].values.tolist()
-            self._mg[key[0]].profile = profile
+            profile = item[["elevation", "thickness"]].values.tolist()
+            self.__setitem__(name=key[0], value=profile)
+            #profile = item[["zlevel", "thickness"]].values.tolist()
+            #self._mg[key[0]].profile = profile
         #print('-->')    
 #
 #
+class MGBasic(NamedTuple):
+    """ """
+    number:int
+    name:str|int
+    mg_type: str
+    rho_w: float
+    title: str
+#
+class ProfileItem(NamedTuple):
+    """ """
+    elevation : list
+    thickness : list
+#
+#
+#
 @dataclass
-class MGitem:
-    __slots__ = ['name', '_profile', 'mgprofile', 'thickness', 'density']
+class MGitem(HydroItem):
+    __slots__ = ['name', '_db_file']
     #
-    def __init__(self, name: int|str, density: float, thickness: float,
-                 profile: str = 'uniform'):
+    def __init__(self, name: int|str,
+                 db_file: str):
         """ """
-        self.name = name
-        self.density = density
-        self.thickness = thickness
-        self.mgprofile = profile
-        self._profile: list = []
-        #self._depth: float = 0.0
+        #self.name = name
+        #self._db_file = db_file
+        super().__init__(name=name, db_file=db_file)
     #
     @property
-    def profile(self):
-        """ """
-        if not self._profile:
-            1/0
-            #Vct = self.tvelocity
-            #zd = (self.zd + self._depth) / max(self._depth + self._eta)
-            #zd = self.zd[::-1]
-            #val = (zd + self._depth) / max(self._depth + self._eta)
-            #1/0
-            #val = np.power(np.abs(val), 1.0 / 7.0)
-            #profile = []
-            #for idx, item in enumerate(zd):
-            #    profile.append([item, val[idx]])
-            #self._profile = [self.zd, np.power(np.abs(Vct * zd), 1.0 / 7.0)]
-            #self._profile = profile
-            #1/0
-        #print('-->')
-        return self._profile
-
-    @profile.setter
-    def profile(self, value: list[list]):
-        """ """
-        prof = []
-        for item in value:
-            elev = item[0].value
-            thickness = item[1].value
-            prof.append([elev, thickness])
+    def rho(self):
+        """Water density"""
+        return self.density
+    
+    @rho.setter
+    def rho(self, value):
+        """Water density"""
+        density = value.convert('kilogram/metre^3').value
         #
-        prof.sort(key=itemgetter(0), reverse=True)
-        self._profile = prof
+        mg_name = (density, self.name, )
+        table = f"UPDATE tb_MarineGrowth \
+                 SET water_density = ?\
+                 WHERE name = ?"
+        #
+        conn = create_connection(self._db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table, mg_name)
+        #
+        #print('--')
+    #
+    #@property
+    #def profile(self):
+    #    """ """
+    #    if not self._profile:
+    #        1/0
+    #        #Vct = self.tvelocity
+    #        #zd = (self.zd + self._depth) / max(self._depth + self._eta)
+    #        #zd = self.zd[::-1]
+    #        #val = (zd + self._depth) / max(self._depth + self._eta)
+    #        #1/0
+    #        #val = np.power(np.abs(val), 1.0 / 7.0)
+    #        #profile = []
+    #        #for idx, item in enumerate(zd):
+    #        #    profile.append([item, val[idx]])
+    #        #self._profile = [self.zd, np.power(np.abs(Vct * zd), 1.0 / 7.0)]
+    #        #self._profile = profile
+    #    1/0
+    #    print('-->')
+    #    return self._profile
+
+    #@profile.setter
+    #def profile(self, value: list[list]):
+    #    """ """
+    #    prof = []
+    #    for item in value:
+    #        elev = item[0].value
+    #        thickness = item[1].value
+    #        prof.append([elev, thickness])
+    #    #
+    #    prof.sort(key=itemgetter(0), reverse=True)
+    #    #
+    #    conn = create_connection(self._db_file)
+    #    with conn:        
+    #        self._push_profile(conn, profile_data=prof)
+    #
+    #
+    #def mg(self):
+    #    """ """
+    #    conn = create_connection(self._db_file)
+    #    with conn:        
+    #        mg = self._pull_item(conn)
+    #    return MGBasic._make(mg)
+    #
+    def _pull_item(self, conn):
+        """ """
+        item_name = (self.name, )
+        cur = conn.cursor()
+        table = 'SELECT * FROM tb_MarineGrowth WHERE name = ?'
+        cur.execute(table, item_name)
+        item = cur.fetchone()
+        return item
+    #
+    #
+    def _push_profile(self, conn, profile_data):
+        """ """
+        #mg_name = (self.name, )
+        #
+        #table = f"UPDATE tb_MarineGrowth \
+        #         SET type = 'profile' \
+        #         WHERE name = ?"
+        #cur = conn.cursor()
+        #cur.execute(table, mg_name)
+        #
+        #cur = conn.cursor()
+        #table = 'SELECT * FROM tb_MarineGrowth WHERE name = ?'
+        #cur.execute(table, mg_name)
+        #mg = cur.fetchone()
+        #
+        mg = self._pull_item(conn)
+        #
+        # Converting thickness units to m
+        #try:
+        #    profile_data = [[item[0], item[1].value] for item in profile_data]
+        #except AttributeError:
+        #    pass
+        #
+        profile = tuple((mg[0], *item, ) for item in profile_data)
+        cur = conn.cursor()
+        table = 'INSERT INTO tb_MarineGProfile(mg_number, \
+                                                elevation, thickness) \
+                                                VALUES(?,?,?)'
+        # push
+        cur = conn.cursor()
+        cur.executemany(table, profile)    
+    #
+    def _pull_profile(self, conn):
+        """get profile data"""
+        mg = self._pull_item(conn)
+        #
+        if re.match(r"\b(profile)\b", mg[2], re.IGNORECASE):
+            mg_name = (mg[0], )
+            cur = conn.cursor()
+            table = 'SELECT * FROM tb_MarineGProfile WHERE mg_number = ?'
+            cur.execute(table, mg_name)
+            mg_profile = cur.fetchall()
+            mg_profile = [item[2:] for item in mg_profile]
+        else:
+            1 / 0
+        #
+        #print('-->')
+        return mg_profile
+    #
+    #def _profile(self):
+    #    conn = create_connection(self._db_file)
+    #    with conn:        
+    #        prof = self._pull_profile(conn)
+    #    
     #
     #
     def MGX(self, Z):

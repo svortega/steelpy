@@ -3,13 +3,14 @@
 #
 # Python stdlib imports
 from __future__ import annotations
-from collections.abc import Mapping
+from array import array
+#from collections.abc import Mapping
 #
 #
 # package imports
 # steelpy.f2uModel.load
 from steelpy.f2uModel.load.process.actions import SelfWeight
-from steelpy.f2uModel.load.process.basic_load import BasicLoadBasic
+from steelpy.f2uModel.load.process.basic_load import LoadCaseBasic, BasicLoadMain
 #
 from steelpy.f2uModel.load.concept.beam import BeamLoadItemIM
 from steelpy.f2uModel.load.concept.node import NodeLoadItemIM
@@ -19,7 +20,7 @@ from steelpy.f2uModel.load.concept.wave_load import WaveLoadItemIM
 #
 #
 #
-class BasicLoadConcept(BasicLoadBasic):
+class BasicLoadConcept(BasicLoadMain):
     __slots__ = ['_load', '_labels', '_title', '_number',
                  'f2u_points', 'f2u_elements']
 
@@ -27,8 +28,12 @@ class BasicLoadConcept(BasicLoadBasic):
         """
         """
         super().__init__()
+        self._labels: list = []
+        self._title: list[str] = []
+        self._number: array = array("I", [])        
         #
         self._load: dict = {}
+        #
         # FIXME: reduce dependency
         self.f2u_points = points
         self.f2u_elements= elements

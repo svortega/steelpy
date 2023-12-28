@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 # Python stdlib imports
@@ -42,17 +42,18 @@ class BSOTM:
     bs  : Base shear
     otm : Overturning moment
     """
-    __slots__ = ['kinematics', 'current', 'hydro',
+    __slots__ = ['kinematics', 'current', 'properties',
                  'condition', 'rho_w']
     def __init__(self, kinematics:list,
-                 current:tuple, hydro:tuple,
+                 current:tuple,
+                 properties:tuple,
                  rho_w:float,
                  condition:int=1): # 
         """
         """
         self.kinematics = kinematics
         self.current = current
-        self.hydro = hydro
+        self.properties = properties
         self.condition = condition
         self.rho_w = rho_w
     #
@@ -175,8 +176,10 @@ class BSOTM:
     #
     def Fwave(self, beam, nelev=5):
         """Calculation of wave forces on beam elements"""
+        #
+        #1 / 0
         #beams = mesh.elements().beams()
-        current = self.current.current
+        #current = self.current.current
         #
         # process
         Bwave = BeamMorisonWave(beam=beam, rho=self.rho_w)
@@ -237,20 +240,25 @@ class BSOTM:
         #
         # -----------------------------------------
         # Hydro diametre & area
-        marine_growth = self.hydro.marine_growth
-        mg = marine_growth.MG(Z)
+        marine_growth = self.properties.marine_growth
+        #mg = marine_growth.MG(Z)
+        mg = marine_growth.get_profile(Z)
+        #
         #Dh, At = self.Dh(D, Z)
         #Dh, At = beamhydro.Dh(mg=mg)
         #
         # -----------------------------------------
         # Cd & Cm
-        cdcm = self.hydro.CdCm
-        cd, cm = cdcm.getCdCm(Z, crestmax, condition=self.condition)
+        cdcm = self.properties.CdCm
+        #cd, cm = cdcm.getCdCm(Z, crestmax, condition=self.condition)
+        cd, cm = cdcm.get_profile(Z)
         #
         # -----------------------------------------
         # Current
+        current = self.current.current
         current.seastate(d=d, z=z, eta=eta)
-        Vc = current.Vc(d, eta, Z)
+        #Vc = current.Vc(d, eta, Z)
+        Vc = current.get_profile(eta, Z)
         #Vc = 0
         #
         # -----------------------------------------

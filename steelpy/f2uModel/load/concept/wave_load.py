@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
@@ -8,20 +8,21 @@ from __future__ import annotations
 #from collections.abc import Mapping
 #from collections import defaultdict
 #from dataclasses import dataclass
-#from typing import NamedTuple
+from typing import NamedTuple
 #import re
 #from operator import itemgetter
 #from itertools import groupby
 
 # package imports
-from steelpy.f2uModel.load.process.wave_load import WaveLoadItem
+#from steelpy.f2uModel.load.process.wave_load import WaveData
+from steelpy.f2uModel.load.process.wave_load import WaveLoadItem, MetoceanLoad
 from steelpy.utils.math.operations import linspace
 #
 # steelpy.f2uModel.load
 from .beam import BeamToNodeIM
 from steelpy.utils.math.operations import trnsload
 #
-from steelpy.trave.beam.load.beam import LineBeam #, BeamLoad
+from steelpy.f2uModel.load.process.beam.beam import LineBeam #, BeamLoad
 #
 import pandas as pd
 from steelpy.utils.dataframe.main import DBframework
@@ -36,8 +37,9 @@ class WaveLoadItemIM(WaveLoadItem):
 
     def __init__(self, load_name: int|str):
         """ """
-        super().__init__(load_name=load_name)
+        super().__init__() # load_name=load_name
         #
+        self._name = load_name
         self._node_eq = BeamToNodeIM(load_name=load_name)
         #
     #
@@ -262,4 +264,42 @@ class WaveLoadItemIM(WaveLoadItem):
         return beamfun
     #
     #
+#
+#
+#
+class MetoceanLoadIM(MetoceanLoad):
+    __slots__ = ['_elements', '_condition', '_labels']
+    #
+    def __init__(self, elements) -> None:
+        """
+        """
+        super().__init__()
+        self._elements = elements
+    #
+    #
+    #
+    # -----------------------------------------------
+    #
+    def __setitem__(self, name: int|str, condition) -> None:
+        """
+        """
+        try:
+            index = self._labels.index(name)
+            raise IOError(f"Load name {name} exist")
+        except ValueError:
+            self._labels.append(name)
+            self._condition.append(condition)
+    #
+    def __getitem__(self, name:int|str) :
+        """
+        """
+        try:
+            index = self._labels.index(name)
+            return self._condition[index]
+        except ValueError:
+            raise IOError(f"Load name {name} not found")
+    #
+    #
+    #   
+#
 #

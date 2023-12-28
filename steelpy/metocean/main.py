@@ -1,29 +1,35 @@
 # 
-# Copyright (c) 2019-2023 steelpy
-#
-from __future__ import annotations
+# Copyright (c) 2019 steelpy
 # 
 # Python stdlib imports
-#from typing import Union, Dict
-from collections.abc import Mapping
+from __future__ import annotations
+#from collections.abc import Mapping
+from datetime import datetime as dt
+#import os
 import re
 
+
 # package imports
+from steelpy.utils.sqlite.main import ClassMainSQL
+#from steelpy.utils.io_module.inout import check_input_file
 #from steelpy.metocean.irregular.main import WaveIrregular
-from steelpy.metocean.regular.main import RegularWaves
+from steelpy.metocean.wave.regular.process.bsotm import BSOTM
+from steelpy.metocean.wave.main import WaveMain
 #from steelpy.metocean.irregular.spectrum import Sprectrum
 from steelpy.utils.units.main import Units
 #from steelpy.metocean.interface.wave import RegularWaves, IregularWaves
-#from steelpy.metocean.interface.wind import Winds
+from steelpy.metocean.wind.main import Wind
 from steelpy.metocean.current.main import Current
-from steelpy.metocean.hydrodynamic.marine_growth import MarineGrowth
-from steelpy.metocean.hydrodynamic.morison import CdCmCoefficients
-from steelpy.metocean.process.combination import MetoceanCombination
-from steelpy.metocean.regular.process.bsotm import BSOTM
+#from steelpy.metocean.hydrodynamic.marine_growth import MarineGrowth
+#from steelpy.metocean.hydrodynamic.morison import CdCmCoefficients
+#from steelpy.metocean.hydrodynamic.wkf import WaveKinFactor
+#from steelpy.metocean.hydrodynamic.cbf import CurrentBlockFactor
 from steelpy.metocean.hydrodynamic.main import Hydrodynamic
+from steelpy.metocean.process.conditions import MetoceanCondition
+from steelpy.utils.sqlite.utils import create_table
 #
 #
-class Metocean:
+class Metocean(ClassMainSQL):
     """
     FE Metocean Class
     
@@ -50,26 +56,97 @@ class Metocean:
       : seastate : metocean combination
     """
     #
-    __slots__ = ['_wave', '_current', '_wind',
+    __slots__ = ['_name', '_wave', '_current', '_wind',
                  '_cdcm','_combination', '_rho_w',
-                 '_hydrodynamic', '_marine_growth']
+                 '_properties',
+                 #'_marine_growth','_wkf', '_cbf', 
+                 '_build', 'db_file']
     #
-    def __init__(self):
+    def __init__(self, name:str|None = None,
+                 sql_file:str|None = None):
         """
         """
         self._rho_w: float = 1032.0  # kg / m^
-        self._wave = WaveType(rho_w=self._rho_w)
-        #self._wind = Winds()
-        self._current = Current()
-        self._marine_growth = MarineGrowth(rho_w=self._rho_w)
-        self._cdcm = CdCmCoefficients()
+        #self._build = True        
         #
-        self._hydrodynamic = Hydrodynamic(rho_w=self._rho_w)
-        self._combination = MetoceanCombination(wave=self._wave,
-                                                current=self._current,
-                                                marine_growth=self._marine_growth,
-                                                cdcm=self._cdcm,
-                                                hydro=self._hydrodynamic)
+        super().__init__(name=name, sql_file=sql_file)
+        #
+        #
+        #if sql_file:
+        #    sql_file = check_input_file(file=sql_file,
+        #                                file_extension="db")
+        #    self.db_file = sql_file
+        #    self._build = False
+        #else:
+        #    self.db_file = self._get_file(name=name)
+        #    #self.data_type = mesh_type
+        #    self._name = name
+        #    conn = create_connection(self.db_file)
+        #    with conn:
+        #        self._create_table(conn)
+        #
+        #
+        self._wave = WaveMain(rho_w=self._rho_w,
+                              db_file=self.db_file)
+        
+        self._wind = Wind(db_file=self.db_file)
+        
+        self._current = Current(db_file=self.db_file)
+        #
+        #self._marine_growth = MarineGrowth(rho_w=self._rho_w,
+        #                                   db_file=self.db_file)
+        #
+        #self._cdcm = CdCmCoefficients(db_file=self.db_file)
+        #self._wkf = WaveKinFactor(db_file=self.db_file)
+        #self._cbf = CurrentBlockFactor(db_file=self.db_file)
+        #
+        self._properties = Hydrodynamic(rho_w=self._rho_w,
+                                        db_file=self.db_file)
+        #
+        self._combination = MetoceanCondition(db_file=self.db_file,
+                                              properties=self._properties)
+    #
+    #def _get_file(self, name: str):
+    #    """ """
+    #    filename = name + ".db"
+    #    path = os.path.abspath(filename)
+    #    try: # remove file if exist
+    #        os.remove(path)
+    #    except FileNotFoundError:
+    #        pass
+    #    #
+    #    return path
+    #
+    #
+    # ------------------
+    # SQL ops
+    # ------------------
+    #
+    def _create_table(self, conn) -> None:
+        """ """
+        # conn = create_connection(self.db_file)
+        table = "CREATE TABLE IF NOT EXISTS tb_Main (\
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    name NOT NULL,\
+                    type TEXT NOT NULL,\
+                    units TEXT NOT NULL,\
+                    rho_water DECIMAL NOT NULL,\
+                    date TEXT);"
+        #
+        create_table(conn, table)
+        #
+        #
+        table = 'INSERT INTO tb_Main(name, type, units,\
+                                    rho_water, date)\
+                                    VALUES(?,?,?,?,?)'
+        #
+        time=dt.now().strftime('%Y-%m-%d')
+        data = (self._name, 'metocean', 'si', self._rho_w, time)
+        # push
+        cur = conn.cursor()
+        cur.execute(table, data)
+    #
+    # ------------------------------------------
     #
     @property
     def rho_w(self):
@@ -82,6 +159,8 @@ class Metocean:
         """ """
         self._rho_w = value.convert('kilogram/metre^3').value
     #
+    # ------------------------------------------
+    #
     def wave(self, values:None|list=None,
              df=None):
         """ """
@@ -90,7 +169,7 @@ class Metocean:
             1/0
         else:
             try:
-                df.columns
+                columns = list(df.columns)
                 grpwave = df.groupby('type')
                 for wtype, item in grpwave:
                     if re.match(r"\b(regular(_wave)?)\b", wtype, re.IGNORECASE):
@@ -105,12 +184,22 @@ class Metocean:
         #
         return self._wave
     #
-    ##
     #@property
-    #def wind(self):
-    #    """
-    #    """
-    #    return self._wind  
+    def wind(self, values:None|list=None,
+             df=None):
+        """
+        """
+        if values:
+            print('-->')
+            1/0
+        else:
+            try:
+                df.columns            
+                self._wind.df(df)
+            except AttributeError:
+                pass
+        #
+        return self._wind
     #
     #@property
     def current(self, values:None|list=None,
@@ -128,35 +217,18 @@ class Metocean:
                 pass
         return self._current
     #
+    #
+    # ------------------------------------------
     #@property
-    def CdCm(self):
-        """ """
-        return self._cdcm
-    #
-    #
-    def MG(self, values:None|list=None,
-           df=None):
-        """Marine Growth"""
-        if values:
-            print('-->')
-            1/0
-        else:
-            try:
-                df.columns            
-                self._marine_growth.df(df)
-            except AttributeError:
-                pass           
-        return self._marine_growth
-    #
-    #@property
-    def hydro(self):
+    def properties(self):
         """
         """
-        return self._hydrodynamic
+        return self._properties
     #
+    # ------------------------------------------
     #@property
-    def load(self, values:None|list=None,
-             df=None):
+    def condition(self, values:None|list=None,
+                 df=None):
         """
         """
         if values:
@@ -171,6 +243,24 @@ class Metocean:
         return self._combination
     #
     #
+    # ------------------------------------------
+    #
+    #
+    def solve(self, surface_points:int = 36,
+              depth_points:int = 100):
+        """ """
+        # wave
+        self._wave.solve(surface_points=surface_points,
+                         depth_points=depth_points)
+        #
+        # current
+        #
+        # wind
+        #print('-->')
+        #1 / 0
+    #
+    #
+    # ------------------------------------------
     #
     def get_load(self, mesh, kinematic,
                  condition:int|None = None,
@@ -214,109 +304,6 @@ class Metocean:
         #
         return bs, otm 
         #return surface
-#
-#
-class WaveType(Mapping):
-    __slots__ = ['_regular', '_iregular', '_spectrum',
-                 '_rho_w', '_labels','_type']
-    def __init__(self, rho_w:float):
-        """
-        """
-        self._labels: list[str|int] = []
-        self._type: list = []
-        self._rho_w: float = rho_w  # kg / m^3
-        self._regular = RegularWaves(cls=self)
-        #self._iregular_wave = WaveIrregular()
-        # self._spectrum = Sprectrum()
-    #
-    #
-    def __setitem__(self, name: int|str,
-                    wave_data: list|tuple|dict) -> None:
-        #try:
-        #    self._labels.index(name)
-        #    raise Exception(f'Wave {name} already exist')
-        #except ValueError:
-        #    wave_type = wave_data[0]
-        #    #properties = get_sect_properties(properties[1:])
-        #    self._labels.append(name)
-        #    self._type.append(wave_type)
-        wave_type = wave_data[0]
-        self._input(name, wave_type)
-        #
-        if re.match(r"\b(regular(_wave)?)\b", wave_type, re.IGNORECASE):
-            self._regular[name] = wave_data
-        elif re.match(r"\b(iregular(_wave)?)\b", wave_type, re.IGNORECASE):
-            #self._iregular[name] = wave_data
-            raise NotImplementedError
-        else:
-            raise ValueError("wave type invalid")
-
-    def __getitem__(self, name: int|str):
-        """
-        node_name : node number
-        """
-        try:
-            index = self._labels.index(name)
-            wave_type = self._type[index]
-        except ValueError:
-            raise KeyError(f'   *** Wave {name} does not exist')
-        #
-        if re.match(r"\b(regular(_wave)?)\b", wave_type, re.IGNORECASE):
-            return self._regular[name]
-        elif re.match(r"\b(iregular(_wave)?)\b", wave_type, re.IGNORECASE):
-            # return self._iregular[name]
-            raise NotImplementedError
-        else:
-            raise ValueError("wave type invalid")
-    #
-    def _input(self, name:inst|str, wave_data:str):
-        """ """
-        try:
-            self._labels.index(name)
-            raise Exception(f'Wave {name} already exist')
-        except ValueError:
-            wave_type = wave_data
-            self._labels.append(name)
-            self._type.append(wave_type)
-    #
-    def __len__(self):
-        return len(self._labels)
-
-    def __iter__(self):
-        return iter(self._labels)
-
-    def __contains__(self, value):
-        return value in self._labels
-    #
-    #
-    #@property
-    #def spectrum(self):
-    #    """
-    #    """
-    #    return self._spectrum
-    #
-    #@property
-    #def irregular(self):
-    #    """
-    #    """
-    #    return self._iregular_wave
-    #
-    #@property
-    def regular(self, values:None|list=None,
-                df=None):
-        """
-        """
-        if values:
-            print('-->')
-            1/0
-        else:
-            try:
-                df.columns
-                self._regular.df(df)
-            except AttributeError:
-                pass
-        return self._regular
-    #
 #
 #
 

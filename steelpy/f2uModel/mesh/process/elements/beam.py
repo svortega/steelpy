@@ -26,23 +26,22 @@ from numpy.linalg import inv
 class BeamBasic(Mapping):
     __slots__ = ['_lables', '_number', '_title']
     
-    def __init__(self, labels) -> None: #, m2D: bool
+    def __init__(self) -> None: #, m2D: bool
         """
         Beam element 
         """
         #
-        #
-        self._labels=labels
+        #self._labels=labels
         self._number: array = array('i', [])
         self._title: list[int|str] = []
         #self._m2D = m2D
     #
-    def _get_labels(self):
-        """ """
-        idx = [x for x, item in enumerate(self._type)
-               if item == self._beam_type]
-        labels = [self._labels[x] for x in idx]
-        return labels
+    #def _get_labels(self):
+    #    """ """
+    #    idx = [x for x, item in enumerate(self._type)
+    #           if item == self._beam_type]
+    #    labels = [self._labels[x] for x in idx]
+    #    return labels
     #
     def __contains__(self, value) -> bool:
         return value in self._labels
@@ -50,12 +49,13 @@ class BeamBasic(Mapping):
     def __iter__(self):
         """
         """
-        labels = self._get_labels()
-        return iter(labels)    
+        #labels = self._get_labels()
+        #return iter(labels)
+        return iter(self._labels)
 
     def __len__(self) -> float:
-        labels = self._get_labels()
-        return len(labels)
+        #labels = self._get_labels()
+        return len(self._labels)
     #
     def __str__(self) -> str:
         """ """

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 fem2ufo
 #
 from __future__ import annotations
 # Python stdlib imports
@@ -198,7 +198,8 @@ class BeamMorisonWave:
         # print(f'qx ={np.min(fx): 1.4e}, qy={np.min(fy): 1.4e}, qz={np.min(fz): 1.4e}')
         # print('========================================')
         #
-        return BeamUnitForce(fx, fy, fz, dz, Elev, self._beam.name)
+        return BeamUnitForce(fx, fy, fz, dz, Elev,
+                             self._beam.name, self._beam.number)
     #
     #def ft(self):
     #    """ Component along the axis of the cylinder (a tangential component)"""
@@ -243,6 +244,7 @@ class BeamUnitForce(NamedTuple):
     dz: list
     elevation: list
     beam_name: str | int
+    beam_number: int
     #
     #
     @property
@@ -251,6 +253,53 @@ class BeamUnitForce(NamedTuple):
         
         [load_title, 'beam', beam_name, 'line',  qx0,qy0,qz0, qx1,qy1,qz1, L0,L1, comment(optional)]"""
         #
+        #coords = self.qx.coords
+        #rows = coords['x'].values
+        #cols = coords['z'].values
+        #wlength = coords['length'].values
+        #
+        #
+        #Fx, Fy, OTM = self.span_loading()
+        #
+        #
+        # FIXME: wave system to beam local system (is this fixed already?)
+        #
+        #qitem = self.qx.to_dataframe(name='qx').reset_index()
+        #qy = self._get_line(qname='qx', qitem=qitem)
+        #qitem = self.qy.to_dataframe(name='qy').reset_index()
+        #qz = self._get_line(qname='qy', qitem=qitem)
+        #qitem = self.qz.to_dataframe(name='qz').reset_index()
+        #qx = self._get_line(qname='qz', qitem=qitem)
+        #
+        # TODO: L1 and L2 should not be zero for all cases
+        #dftemp = []
+        #for x, row in enumerate(rows):
+        #    for idx, wstep in enumerate(wlength):
+        #        for hstep, col in enumerate(cols):
+        #            ldata = list(zip(qx[idx][hstep], qy[idx][hstep], qz[idx][hstep]))
+        #            dftemp.append(['beam', self.beam_name, self.beam_number, 'line',
+        #                           *ldata[0], *ldata[1], 0, 0,
+        #                           float(Fx[x, hstep, idx].values),
+        #                           float(OTM[x, hstep, idx].values), 
+        #                           row, wstep, col])
+        #
+        dftemp = self.solve()
+        #
+        # setup df's columns
+        header = ['element_type', 'element_name', 'element_number', 
+                  'load_type',
+                  'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
+                  'L0', 'L1', 'BS', 'OTM', 
+                  'x', 'y', 'z']
+        #
+        df = DBframework()
+        dfload = df.DataFrame(data=dftemp, columns=header, index=None)
+        # print('--->')
+        # 1 / 0
+        return dfload
+    #
+    def solve(self):
+        """ """
         coords = self.qx.coords
         rows = coords['x'].values
         cols = coords['z'].values
@@ -275,23 +324,12 @@ class BeamUnitForce(NamedTuple):
             for idx, wstep in enumerate(wlength):
                 for hstep, col in enumerate(cols):
                     ldata = list(zip(qx[idx][hstep], qy[idx][hstep], qz[idx][hstep]))
-                    dftemp.append(['beam', self.beam_name, 'line',
+                    dftemp.append(['beam', self.beam_name, self.beam_number, 'line',
                                    *ldata[0], *ldata[1], 0, 0,
                                    float(Fx[x, hstep, idx].values),
                                    float(OTM[x, hstep, idx].values), 
                                    row, wstep, col])
-        # setup df's columns
-        header = ['element_type', 'element_name', 'load_type',
-                  'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
-                  'L0', 'L1', 'BS', 'OTM', 
-                  'x', 'y', 'z']
-        #
-        df = DBframework()
-        dfload = df.DataFrame(data=dftemp, columns=header, index=None)
-        # print('--->')
-        # 1 / 0
-        return dfload
-
+        return dftemp
     #
     #
     def _get_line2(self, qname: str, qitem):

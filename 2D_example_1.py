@@ -7,7 +7,7 @@ from steelpy import Trave3D
 #
 units = Units()
 #
-f2umodel = f2uModel(component="example2D_2")
+f2umodel = f2uModel()
 #
 #
 # ----------------------------------------------------
@@ -16,7 +16,7 @@ f2umodel = f2uModel(component="example2D_2")
 # ----------------------------------------------------
 # ----------------------------------------------------
 #
-mesh = f2umodel.mesh()
+mesh = f2umodel.mesh(name="2D_example_1")
 #
 #
 # ----------------------------------------------------
@@ -81,12 +81,6 @@ mesh.elements([(1,  'beam',  1, 2, 10, 20, 0),
                (2,  'beam',  2, 3, 15, 25, 0),
                (3,  'beam',  3, 4, 10, 20, 0)])
 #
-#
-#
-# ----------------------------------------------------
-# mesh data
-# ----------------------------------------------------
-#
 print(mesh.elements().beams())
 #
 #
@@ -105,19 +99,28 @@ load = mesh.load()
 #
 #
 # load numbering is automatic (consecutive)
-# load.basic([[load_title, 'node', node_number, 'point',  x,y,z,mx,my,mz, comment(optional)],
-#             [load_title, 'node', node_number, 'mass' ,  x,y,z, comment(optional)]
-#             [load_title, 'beam', beam_number, 'line' ,  qx0,qy0,qz0, qx1,qy1,qz1, L0,L1, comment(optional)],
-#             [load_title, 'beam', beam_number, 'point',  L0,x,y,z,mx,my,mz, comment(optional)]])
+# load.basic([[load_title, 'node', node_id, 'point',  x,y,z,mx,my,mz, comment(optional)],
+#             [load_title, 'node', node_id, 'mass' ,  x,y,z, comment(optional)]
+#             [load_title, 'beam', beam_id, 'line' ,  qx0,qy0,qz0, qx1,qy1,qz1, L0,L1, comment(optional)],
+#             [load_title, 'beam', beam_id, 'point',  L0,x,y,z,mx,my,mz, comment(optional)]])
 #
-#basic = load.basic([['wind load x', 'node', 2, 'point', 0, -4_000_000_000, 0],
-#                    ['wind load x', 'node', 3, 'point', 0, -2_000_000_000, 0],
-#                    ['snow load'  , 'beam', 2, 'line' , -1_000_000, 0, 0]])
+#
+Pnull = 0 * units.N
+Lnull= 0 * units.N / units.m
+Punit = units.kN
+Munit = units.kN * units.m
+Lunit = units.N/units.m
+#
+#load.basic([['wind load', 'node', 2, 'load', 400 * Punit, Pnull, Pnull, 100 * Munit, 100 * Munit, 'nodex_1'],
+#            ['wind load', 'node', 3, 'load', -200 * Punit, 'nodex_2'],
+#            ['snow load', 'beam', 2, 'line', Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_1'],
+#            ['snow load', 'beam', 1, 'point', 3* units.m, 10 * Punit, 'point_1']])
 #
 #print(basic)
 #
 basic = load.basic()
 #
+#defined = basic.defined()
 #
 # basic[1].node([[node_number, 'point', x,y,z,mx,my,mz, comment(optional)],
 #                [node_number, 'mass' , x,y,z, comment(optional)]])
@@ -134,27 +137,29 @@ basic = load.basic()
 #                [9, 'line', 0, -1000, 'udl_2'],
 #                [10, 'line', 0, -1000, 'udl_2']])
 #
+basic[1] = 'wind load'
+basic[1].node([[2, 'load', 400 * Punit, Pnull, Pnull, 100 * Munit, 100 * Munit, 'nodex_1'],
+               [3, 'load', -200 * Punit, Pnull, Pnull, 'nodex_2']])
 #
-nullLoad = 0 * units.N
-pointLoad = -1_000 * units.N
-basic[11] = 'example'
-basic[11].node([[2, 'load',
-                 400_000 * units.N, nullLoad, nullLoad,
-                 100_000 * units.N * units.m, 100_000 * units.N * units.m,
-                 'nodex_1'],
-                [3, 'load',
-                 -1 * 200_000 * units.N, nullLoad, nullLoad, 'nodex_2']])
-
+print(basic[1])
 #
-nullUDL= 0 * units.N / units.m
-basic[11].beam([[2, 'line',
-                 nullUDL, -50_000 * units.N/units.m, nullUDL,
-                 nullUDL, -50_000 * units.N/units.m, 20_000 * units.N/units.m,
-                 'udly_1'],
-                [1, 'point', 3* units.m, 10 * units.kN, 'point_1']])
+#nullLoad = 0 * units.N
+#pointLoad = -1_000 * units.N
+#basic[11] = 'example'
+#basic[11].node([[2, 'load',
+#                 400_000 * units.N, nullLoad, nullLoad,
+#                 100_000 * units.N * units.m, 100_000 * units.N * units.m,
+#                 'nodex_1'],
+#                [3, 'load',
+#                 -1 * 200_000 * units.N, nullLoad, nullLoad, 'nodex_2']])
+#
+basic[2] = 'snow load'
+basic[2].beam([[2, 'line', Lnull, -50_000 * Lunit, Lnull, Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_1'],
+               [3, 'line', Lnull, -50_000 * Lunit, Lnull, Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_1'],
+               [1, 'point', 3* units.m, 10 * Punit, 'point_1']])
 #
 #
-print(basic)
+print(basic[2])
 #
 #for key, items in basic.items():
 #    key, items
@@ -182,9 +187,9 @@ print("")
 elements = mesh.elements()
 print(elements)
 #
-loadm = mesh.load()
+loadm = mesh.load().basic()
 print("Load")
-print(loadm.basic())
+print(loadm)
 #
 #
 #mesh.to_excel()
@@ -207,12 +212,35 @@ print(loadm.basic())
 #
 #
 # ----------------------------------------------------
-# Structural Analysis
+# Structural Analysis Explicit
 # ----------------------------------------------------
 #
-frame = Trave2D()
-frame.mesh = mesh
+frame = Trave2D(mesh=mesh)
+# ------------------------------
+#static = frame.static()
+#mesh.plane(frame._plane2D)
+#
+# ------------------------------
+# Get K matrix
+#
+#K = mesh.K() 
+#jbc = mesh.jbc()
+#
+# ------------------------------
+# Get load vector
+#       
+#basic_load = loadm.basic()
+#Fn_df = basic_load.Fn()
+#
+# ------------------------------
+# Static solution
+#      
+#Udf = static.solve(Kg=K, Fn=Fn_df, jbc=jbc)
+#
+#mesh.Un = Udf
+# ------------------------------
+#
 frame.static()
-results = frame.solve()
+results = frame.results()
 print(results)
 print('-->')

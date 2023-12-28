@@ -38,7 +38,8 @@ class BoundaryNode(Mapping):
     def __init__(self):
         """
         """
-        self._labels: list[int|str] = []
+        #self._labels: list[int|str] = []
+        pass
     #
     #
     def __len__(self) -> float:

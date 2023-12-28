@@ -1,18 +1,17 @@
 #
-# Copyright (c) 2009-2023 steelpy
-#
-from __future__ import annotations
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
+from __future__ import annotations
 #from array import array
 from dataclasses import dataclass
-#import math
-#from typing import NamedTuple, Tuple, Union, List, Dict
+
+
 
 # package imports
-from steelpy.metocean.regular.fourier.Subroutines import Newton, initial
-from steelpy.metocean.regular.process.inout import title_block, output
-from steelpy.metocean.regular.process.waveops import WaveRegModule, WaveItem, get_wave_data
+from steelpy.metocean.wave.regular.fourier.Subroutines import Newton, initial
+from steelpy.metocean.wave.regular.process.inout import title_block, output
+from steelpy.metocean.wave.regular.process.waveops import WaveItem #, get_wave_data, WaveRegModule, 
 
 import numpy as np
 
@@ -21,17 +20,17 @@ import numpy as np
 @dataclass
 class WaveFourier(WaveItem):
     
-    def __init__(self, H:float, d:float, title:str, 
-                 T:float|None=None,
-                 Lw:float|None = None, 
+    def __init__(self, H:float, d:float, 
+                 T:float|None=None, Lw:float|None = None,
+                 title:str|None = None,
                  infinite_depth:bool=False,
                  current:float = 0.0, c_type:int = 1,
                  order:int=5, nstep:int=2,
-                 number:int=40, accuracy:float=1e-6) -> None:
+                 niter:int=40, accuracy:float=1e-6) -> None:
         """
         """
         super().__init__(H=H, Tw=T, d=d, title=title,
-                         order=order, nstep=nstep, niter=number,
+                         order=order, nstep=nstep, niter=niter,
                          accuracy=accuracy,
                          current=current, c_type=c_type,
                          infinite_depth=infinite_depth)
@@ -48,13 +47,33 @@ class WaveFourier(WaveItem):
             self._Y = Y
             self._B = B
             self._Tanh = Tanh
-            self._wave_length = 2 * np.pi / z[ 1 ]
-        #self._Highest = Highest         
+            self._Lw = 2 * np.pi / z[ 1 ]
+        #self._Highest = Highest
         #return z, Y, B, Tanh
-
+#
+@dataclass
+class WaveFourierX:
+    def __init__(self) -> None:
+        """
+        """
+        self.method = "Fourier"
+    #
+    #
+    def solver(self):
+        """ Solver """
+        try:
+            self._z
+        except AttributeError:        
+            data = self.get_parameters()
+            z, Y, B, Tanh = FourierMain(*data)
+            self._z = z
+            self._Y = Y
+            self._B = B
+            self._Tanh = Tanh
+            #self._wave_length = 2 * np.pi / z[ 1 ]        
 #
 #
-class FourierModule(WaveRegModule):
+class FourierModule: #(WaveRegModule)
     __slots__ = [ 'order', 'nsteps', 'max_iter', 'accuracy',
                   '_labels', '_cases', 'c_type', '_current']
 

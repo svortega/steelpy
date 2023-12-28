@@ -6,7 +6,7 @@ from steelpy.design.codes.main import CodeCheck
 from steelpy.utils.roarks.main import RoarksFormulas
 from steelpy.design.main import ClampDesign as Clamp
 from steelpy.metocean.main import Metocean
-from steelpy.trave.main import Trave2D, Trave3D, Beam
+from steelpy.trave.main import Trave2D, Trave3D #, Beam
 #from steelpy.beam.main import Beam #, SimpleBeam
 from steelpy.f2uModel.main import f2uModel
 #
@@ -19,8 +19,8 @@ from steelpy.utils.spreadsheet.main import Spreadsheet
 
 # constants
 __major__ = 0.  # for major interface/format changes
-__minor__ = 5  # for minor interface/format changes
-__release__ = 1  # for tweaks, bug-fixes, or development
+__minor__ = 6  # for minor interface/format changes
+__release__ = 0  # for tweaks, bug-fixes, or development
 
 __version__ = '%d.%d.%d' % (__major__, __minor__, __release__)
 

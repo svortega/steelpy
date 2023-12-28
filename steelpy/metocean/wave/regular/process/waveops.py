@@ -1,9 +1,9 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 # Python stdlib imports
-from array import array
+#from array import array
 from dataclasses import dataclass
 import re
 import math
@@ -11,10 +11,10 @@ import math
 
 # package imports
 from steelpy.metocean.current.main import MeanCurrent
-from steelpy.metocean.regular.process.kinematic import  get_kinematic, KinematicResults
-from steelpy.metocean.regular.process.inout import get_Height
+from steelpy.metocean.wave.regular.process.kinematic import  get_kinematic, KinematicResults
+from steelpy.metocean.wave.regular.process.inout import get_Height
 #
-from steelpy.metocean.regular.process.surface import get_surface, SurfaceResults
+from steelpy.metocean.wave.regular.process.surface import get_surface, SurfaceResults
 #
 #from steelpy.process.units.main import Units
 #from steelpy.process.dataframe.main import DBframework
@@ -22,11 +22,11 @@ import numpy as np
 #
 #
 #
-#@dataclass
+@dataclass
 class WaveItem:
-    __slots__ = ['H', 'Tw', 'd', 'title', 'Lw',
+    __slots__ = ['H', 'Tw', 'd', 'title', '_Lw', '_surface', 
                  'order', 'nstep', 'niter', 'accuracy',
-                 'current', 'c_type', 'method', 'finite_depth',
+                 'c_vel', 'c_type', 'method', 'finite_depth',
                  '_wave_length', '_z', '_Y', '_B', '_Tanh', '_Highest']
     
     def __init__(self, H:float, d:float, title:str, 
@@ -39,15 +39,15 @@ class WaveItem:
         """ """
         self.H = H
         if Lw:
-            self.Lw = Lw
+            self._Lw = Lw
             self.Tw = None
         else:
             self.Tw = Tw
-            self.Lw = None
+            self._Lw = None
         self.d = d
-        self.title: str
+        self.title = title
         # current 
-        self.current = current
+        self.c_vel = current
         self.c_type = c_type        
         #
         self.order = order
@@ -60,7 +60,16 @@ class WaveItem:
             self.finite_depth = False
         #
         #self.wave_length:float
-        #
+        self._surface = None
+    #
+    #
+    def current(self, c_type: int = 1, c_velocity: float = 0.0) -> None:
+        """Current data  
+            c_type  : Current criterion, 1 - Eularian mean, 2 - Stokes depth integrated mean
+            c_velocity : Current magnitude"""
+        self.c_vel = c_velocity
+        self.c_type = c_type
+    #
     #
     def get_parameters(self, g:float = 9.80665):
         """ 
@@ -80,10 +89,10 @@ class WaveItem:
         finite_depth : True/False
         """
         MaxH = self.H / self.d
-        current = self.current / math.sqrt( g * self.d )
-        if self.Lw:
+        current = self.c_vel / math.sqrt( g * self.d )
+        if self._Lw:
             case = "wavelength"
-            L = self.Lw / self.d
+            L = self._Lw / self.d
             Height = get_Height(MaxH, case, self.finite_depth, L=L)
             T = None
         else:
@@ -96,61 +105,80 @@ class WaveItem:
                 self.order, self.nstep, self.niter, self.accuracy,
                 Height, self.finite_depth]
     #
-    @property
-    def L(self):
-        """ Wave Length"""
-        try:
-            return self._wave_length * self.d
-        except AttributeError:
-            self.__call__()
-            return self._wave_length * self.d
-    #
-    #
-    def surface(self, surface_points:int = 36,
-                step_size:float|None=None):
-        """Free surface (wave) profile
-        surface_points : Number of points on free surface (the program clusters them near crest)
-        step_size: deg
-        """
-        self.__call__()
+    def get_surface(self, surface_points:int = 36):
+        """ claculate wave surface """
         n = self.order
         kd = self._z[1]
-        #
-        surface = get_surface(n, kd, self._Y, self.d, 
+        Y = self._Y
+        surface = get_surface(n, kd, Y, self.d, 
                               surface_points, self.finite_depth)
         #
-        return SurfaceResults(surface, self.H, self.Tw, self.d, self.finite_depth)
+        if self.title:
+            surface['title'] = self.title
+        else:
+            surface['title'] = None
+        #surface['wave_number'] = self.number
+        surface['type'] = 'order_1'
+        #
+        self._surface = surface
+        #
+        return surface[['type', 'x', 'eta', 'phase']]
     #
-    #
-    def kinematics(self, surface=None, depth_points:int = 100,
-                   surface_points:int = 36):
-        """ """
-        self.__call__()
+    def surface(self, surface_points:int = 36):
+        """ wave surface """
+        surface = self._surface
         if not surface:
-            surface = self.surface(surface_points)
+            surface = self.get_surface(surface_points)
         #
-        #n = self.order
-        #kd = self._z[1]
-        #
-        #crest = surface.eta
-        #
-        #depth = np.arange(depth_points + 1) / depth_points
-        #
-        #zdepth =  crestmax * depth  # --> fix sign
-        #zdepth = surfacePoints(d=self.d, points=depth_points, eta=crest)
-        #
-        #get_kinematicX(n, self._z, self._Y, self._B, self._Tanh,
-        #               surface_points, depth_points, self.finite_depth)
-        #
+        return SurfaceResults(surface=surface,
+                              Hw=self.H, Tw=self.Tw, d=self.d,
+                              finite_depth=self.finite_depth)
+    #
+    def get_kinematics(self, depth_points:int = 100,
+                       surface_points:int|None = None):
+        """get wave kinematics"""
+        surface = self._surface
+        if surface_points: #or not surface
+            surface = self.get_surface(surface_points)
+            
         kpoints = depth_points
         kindf = get_kinematic(self.order, self._z, self._B, self._Tanh,
                               self.d, surface, kpoints,
                               self.finite_depth)
         #
+        #surface['wave_name'] = self.name
+        #kindf['wave_number'] = self.number
+        kindf['type'] = 'order_1'
         #
-        return KinematicResults(surface, kindf, depth_points+1)
+        #depth_steps = np.arange(depth_points + 1) / depth_points
+        #kindf['surface_number'] = repmat(surface['number'].to_numpy(),
+        #                                 depth_steps.size, 1).flatten('F')
         #
-        #return dataframe
+        #kindf.drop(columns=['phase', 'x'], inplace=True, axis=1)        
+        #
+        return kindf
+    #
+    def kinematics(self, depth_points:int = 100,
+                   surface_points:int|None = None):
+        """wave kinematics"""
+        kin = self.get_kinematics(depth_points, surface_points)
+        return KinematicResults(surface=self._surface,
+                                kindata=kin,
+                                depth_points=depth_points)
+    #
+    @property
+    def Lw(self):
+        """ wave_length [m]"""
+        if not self._Lw:
+            self.__call__()
+        return self._Lw
+    
+    @Lw.setter
+    def Lw(self, L):
+        """ wave_length [m]"""
+        
+        self._Lw = L
+    #
 #
 #
 #
@@ -253,7 +281,7 @@ def get_data_dic(data:dict)->list[float]:
 #
 def get_data_list(data:list, steps:int=5)->list[float]:
     """
-    [Hw, Tw, d, Lw, wave_type]
+    [Hw, Tw, d, wave_theory, Lw]
     """
     new_data = [0] * steps
     new_data[-1] = "Fourier"

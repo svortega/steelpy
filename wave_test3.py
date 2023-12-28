@@ -13,9 +13,9 @@ units = Units()
 #
 # ----------------------------------------------------
 #
-f2umodel = f2uModel(component="wave_test3")
+f2umodel = f2uModel()
 #
-mesh = f2umodel.mesh()
+mesh = f2umodel.mesh(name="wave_test3")
 #
 # ----------------------------------------------------
 # Material input
@@ -87,41 +87,80 @@ print(elements)
 # Metocean 
 # ----------------------------------------------------
 #
-meto = Metocean()
+meto = Metocean(name="metocean_1")
 #
 # ----------------------------------------------------
 # hydrodynamic parameters input
 # ----------------------------------------------------
 #
+proph = meto.properties()
 #
-#cdcm = meto.CdCm()
+cdcm = proph.CdCm()
 # ['coefficients', Cd, Cm]
-#cdcm['cdcm_default'] = ['coefficients', 0.70, 2.0]
-#cdcm['cdcm_default'].elements = [12, 23]
+#cdcm['cdcm_1'] = ['cdcm_default', 0.70, 2.0]
+#cdcm['cdcm_1'].elements = [12, 23]
+cdcm['cdcm_1'] = [[ 10 * units.m, 0.70, 2.0],
+                  [ 00 * units.m, 0.70, 2.0],
+                  [-10 * units.m, 0.70, 2.0],
+                  [-50 * units.m, 0.70, 2.0],
+                  [-100 * units.m, 0.70, 2.0]]
 #
 #
 #
-mg = meto.MG()
+mg = proph.MG()
+#       [title, density, thickness]
+#mg['MG_1'] = ['MG_1' , meto.rho_w * 1.35]
+# profile [elevation, thickness]
+mg['MG_1'] = [[ 10 * units.m, 60 * units.mm],
+              [ 00 * units.m, 60 * units.mm],
+              [-10 * units.m, 30 * units.mm],
+              [-50 * units.m, 10 * units.mm],
+              [-100 * units.m, 0 * units.mm]]
+mg['MG_1'].rho = meto.rho_w * 1.35
 #
-mg['MG_1'] = meto.rho_w * 1.35
-mg['MG_1'].profile = [[ 10 * units.m, 60 * units.mm],
-                      [ 00 * units.m, 60 * units.mm],
-                      [-10 * units.m, 30 * units.mm],
-                      [-50 * units.m, 10 * units.mm],
-                      [-100 * units.m, 0 * units.mm]]
+# Wave kinematics factor
+wkrf = proph.WKF()
+#  [text, type (constant/profile), factor]
+#wkrf['wkf1'] = [ 'wkf1', 0.95]
+wkrf['wkf1'] = [[ 10 * units.m, 0.95],
+                [ 00 * units.m, 0.95],
+                [-10 * units.m, 0.95],
+                [-50 * units.m, 0.95],
+                [-100 * units.m, 0.95]]
 #
 #
+#
+cbf = proph.CBF()
+#  [text, type (constant/profile), factor]
+#cbf['cbf1'] = [ 'cbf1', 0.85]
+cbf['cbf1'] = [[ 10 * units.m, 0.85],
+               [ 00 * units.m, 0.85],
+               [-10 * units.m, 0.85],
+               [-50 * units.m, 0.85],
+               [-100 * units.m, 0.85]]
+#
+#
+# ----------------------------------------------------
+# Current
 #
 current = meto.current()
 #
-# [velocity_top, velocity_bottom, profile (linear/exponential)]
-current['current_1'] = 0*1.54 * units.m/units.sec # [1.5 * units.m/units.sec, 0.10 * units.m/units.sec]
-# profile [elevation, factor]
-current['current_1'].profile = [[  5 * units.m, 1.0],
-                                [-10 * units.m, 1.0],
-                                [-30 * units.m, 0.70],
-                                [-60 * units.m, 0.50],
-                                [-80 * units.m, 0.20]]
+# [title, profile (linear/exponential/user), velocity_top, velocity_bottom]
+#current['curr_1'] = 'current_1' # [1.5 * units.m/units.sec, 0.10 * units.m/units.sec]
+# profile [elevation, velocity]
+cvel = 1.54 * units.m/units.sec
+current['curr_1'] = [[  5 * units.m, 1.0 * cvel],
+                     [-10 * units.m, 1.0 * cvel],
+                     [-30 * units.m, 0.70 * cvel],
+                     [-60 * units.m, 0.50 * cvel],
+                     [-80 * units.m, 0.20 * cvel]]
+#
+#
+# ----------------------------------------------------
+# Wind
+#wind = meto.wind()
+#wind['wind_1'] =  1.293 * units.kg / units.m**3
+#
 #
 # ----------------------------------------------------
 # Regular wave [Stokes/Fourier/Cnoidal]
@@ -134,7 +173,20 @@ wave = meto.wave()
 # Stokes
 regwave = wave.regular()
 #
-#wave = regwave.Stokes()
+#
+#waveCnoidal = regwave.Cnoidal(H=0.30, T=6.4, d=1)
+#print(waveCnoidal.Lw)
+#surface = waveCnoidal.surface()
+#surface.plot()
+#kin = waveCnoidal.kinematics()
+#kin.plot()
+#
+#waveStoke = regwave.Stokes(H=15, T=12.0, d=100)
+#print(waveStoke.Lw)
+#surface = waveStoke.surface()
+#surface.plot()
+#kin = waveStoke.kinematics()
+#kin.plot()
 #wave = regwave.Fourier()
 #wave.mean_current.Euler = 0.31 * units.m/units.sec
 #wave.infinite_water_depth
@@ -142,12 +194,16 @@ regwave = wave.regular()
 #wave['100yrs'] = {'Hw':15.0 * units.m, 'Tw':12.0 * units.sec, 'd':100*units.m}
 # 
 # [Hw, Tw, d, wave_type(Fourier/Stokes)]
-regwave['100yrs'] = [15*units.m, 12.0*units.sec, 100*units.m, 'Stokes']
-Ls = regwave['100yrs'].L
-print(f'Wave length = {Ls: 1.4e} m')
+regwave['100yrs_1'] = [15*units.m, 12.0*units.sec, 100*units.m, 'Stokes']
+#Ls = regwave['100yrs'].L
+#print(f'Wave length = {Ls: 1.4e} m')
 #surface = regwave['100yrs'].surface(surface_points=18)
 #surface.plot(phase=True)
 #print(surface)
+#
+regwave['100yrs_2'] = [15*units.m, 12.0*units.sec, 100*units.m]
+#regwave['100yrs_3'] = [0.30 * units.m, 6.4 * units.sec, 1*units.m, 'Cnoidal']
+#regwave['100yrs_4'] = [0.30 * units.m, 6.4 * units.sec, 1*units.m]
 #
 #kinematic = regwave['100yrs'].kinematics()
 #print(kinematic)
@@ -167,17 +223,31 @@ print(f'Wave length = {Ls: 1.4e} m')
 #meto.get_load(mesh=mesh, kinematic=kinematic,
 #              condition=2)
 #
-metload = meto.load()
-# [title, marine_growth, Buoyancy(False/True), conductor_shielding]
-metload['sea_1'] = ['storm_0deg', 'MG_1']
-# wave =[wave_name, Direction(deg), Kinematics, crest_elevation, title]
-metload['sea_1'].wave = ['100yrs', 0.0, 0.95]
-# current [current_name,  Direction(deg), Blockage, Stretching, title]
-metload['sea_1'].current = ['current_1', 0.0, 0.85, True, 'current_test']
-# wind [wind_name, Direction(deg), title]
-metload['sea_1'].wind = ['wind_1', 0.0, 'wind_test']
+metcond = meto.condition()
+# [title]
+metcond[10] = 'storm_0deg'    #['storm_0deg', 'MG_1', False, 0.85]
+# wave =[wave_id, Direction(deg), Kinematics, crest_elevation]
+metcond[10].wave = ['100yrs_1', 10.0, 'wkf1']
+# current [current_id,  Direction(deg), Blockage, Stretching]
+metcond[10].current = ['curr_1', 20.0, 'cbf1', True]
+# wind [wind_id, Direction(deg)]
+#metload[1].wind = [1, 30.0]
+#
+# [ marine_growth, CdCm, Flooding, conductor_shielding, element_refinament, airCdCm]
+metcond[10].properties = ['MG_1', 'cdcm_1']
+#
+# [Design load, Buoyancy(False/True), 
+#  Criterion (local/global), Scale factor, title]
+metcond[10].parameters = ['max_BS', None, 'local']
 #
 #
+# ----------------------------------------------------
+#
+#wave.solve(surface_points=36,
+#           depth_points=100)
+#
+meto.solve(surface_points=36,
+           depth_points=100)
 #
 #
 # ----------------------------------------------------
@@ -188,12 +258,11 @@ load = mesh.load()
 #
 # ----------------------------------------------------
 # Basic Load
-basic = load.basic()
+loadCase = load
+hydro = loadCase.metocean(metcond)
 #
+#hydro['MET_10'] = metcond[10]
 #
-basic[10] = 'wave load'
-basic[10].wave(wave_load=metload['sea_1'],
-               design_load='max_BS')
 #
 # ----------------------------------------------------
 # Meshing input
@@ -201,15 +270,18 @@ basic[10].wave(wave_load=metload['sea_1'],
 #
 mesh.build()
 #
+print("Load")
+loadm = mesh.load()
+basicLoad = loadm.basic()
+print(basicLoad)
 #
 # ----------------------------------------------------
 # Structural Analysis
 # ----------------------------------------------------
 #
-frame = Trave2D()
-frame.mesh = mesh
+frame = Trave2D(mesh=mesh)
 frame.static()
-results = frame.solve()
+results = frame.results()
 print(results)
 #
 print('-->')

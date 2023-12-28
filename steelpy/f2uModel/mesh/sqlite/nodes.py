@@ -3,7 +3,7 @@
 # Python stdlib imports
 from __future__ import annotations
 #from array import array
-from collections.abc import Mapping
+#from collections.abc import Mapping
 from math import isclose, dist
 from typing import NamedTuple
 import re
@@ -11,10 +11,9 @@ import re
 # package imports
 #from steelpy.process.units.main import Units
 # steelpy.f2uModel.mesh
-from steelpy.f2uModel.mesh.process.nodes import (check_point_list, check_point_dic, 
-                                                 get_coordinate_system, NodeBasic)
+from steelpy.f2uModel.mesh.process.nodes import get_coordinate_system, NodeBasic
 # steelpy
-from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
+from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.dataframe.main import DBframework
 
 
@@ -43,21 +42,37 @@ class NodeSQL(NodeBasic):
     _sets : List[tuple]
         set with node/element
     """
-    __slots__ = ['_system', 'db_file', '_labels']
+    __slots__ = ['_system', 'db_file']
 
-    def __init__(self, db_file: str,
+    def __init__(self,
+                 db_file: str,
+                 plane: NamedTuple, 
                  db_system:str="sqlite",
                  system:str = 'cartesian') -> None:
         """
         """
         super().__init__(system)
+        #
         self.db_file = db_file
+        self._plane = plane
         # create node table
         conn = create_connection(self.db_file)
         with conn:
             self._create_table(conn)
         #print('--> update labels?')
         #1 / 0
+    #
+    #
+    @property
+    def _labels(self):
+        """ """
+        table = 'SELECT tb_Nodes.name FROM tb_Nodes ORDER BY number ASC'
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table)
+            items = cur.fetchall()
+        return [item[0] for item in items]
     #
     # ---------------------------------
     #
@@ -71,7 +86,7 @@ class NodeSQL(NodeBasic):
                             .format(node_name))
         except ValueError:
             coordinates = self._get_coordinates(coordinates)
-            self._labels.append(node_name)
+            #self._labels.append(node_name)
             #
             conn = create_connection(self.db_file)
             with conn:
@@ -226,7 +241,7 @@ class NodeSQL(NodeBasic):
     #        update_table(conn, nodes)
     #        conn.commit()
     #
-    def _get_maxmin(self):
+    def get_maxmin(self):
         """
         """
         #
@@ -344,7 +359,7 @@ def get_node(conn, node_name:int|str, item:str='*'):
 def get_item_table(conn, node_name, item):
     """ """
     project = (node_name,)
-    sql = 'SELECT {:} FROM tb_Nodes WHERE name = ?'.format(item)
+    sql = f'SELECT {item} FROM tb_Nodes WHERE name = ?'
     cur = conn.cursor()
     cur.execute(sql, project)
     record = cur.fetchone()
@@ -405,5 +420,4 @@ def update_colum(conn, colname: str, newcol: list):
     cur = conn.cursor()
     cur.executemany(sql, newcol)
 #    
-#
-#
+#   

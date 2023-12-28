@@ -1,0 +1,1062 @@
+# 
+# Copyright (c) 2019 steelpy
+#
+# 
+# Python stdlib imports
+from __future__ import annotations
+from collections.abc import Mapping
+#from collections import defaultdict
+from dataclasses import dataclass
+from typing import NamedTuple
+#from math import prod
+
+# package imports
+from steelpy.utils.units.main import Units
+#
+from steelpy.metocean.process.bsotm import BSOTM
+from steelpy.metocean.process.parameters import HydroDesign
+from steelpy.metocean.wave.regular.main import RegWaveItem
+from steelpy.metocean.hydrodynamic.wkf import WKFitem
+from steelpy.metocean.current.main import CurrentItem
+from steelpy.metocean.hydrodynamic.cbf import CBFitem
+from steelpy.metocean.hydrodynamic.marine_growth import MGitem
+from steelpy.metocean.hydrodynamic.morison import CdCmitem
+#
+from steelpy.utils.sqlite.utils import create_connection, create_table
+#
+from steelpy.utils.dataframe.main import DBframework
+#
+#
+#
+class MetoceanCondition(Mapping):
+    """
+    FE Metocean Combination Class
+    
+    Combination
+        |_ name
+        |_ number
+        |_ surface
+        |_ gravity
+        |_ water_density
+        |_ air_density
+        |_ fluid_viscosity
+        |_ air_viscosity
+        |_ zone
+    
+    **Parameters**:  
+      :number:  integer internal number 
+      :name:  string node external name
+    """
+    __slots__ = ['db_file', '_properties', '_design']
+
+    def __init__(self, properties, db_file: str):
+        """
+        """
+        self.db_file = db_file
+        self._properties = properties
+        self._design = HydroDesign(self.db_file)
+        #
+        # create table
+        conn = create_connection(self.db_file)
+        with conn:
+            self._create_table(conn)
+    #
+    @property
+    def _labels(self):
+        """ """
+        table = 'SELECT tb_Condition.name FROM tb_Condition'
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table)
+            items = cur.fetchall()
+        return [item[0] for item in items]    
+    #
+    #
+    def __setitem__(self, comb_name: str|int, title: str) -> None:
+        """
+        title, marine_growth, Buoyancy(False/True), conductor_shielding
+        """
+        #
+        #values = self.get_setup(setupval)
+        #comb_title = values.pop(0)
+        #self._combination[comb_name] = CombTypes(comb_name, comb_title, self)
+        #self._combination[comb_name].setup = values
+        #
+        #
+        comb_data = [comb_name, title,   # name, title,
+                     0, 0, None, 'off',  # wave_number, wave_direction, wave_kfnumber, buoyancy
+                     0, 0, None, 'on',   # current_number, current_direction, current_bfnumber, stretching,
+                     0, 0, None]         # wind_number, wind_direction, wind_area_number
+                     #None, None]         # mg_number, cdcm_number
+        conn = create_connection(self.db_file)
+        with conn:
+            self._push_data(conn, comb_data)        
+    #
+    def __getitem__(self, comb_name:str|int):
+        """
+        """
+        return CombTypes(comb_name,
+                         properties=self._properties,
+                         design=self._design, 
+                         db_file=self.db_file)
+        #1 / 0
+        #return self._combination[comb_name]
+    #
+    #def __delitem__(self, load_name:str|int):
+    #    """
+    #    """
+    #    del self._combination[load_name]
+    #
+    def __len__(self) -> int:
+        return len(self._labels)
+    #
+    def __iter__(self):
+        """
+        """
+        return iter(self._labels)
+    #
+    #
+    #def get_setup(self, values:str|list|dict):
+    #    """
+    #    [title, marine_growth, CdCm, Buoyancy]
+    #    """
+    #    output = [None, False, False, False]
+    #
+    #    if isinstance(values, str):
+    #        output[0] = values
+    #
+    #    elif isinstance(values, dict):
+    #        raise NotImplementedError
+    #
+    #    elif isinstance(values, list):
+    #        for idx, item in enumerate(values):
+    #            output[idx] = item
+    #
+    #    else:
+    #        raise IOError("input not valid")
+    #
+    #    return output
+    #
+    # ----------------------------------------
+    # SQL ops
+    #
+    def _create_table(self, conn) -> None:
+        """ """
+        table = "CREATE TABLE IF NOT EXISTS tb_Condition (\
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    name NOT NULL,\
+                    title TEXT NOT NULL,\
+                    wave_number INTEGER NOT NULL REFERENCES tb_Wave(number),\
+                    wave_direction  DECIMAL NOT NULL,\
+                    wave_kfnumber INTEGER REFERENCES tb_WaveKinFactor(number),\
+                    buoyancy TEXT NOT NULL,\
+                    current_number INTEGER REFERENCES tb_Current(number),\
+                    current_direction DECIMAL,\
+                    current_bfnumber INTEGER REFERENCES tb_CurrentBlockageFactor(number),\
+                    stretching TEXT,\
+                    wind_number INTEGER REFERENCES tb_Wind(number),\
+                    wind_direction DECIMAL,\
+                    wind_area_number INTEGER REFERENCES tb_WindArea(number));"
+        create_table(conn, table)
+    #
+    #
+    def _push_data(self, conn, comb_data):
+        """
+        Create a new project into the projects table
+        """
+        #
+        #cur = conn.cursor()
+        #cur.execute("SELECT tb_Current.name, tb_Current.number FROM tb_Current;")
+        #items = cur.fetchall()
+        #current = {item[0]:item[1] for item in items}        
+        #
+        #
+        cur = conn.cursor()
+        table = 'INSERT INTO tb_Condition(name, title, \
+                                            wave_number, wave_direction, wave_kfnumber, buoyancy, \
+                                            current_number, current_direction, current_bfnumber, stretching, \
+                                            wind_number, wind_direction, wind_area_number) \
+                                            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)'
+        # push
+        cur = conn.cursor()
+        cur.execute(table, tuple(comb_data))
+        #print('-->')
+    #
+    #
+    #
+    # --------------------------------------
+    #
+    def df(self, df):
+        """ """
+        #1 / 0
+        #grpname = df.groupby(['name'])
+        dfcond = df.set_index('name')
+        #
+        for item in dfcond.itertuples():
+        #for key, item in grpname:
+            name = item.Index
+            #
+            comb = item.title #[['title']].values.tolist()
+            #                  'conductor_shielding']].values.tolist()
+            #
+            wave = [item.wave_name, item.wave_direction,
+                    item.wave_kinematics, item.crest_elevation]            
+            #
+            #wave = item[['wave_name', 'wave_direction',
+            #             'wave_kinematics', 'crest_elevation']].values.tolist()
+            #
+            #
+            current = [item.current_name, item.current_direction,
+                       item.current_blockage, item.current_stretching]
+            #
+            #current = item[['current_name', 'current_direction',
+            #                'current_blockage', 'current_stretching']].values.tolist()
+            #
+            try:
+                wind = [item.wind_name, item.wind_direction]
+            except AttributeError:
+                wind = [None, None]
+            #
+            #wind = item[['wind_name', 'wind_direction']].values.tolist()
+            #
+            #
+            properties = [item.MG, item.CdCm, item.conductor_shielding]         
+            #
+            #properties = item[['MG', 'CdCm', #'flooding',
+            #                   'conductor_shielding']].values.tolist()
+            #
+            #
+            parameters = [item.design_load, item.buoyancy, item.criterion]
+            #
+            #parameters = item[['design_load', 'buoyancy', 'criterion']].values.tolist()            
+            #
+            self.__setitem__(comb_name=name, title=comb)
+            _combination = self.__getitem__(comb_name=name)
+            _combination.wave = wave
+            _combination.current = current
+            #_combination.wind = wind
+            _combination.properties = properties
+            _combination.parameters = parameters
+        #print('--')
+        #1 / 0
+    #
+#
+#
+class ConditionBasic(NamedTuple):
+    """
+    """
+    number:int
+    name:str|int
+    title: str
+    #
+    wave_number:str|int = 0
+    wave_direction:float = 0.0
+    wave_kfnumber:float = 1.0
+    #
+    buoyancy : bool = True
+    #
+    current_number: str|int = 0
+    current_direction:float = 0.0
+    current_bfnumber:float  = 1.0
+    current_stretching : bool = True
+    #
+    wind_number:str|int = 0
+    wind_direction:float = 0.0
+    wind_area_number: int = 0
+#
+class ParametersBasic(NamedTuple):
+    """
+    """
+    number: int
+    name: str|int
+    title: str
+    #
+    design_load: str
+    buoyancy : str|None
+    criterion: str
+    scaling_factor: float
+#
+class WaveBasic(NamedTuple):
+    #number:int
+    wave:str|int
+    direction:float
+    kinematic_factor:list
+    crest_elevation:float|None
+    #title:str
+    #
+    def kinematics(self):
+        """vave kinemactis"""
+        return self.wave.kinematics()
+    #    print('here')
+#
+class WindBasic(NamedTuple):
+    #number:int
+    wind:str|int
+    direction:float
+    #wind_areas:list = []
+    title:str
+#
+class CurrentBasic(NamedTuple):
+    #number:int
+    current: str|int
+    direction:float
+    blockage_factor:float
+    stretching : bool
+    #title:str
+#
+class PropertyBasic(NamedTuple):
+    """ """
+    number:int
+    name:str|int
+    title: str
+    rho_w: float
+    #
+    marine_growth: tuple
+    CdCm: tuple
+    flooding: tuple | None = None
+    conductor_shielding: tuple | None = None
+    element_refinament: tuple | None = None
+    #
+#
+#
+@dataclass
+class CombTypes:
+    """
+    """
+    __slots__ = ['name', 'number', '_db_file', '_properties', '_design']
+                # '_wave', '_current', '_wind', '_setup', 'number', 'title',
+    
+    def __init__(self, name:int|str, 
+                 properties, design, 
+                 db_file: str):
+        """
+        """
+        self.name = name
+        self._db_file = db_file
+        self._properties= properties
+        self._design = design
+        #
+        condition = self.condition
+        self.number = condition.number
+    #
+    #
+    @property
+    def condition(self):
+        """ """
+        conn = create_connection(self._db_file)
+        with conn:        
+            items = self._pull_condition(conn)
+        #
+        return ConditionBasic._make(items)
+    #
+    def _pull_condition(self, conn, item: str = '*'):
+        """ """
+        project = (self.name,)
+        table = 'SELECT {:} FROM tb_Condition WHERE name = ?'.format(item)
+        cur = conn.cursor()
+        cur.execute(table, project)      
+        condition = cur.fetchone()        
+        #
+        #wave = self._pull_wave(conn, name=data[0])
+        #
+        #current = self._pull_current(conn, name=data[1])
+        if not condition:
+            raise IOError(f'Condition {self.name} not valid')
+        #
+        return condition
+    #    
+    #
+    @property
+    def setup(self):
+        """ comb setup"""
+        
+        return self._setup
+
+    @setup.setter
+    def setup(self, values=list):
+        """ comb setup"""
+        # marine_growth
+        try:
+            mg = self._cls._marine_growth[values[0]]
+        except KeyError:
+            units = Units()
+            self._cls._marine_growth['default'] = [self._cls._hydro.rho_w * units.kg / units.m**3,
+                                                   0 * units.mm, 'constant']
+            mg = self._cls._marine_growth['default']
+        # CdCm
+        #try:
+        CdCm = self._cls._cdcm
+        #except KeyError:
+        #    1/0
+        #
+        buoyancy = values[2]
+        self._setup = CombSetup(marine_growth=mg,
+                                CdCm=CdCm,
+                                hydro=self._cls._hydro,
+                                buoyancy=buoyancy)
+    #
+    # -----------------------------
+    #
+    @property
+    def wave(self):
+        """
+        """
+        cond = self.condition
+        #
+        conn = create_connection(self._db_file)
+        # Wave data
+        with conn:
+            #values = self._get_wave(conn, wave_name=self.name)
+            project = (cond.wave_number,)
+            table = 'SELECT * FROM tb_Wave WHERE number = ?'
+            cur = conn.cursor()
+            cur.execute(table, project)      
+            wdata = cur.fetchone()            
+        #
+        # Wave kinemactis factor
+        with conn:
+            project = (cond.wave_kfnumber,)
+            table = 'SELECT * FROM tb_WaveKinFactor WHERE number = ?'
+            cur = conn.cursor()
+            cur.execute(table, project)
+            wkfdata = cur.fetchone()            
+            wkf = WKFitem(name=wkfdata[1], db_file=self._db_file)
+        #
+        # Regular wave
+        if wdata[2].lower() == 'regular':
+            # get wave data
+            project = (wdata[0],)
+            table = 'SELECT * FROM tb_WaveRegular WHERE wave_number = ?'
+            cur = conn.cursor()
+            cur.execute(table, project)
+            wregdata = cur.fetchone()
+            #
+            wave = RegWaveItem(number=wdata[0], name=wdata[1],
+                               Hw=wregdata[2], Tw=wregdata[3], d=wregdata[4], 
+                               theory=wregdata[5], db_file=self._db_file)
+            #
+            return WaveBasic(wave=wave, 
+                            direction = cond.wave_direction, 
+                            kinematic_factor=wkf, 
+                            crest_elevation=wregdata[9])
+        else:
+            raise NotImplementedError(f'wave type {wave[2]} not yet implemented')
+    
+    @wave.setter
+    def wave(self, values: list|dict):
+        """
+        [wave_name, Direction(deg), Kinematics, title]
+        """
+        values = self._get_wvalues(values)
+        #try:
+        conn = create_connection(self._db_file)
+        with conn:
+            wave = self._pull_wave(conn, wave_name=values[0])
+            if not wave:
+                raise IOError(f'Wave {values[0]} not valid')
+            #
+            wkf = self._pull_wkf(conn, name=values[2])
+            if not wkf:
+                print('fix wkf')
+                1 / 0
+            #
+            table = f"UPDATE tb_Condition \
+                     SET wave_number = {wave[0]}, \
+                     wave_direction= {values[1]}, \
+                     wave_kfnumber = {wkf[0]}, \
+                     buoyancy = '{values[3]}' \
+                     WHERE name = {self.name}"
+            #
+            cur = conn.cursor()
+            cur.execute(table)                 
+            #wave = self._cls._wave[values[0]]
+        #except KeyError:
+        #    raise IOError(f'wave {values[0]} not found')
+        #
+        #with conn:
+        #    table = f"UPDATE tb_Combination \
+        #             SET wave_number = {wave[0]}, \
+        #             wave_direction= {values[1]}, \
+        #             kinematic_factor = {values[2]}, \
+        #             buoyancy = '{values[3]}' \
+        #             WHERE name = {self.name}"
+        #    #
+        #    cur = conn.cursor()
+        #    cur.execute(table) 
+        #
+        #print('-->')
+    #
+    def _pull_wave(self, conn, wave_name: int|str,
+                  item: str = '*'):
+        """ """
+        #cur = conn.cursor()
+        #cur.execute("SELECT * FROM tb_Wave;")
+        project = (wave_name,)
+        table = 'SELECT {:} FROM tb_Wave WHERE name = ?'.format(item)
+        cur = conn.cursor()
+        cur.execute(table, project)      
+        items = cur.fetchone()
+        #wave = {item[0]:item[1] for item in items}
+        return items
+    #
+    #
+    def _pull_wkf(self, conn, name: int|str,
+                  item: str = '*'):
+        """ """
+        project = (name,)
+        table = 'SELECT {:} FROM tb_WaveKinFactor WHERE name = ?'.format(item)
+        cur = conn.cursor()
+        cur.execute(table, project)      
+        items = cur.fetchone()
+        return items
+    #
+    #
+    @property
+    def current(self):
+        """
+        """
+        cond = self.condition
+        #
+        conn = create_connection(self._db_file)
+        with conn:
+            project = (cond.current_number,)
+            table = 'SELECT * FROM tb_Current WHERE number = ?'
+            cur = conn.cursor()
+            cur.execute(table, project)      
+            currdata = cur.fetchone()            
+        #
+        #
+        # Current blockage factor
+        with conn:
+            project = (cond.current_bfnumber,)
+            table = 'SELECT * FROM tb_CurrentBlockageFactor WHERE number = ?'
+            cur = conn.cursor()
+            cur.execute(table, project)
+            cbfdata = cur.fetchone()            
+            cbf = CBFitem(name=cbfdata[1], db_file=self._db_file)        
+        #
+        curritem = CurrentItem(name=currdata[1], db_file=self._db_file)
+        #
+        #1 / 0
+        return CurrentBasic(current=curritem,
+                            direction=cond.current_direction,
+                            blockage_factor=cbf,
+                            stretching=cond.current_stretching)
+                            #title=title)
+    
+    @current.setter
+    def current(self, values: list|dict):
+        """
+        """
+        values = self._get_cvalues(values)
+        #try:
+        conn = create_connection(self._db_file)
+        with conn:            
+            current = self._pull_current(conn, current_name=values[0])
+            if not current:
+                raise IOError(f'Current {values[0]} not valid')
+            #
+            cbf = self._pull_cbf(conn, name=values[2])
+            if not cbf:
+                print('fix cbf')
+                1 / 0                
+            #
+            #
+            table = f"UPDATE tb_Condition \
+                     SET current_number = {current[0]}, \
+                     current_direction= {values[1]}, \
+                     current_bfnumber = {cbf[0]}, \
+                     stretching = '{values[3]}' \
+                     WHERE name = {self.name}"
+            #
+            cur = conn.cursor()
+            cur.execute(table)
+        #except KeyError:
+        #    raise IOError(f'current {values[0]} not found')
+        #
+        
+    #
+    #
+    def _pull_current(self, conn, current_name: int|str,
+                  item: str = '*'):
+        """ """
+        project = (current_name,)
+        table = 'SELECT {:} FROM tb_Current WHERE name = ?'.format(item)
+        cur = conn.cursor()
+        cur.execute(table, project)      
+        items = cur.fetchone()
+        #wave = {item[0]:item[1] for item in items}
+        return items
+    #
+    def _pull_cbf(self, conn, name: int|str,
+                  item: str = '*'):
+        """ Current Blockage Factor"""
+        project = (name,)
+        table = 'SELECT {:} FROM tb_CurrentBlockageFactor WHERE name = ?'.format(item)
+        cur = conn.cursor()
+        cur.execute(table, project)      
+        items = cur.fetchone()
+        return items
+    #
+    #
+    @property
+    def wind(self):
+        """
+        """
+        return self._wind
+    
+    @wind.setter
+    def wind(self, values: list|dict):
+        """
+        """
+        1 / 0
+        values, title = self.get_values(values)
+        self._wind = WindBasic(wind=values[0],
+                               direction=values[1],
+                               title=title)
+    #
+    #
+    # -----------------------------
+    # Hydro parameters
+    #
+    @property
+    def properties(self):
+        """ cdcm class"""
+        #
+        conn = create_connection(self._db_file)
+        with conn:
+            propitem = self._pull_property(conn)
+        #
+        # MG
+        with conn:
+            project = (propitem[3],)
+            table = 'SELECT * FROM tb_MarineGrowth WHERE number = ?'
+            cur = conn.cursor()
+            cur.execute(table, project)      
+            mgdata = cur.fetchone()       
+            mg = MGitem(name=mgdata[1], db_file=self._db_file)
+        #
+        # CdCm
+        with conn:
+            project = (propitem[4],)        
+            table = 'SELECT * FROM tb_CdCm WHERE number = ?'
+            cur = conn.cursor()
+            cur.execute(table, project)      
+            cdcmdata = cur.fetchone()        
+            cdcm = CdCmitem(name=cdcmdata[1], db_file=self._db_file)
+        #
+        return PropertyBasic(number=propitem[0], 
+                             name=propitem[1],
+                             title=propitem[2],
+                             rho_w=self._properties.rho_w, 
+                             marine_growth=mg, 
+                             CdCm=cdcm,
+                             flooding=self._properties.flooding)
+    
+    @properties.setter
+    def properties(self, values: list|tuple|dict):
+        """ cdcm input"""
+        
+        if isinstance(values, list|tuple|dict):
+            data = self._get_pdata(values)
+        else:
+            raise IOError('Input data not valid')
+        #
+        conn = create_connection(self._db_file)
+        with conn:
+            self._push_property(conn, data)
+    #
+    def _push_property(self, conn, data: tuple,
+                       item: str = "*"):
+        """ """
+        #
+        condition = self._pull_condition(conn)
+        #
+        MG = self._pull_mg(conn, name=data[0])
+        #
+        CdCm = self._pull_cdcm(conn, name=data[1])
+        #
+        #
+        profile = (condition[0], MG[0], CdCm[0], *data[2:])
+        cur = conn.cursor()
+        table = 'INSERT INTO tb_Properties(condition_number, \
+                                            mg_number, cdcm_number, \
+                                            flooding_number, cshielding_number, \
+                                            element_refinament, title) \
+                                            VALUES(?,?,?,?,?,?,?)'
+        #
+        # push
+        cur = conn.cursor()
+        cur.execute(table, profile)        
+        #       
+    #
+    def _pull_property(self, conn, item: str = '*'):
+        """ """
+        # Condition
+        cond = self.condition
+        #
+        project = (cond.number,)
+        table = 'SELECT {:} FROM tb_Properties WHERE condition_number = ?'.format(item)
+        cur = conn.cursor()
+        cur.execute(table, project)      
+        prop = cur.fetchone()
+        #
+        # MG
+        #project = (prop[2],)
+        #table = 'SELECT * FROM tb_MarineGrowth WHERE number = ?'
+        #cur = conn.cursor()
+        #cur.execute(table, project)      
+        #mg = cur.fetchone()
+        #
+        # CdCm
+        #project = (prop[3],)
+        #table = 'SELECT * FROM tb_CdCm WHERE number = ?'
+        #cur = conn.cursor()
+        #cur.execute(table, project)      
+        #cdcm = cur.fetchone()
+        #
+        #1 / 0
+        return [*cond[:3], *prop[2:-1]]        
+    #
+    #
+    def _pull_cdcm(self, conn, name: int|str,
+                   item: str = '*'):
+        """ """
+        project = (name,)
+        table = 'SELECT {:} FROM tb_CdCm WHERE name = ?'.format(item)
+        cur = conn.cursor()
+        cur.execute(table, project)      
+        items = cur.fetchone()
+        return items    
+    #
+    def _pull_mg(self, conn, name: int|str,
+                 item: str = '*'):
+        """ """
+        project = (name,)
+        table = 'SELECT {:} FROM tb_MarineGrowth WHERE name = ?'.format(item)
+        cur = conn.cursor()
+        cur.execute(table, project)      
+        items = cur.fetchone()
+        return items
+    #
+    #
+    # -----------------------------
+    # Seastate parameters
+    #
+    @property
+    def parameters(self):
+        """ """
+        conn = create_connection(self._db_file)
+        with conn:
+            param = self._pull_parameters(conn)
+        #
+        #return self._design
+        return ParametersBasic._make(param)
+    
+    @parameters.setter
+    def parameters(self, values: list|tuple|dict):
+        """ """
+        if isinstance(values, list|tuple|dict):
+            data = self._get_ddata(values)
+        else:
+            raise IOError('Input data not valid')
+        #
+        conn = create_connection(self._db_file)
+        with conn:
+            self._push_parameters(conn, data)
+    #
+    def _push_parameters(self, conn, data: tuple,
+                       item: str = "*"):
+        """ """
+        condition = self._pull_condition(conn)
+        #
+        profile = (condition[0], *data)
+        cur = conn.cursor()
+        table = 'INSERT INTO tb_Parameters(condition_number, \
+                                           design_load, buoyancy, \
+                                           criterion, \
+                                           scaling_factor, title) \
+                 VALUES(?,?,?,?,?,?)'
+        # push
+        cur = conn.cursor()
+        cur.execute(table, profile)
+    #
+    def _pull_parameters(self, conn, item: str = '*'):
+        """ """
+        # Condition
+        cond = self.condition
+        #
+        project = (cond.number,)
+        table = 'SELECT {:} FROM tb_Parameters WHERE condition_number = ?'.format(item)
+        cur = conn.cursor()
+        cur.execute(table, project)      
+        prop = cur.fetchone()
+        #
+        return [*cond[:3], *prop[2:-1]]
+    #
+    # -----------------------------
+    # operations
+    #
+    def _get_wvalues(self, values):
+        """ values : [wave_name, Direction(deg), Kinematics, Buoyancy(False/True)] """
+        # TODO : values need update
+        if isinstance(values, (list|tuple)):
+            #
+            # Direction
+            try:
+                values[1] = values[1].value
+            except (AttributeError, IndexError):
+                #values.append(False)
+                pass
+            #
+            # Kinematics
+            try:
+                values[2]
+            except IndexError:
+                values.append(1.0)
+            #
+            # Buoyancy(False/True)
+            try:
+                if values[3]:
+                    values[3] = 'on'
+                else:
+                    values[3] = 'off'
+            except IndexError:
+                values.append('off')
+            #
+            # crest_elevation
+            #try:
+            #    values[4] = values[4].value
+            #except (AttributeError, IndexError):
+            #    values.append(None)
+            
+        elif isinstance(values, dict):
+            1 / 0
+            
+        else:
+            raise IOError('Input data not valid')
+        #
+        return values
+    #
+    def _get_cvalues(self, values):
+        """ [current_name,  Direction(deg), Blockage, Stretching] """
+        if isinstance(values, (list|tuple)):
+            #
+            # Direction
+            try:
+                values[1] = values[1].value
+            except (AttributeError, IndexError):
+                #values.append(False)
+                pass
+            #
+            # Blockage
+            try:
+                values[2]
+            except IndexError:
+                values.append(1.0)
+            #
+            # Stretching
+            try:
+                if values[3]:
+                    values[3] = 'on'
+                else:
+                    values[3] = 'off'
+            except IndexError:
+                values.append('off')
+            #
+            
+        elif isinstance(values, dict):
+            1 / 0
+            
+        else:
+            raise IOError('Input data not valid')
+        #
+        return values        
+    #
+    def _get_pdata(self, values):
+        """ [marine_growth, CdCm, Flooding, conductor_shielding, element_refinament, title]"""
+        #
+        output = [None] * 6
+        #
+        if isinstance(values, (list|tuple)):
+            for x, item in enumerate(values):
+                output[x] = item
+        
+        elif isinstance(values, dict):
+            1 / 0
+        
+        else:
+            raise IOError('Input data not valid')
+        #
+        return output
+    #
+    def _get_ddata(self, values):
+        """ [design_load, buoyancy, criterion, scaling_factor, title]"""
+        #
+        output = ['max_bs', None, 'local', 1.0, None]
+        #
+        if isinstance(values, (list|tuple)):
+            for x, item in enumerate(values):
+                output[x] = item
+        
+        elif isinstance(values, dict):
+            1 / 0
+        
+        else:
+            raise IOError('Input data not valid')
+        #
+        return output
+    #
+    # -----------------------------
+    # load process
+    #
+    def load(self):
+        """ convert to beam load"""
+        wave = self.wave
+        current = self.current
+        hydro = self.properties
+        rho_w = self.properties.rho_w
+        kinematics = wave.kinematics()
+        #
+        #1 / 0
+        #
+        res = BSOTM(kinematics=kinematics,
+                    current=current,
+                    properties=hydro,
+                    rho_w=rho_w, 
+                    condition=2)
+        return res
+        #calc
+    #
+    #
+    def get_beam_load(self, beams):
+        """ """
+        # get load
+        wload = self.load()
+        # get parameters
+        parameters = self.parameters
+        #
+        dftemp = []
+        #
+        # ------------------------------------------
+        # TODO: Multiprocess --> sqlite issue
+        #
+        #cpuno = os.cpu_count() - 1
+        #
+        #def myfunc(beam):
+        #    beam = BeamItemSQL(name,
+        #                       plane=self._plane,
+        #                       db_file=self.db_file)
+        #    Fwave = wload.Fwave(beam=beam)
+        #    return Fwave.solve()
+        #
+        #beams = [BeamItemWave(name,
+        #                      db_file=self.db_file)
+        #         for name in labels]
+        #
+        #with ProcessPoolExecutor(max_workers=cpuno) as executor:
+        #    for r in executor.map(myfunc, beams):
+        #        dftemp.append(r)
+        #
+        #engine = Engine(wload=wload)
+        #                plane=self._plane,
+        #                wload=wload)
+        #
+        #dftemp = engine.run(beams)
+        #
+        #with ProcessPoolExecutor(max_workers=cpuno) as executor:
+        #    for r in executor.map(engine, beams):
+        #        dftemp.append(r)
+        #
+        #try:
+        #    pool = Pool(cpuno)
+        #    engine = Engine(db_file=self.db_file,
+        #                    plane=self._plane,
+        #                    wload=wload)
+        #    dftemp = pool.map(engine, beams)
+        #finally:
+        #    pool.close()
+        #    pool.join()
+        #
+        # ------------------------------------------
+        #
+        for beam in beams.values():
+        #for name in labels:
+            # get beam 
+            #beam = BeamItemSQL(name,
+            #                   plane=self._plane,
+            #                   db_file=self.db_file)
+            # solve beam forces
+            Fwave = wload.Fwave(beam=beam)
+            dftemp.extend(Fwave.solve())
+            #
+            #print('-->')
+        #
+        # ------------------------------------------
+        # create database
+        #
+        header = ['element_type', 'element_name', 'element_number', 
+                  'type',
+                  'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
+                  'L0', 'L1', 'BS', 'OTM', 
+                  'x', 'y', 'z']        
+        #
+        df = DBframework()
+        df_bload = df.DataFrame(data=dftemp, columns=header, index=None)        
+        #
+        #
+        #
+        # ------------------------------------------
+        # select data in database        
+        #
+        design_load = parameters.design_load
+        design_load = design_load.split("_")
+        value_type = design_load[0]
+        load_type = design_load[1].upper()
+        
+        if parameters.criterion == 'local':
+            #blgrp = df_bload.groupby(['element_name', 'element_number', 'element_type'])
+            #for key, wload in blgrp:
+            #    key, wload
+            #
+            grpwave = df_bload.groupby(['element_name','y'])[['BS', 'OTM']].sum()
+            #
+            grpm = grpwave[load_type].abs().groupby('element_name')
+            #
+            if value_type.lower() == 'max':
+                idx = grpm.idxmax()
+            else:
+                1 / 0
+            #
+            df_bload.set_index(['element_name','y'], inplace=True)
+            df_bload = df_bload.loc[idx]
+            df_bload.reset_index(inplace=True)
+        #
+        #
+        # ------------------------------------------
+        # update database
+        #
+        header = ['load_number', 'element_number',
+                  'title', 'system', 'type',
+                  'L0', 'qx0', 'qy0', 'qz0',
+                  'L1', 'qx1', 'qy1', 'qz1',
+                  'BS', 'OTM', 'x', 'y', 'z']
+        #
+        df_bload['load_number'] = self.number
+        df_bload['title'] = f'MET_{self.name}'
+        df_bload['system'] = 'local'
+        #df_bload.rename(columns={'load_type': 'type'}, inplace=True)
+        df_bload =  df_bload[header]            
+        #
+        # ------------------------------------------
+        # push data in database        
+        #
+        #with conn:
+        #    df_bload.to_sql('tb_LoadBeamLine', conn,
+        #                    index_label=header, 
+        #                    if_exists='append', index=False)
+        #1 / 0
+        return df_bload
+    #    
+#

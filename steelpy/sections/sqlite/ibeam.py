@@ -16,8 +16,7 @@ from steelpy.sections.process.operations import get_sect_properties
 #
 
 class IbeamSQLite(SectionSQLite):
-    __slots__ = ['_labels', '_number', '_title', '_type', '_default', 
-                 'db_file']
+    __slots__ = ['_default', 'db_file']
 
     def __init__(self, db_file:str):
         """ 
@@ -44,7 +43,7 @@ class IbeamSQLite(SectionSQLite):
             self._labels.index(shape_name)
             raise Exception('element {:} already exist'.format(shape_name))
         except ValueError:
-            self._labels.append(shape_name)
+            #self._labels.append(shape_name)
             #
             d = parameters[0]
             tw = parameters[1]
@@ -71,13 +70,13 @@ class IbeamSQLite(SectionSQLite):
                        shear_stress, build,
                        compactness,)
             number = self.push_section(section)
-            self._number.append(number)
+            #self._number.append(number)
     #
     def __getitem__(self, shape_name: str | int):
         """
         """
         try:
-            index = self._labels.index(shape_name)
+            self._labels.index(shape_name)
             #number = self._number[index]
         except ValueError:
             raise Exception(f" section name {shape_name} not found")

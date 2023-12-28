@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2019 steelpy
 #
 
 # Python stdlib imports
@@ -8,12 +8,13 @@ from __future__ import annotations
 
 # package imports
 #
-from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection #, create_table
+from steelpy.sections.process.utils import ShapeMain
+from steelpy.utils.sqlite.utils import create_connection #, create_table
 from ..process.operations import ShapeProperty, get_sect_prop_df
 from steelpy.utils.dataframe.main import DBframework
 
 #
-class SectionSQLite:
+class SectionSQLite(ShapeMain):
     """ """
     #__slots__ = ['db_file']
 
@@ -30,13 +31,38 @@ class SectionSQLite:
         """
         self.db_file = db_file
         self._properties = None
-        self._labels:list = []
-        self._number:list = []
+        #self._labels:list = []
+        #self._number:list = []
         # create table
         #conn = create_connection(self.db_file)
         #with conn:
         #    self.number = self._push_section_table(conn, section)
     #
+    # -----------------------------------------------
+    #
+    @property
+    def _labels(self):
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:           
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Sections.name from tb_Sections ")
+            items = cur.fetchall()
+        #print("--->")
+        return [item[0] for item in items]
+    
+    @property
+    def _type(self):
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:           
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Sections.type from tb_Sections ")
+            items = cur.fetchall()
+        #print("--->")
+        return [item[0] for item in items]    
+    #
+    # -----------------------------------------------
     #
     def update_item(self, item :str, value :float):
         """ """
@@ -152,7 +178,7 @@ class SectionSQLite:
         #print("--->")
         return row
     #
-    #
+    # -----------------------------------------------
     #
     @property
     def df(self):
@@ -181,10 +207,10 @@ class SectionSQLite:
                                       'shear_stress', 'build', 'compactness'], 
                          if_exists='append', index=False)
         #
-        self._labels.extend(df['name'].tolist())
+        #self._labels.extend(df['name'].tolist())
         # TODO : fix numbering
-        nitems = len(self._number) + 1
-        self._number.extend([item + nitems for item in df.index])
+        #nitems = len(self._number) + 1
+        #self._number.extend([item + nitems for item in df.index])
         #print('-->')
 #
 def get_sections(conn, component_name):

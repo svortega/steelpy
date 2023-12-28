@@ -347,9 +347,8 @@ plot.frame()
 #
 #
 #frame = Trave3D()
-frame = Trave2D()
-frame.mesh = mesh
+frame = Trave2D(mesh=mesh)
 frame.static(second_order=True)
-results = frame.solve()
+results = frame.results()
 print(results)
 print('-->')

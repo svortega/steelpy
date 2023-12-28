@@ -1,17 +1,18 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 #
 # Python stdlib imports
 from array import array
 #from dataclasses import dataclass
-import math
+#import math
 #from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
 #from steelpy.metocean.regular.fourier.Subroutines import zeros
-from steelpy.metocean.regular.cnoidal.Elliptic import Elliptic_integrals, cn, sn, dn
+from steelpy.metocean.wave.regular.cnoidal.Elliptic import Elliptic_integrals, cn, sn, dn
+import numpy as np
 
 
 # *********************************************************************
@@ -24,7 +25,7 @@ def Solve(T: float, H: float, order: int,
           iter_limit: int = 20, L1: int = 10., T1: int = 10., accuracy: float = 1.e-4):
     """ """
     case = case.lower()
-    pi = math.pi
+    pi = np.pi
     K = 1
     if m1 < m1_limit:
         m = 1.
@@ -40,23 +41,23 @@ def Solve(T: float, H: float, order: int,
         if case == 'period':
             if c_type == 1:
                 K = (T * (current + Ubar_h(epsilon, e, m, mm, order)
-                          * math.sqrt(hoverd(H, e, ee, m, mm, order)))
-                     * math.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order))
+                          * np.sqrt(hoverd(H, e, ee, m, mm, order)))
+                     * np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order))
             else:
                 # if (c_type == 2):
-                K = (T * (current + Q_h(epsilon) * pow(hoverd(H, e, ee, m, mm, order), 1.5))
-                     * math.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order))
+                K = (T * (current + Q_h(epsilon) * np.power(hoverd(H, e, ee, m, mm, order), 1.5))
+                     * np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order))
         else:
             # elif (Known, Wavelength):
-            K = L * math.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order)
+            K = L * np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order)
 
         if m1 > m1_limit:
-            q1 = math.exp(-pi * K / Kd)
-            m = pow((1 - 2 * q1 + 2 * pow(q1, 4)) / (1 + 2 * q1 + 2 * pow(q1, 4)), 4)
+            q1 = np.exp(-pi * K / Kd)
+            m = np.power((1 - 2 * q1 + 2 * np.power(q1, 4)) / (1 + 2 * q1 + 2 * np.power(q1, 4)), 4)
             e, ee, mm, Kd = Elliptic_integrals(m, m1_limit)
 
         if case == 'period':
-            L = K / (math.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order))
+            L = K / (np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order))
             if abs(L / L1 - 1.) < accuracy:
                 break
             L1 = L
@@ -64,12 +65,12 @@ def Solve(T: float, H: float, order: int,
             # elif(Known, Wavelength):
             if c_type == 1:
                 T = (K / ((current + Ubar_h(epsilon, e, m, mm, order)
-                           * math.sqrt(hoverd(H, e, ee, m, mm, order)))
-                          * math.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order)))
+                           * np.sqrt(hoverd(H, e, ee, m, mm, order)))
+                          * np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order)))
             else:
                 # if (c_type == 2):
-                T = (K / ((current + Q_h(epsilon) * pow(hoverd(H, e, ee, m, mm, order), 1.5))
-                          * math.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order)))
+                T = (K / ((current + Q_h(epsilon) * np.power(hoverd(H, e, ee, m, mm, order), 1.5))
+                          * np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order)))
 
             if abs(T / T1 - 1.) < accuracy:
                 break
@@ -96,23 +97,23 @@ def Solve(T: float, H: float, order: int,
 
 def Ubar_h(epsilon: float, e: float, m: float, mm: array, order: int):
     """"""
-    U_bar_Height = zeros(7)
+    U_bar_Height = np.zeros(7)
     # print(`"U_bar_Height" is U/math.sqrt(g.h) as a function of H/h, m, and e(m), Fenton (1999, eqn A.6)`)
     U_bar_Height[1] = 1 + epsilon / m * (1. / 2 - e)
 
-    U_bar_Height[2] = (U_bar_Height[1] + pow(epsilon, 2) / mm[2]
+    U_bar_Height[2] = (U_bar_Height[1] + np.power(epsilon, 2) / mm[2]
                        * (-13. / 120 - 1. / 60 * m - 1. / 40 * mm[2] + (1. / 3 + 1. / 12 * m) * e))
 
-    U_bar_Height[3] = (U_bar_Height[2] + pow(epsilon, 3) / mm[3]
+    U_bar_Height[3] = (U_bar_Height[2] + np.power(epsilon, 3) / mm[3]
                        * (-361. / 2100 + 1899. / 5600 * m - 2689. / 16800 * mm[2]
                           + 13. / 280 * mm[3] + (7. / 75 - 103. / 300 * m + 131. / 600 * mm[2]) * e))
 
-    U_bar_Height[4] = (U_bar_Height[3] + pow(epsilon, 4) / mm[4]
+    U_bar_Height[4] = (U_bar_Height[3] + np.power(epsilon, 4) / mm[4]
                        * (2349. / 112000 + 29053. / 168000 * m - 1181. / 2100 * mm[2] + 11161. / 28000 * mm[3]
                           - 273. / 3200 * mm[4] + (29369. / 28000 * mm[2] - 15867. / 28000 * mm[
                         3] - 5729. / 8400 * m + 1583. / 4200) * e))
 
-    U_bar_Height[5] = (U_bar_Height[4] + pow(epsilon, 5) / mm[5]
+    U_bar_Height[5] = (U_bar_Height[4] + np.power(epsilon, 5) / mm[5]
                        * (1786123. / 16170000 - 32376301. / 103488000 * m - 87413873. / 776160000 * mm[2]
                           + 474001783. / 517440000 * mm[3] - 71678951. / 97020000 * mm[4] + 97103. / 616000 * mm[5]
                           + (-61854593. / 35280000 * mm[3] + 35498549. / 35280000 * mm[4] + 444959. / 1260000 * mm[2]
@@ -131,20 +132,20 @@ def Ubar_h(epsilon: float, e: float, m: float, mm: array, order: int):
 
 def Q_h(epsilon: float, m: float, mm: array, order: int):
     """ """
-    Q_Height = zeros(7)
+    Q_Height = np.zeros(7)
     # print("Q_Height" is Q/math.sqrt(g.h^3) as a function of H/h and m, Fenton (1999, eqn A.4))
     Q_Height[1] = 1 + epsilon / m * (-1. / 2 + m)
 
-    Q_Height[2] = Q_Height[1] + pow(epsilon, 2) / mm[2] * (9. / 40 - 7. / 20 * m - 1. / 40 * mm[2])
+    Q_Height[2] = Q_Height[1] + np.power(epsilon, 2) / mm[2] * (9. / 40 - 7. / 20 * m - 1. / 40 * mm[2])
 
-    Q_Height[3] = (Q_Height[2] + pow(epsilon, 3) / mm[3]
+    Q_Height[3] = (Q_Height[2] + np.power(epsilon, 3) / mm[3]
                    * (-11. / 140 + 69. / 1120 * m + 11. / 224 * mm[2] + 3. / 140 * mm[3]))
 
-    Q_Height[4] = (Q_Height[3] + pow(epsilon, 4) / mm[4]
+    Q_Height[4] = (Q_Height[3] + np.power(epsilon, 4) / mm[4]
                    * (-16109. / 42000 * mm[3] + 59321. / 84000 * mm[2]
                       - 123787. / 168000 * m - 871. / 22400 * mm[4] + 133687. / 336000))
 
-    Q_Height[5] = (Q_Height[4] + pow(epsilon, 5) / mm[5]
+    Q_Height[5] = (Q_Height[4] + np.power(epsilon, 5) / mm[5]
                    * (89101. / 1232000 * mm[5] + 7482007. / 16170000 * mm[4]
                       - 4473257. / 5390000 - 347331631. / 517440000 * mm[3]
                       - 21859819. / 36960000 * mm[2] + 163246841. / 103488000 * m))
@@ -161,26 +162,26 @@ def Q_h(epsilon: float, m: float, mm: array, order: int):
 def lambda_d(H: float, K: float, e: float, ee: array,
              m: float, mm: array, order: int):
     """ """
-    return K * 4 / math.sqrt(3 * H / m) * lambda_series(H, e, ee, m, mm, order)
+    return K * 4 / np.sqrt(3 * H / m) * lambda_series(H, e, ee, m, mm, order)
 
 
 #
 #
 def lambda_series(H: float, e: float, ee: array, m: float, mm: array, order: int):
     """ """
-    Wavelength = zeros(7)
+    Wavelength = np.zeros(7)
     # print(`"Wavelength" is lamda/d as a function of H/d, m, and e(m), Fenton (1999, eqn A.7)`)
     Wavelength[1] = 1
     Wavelength[2] = Wavelength[1] + H / m * (-3. / 2 * e + 5. / 4 - 5. / 8 * m)
-    Wavelength[3] = (Wavelength[2] + pow(H, 2) / mm[2]
+    Wavelength[3] = (Wavelength[2] + np.power(H, 2) / mm[2]
                      * (-15. / 32 + 15. / 32 * m - 21. / 128 * mm[2] + (-1. / 16 * m + 1. / 8) * e + 3. / 8 * ee[2]))
 
-    Wavelength[4] = (Wavelength[3] + pow(H, 3) / mm[3]
+    Wavelength[4] = (Wavelength[3] + np.power(H, 3) / mm[3]
                      * (341227. / 336000 - 341227. / 224000 * m + 984359. / 1344000 * mm[2]
                         - 20127. / 179200 * mm[3] + (-1471. / 1600 - 409. / 6400 * mm[2] + 1471. / 1600 * m) * e
                         + (-7. / 64 * m + 7. / 32) * ee[2] + 1. / 16 * ee[3]))
 
-    Wavelength[5] = (Wavelength[4] + pow(H, 4) / mm[4]
+    Wavelength[5] = (Wavelength[4] + np.power(H, 4) / mm[4]
                      * (-105363683. / 37632000 + 105363683. / 18816000 * m
                         - 306621467. / 75264000 * mm[2] + 95894101. / 75264000 * mm[3] - 1575087. / 28672000 * mm[4]
                         + (-2462811. / 448000 * m + 820937. / 224000 - 1086367. / 1792000 * mm[3]
@@ -201,21 +202,21 @@ def lambda_series(H: float, e: float, ee: array, m: float, mm: array, order: int
 def hoverd(H: float, e: float, ee: array,
            m: float, mm: array, order: int):
     """ """
-    hd = zeros(7)
+    hd = np.zeros(7)
     # double hd[7]
     hd[1] = 1 + H / m * (1 - e - m)
-    hd[2] = hd[1] + pow(H / m, 2) * (-1. / 2 + 1. / 2 * m + (1. / 2 - 1. / 4 * m) * e)
+    hd[2] = hd[1] + np.power(H / m, 2) * (-1. / 2 + 1. / 2 * m + (1. / 2 - 1. / 4 * m) * e)
 
-    hd[3] = (hd[2] + pow(H / m, 3)
+    hd[3] = (hd[2] + np.power(H / m, 3)
              * (133. / 200 - 399. / 400 * m + 133. / 400 * mm[2]
                 + (233. / 200 * m - 1. / 25 * mm[2] - 233. / 200) * e + (1. / 2 - 1. / 4 * m) * ee[2]))
 
-    hd[4] = (hd[3] + pow(H / m, 4)
+    hd[4] = (hd[3] + np.power(H / m, 4)
              * (-122. / 75 + 244. / 75 * m - 1227. / 500 * mm[2] + 1241. / 1500 * mm[3]
                 + (481. / 150 + 6529. / 3000 * mm[2] - 573. / 2000 * mm[3] - 481. / 100 * m) * e
                 + (52. / 25 * m - 57. / 400 * mm[2] - 52. / 25) * ee[2] + (1. / 2 - 1. / 4 * m) * ee[3]))
 
-    hd[5] = (hd[4] + pow(H / m, 5)
+    hd[5] = (hd[4] + np.power(H / m, 5)
              * (57231077. / 11760000 - 57231077. / 4704000 * m + 69379843. / 5880000 * mm[2]
                 - 130123673. / 23520000 * mm[3] + 123967. / 120000 * mm[4]
                 + (126350477. / 5880000 * m + 2579201. / 490000 * mm[3] - 302159. / 1470000 * mm[4]
@@ -234,26 +235,26 @@ def hoverd(H: float, e: float, ee: array,
 
 def Alpha(epsilon: float, m: float, mm: array, order: int):
     """"""
-    alpha = zeros(7)
+    alpha = np.zeros(7)
     # This is the original series for alpha(H/h)
     # print("Alpha" is alpha as a function of H/h and m, Fenton (1999, eqn A.2))
     alpha[1] = 1
     alpha[2] = alpha[1] + epsilon / m * (1. / 4 - 7. / 8 * m)
 
-    alpha[3] = alpha[2] + pow(epsilon, 2) / mm[2] * (1. / 32 - 11. / 32 * m + 111. / 128 * mm[2])
+    alpha[3] = alpha[2] + np.power(epsilon, 2) / mm[2] * (1. / 32 - 11. / 32 * m + 111. / 128 * mm[2])
 
-    alpha[4] = (alpha[3] + pow(epsilon, 3) / mm[3]
+    alpha[4] = (alpha[3] + np.power(epsilon, 3) / mm[3]
                 * (184711. / 1344000 * mm[2] + 114567. / 224000 * m
                    - 126817. / 336000 - 149273. / 179200 * mm[3]))
 
-    alpha[5] = (alpha[4] + pow(epsilon, 4) / mm[4]
+    alpha[5] = (alpha[4] + np.power(epsilon, 4) / mm[4]
                 * (13618217. / 25088000 * mm[3] + 22012297. / 28672000 * mm[4]
                    - 34858533. / 25088000 * mm[2] + 509843. / 2508800 + 2777099. / 6272000 * m))
 
     alpha[6] = Aitken(alpha, 5)
 
     for i in range(1, 6 + 1):
-        alpha[i] = math.sqrt(3 * epsilon / 4 / m) * alpha[i]
+        alpha[i] = np.sqrt(3 * epsilon / 4 / m) * alpha[i]
     return alpha[order]
 
 
@@ -264,21 +265,21 @@ def Alpha(epsilon: float, m: float, mm: array, order: int):
 
 def R_h(epsilon: float, m: float, mm: array, order: int):
     """ """
-    R_Height = zeros(7)
+    R_Height = np.zeros(7)
     # print(`"R_Height" is R/(g.h) as a function of H/h and m, Fenton (1999, eqn A.5)`)
     R_Height[1] = 3. / 2 + epsilon / m * (-1. / 2 + m)
 
-    R_Height[2] = (R_Height[1] + pow(epsilon, 2) / mm[2]
+    R_Height[2] = (R_Height[1] + np.power(epsilon, 2) / mm[2]
                    * (-7. / 20 * m + 7. / 20 - 1. / 40 * mm[2]))
 
-    R_Height[3] = (R_Height[2] + pow(epsilon, 3) / mm[3]
+    R_Height[3] = (R_Height[2] + np.power(epsilon, 3) / mm[3]
                    * (25. / 224 * m - 107. / 560 + 13. / 1120 * mm[2] + 13. / 280 * mm[3]))
 
-    R_Height[4] = (R_Height[3] + pow(epsilon, 4) / mm[4]
+    R_Height[4] = (R_Height[3] + np.power(epsilon, 4) / mm[4]
                    * (-30823. / 42000 * m + 55331. / 84000 * mm[2]
                       + 1214. / 2625 - 26833. / 84000 * mm[3] - 17. / 200 * mm[4]))
 
-    R_Height[5] = (R_Height[4] + pow(epsilon, 5) / mm[5]
+    R_Height[5] = (R_Height[4] + np.power(epsilon, 5) / mm[5]
                    * (-270759631. / 258720000 + 24097. / 154000 * mm[5] + 21098053. / 64680000 * mm[4]
                       - 202951241. / 517440000 * mm[3] - 864417. / 880000 * mm[2] + 198968527. / 103488000 * m))
 
@@ -296,8 +297,8 @@ def eta_h(x: float, alpha: float, epsilon: float,
           m: float, mm: array, m1: float, m1_limit: float,
           q1: float, K: float, Kd: float, order: int):
     """ """
-    C = zeros(11)
-    Eta = zeros(7)
+    C = np.zeros(11)
+    Eta = np.zeros(7)
     # print("Eta" is eta/h as a function of H/h, m, and cn^2, Fenton (1999, eqn A.1));
     #
     # Correction to 'm' from previous 'k' advised by Thomas Lykke Andersen
@@ -307,18 +308,18 @@ def eta_h(x: float, alpha: float, epsilon: float,
     #
     Eta[1] = 1 + C[2] * epsilon
 
-    Eta[2] = Eta[1] + pow(epsilon, 2) / mm[2] * (-3. / 4 * mm[2] * C[2] + 3. / 4 * mm[2] * C[4])
+    Eta[2] = Eta[1] + np.power(epsilon, 2) / mm[2] * (-3. / 4 * mm[2] * C[2] + 3. / 4 * mm[2] * C[4])
 
-    Eta[3] = (Eta[2] + pow(epsilon, 3) / mm[3]
+    Eta[3] = (Eta[2] + np.power(epsilon, 3) / mm[3]
               * ((111. / 80 * mm[3] - 61. / 80 * mm[2]) * C[2]
                  + (-53. / 20 * mm[3] + 61. / 80 * mm[2]) * C[4] + 101. / 80 * mm[3] * C[6]))
 
-    Eta[4] = (Eta[3] + pow(epsilon, 4) / mm[4]
+    Eta[4] = (Eta[3] + np.power(epsilon, 4) / mm[4]
               * ((59737. / 24000 * mm[3] - 4883. / 1600 * mm[4] - 302. / 375 * mm[2]) * C[2]
                  + (-20791. / 4800 * mm[3] + 302. / 375 * mm[2] + 35551. / 4800 * mm[4]) * C[4]
                  + (22109. / 12000 * mm[3] - 156611. / 24000 * mm[4]) * C[6] + 17367. / 8000 * mm[4] * C[8]))
 
-    Eta[5] = (Eta[4] + pow(epsilon, 5) / mm[5]
+    Eta[5] = (Eta[4] + np.power(epsilon, 5) / mm[5]
               * ((209511. / 32000 * mm[5] - 2209587. / 313600 * mm[4] + 3014947. / 1568000 * mm[3]
                   + 684317. / 1568000 * mm[2]) * C[2]
                  + (-2218593. / 112000 * mm[5] - 684317. / 1568000 * mm[2] + 3910057. / 224000 * mm[4]
@@ -338,9 +339,9 @@ def eta_h(x: float, alpha: float, epsilon: float,
 
 def u_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
     """ """
-    C = zeros(11)
-    y = zeros(11)
-    uu = zeros(7)
+    C = np.zeros(11)
+    y = np.zeros(11)
+    uu = np.zeros(7)
     # 
     # print("uu" is U/math.sqrt(g.h) as a function of delta, m, y/h and cn^2, Fenton (1999, eqn A.3.1))
     # Correction to 'm' from previous 'k' advised by Thomas Lykke Andersen
@@ -351,11 +352,11 @@ def u_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
         y[i] = y[i - 1] * y[1]
 
     uu[1] = -1 + (1. / 2 - m + m * C[2]) * delta
-    uu[2] = (uu[1] + pow(delta, 2)
+    uu[2] = (uu[1] + np.power(delta, 2)
              * (-79. / 40 * mm[2] - 19. / 40 + 79. / 40 * m + C[2] * (-3. / 2 * m + 3 * mm[2]) - mm[2] * C[4]
                 + (-3. / 4 * m + 3. / 4 * mm[2] + C[2] * (-3 * mm[2] + 3. / 2 * m) + 9. / 4 * mm[2] * C[4]) * y[2]))
 
-    uu[3] = (uu[2] + pow(delta, 3)
+    uu[3] = (uu[2] + np.power(delta, 3)
              * (55. / 112 + 7113. / 1120 * mm[2] - 2371. / 560 * mm[3] - 3471. / 1120 * m
                 + C[2] * (71. / 40 * m - 339. / 40 * mm[2] + 339. / 40 * mm[3])
                 + C[4] * (27. / 10 * mm[2] - 27. / 5 * mm[3]) + 6. / 5 * mm[3] * C[6]
@@ -366,7 +367,7 @@ def u_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
                    * (3. / 8 * m + 51. / 16 * mm[3] - 51. / 16 * mm[2])
                    + C[4] * (-45. / 8 * mm[3] + 45. / 16 * mm[2]) + 45. / 16 * mm[3] * C[6]) * y[4]))
 
-    uu[4] = (uu[3] + pow(delta, 4)
+    uu[4] = (uu[3] + np.power(delta, 4)
              * (-11813. / 22400 - 382841. / 28000 * mm[2] + 108923. / 5600 * mm[3]
                 - 108923. / 11200 * mm[4] + 31581. / 8000 * m
                 + C[2] * (-53327. / 42000 * m + 1192733. / 84000 * mm[2] - 39177. / 1120 * mm[3] + 13059. / 560 * mm[4])
@@ -385,7 +386,7 @@ def u_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
                    + C[4] * (567. / 80 * mm[4] - 567. / 80 * mm[3] + 189. / 160 * mm[2])
                    + C[6] * (-63. / 8 * mm[4] + 63. / 16 * mm[3]) + 189. / 64 * mm[4] * C[8]) * y[6]))
 
-    uu[5] = (uu[4] + pow(delta, 5)
+    uu[5] = (uu[4] + np.power(delta, 5)
              * (57159. / 98560 + 327236467. / 17248000 * mm[2] - 884845613. / 17248000 * mm[3]
                 - 57144683. / 2464000 * mm[5]
                 + 57144683. / 985600 * mm[4] - 124831351. / 34496000 * m
@@ -435,9 +436,9 @@ def u_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
 
 def v_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
     """ """
-    C = zeros(11)
-    y = zeros(11)
-    vv = zeros(7)
+    C = np.zeros(11)
+    y = np.zeros(11)
+    vv = np.zeros(7)
     #
     # Correction to 'm' from previous 'k' advised by Thomas Lykke Andersen
     C[1] = cn(alpha * x, m, m1, m1_limit, q1, K, Kd)
@@ -449,7 +450,7 @@ def v_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
     S = sn(alpha * x, m, m1, m1_limit, q1, K, Kd)
     D = dn(alpha * x, m, m1, m1_limit, q1, K, Kd)
 
-    Lead = y[1] * m * C[1] * S * D * math.sqrt(3) * pow(delta, 3. / 2)
+    Lead = y[1] * m * C[1] * S * D * np.sqrt(3) * np.power(delta, 3. / 2)
 
     vv[1] = 1
     vv[2] = vv[1] + ((1. / 2 - m + (3. / 2) * m * C[2]) * y[2] - 2 * m * C[2] + 3 * m - 3. / 2) * delta
@@ -460,7 +461,7 @@ def v_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
                       + (-(15. / 2) * mm[2] * C[4] + (-(25. / 4) * m + (25. / 2) * mm[2]) * C[2] - 3. / 4 - (9. / 2) *
                          mm[2]
                          + (9. / 2) * m) * y[2] + (18. / 5) * mm[2] * C[4] + ((27. / 5) * m - (54. / 5) * mm[2]) * C[2]
-                      + (339. / 40) * mm[2] + 71. / 40 - (339. / 40) * m) * pow(delta, 2))
+                      + (339. / 40) * mm[2] + 71. / 40 - (339. / 40) * m) * np.power(delta, 2))
 
     vv[4] = (vv[3] + (((27. / 16) * mm[3] * C[6] + (-(27. / 8) * mm[3] + (27. / 16) * mm[2]) * C[4]
                        + (-(81. / 40) * mm[2] + (81. / 40) * mm[3] + (27. / 80) * m) * C[2] - (99. / 560) * m
@@ -474,7 +475,7 @@ def v_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
                       - (788. / 125) * mm[3] * C[6] + (-(1763. / 125) * mm[2] + (3526. / 125) * mm[3]) * C[4]
                       + (-(12793. / 300) * mm[3] - (13109. / 1500) * m + (12793. / 300) * mm[2]) * C[2]
                       + (1192733. / 84000) * m - (39177. / 1120) * mm[2] + (13059. / 560) * mm[3]
-                      - 53327. / 42000) * pow(delta, 3))
+                      - 53327. / 42000) * np.power(delta, 3))
 
     vv[5] = (vv[4] + (((405. / 256) * mm[4] * C[8] + ((135. / 64) * mm[3] - (135. / 32) * mm[4]) * C[6]
                        + ((999. / 256) * mm[4] + (189. / 256) * mm[2] - (999. / 256) * mm[3]) * C[4]
@@ -501,7 +502,7 @@ def v_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
                       + ((757991. / 24500) * mm[2] - (72731. / 500) * mm[3] + (72731. / 500) * mm[4]) * C[4]
                       + ((3137133. / 14000) * mm[3] - (26486863. / 294000) * mm[2] + (1131733. / 147000) * m
                          - (1045711. / 7000) * mm[4]) * C[2] - (34543. / 3136) * m + (14639941. / 196000) * mm[2]
-                      - (3566001. / 28000) * mm[3] + (3566001. / 56000) * mm[4] - 144821. / 156800) * pow(delta, 4))
+                      - (3566001. / 28000) * mm[3] + (3566001. / 56000) * mm[4] - 144821. / 156800) * np.power(delta, 4))
     vv[6] = vv[5]
     # NB - the Aitken velocities were a bit irregular, so I did not apply them
     return vv[order] * Lead
@@ -520,7 +521,7 @@ def Aitken(S: array, j: int):
     if abs(den) < 1e-6:
         return S[j]
     else:
-        return S[j] - pow(S[j] - S[j - 1], 2) / den
+        return S[j] - np.power(S[j] - S[j - 1], 2) / den
     # return R
 #
 # def zeros(m, n=False, code='d'):

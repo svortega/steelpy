@@ -96,9 +96,6 @@ sect["WT"] *= units.mm
 sect.rename(columns={"OD": "d", "WT": "tw"}, inplace=True)
 #
 concept.sections(df=sect)
-#f2u_model.sections(df=sect)
-#section = f2u_model.sections()
-#section.df = sect
 sect = concept.sections().df
 #
 # -----------------------------------
@@ -109,17 +106,14 @@ memb = data[["NodeNo", "x_Node_Start", "y_Node_Start", "z_Node_Start",
 # rename
 memb.columns = ["name", "coordx_1", "coordy_1", "coordz_1",
                 "coordx_2", "coordy_2", "coordz_2"]
-#memb['units'] = "metre"
-#memb.join(sect["name"])
+#
 memb.insert(6, column="material", value=mat["name"])
 memb.insert(6, column="section", value=sect["name"])
 #
 print(memb)
-#
 elements = concept.elements()
 elements.beams(df=memb)
-#beams = concept.beams()
-#beams.df = memb
+
 #
 #
 #
@@ -127,21 +121,13 @@ elements.beams(df=memb)
 # Metocean 
 # ----------------------------------------------------
 #
-meto = Metocean()
+# ----------------------------------------------------
+# hydrodynamic parameters input
+# 
+meto = Metocean(name="metocean_112")
 #
-# Current
 #
-Csheets = wb.sheets["Current Profile"]
-current = Csheets.to_df()
-current['HeightFromSeaBed_m'] -= current['HeightFromSeaBed_m'].max()
-current['HeightFromSeaBed_m'] *= units.m
-current['CurrentSpeed_ms'] *= units.m / units.sec
-#
-current.rename(columns={"CriteriaID": "name",
-                        "HeightFromSeaBed_m" : "zlevel",
-                        "CurrentSpeed_ms": "velocity"}, inplace=True)
-current = current[['name', 'zlevel', 'velocity']]
-meto.current(df=current)
+proph = meto.properties()
 #
 # Marine Growth
 #
@@ -152,11 +138,28 @@ mg['BottomElevation_m'] *= units.m
 mg['Thickness_mm'] *= units.mm
 #
 mg.rename(columns={"AssetID": "name",
-                   "TopElevation_m": "zlevel",
+                   "TopElevation_m": "elevation",
                    "Thickness_mm": "thickness"}, inplace=True)
 #
-meto.MG(df=mg)
+MG = proph.MG(df=mg)
 #
+# ----------------------------------------------------
+# Current
+#
+Csheets = wb.sheets["Current Profile"]
+current = Csheets.to_df()
+current['HeightFromSeaBed_m'] -= current['HeightFromSeaBed_m'].max()
+current['HeightFromSeaBed_m'] *= units.m
+current['CurrentSpeed_ms'] *= units.m / units.sec
+#
+current.rename(columns={"CriteriaID": "name",
+                        "HeightFromSeaBed_m" : "elevation",
+                        "CurrentSpeed_ms": "velocity"}, inplace=True)
+current = current[['name', 'elevation', 'velocity']]
+meto.current(df=current)
+#
+#
+# ----------------------------------------------------
 # Wave setup
 #
 Msheet = wb.sheets["Metocean Criteria"]
@@ -200,33 +203,65 @@ grpcurr = current.groupby(['name'])
 grpmg = mg.groupby(['name'])
 for row in asset.itertuples():
     waveitem = grpcomb.get_group(name=row.AssetID)
-    criteriaID = waveitem['CriteriaID'].values[0]
+    criteriaID = waveitem['CriteriaID'].values.tolist()[0]
     #
     waveitem['wave_name'] = criteriaID
     waveitem['wave_direction'] = 0
-    waveitem['buoyancy'] = False
     waveitem['CrestElevation_m'] *= units.m
     #
-    # Marine Growth
     try:
-        mgitem = grpmg.get_group(name=row.AssetID)
-        waveitem['MG'] = row.AssetID
+        WKF = waveitem['WaveKinematicsFactor'].values.tolist()
+        # Wave kinematics factor
+        wkrf = proph.WKF()
+        wkrf[criteriaID] = ['constant', row.WaterDepth_m, WKF[0]]
+        waveitem['WaveKinematicsFactor'] = criteriaID
     except KeyError:
-        waveitem['MG'] = None
+        waveitem['WaveKinematicsFactor'] = None    
+    #
     #
     # Current
     try:
         curritem = grpcurr.get_group(name=criteriaID)
         waveitem['current_name'] = criteriaID
         waveitem['current_direction'] = 0
+        #waveitem['current_blockage'] = None
         waveitem['current_stretching'] = True
+        #
+        CBF = waveitem['CurrentBlockage'].values.tolist()
+        cbf = proph.CBF()
+        cbf[criteriaID] = ['constant', row.WaterDepth_m, CBF[0]]
+        waveitem['CurrentBlockage'] = criteriaID
+        #
     except KeyError:
         waveitem['current_name'] = None
     #
     # Wind
     # TODO: wind not implemented
-    waveitem['wind_name'] = criteriaID
-    waveitem['wind_direction'] = 0
+    #waveitem['wind_name'] = criteriaID
+    #waveitem['wind_direction'] = 0
+    #
+    # properties
+    #
+    # Marine Growth
+    try:
+        mgitem = grpmg.get_group(name=row.AssetID)
+        #MG[row.AssetID]
+        waveitem['MG'] = row.AssetID
+    except KeyError:
+        waveitem['MG'] = None
+    #
+    #
+    cdcm = proph.CdCm()
+    cdcm[criteriaID] = ['constant',row.WaterDepth_m, 0.70, 2.0]
+    waveitem['CdCm'] = criteriaID
+    #
+    #
+    # parameters
+    #
+    waveitem['design_load'] = 'max_BS'
+    waveitem['buoyancy'] = False
+    waveitem['criterion'] = 'local'
+    #
     #
     # Setup input
     #
@@ -239,10 +274,14 @@ for row in asset.itertuples():
     #
     # Input load
     #
-    meto.load(df=waveitem)
+    meto.condition(df=waveitem)
+#
+metcond = meto.condition()
+#
+meto.solve(surface_points=36,
+           depth_points=100)
 #
 #
-metload = meto.load()
 #
 #
 # -----------------------------------
@@ -297,13 +336,9 @@ basic[3].beam.line = {'qx': -3 * units.kN/units.m, 'name': "wind_3"}
 #
 # -----------------------------------
 #
+hydro = load.metocean(metcond)
 #
-metcases = list(metload.keys())
-lcnumber = 10
-for idx, key in enumerate(metcases):
-    lcnumber += idx
-    basic[lcnumber] = f'wave load {idx+1}'
-    basic[lcnumber].wave = [metload[key], 'max_BS']
+
 #
 #
 #
@@ -316,22 +351,46 @@ for idx, key in enumerate(metcases):
 mesh = concept.mesh()
 #
 #
+# ----------------------------------------------------
+# Get mesh in dataframe pandas
 #
-#
+print("Nodes")
 nodes = mesh.nodes()
-print(nodes)
+nodedf = nodes.df
+print(nodedf)
 #
-bds = mesh.boundaries()
 print("boundaries")
-print(bds)
+supports = mesh.boundaries()
+supportsdf = supports.df
+print(supportsdf)
 #
-print("")
+print("Elements")
 elements = mesh.elements()
+elementsdf = elements.df
 print(elements)
 #
-loadm = mesh.load()
 print("Load")
-print(loadm.basic())
+loadmesh = mesh.load()
+basiclm = loadmesh.basic()
+#
+nodalblm = basiclm.node()
+print("Nodal Load")
+bl_nodedf = nodalblm.df
+print(bl_nodedf)
+#
+beamblm = basiclm.beam()
+print("Beam Point Load")
+bl_bpointdf = beamblm.point.df
+print(bl_bpointdf)
+#
+print("Beam Line Load")
+bl_blinedf = beamblm.line.df
+print(bl_blinedf)
+#
+# ----------------------------------------------------
+# Export mesh to excel 
+#mesh.to_excel()
+#
 #
 # ----------------------------------------------------
 # Plotting
@@ -350,10 +409,34 @@ print(loadm.basic())
 # Structural Analysis
 # ----------------------------------------------------
 #
-frame = Trave2D()
-frame.mesh = mesh
+frame = Trave2D(mesh=mesh)
 frame.static()
-results = frame.solve()
+results = frame.results()
+#
+#
+noderes = results.nodes()
+#print(noderes)
+ndisp = noderes.displacement()
+# get pandas df
+ndisp_df = ndisp.df
+nreacc = noderes.reaction()
+# get indidual node results
+ndisp = noderes[1].displacement()
+#
+beamres = results.beam()
+#print(beamres)
+bdisp = beamres.displacement()
+bforce = beamres.force()
+bstress = beamres.stress()
+# get indidual beam results
+bforce = beamres[1].displacement()
+bdisp = beamres[2].force()
+bstress = beamres[3].stress()
+# get pandas df
+bstress_df = bstress.df
+#print(bstress)
+#
+#
 print(results)
 print('--')
 

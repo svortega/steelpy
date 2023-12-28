@@ -18,9 +18,9 @@ from itertools import groupby
 from math import dist
 
 # package imports
-from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, check_nodes
+from steelpy.utils.sqlite.utils import create_connection, check_nodes
 #from steelpy.beam.main import BasicCalcs
-from .nodes import get_node #, NodeSQL
+from steelpy.f2uModel.mesh.sqlite.nodes import get_node #, NodeSQL
 from steelpy.sections.sqlite.main import get_section #, SectionSQL
 from steelpy.material.sqlite.isotropic import  get_materialSQL #, MaterialSQL
 from ..process.elements.beam import BeamBasic, BeamItemBasic
@@ -31,21 +31,31 @@ from ..process.elements.beam import BeamBasic, BeamItemBasic
 
 
 class BeamSQL(BeamBasic):
-    __slots__ = ['_labels', '_title', '_type', 
-                 'db_file', '_plane', '_beam_type']
+    __slots__ = ['_title', 'db_file', '_plane']
     
     def __init__(self, db_file:str,
-                 labels, element_type, 
+                 #labels,
+                 #element_type, 
                  plane: NamedTuple) -> None:
         """
         beam elements
         """
-        super().__init__(labels=labels) 
+        super().__init__() # 
         self.db_file = db_file
         self._plane = plane
-        self._type:list = element_type
-        self._beam_type:str = 'beam'
+        #self._type:list = element_type
+        #self._beam_type:str = 'beam'
     #
+    @property
+    def _labels(self):
+        """ """
+        table = "SELECT tb_Elements.name FROM tb_Elements WHERE type = 'beam'"
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table)
+            items = cur.fetchall()
+        return [item[0] for item in items]    
     #
     def __setitem__(self, beam_name: int|str, parameters: list) -> None:
         """
@@ -57,7 +67,7 @@ class BeamSQL(BeamBasic):
         except ValueError:
             # default
             self._labels.append(beam_name)
-            self._type.append(self._beam_type)
+            #self._type.append(self._beam_type)
             # push to SQL
             conn = create_connection(self.db_file)
             with conn:
@@ -144,8 +154,8 @@ class BeamSQL(BeamBasic):
             sections = cur.fetchall()
             sections = {item[0]:item[1] for item in sections}
         #
-        df['material_number'] = df['material_id'].apply(lambda x: materials[str(x)])
-        df['section_number'] = df['section_id'].apply(lambda x: sections[str(x)])
+        df['material_number'] = df['material_name'].apply(lambda x: materials[x])
+        df['section_number'] = df['section_name'].apply(lambda x: sections[x])
         #
         if not df.columns.isin(['title']).any():
             df['title'] = ""
@@ -176,9 +186,9 @@ class BeamSQL(BeamBasic):
             nodes = {item[0]:item[1] for item in nodes}
         #
         nheader = ['element_number', 'node_number', 'node_end']
-        df['element_number'] = df['name'].apply(lambda x: elements[str(x)])
+        df['element_number'] = df['name'].apply(lambda x: elements[x])
         #
-        df['node_number'] = df['node_1'].apply(lambda x: elements[str(x)])
+        df['node_number'] = df['node_1'].apply(lambda x: elements[x])
         df['node_end'] = int(1)
         nodeconn = df[nheader]
         with conn:        
@@ -187,7 +197,7 @@ class BeamSQL(BeamBasic):
                             if_exists='append', index=False)
             
         #
-        df['node_number'] = df['node_2'].apply(lambda x: elements[str(x)])
+        df['node_number'] = df['node_2'].apply(lambda x: elements[x])
         df['node_end'] = int(2)
         nodeconn = df[nheader]
         with conn:        
@@ -196,8 +206,8 @@ class BeamSQL(BeamBasic):
                             if_exists='append', index=False)        
         #
         #print('--->')
-        self._labels.extend(df['name'].tolist())
-        self._type.extend(df['type'].tolist())
+        #self._labels.extend(df['name'].tolist())
+        #self._type.extend(df['type'].tolist())
         #1 / 0
 #
 #
@@ -346,7 +356,7 @@ class BeamItemSQL(BeamItemBasic):
         for _node in self.connectivity:
             with conn:
                 _nodes.append(get_node(conn, node_name=_node))
-        return _nodes    
+        return _nodes
     #
     @property
     def material(self) -> list:
@@ -423,7 +433,7 @@ class BeamItemSQL(BeamItemBasic):
         #               self.material, self.section, self.beta,
         #               self.length, title)
         node1, node2 = self.connectivity
-        return "{:>8s} {:>8s} {:>8s} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}"\
+        return "{:>8s} {:>8s} {:>8s} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}\n"\
                .format(beam_name, str(node1), str(node2),
                        str(self.material.name), str(self.section.name),
                        self.beta, self.L, title)

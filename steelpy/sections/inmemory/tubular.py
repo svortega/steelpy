@@ -133,7 +133,7 @@ class TubularIM(SectionBasic):
             self._number.append(mnumber)
         #mnumber = [next(self.get_number()) for _ in df.name]
         #self._number.extend(mnumber)
-        self._title.extend(['NULL' for _ in df.name])
+        self._title.extend(df.title.tolist())
         self._labels.extend(df.name.tolist())
         self._type.extend(df.type.tolist())
         try:

@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 #
@@ -9,8 +9,8 @@ from __future__ import annotations
 #from typing import NamedTuple, Tuple, Union, List, Dict
 
 # package imports
-from steelpy.metocean.regular.fourier.Dsvdcmp import dsvdcmp
-from steelpy.metocean.regular.fourier.Dsvbksb import dsvbksb
+from steelpy.metocean.wave.regular.fourier.Dsvdcmp import dsvdcmp
+from steelpy.metocean.wave.regular.fourier.Dsvbksb import dsvbksb
 import numpy as np
 #
 #

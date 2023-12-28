@@ -16,7 +16,7 @@ from steelpy.utils.units.main import Units
 #from steelpy.process.units.buckingham import Number
 #from ..process.operations import
 from ..process.print_report import print_isomat
-from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
+from steelpy.utils.sqlite.utils import create_connection, create_table
 #
 from ..process.operations import get_isomat_prop, get_isomat_prop_df
 from ..process.mechanical import MaterialItem 
@@ -24,29 +24,83 @@ from ..process.mechanical import MaterialItem
 from steelpy.utils.dataframe.main import DBframework
 #
 #
-class MaterialSQL(Mapping):
-    __slots__ = ['db_file', 'db_system', '_labels', '_default',
-                 '_number', '_type', '_elastic', '_curve']
+# ----------------------------------------
+#
+class MatBasicSQL(Mapping):
+    
+    def __init__(self, db_file: str) -> None:
+        """
+        db_system: sqlite
+        """
+        self.db_file = db_file
+    #
+    #
+    @property
+    def _labels(self):
+        """ """
+        table = 'SELECT tb_Materials.name FROM tb_Materials'
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table)
+            items = cur.fetchall()
+        return [item[0] for item in items]    
+    #
+    #
+    def __len__(self):
+        return len(self._labels)
+
+    def __iter__(self):
+        """
+        """
+        return iter(self._labels)
+
+    def __contains__(self, value):
+        return value in self._labels
+    #
+    #
+    #@property
+    #def _default(self):
+    #    """ """
+    #    print('here')
+    #
+    #def get_number(self, start:int=1)-> Iterable[int]:
+    #    """
+    #    """
+    #    try:
+    #        n = max(self._number) + 1
+    #    except ValueError:
+    #        n = start
+    #    #
+    #    while True:
+    #        yield n
+    #        n += 1
+    #     
+#
+#
+# ----------------------------------------
+#
+class MaterialSQL(MatBasicSQL):
+    
+    __slots__ = ['db_file', 'db_system', '_default',
+                 '_elastic', '_curve']
 
     def __init__(self, db_file: str,
                  db_system:str="sqlite") -> None:
         """
         db_system: sqlite
         """
-        self.db_file = db_file
-        self.db_system = db_system
+        super().__init__(db_file)
         #
+        self.db_system = db_system
         self._default: str|None = None
-        self._labels:list[str|int] = []
-        self._number: list[int] = []
-        self._type:list[str|int] = []
-        #self._default:Union[str,None] = None
         self._elastic = MaterialElasticSQL(self.db_file)
+        #
         # create node table
         conn = create_connection(self.db_file)
         with conn:        
             self._create_table(conn)
-            
+    #
     #
     def __setitem__(self, material_name: str|int,
                     properties: list[str|float]) -> None:
@@ -57,20 +111,20 @@ class MaterialSQL(Mapping):
             raise IOError('   error material {:} already exist'.format(material_name))
         except ValueError:
             material_type = properties[0]
-            self._labels.append(material_name)
-            self._type.append(material_type)
+            #self._labels.append(material_name)
+            #self._type.append(material_type)
             #
             conn = create_connection(self.db_file)
             with conn:
-                mat_number = push_material(conn, material_name, material_type)
-                #conn.commit()
-                self._number.append(mat_number)
+                push_material(conn, material_name, material_type)
+            #    #conn.commit()
+            #    #self._number.append(mat_number)
             # set material
             if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
                 #self._material[material_name]
                 raise Exception('--> No ready')
             elif re.match(r"\b(elastic|linear|isotropic)\b", material_type, re.IGNORECASE):
-                self._elastic[material_name] = [mat_number, *properties[1:]]
+                self._elastic[material_name] = properties[1:] # [mat_number, *properties[1:]]
             else:
                 raise IOError(' material type {:} not recognised'
                               .format(material_type))
@@ -83,21 +137,24 @@ class MaterialSQL(Mapping):
         try:
             index = self._labels.index(material_name)
             #mat_number = self._number[index]
-            material_type = self._type[index]
+            #material_type = self._type[index]
             self._default = material_name
         except (IndexError, ValueError):
             raise KeyError('Invalid material name : {:}'.format(material_name))
         #
+        conn = create_connection(self.db_file)
+        with conn:        
+            mat_number, mat_type = get_mat_specs(conn, material_name)
         #
-        if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
+        if re.match(r"\b(curve)\b", mat_type, re.IGNORECASE):
             return self._curve[material_name]
         
-        elif re.match(r"\b(elastic|linear|isotropic)\b", material_type, re.IGNORECASE):
+        elif re.match(r"\b(elastic|linear|isotropic)\b", mat_type, re.IGNORECASE):
             return self._elastic[material_name]
         
         else:
             raise IOError(' material type {:} not recognised'
-                          .format(material_type))        
+                          .format(mat_type))        
     #
     #def _push_material(self, conn, material_name: Union[str, int],
     #                   material_type:str):
@@ -119,36 +176,7 @@ class MaterialSQL(Mapping):
         #
         #conn = create_connection(self.db_file)
         create_table(conn, _table_materials)
-    #
-    def __len__(self):
-        return len(self._labels)
-
-    def __iter__(self):
-        """
-        """
-        return iter(self._labels)
-
-    def __contains__(self, value):
-        return value in self._labels
-    #
-    #
-    #@property
-    #def _default(self):
-    #    """ """
-    #    print('here')
-    #
-    def get_number(self, start:int=1)-> Iterable[int]:
-        """
-        """
-        try:
-            n = max(self._number) + 1
-        except ValueError:
-            n = start
-        #
-        while True:
-            yield n
-            n += 1
-    #    
+    #   
     #
     @property
     def default(self):
@@ -171,14 +199,14 @@ class MaterialSQL(Mapping):
             if isinstance(values, list):
                 for item in values:
                     material_name = item[0]
-                    material_type = "elastic"
-                    self._labels.append(material_name)
-                    self._type.append(material_type)
-                    mat_number = next(self.get_number())
-                    self._number.append(mat_number)
+                    #material_type = "elastic"
+                    #self._labels.append(material_name)
+                    #self._type.append(material_type)
+                    #mat_number = next(self.get_number())
+                    #self._number.append(mat_number)
                     #self.__setitem__(item[0], item[1:])
                     properties = get_isomat_prop(item[1:])
-                    self._elastic[material_name] = [material_name, *properties]
+                    self._elastic[material_name] = properties # [material_name, *properties]
             
             else:
                 raise IOError('material input not valid')
@@ -190,12 +218,12 @@ class MaterialSQL(Mapping):
             group = df.groupby("type")
             elastic = group.get_group("elastic")
             elastic = get_isomat_prop_df(elastic)
-            elastic = elastic.drop_duplicates(['name'])
+            #elastic = elastic.drop_duplicates(['name'])
             #
-            self._labels.extend(elastic.name)
-            self._type.extend(elastic.type)
-            material_number = [next(self.get_number()) for _ in elastic.name]
-            self._number.extend(material_number)
+            #self._labels.extend(elastic.name)
+            #self._type.extend(elastic.type)
+            #material_number = [next(self.get_number()) for _ in elastic.name]
+            #self._number.extend(material_number)
             #
             self._elastic.df = elastic
         except AttributeError:
@@ -208,34 +236,33 @@ class MaterialSQL(Mapping):
 #
 @dataclass
 class MaterialType:
-    __slots__ = ['_type', '_labels', '_number',
-                 '_cls_type', '_item_type', 'db_file']
+    __slots__ = ['_cls_type', '_item_type', 'db_file']
     
     def __init__(self, mat_type: str, cls_type, cls):
         """
         """
         self._cls_type = cls_type
         self._item_type = mat_type
-        self._labels = cls._labels
-        self._type = cls._type
-        self._number = cls._number
+        #self._labels = cls._labels
+        #self._type = cls._type
+        #self._number = cls._number
         self.db_file = cls.db_file
         
     def __setitem__(self, material_name:str|int,
                     properties:list[str|float]) -> None:
         """
         """
-        self._labels.append(material_name)
-        self._type.append(self._item_type)
+        #self._labels.append(material_name)
+        #self._type.append(self._item_type)
         # set material master
         conn = create_connection(self.db_file)
         with conn:
-            mat_number = push_material(conn, material_name, self._item_type)
+            push_material(conn, material_name, self._item_type)
         #
-        self._number.append(mat_number)
+        #self._number.append(mat_number)
         # set material type
         prop = get_isomat_prop(properties)
-        self._cls_type[material_name] = [mat_number, *prop]
+        self._cls_type[material_name] = prop # [mat_number, *prop]
     
     def __getitem__(self, material_name:str|int):
         """
@@ -269,7 +296,7 @@ def push_material(conn, material_name: str|int,
     sql = 'INSERT INTO  tb_Materials(name, title, type) VALUES(?,?,?)'
     cur = conn.cursor ()
     cur.execute (sql, project)
-    return cur.lastrowid
+    #return cur.lastrowid
 #
 #
 class GetMaterial(NamedTuple):
@@ -308,7 +335,6 @@ def get_materials(conn, component_name):
     #conn.close()
     #print("--->")
     return materials
-#
 #
 #
 def get_materialSQL(conn, material_name:int|str):
@@ -475,19 +501,19 @@ class GetMaterialSQL:
 
 #
 #
-class MaterialElasticSQL(Mapping):
-    __slots__ = ['db_file', '_labels', '_default',
-                 'f2u_units', '_title', '_number']
+class MaterialElasticSQL(MatBasicSQL):
+    __slots__ = ['db_file', '_default']
 
     def __init__(self, db_file: str):
         """
         """
+        super().__init__(db_file)
         self.db_file = db_file
-        #self._title: list[str | int] = []
-        self._labels: list[str | int] = []
-        self._number: array = array('I', [])
+        #
         # create node table
-        self._create_table()
+        conn = create_connection(self.db_file)
+        with conn:            
+            self._create_table()
 
     #
     # @property
@@ -501,17 +527,13 @@ class MaterialElasticSQL(Mapping):
         """
         try:
             self._labels.index(material_name)
-            raise Exception(f' *** warning material {material_name} already exist')
-        except ValueError:
-            self._labels.append(material_name)
-            material_number = properties.pop(0)
-            self._number.append(material_number)
-            #self._title.append(properties.pop(0))
-            #
             conn = create_connection(self.db_file)
             with conn:
-                self._push_material(conn, material_number, properties)
-                # conn.commit()
+                self._push_material(conn, material_name, properties)
+                # conn.commit()            
+        except ValueError:
+            raise Exception(f' *** warning material {material_name} missing')
+
             
 
     #
@@ -528,6 +550,7 @@ class MaterialElasticSQL(Mapping):
         except ValueError:
             raise IndexError('   *** material {:} does not exist'.format(material_name))
 
+    #
     #
     def _create_table(self) -> None:
         """ """
@@ -546,10 +569,12 @@ class MaterialElasticSQL(Mapping):
         create_table(conn, _table_material)
 
     #
-    def _push_material(self, conn, material_number, properties):
+    def _push_material(self, conn, material_name: int|str,
+                       properties):
         """
         """
-        project = (material_number, *properties)
+        mat_number, mat_type = get_mat_specs(conn, material_name)
+        project = (mat_number, *properties)
         sql = 'INSERT INTO  tb_MatElastoPlastic(material_number,\
                                                 Fy, Fu, E, G, poisson, density , alpha)\
                                                 VALUES(?,?,?,?,?,?,?,?)'
@@ -557,17 +582,6 @@ class MaterialElasticSQL(Mapping):
         cur.execute(sql, project)
         #return cur.lastrowid
 
-    #
-    def __len__(self) -> float:
-        return len(self._labels)
-
-    def __iter__(self):
-        """
-        """
-        return iter(self._labels)
-
-    def __contains__(self, value) -> bool:
-        return value in self._labels
     #
     #
     @property
@@ -607,7 +621,6 @@ class MaterialElasticSQL(Mapping):
                          index_label=['name', 'title', 'type'], 
                          if_exists='append', index=False)
         #
-        self._labels.extend(dfmat['name'].tolist())
         #
         cur = conn.cursor()
         cur.execute("SELECT * from tb_Materials")
@@ -617,7 +630,8 @@ class MaterialElasticSQL(Mapping):
         # push elastic material
         dfel = df[['Fy', 'Fu', 'E', 'G',
                    'poisson', 'density' , 'alpha']].copy()
-        dfel['material_number'] = [int(mat_name[str(item)]) for item in df.name]
+        dfel['material_number'] = [mat_name[item] for item in df.name]
+        #dfel['material_number'] = dfel['material_number'].astype(int)
         with conn:
             dfel.to_sql('tb_MatElastoPlastic', conn,
                         index_label=['material_number',
@@ -625,9 +639,21 @@ class MaterialElasticSQL(Mapping):
                                      'poisson', 'density' , 'alpha'], 
                         if_exists='append', index=False)
         #
-        self._number.extend(dfel['material_number'].tolist())
-        #print('--')    
+        # TODO: update matIM
+        #self._number.extend(dfel['material_number'].tolist())
+        #self._labels.extend(dfmat['name'].tolist())
+        #print('--')
 #
 #
+#
+def get_mat_specs(conn, material_name:int|str):
+    """
+    """
+    cur = conn.cursor()
+    cur.execute("SELECT tb_Materials.number, tb_Materials.type \
+                FROM tb_Materials \
+                WHERE  tb_Materials.name = ?",(material_name, ))
+    row = cur.fetchone()
+    return list(row)
 #
 #

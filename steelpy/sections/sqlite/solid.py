@@ -30,7 +30,7 @@ class SolidSectionSQL(SectionSQLite):
         #self._wb: array = array('f', [])
         #self._wt: array = array('f', [])
         #
-        self._type = []
+        #self._type = []
         self.db_file = db_file
         # push data to sqlite table
         #SectionSQLite.__init__(self, db_file=self.db_file,
@@ -47,7 +47,7 @@ class SolidSectionSQL(SectionSQLite):
             raise Exception('element {:} already exist'.format(shape_name))
         except ValueError:
             shape_type = parameters.pop(0)
-            self._labels.append(shape_name)
+            #self._labels.append(shape_name)
             #self._title.append('NULL')
             #mnumber = next(self.get_number())
             #self._number.append(mnumber)
@@ -60,7 +60,7 @@ class SolidSectionSQL(SectionSQLite):
             compactness = None
             #
             if re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
-                self._type.append('round')
+                #self._type.append('round')
                 #self._wb.append(0)
                 #self._wt.append(0)
                 #
@@ -77,7 +77,7 @@ class SolidSectionSQL(SectionSQLite):
                            compactness,)               
 
             elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
-                self._type.append('rectangle')
+                #self._type.append('rectangle')
                 w = parameters[1]
                 #self._wb.append(parameters[1])
                 #self._wt.append(parameters[1])
@@ -95,7 +95,7 @@ class SolidSectionSQL(SectionSQLite):
                            compactness,)                 
 
             elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
-                self._type.append('trapeziod')
+                #self._type.append('trapeziod')
                 wb = parameters[1]
                 wt = parameters[2]
                 #self._wb.append(parameters[1])
@@ -116,7 +116,7 @@ class SolidSectionSQL(SectionSQLite):
                 raise Exception(f" section type {shape_type} not recognized")
             #
             number = self.push_section(section)
-            self._number.append(number)
+            #self._number.append(number)
     #
     def __getitem__(self, shape_name: str | int):
         """

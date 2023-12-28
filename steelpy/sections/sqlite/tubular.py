@@ -12,10 +12,10 @@ from ..inmemory.tubular import TubularBasic
 #from ..process.operations import get_sect_properties
 from .operations import SectionSQLite
 #from ..inmemory.operations import ShapeBasic
-from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection
-from ..process.operations import get_sect_prop_df
+#from steelpy.f2uModel.mesh.sqlite.utils import create_connection
+#from ..process.operations import get_sect_prop_df
 #
-from steelpy.utils.dataframe.main import DBframework
+#from steelpy.utils.dataframe.main import DBframework
 #
 # ----------------------------------------
 #      Standard Sections Profiles
@@ -43,14 +43,9 @@ class TubularSQL(SectionSQLite):
         t : wall Thickness
         Shear Stress: MAXIMUM / AVERAGE
         """
-        #TubularBasic.__init__(self)
-        #self.name = name
-        #self._properties = None
         self.db_file = db_file
-        # push data to sqlite table
-        #SectionSQLite.__init__(self, db_file=self.db_file,
-        #                       section=section)
         super().__init__(db_file=self.db_file)
+        #
     #
     #
     def __setitem__(self, shape_name: int|str, parameters: list) -> None:
@@ -61,7 +56,7 @@ class TubularSQL(SectionSQLite):
             self._labels.index(shape_name)
             raise Exception('element {:} already exist'.format(shape_name))
         except ValueError:
-            self._labels.append(shape_name)
+            #self._labels.append(shape_name)
             #
             d = parameters[0]
             t = parameters[1]
@@ -82,7 +77,7 @@ class TubularSQL(SectionSQLite):
                        shear_stress, build,
                        compactness,)
             number = self.push_section(section)
-            self._number.append(number)
+            #self._number.append(number)
     #
     def __getitem__(self, shape_name: str | int):
         """

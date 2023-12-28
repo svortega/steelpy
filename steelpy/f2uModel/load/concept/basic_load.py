@@ -6,13 +6,14 @@ from __future__ import annotations
 #
 #
 # package imports
+from array import array
 # steelpy.f2uModel.load
 from ..process.actions import SelfWeight
-#from ..inmemory.beam import BeamLoadItemIM
-#from ..inmemory.node import NodeLoadItemIM
+from ..inmemory.beam import BeamLoadItemIM
+from ..inmemory.node import NodeLoadItemIM
 from ..process.basic_load import BasicLoadBasic, LoadTypeBasic
 
-#from steelpy.f2uModel.load.inmemory.wave_load import WaveLoadItemIM
+from steelpy.f2uModel.load.inmemory.wave_load import WaveLoadItemIM
 
 #
 #
@@ -44,6 +45,10 @@ class BasicLoad(BasicLoadBasic):
         """
         """
         super().__init__()
+        self._labels: list = []
+        self._title: list[str] = []
+        self._number: array = array("I", [])        
+        #
         self._basic: dict = {}
         self._f2u_elements = elements
         self._f2u_nodes = nodes
@@ -102,11 +107,10 @@ class LoadTypeInMemory(LoadTypeBasic):
                  'name', 'number', 'title', '_wave']
                  #'_f2u_beams', '_f2u_nodes']
 
-    def __init__(self, name: str | int, number: int, title: str,
-                 nodes, elements):
+    def __init__(self, nodes, elements):
         """
         """
-        super().__init__(name, number, title)
+        #super().__init__(name, number, title)
         #self.name = name
         #self.number = number
         #self.title = title

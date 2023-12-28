@@ -16,7 +16,7 @@ f2umodel = f2uModel()
 # ----------------------------------------------------
 # ----------------------------------------------------
 #
-mesh = f2umodel.mesh(sql_file="example2D_2_f2u")
+mesh = f2umodel.mesh(sql_file="2D_example_2")
 #
 #
 #
@@ -25,14 +25,11 @@ mesh = f2umodel.mesh(sql_file="example2D_2_f2u")
 # ----------------------------------------------------
 #
 #
-#
-#
-# ----------------------------------------------------
-# Meshing
-# ----------------------------------------------------
-#
-#
 mesh.build()
+#
+print(mesh.materials())
+#
+print(mesh.sections())
 #
 nodes = mesh.nodes()
 print(nodes)
@@ -45,9 +42,9 @@ print("")
 elements = mesh.elements()
 print(elements)
 #
-loadm = mesh.load()
+loadm = mesh.load().basic()
 print("Load")
-print(loadm.basic())
+print(loadm)
 #
 #
 # ----------------------------------------------------
@@ -72,9 +69,9 @@ print(loadm.basic())
 # Structural Analysis
 # ----------------------------------------------------
 #
-frame = Trave2D()
-frame.mesh = mesh
+frame = Trave2D(mesh=mesh)
+# FIXME: calcs 
 frame.static()
-results = frame.solve()
+results = frame.results()
 print(results)
 print('-->')

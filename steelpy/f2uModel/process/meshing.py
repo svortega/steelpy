@@ -9,7 +9,7 @@ import math
 from collections import defaultdict
 from dataclasses import dataclass
 #from typing import Tuple
-import os
+#import os
 
 # package imports
 from steelpy.utils.units.main import Units
@@ -110,9 +110,9 @@ class Meshing:
         """ """
         nodes = self._mesh.nodes()
         try:
-            return nodes.get_node_name(coord)
+            return nodes.get_point_name(coord)
         except IOError:
-            return nodes.get_new_node(coord)
+            return nodes.get_new_point(coord)
     #
     def _set_boundary(self):
         """ """
@@ -140,7 +140,7 @@ class Meshing:
             support = value.points
             for point in support.points:
                 try:
-                    node_id = mnodes.get_node_name(point)
+                    node_id = mnodes.get_point_name(point)
                     msupports[node_id] = [*support[:6], key]
                     print(f"Boundary: {key}  @ Node: {node_id}")
                 except IOError:
@@ -224,12 +224,12 @@ class Meshing:
         print( '--- Meshing Basic Load' )
         # Mesh
         mesh = self._mesh
-        mnodes = mesh.nodes()
+        Mnodes = mesh.nodes()
         melements = mesh.elements()
-        mbeams = melements.beams()
+        Mbeams = melements.beams()
         # Mesh Load
         mload = mesh.load()
-        mlbasic = mload.basic()
+        Mlbasic = mload.basic()
         # Concept
         Concept = self.concept
         Celements = Concept.elements()
@@ -240,9 +240,9 @@ class Meshing:
         #
         for Clb_name, Clb_item in Clbasic.items():
             # clone mesh load
-            mlbasic[Clb_name] = Clb_item.title
-            mlb_node = mlbasic[Clb_name].node()
-            mlb_beam = mlbasic[Clb_name].beam()
+            Mlbasic[Clb_name] = Clb_item.title
+            mlb_node = Mlbasic[Clb_name].node()
+            mlb_beam = Mlbasic[Clb_name].beam()
             #
             # Beam load process
             # TODO : update linefit
@@ -251,58 +251,60 @@ class Meshing:
                 Lc = cbeam.L #.value
                 #print(f'---> Load: {load_name} Beam: {bname} L: {Lb:4.2f}')
                 # Beam line load process
-                for lbload in CBloads.line:
-                    label = lbload.load_name
-                    print(f'Load Title: {label} - Line Load')
-                    waxial = linefit(lbload.qx0, lbload.qx1,
-                                     Lc, lbload.L0, lbload.L1)
-                    winplane = linefit(lbload.qy0, lbload.qy1,
-                                       Lc, lbload.L0, lbload.L1)
-                    woutplane = linefit(lbload.qz0, lbload.qz1,
-                                        Lc, lbload.L0, lbload.L1)
-                    # start loop beam steps
-                    xi = 0
-                    for step in cbeam.step:
-                        bname = step._mesh
-                        beam = mbeams[bname]
-                        Lbi = beam.L
-                        xi += Lbi
-                        qaxial = waxial.qi(xi)
-                        qinp = winplane.qi(xi)
-                        qoutp = woutplane.qi(xi)
-                        # check load on segment
-                        try:
-                            Li = winplane.Li(xi, Lbi)
-                        except RuntimeWarning:
-                            continue # no load should be applied to this segment
-                        # set load for mesh element
-                        print(f'Element: {bname} --> {Lbi:4.2f} {xi:4.2f} {qinp} {qoutp} {Li}')
-                        mlb_beam[bname].line = [qaxial[0], qinp[0], qoutp[0],
-                                                qaxial[1], qinp[1], qoutp[1],
-                                                Li[0], Li[1], lbload.title]
+                for rows in CBloads.line.values():
+                    for lbload in rows:
+                        label = lbload.load_name
+                        print(f'Load Title: {label} - Line Load')
+                        waxial = linefit(lbload.qx0, lbload.qx1,
+                                         Lc, lbload.L0, lbload.L1)
+                        winplane = linefit(lbload.qy0, lbload.qy1,
+                                           Lc, lbload.L0, lbload.L1)
+                        woutplane = linefit(lbload.qz0, lbload.qz1,
+                                            Lc, lbload.L0, lbload.L1)
+                        # start loop beam steps
+                        xi = 0
+                        for step in cbeam.step:
+                            bname = step._mesh
+                            beam = Mbeams[bname]
+                            Lbi = beam.L
+                            xi += Lbi
+                            qaxial = waxial.qi(xi)
+                            qinp = winplane.qi(xi)
+                            qoutp = woutplane.qi(xi)
+                            # check load on segment
+                            try:
+                                Li = winplane.Li(xi, Lbi)
+                            except RuntimeWarning:
+                                continue # no load should be applied to this segment
+                            # set load for mesh element
+                            print(f'Element: {bname} --> {Lbi:4.2f} {xi:4.2f} {qinp} {qoutp} {Li}')
+                            mlb_beam[bname].line = [qaxial[0], qinp[0], qoutp[0],
+                                                    qaxial[1], qinp[1], qoutp[1],
+                                                    Li[0], Li[1], lbload.title]
                 #
                 # Beam point load process
-                for pbload in CBloads.point:
-                    label = pbload.load_name
-                    print(f'Load Title: {label} - Point Load')
-                    L1 = pbload.distance
-                    # start loop beam steps
-                    xi = 0                    
-                    for step in cbeam.step:
-                        bname = step._mesh
-                        beam = mbeams[bname]
-                        Lbs = beam.L
-                        xi += Lbs
-                        #
-                        if xi < L1: # no load for this beam step
-                            continue
-                        else:
-                            L2 = xi - L1
-                            Li = (Lbs - L2)
-                            self._beam_pload(beam, pbload,
-                                             mlb_node, mlb_beam,
-                                             Li=Li)
-                            break
+                for rows in CBloads.point.values():
+                    for pbload in rows:
+                        label = pbload.load_name
+                        print(f'Load Title: {label} - Point Load')
+                        L1 = pbload.distance
+                        # start loop beam steps
+                        xi = 0                    
+                        for step in cbeam.step:
+                            bname = step._mesh
+                            beam = Mbeams[bname]
+                            Lbs = beam.L
+                            xi += Lbs
+                            #
+                            if xi < L1: # no load for this beam step
+                                continue
+                            else:
+                                L2 = xi - L1
+                                Li = (Lbs - L2)
+                                self._beam_pload(beam, pbload,
+                                                 mlb_node, mlb_beam,
+                                                 Li=Li)
+                                break
             #
             # Nodal load process
             for CPname, CPloads in Clb_item.points.items():
@@ -312,24 +314,24 @@ class Meshing:
                     print(f'Load Title: {label} - Nodal Load')
                     #
                     try:
-                        node_name = mnodes.get_node_name(point[:3])
-                        node = mnodes[node_name]
+                        node_name = Mnodes.get_point_name(point[:3])
+                        node = Mnodes[node_name]
                         print(f'---> Load: {CPname} Point: {node_name} Node: {node.name}')
                         mlb_node[node.name].load = [*pload[:6], pload[7]]
                     except IOError: # check if point load on a beam
-                        for beam_name, beam in mbeams.items():
+                        for beam_name, beam in Mbeams.items():
                             # TODO: avoid to loop all beams elements
                             if beam.intersect_point(point):
                                 self._beam_pload(beam, pload,
                                                  mlb_node, mlb_beam, 
                                                  point=point)
                                 break
-            #
-            # wave
-            for wname, wload in Clb_item.wave.items():
-                mlbasic[Clb_name].wave(wave_load=wload.seastate,
-                                       design_load=wload.design_load,
-                                       criterion=wload.criterion)
+        #
+        Clwave = Cloads.metocean()
+        Mlwave = mload.metocean()
+        # Metocean
+        for name, condition in Clwave.items():
+            Mlwave[name] = condition
         #
         #print('--> end mesh loading')
     #

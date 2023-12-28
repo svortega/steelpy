@@ -50,7 +50,7 @@ class NodesIM(NodeBasic):
         """
         """
         super().__init__(system)
-        #self._boundaries = boundaries
+        self._labels : list = []
         #
         self._x: array = array('f', [])
         self._y: array = array('f', [])

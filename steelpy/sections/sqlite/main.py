@@ -9,7 +9,7 @@ import re
 #
 
 # package imports
-from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
+from steelpy.utils.sqlite.utils import create_connection, create_table
 #
 from .angle import AngleSQLite
 from .tubular import TubularSQL
@@ -27,25 +27,24 @@ from ..inmemory.box import BoxBasic
 from ..inmemory.channel import ChannelBasic
 from ..inmemory.tee import TeeBasic
 from ..inmemory.angle import AngleBasic
-from ..inmemory.operations import SectionBasic
+#from ..inmemory.operations import SectionBasic
+from steelpy.sections.process.utils import SectionMain
 #
 from steelpy.utils.dataframe.main import DBframework
 
 #
-class SectionSQL(SectionBasic):
-    __slots__ = ['_labels', '_number', '_title', '_type',
-                 '_tubular', '_solid', '_ibeam', '_box',
+class SectionSQL(SectionMain):
+    __slots__ = ['_tubular', '_solid', '_ibeam', '_box',
                  '_channel', '_tee', '_angle', '_default',
-                 'db_file']    
+                 'db_file']    # '_labels', '_number', '_title', '_type',
 
     def __init__(self, db_file: str,
                  db_system: str = "sqlite"):
         """
         """
-        super().__init__()
+        #super().__init__()
         #
         self.db_file = db_file
-        self._create_table()
         #
         self._tubular = TubularSQL(db_file=db_file)
         self._solid = SolidSectionSQL(db_file=db_file)
@@ -54,9 +53,42 @@ class SectionSQL(SectionBasic):
         self._channel = ChannelSQLite(db_file=db_file)
         self._tee = TeeSQLite(db_file=db_file)
         self._angle = AngleSQLite(db_file=db_file)
-
+        #
+        conn = create_connection(self.db_file)
+        with conn:         
+            self._create_table()
     #
-    # 
+    #
+    @property
+    def _labels(self):
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:           
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Sections.name from tb_Sections ")
+            items = cur.fetchall()
+        return [item[0] for item in items]
+    #
+    @property
+    def _type(self):
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:           
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Sections.type from tb_Sections ")
+            items = cur.fetchall()
+        return [item[0] for item in items]
+    #
+    @property
+    def _title(self):
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:           
+            cur = conn.cursor()
+            cur.execute("SELECT tb_Sections.title from tb_Sections ")
+            items = cur.fetchall()
+        return [item[0] for item in items]    
+    #
     #
     # def push_sections(self):
     #    """
@@ -148,6 +180,11 @@ class SectionSQL(SectionBasic):
         title = df.pop('title')
         df.insert(len(df.columns), 'title', title)
         return df
+    
+    @df.setter
+    def df(self, df):
+        """ """
+        super().df(df)
 #
 #
 #
@@ -160,9 +197,8 @@ class SectionSQL(SectionBasic):
 #    return summary
 #
 #
-def get_section2(section_name):
+def get_section2(conn, section_name):
     """ """
-    conn = create_connection(self.db_file)
     with conn:
         row = _get_section(conn, section_name)
     return row[1:]

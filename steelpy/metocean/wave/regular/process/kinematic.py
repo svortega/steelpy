@@ -367,12 +367,13 @@ class KinematicResults:
 #
 #
 def get_kinematic(n: int, z: list, B: list, Tanh: list, d: float,
-                  surface: list, depth_points: int, #zdepth, 
+                  surface: list,
+                  depth_points: int, #zdepth, 
                   is_finite: bool, g: exec = 9.80665):
     """
     n : order - Number of Fourier components or order of Stokes or cnoidal theory
-    z :
-    B :
+    z : Solution vector
+    B : Fourier coefficients
     TanH :
     d : water depth
     surface x :
@@ -389,9 +390,9 @@ def get_kinematic(n: int, z: list, B: list, Tanh: list, d: float,
     ce = z[5] / np.sqrt(z[1])
     R = 1 + z[9] / z[1]
     #
-    etas = surface['eta']
-    xx = surface['x']
-    phase = surface['phase']
+    etas = surface['eta'].to_numpy()
+    xx = surface['x'].to_numpy()
+    phase = surface['phase'].to_numpy()
     #time = surface['t']
     #
     #npt = len(etas)

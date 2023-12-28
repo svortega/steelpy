@@ -5,7 +5,7 @@
 # Python stdlib imports
 from __future__ import annotations
 from array import array
-from itertools import chain
+from itertools import chain, count
 from collections import Counter
 from collections import defaultdict
 from collections.abc import Mapping
@@ -15,9 +15,8 @@ from typing import NamedTuple
 from math import  isclose, dist
 #
 # package imports
-#from steelpy.trave3D.preprocessor.assemble import get_bandwidth
-#
-
+from steelpy.utils.math.operations import zeros, to_matrix
+from steelpy.utils.dataframe.main import DBframework
 
 
 #
@@ -46,15 +45,19 @@ class NodeBasic(Mapping):
     _sets : List[tuple]
         set with node/element
     """
-    #__slots__ = ['_system', 'db_file', '_labels']
+    __slots__ = ['_labels', '_number', '_system', 
+                 '_jbc', '_db','_plane']
 
     def __init__(self, system:str) -> None:
         """
         system : cartesian/cylindrical/spherical
         """
-        self._labels : list = []
+        #self._labels : list = []
         self._number : array = array('I', [])
         self._system = system # get_coordinate_system(system)
+        #
+        self._jbc: array = array('I', [])
+        self._db = DBframework()        
     #
     def __len__(self) -> int:
         return len(self._labels)
@@ -62,11 +65,45 @@ class NodeBasic(Mapping):
     def __iter__(self):
         """
         """
-        return iter(self._labels)
+        nodes = sorted(self._labels)
+        return iter(nodes)
 
     def __contains__(self, value) -> bool:
         return value in self._labels
+    
+    def __str__(self, units:str="si") -> str:
+        """ """
+        lenght = ' m'
+        space = " "
+        output = "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += f"{33*space}NODES\n"
+        output += "\n"
+        output += (f"Node {12*space} x  [{lenght}] {4*space} y  [{lenght}] {4*space} z  [{lenght}] ")        
+        output += "\n"
+        output += "{:}\n".format(80*".")
+        output += "\n"
+        #
+        for key in self._labels:
+            node = self.__getitem__(key)
+            output += node.__str__()
+        return output    
     #
+    #
+    # ----------------------------------
+    #
+    @property
+    def plane(self) -> NamedTuple:
+        """ """
+        return self._plane
+    #
+    @plane.setter
+    def plane(self, plane: NamedTuple) -> None:
+        """ """
+        self._plane = plane
+    #    
+    # ----------------------------------
     #
     @property
     def system(self) -> tuple:
@@ -135,6 +172,58 @@ class NodeBasic(Mapping):
         while True:
             yield n
             n += 1
+    #
+    # ----------------------------------
+    #
+    #@property
+    def jbc(self, supports):
+        """ joints with boundary"""
+        nnp = len(self._labels)
+        jbc = zeros(nnp, 6, code='I')
+        #
+        for node_name, bd in supports.items():
+            node = self.__getitem__(bd.node)
+            #ind = self._nodes[bd.node].index
+            ind = node.index
+            jbc[ind] = bd[:6]
+        #
+        #jbc = self.jbc.transposed()
+        #jbc = boundaries.transposed()
+        #jbc = list(it.chain.from_iterable(jbc))
+        #
+        #jbc = to_matrix(jbc, 6)
+        df_jbc = self._db.DataFrame(data=jbc,
+                                    columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])
+        jbc = df_jbc[self._plane.dof].values.tolist()
+        jbc = list(chain.from_iterable(jbc))
+        #
+        counter = count(start=1)
+        jbc = [next(counter) if item == 0 else 0
+               for item in jbc]
+        # update jbc
+        self._jbc = array('I', jbc)
+        #
+        jbc = to_matrix(self._jbc, self._plane.ndof)
+        df_jbc = self._db.DataFrame(data=jbc, columns=self._plane.dof)
+        node_name = list(self._labels)
+        df_jbc['node_name'] = node_name
+        df_jbc = df_jbc.set_index('node_name', drop=True)    
+        # remove rows with zeros
+        #df_jbc = df_jbc[df_jbc.any(axis=1)]
+        #df_jbc.replace(0, self._db.nan, inplace=True)
+        #df_jbc = df_jbc.notnull()        
+        return df_jbc
+    #
+    def neq(self, supports):
+        """ Number the equations  in jbc from 1 up to the order.
+           Start assigning equation numbers for zero dof's
+           from 1 up;  only zero given a number. """
+        #
+        if not self._jbc:
+            self.jbc(supports)
+        neq = max(self._jbc)
+        #jbc = to_matrix(self._jbc, 6)
+        return neq
     #    
 #
 #

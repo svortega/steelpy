@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -17,26 +17,22 @@ import re
 #from steelpy.f2uModel.mesh.sqlite.nodes import get_node
 #from steelpy.material.matsql import get_materialSQL
 #from steelpy.sections.main import get_sectionSQL
-from steelpy.f2uModel.mesh.sqlite.process_sql import create_connection, create_table
+from steelpy.utils.sqlite.utils import create_connection, create_table
 #from steelpy.f2uModel.mesh.operations.elements  import (beam_Klocal, trans_3d_beam, Rmatrix)
 #from steelpy.f2uModel.mesh.operations.elements import BeamElementSQL
-from .beam import BeamSQL, get_connectivity
+from steelpy.f2uModel.mesh.sqlite.beam import BeamSQL, get_connectivity
 from steelpy.utils.dataframe.main import DBframework
 
 #
 #
 class ElementsSQL(Mapping):
-    __slots__ = ['_type', '_labels',
-                 '_beams', '_plane', 'db_file'] # '_number', 
+    __slots__ = ['_beams', '_plane', 'db_file']
     
     def __init__(self, db_file:str, plane: NamedTuple, 
                  db_system:str="sqlite") -> None:
         """
         """
         self.db_file = db_file
-        self._labels:list = []
-        #self._number: array = array('i', [])
-        self._type:list = []
         # create node table
         conn = create_connection(self.db_file)
         with conn:        
@@ -45,17 +41,40 @@ class ElementsSQL(Mapping):
         # TODO: 
         self._plane = plane
         self._beams = BeamSQL(db_file=db_file,
-                              labels=self._labels,
-                              element_type=self._type, 
+                              #labels=self._labels,
+                              #element_type=self._type, 
                               plane=self._plane)
     #
     #
-    #@property
-    #def _labels(self):
-    #    """ """
-    #    labels = self._beams._labels
-    #    return labels    
+    @property
+    def _labels(self):
+        """ """
+        table = 'SELECT tb_Elements.name FROM tb_Elements'
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table)
+            items = cur.fetchall()
+        return [item[0] for item in items]
     #
+    @property
+    def _type(self):
+        """ """
+        table = 'SELECT tb_Elements.type FROM tb_Elements'
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table)
+            items = cur.fetchall()
+        return [item[0] for item in items]
+    #
+    #
+    @property
+    def plane(self) -> NamedTuple:
+        """ """
+        return self._plane
+    
+    @plane.setter
     def plane(self, plane: NamedTuple):
         """ """
         self._plane = plane
@@ -113,6 +132,27 @@ class ElementsSQL(Mapping):
 
     def __contains__(self, value) -> bool:
         return value in self._labels
+    
+    def __str__(self, units:str="si") -> str:
+        """ """
+        lenght = ' m'
+        space = " "
+        output = "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += f"{33*space}ELEMENTS\n"
+        output += "\n"
+        output += (f"Element     Node1    Node2 {4*space} Material  Section {4*space}")
+        output += (f"Beta {3*space} Lenght {2*space} Title")
+        output += "\n"
+        output += "{:}\n".format(80*".")
+        output += "\n"
+        for key in self._labels:
+            element = self.__getitem__(key)
+            output += element.__str__()
+            #output += "\n"
+        return output
+    #
     #
     # TODO : get number from database
     def get_number(self, start:int=0):
@@ -166,7 +206,7 @@ class ElementsSQL(Mapping):
         """ """
         _table_elements = "CREATE TABLE IF NOT EXISTS tb_Elements(\
                             number INTEGER PRIMARY KEY NOT NULL,\
-                            name TEXT NOT NULL,\
+                            name NOT NULL,\
                             title TEXT,\
                             type TEXT NOT NULL,\
                             material_number INTEGER NOT NULL REFERENCES tb_Materials(number),\
@@ -176,7 +216,7 @@ class ElementsSQL(Mapping):
         _table_connectivity = "CREATE TABLE IF NOT EXISTS tb_Connectivity(\
                                 number INTEGER PRIMARY KEY NOT NULL,\
                                 element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
-                                node_number INTEGER REFERENCES tb_Nodes(name),\
+                                node_number INTEGER REFERENCES tb_Nodes(number),\
                                 node_end INTEGER NOT NULL);"
         #
         _table_univectors = "CREATE TABLE IF NOT EXISTS tb_DirectionCosines(\
@@ -187,7 +227,7 @@ class ElementsSQL(Mapping):
         _table_offset = "CREATE TABLE IF NOT EXISTS tb_Eccentricities(\
                             number INTEGER PRIMARY KEY NOT NULL,\
                             element_number INTEGER NOT NULL REFERENCES tb_Elements(number),\
-                            node_number INTEGER REFERENCES tb_Nodes(name),\
+                            node_number INTEGER REFERENCES tb_Nodes(number),\
                             node_end INTEGER NOT NULL,\
                             system TEXT NOT NULL,\
                             x DECIMAL,\
@@ -280,7 +320,7 @@ class ElementsSQL(Mapping):
                         raise Exception('element {:} already exist'.format(element_name))
                     except ValueError:
                         element_type = 'beam'
-                        mnumber = next(self.get_number())
+                        #mnumber = next(self.get_number())
                         # default
                         self._labels.append(element_name)
                         #self._number.append(mnumber)
@@ -297,6 +337,53 @@ class ElementsSQL(Mapping):
         return self._beams
         #return ElementType(item_type='beam',
         #                   cls_type=self._beams, cls=self)
+    #
+    #@property
+    #def sections(self):
+    #    """ """
+    #    1 / 0
+    #    return self._sections
+    #
+    #@property
+    #def materials(self):
+    #    """ """
+    #    1 / 0
+    #    return self._materials
+    #
+    #
+    def max_bandwidth(self,  jbc):
+        """
+        calculate max bandwidth
+        ------------------------  
+        npi : connectivity end 1
+        npj : connectivity end 2
+        jbc : nodes freedom
+        nel: number of elements
+        if we
+        npi ,npj, jbc, nel
+        """
+        #TODO : plates 
+        ibndm4 = [0]
+        for key in self.self._labels:
+            element = self.__getitem__(key)
+            #idof, jdof = element.DoF
+            #bc1 = jbc[idof]
+            #bc2 = jbc[jdof]
+            nodes = element.connectivity
+            #for node in nodes:
+            bc1 = jbc.loc[nodes[0]].tolist()
+            bc2 = jbc.loc[nodes[1]].tolist()
+            ieqn = bc1 + bc2
+            try:
+                ibndm4.append(max([abs(ieqn1 - ieqn2)
+                                   for x, ieqn1 in enumerate(ieqn) if ieqn1 > 0
+                                   for ieqn2 in ieqn[x+1:] if ieqn2 > 0]))
+            except ValueError:
+                continue
+        #
+        return max(ibndm4) + 1
+    #    
+    #
     #
     @property
     def df(self):
@@ -315,8 +402,14 @@ class ElementsSQL(Mapping):
     def df(self, df):
         """nodes in dataframe format"""
         try:
-            df.columns
-            1 / 0
+            columns = list(df.columns)
+            group = df.groupby("type", sort=False)
+            for memb_type, elements in group:
+                if re.match(r"\b(beam(s)?)\b", memb_type, re.IGNORECASE):
+                    elements.drop(['node_3', 'node_4'], axis=1, inplace=True)
+                    self._beams.df = elements
+                else:
+                    raise NotImplemented(f"element type {memb_type}")            
             #self._nodes.df =df
         except AttributeError:
             raise IOError('Node df not valid')    
@@ -482,7 +575,7 @@ def get_connectivities(conn):
                 WHERE tb_Connectivity.element_number = tb_Elements.number \
                 AND tb_Nodes.number = tb_Connectivity.node_number;")
     connodes = cur.fetchall()
-    xxx = [x for i, j, x in sorted(connodes)]
+    #xxx = [x for i, j, x in sorted(connodes)]
     #memb = defaultdict(list)
     #for item in connodes:
     #    memb[item[0]].append()
