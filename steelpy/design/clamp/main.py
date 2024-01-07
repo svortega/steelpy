@@ -16,8 +16,8 @@ from steelpy.design.clamp.process.shell import ClampShell
 from steelpy.design.clamp.process.neoprene import Neoprene
 from steelpy.design.clamp.process.bolts import Bolts
 from steelpy.design.codes.api.main import API_design
-from steelpy.sections.main import Sections
-from steelpy.material.main import Materials
+from steelpy.sections.main import Section
+from steelpy.material.main import Material
 
 #
 #-------------------------------------------------
@@ -74,10 +74,10 @@ class ClampDesign(ISO19902, OTH88283):
         #
         db_file = "beam_f2u.db"
         mesh_type = 'inmemory'
-        self._section = Sections(mesh_type=mesh_type,
+        self._section = Section(mesh_type=mesh_type,
                                  db_file=db_file)
         #
-        self._material = Materials(mesh_type=mesh_type,
+        self._material = Material(mesh_type=mesh_type,
                            db_file=db_file)
         #
         self._shell = ClampShell(material=self._material,
