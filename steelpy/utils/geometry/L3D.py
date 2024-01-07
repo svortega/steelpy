@@ -1,14 +1,14 @@
 # 
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
 # from math import sqrt
 from dataclasses import dataclass
-# from typing import NamedTuple, Tuple, Union, List, Dict, Iterator
+# from typing import NamedTuple
 
 # package imports
-from steelpy.f2uModel.mesh.process.nodes import CoordCartesian as Point
+from steelpy.ufo.mesh.elements.nodes import CoordCartesian as Point
 
 # from point import Point
 # from euclid import Point3 as Point

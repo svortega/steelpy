@@ -3,41 +3,57 @@
 #
 # Python stdlib imports
 from __future__ import annotations
-from collections.abc import Mapping
+from dataclasses import dataclass
 
 # package imports
+from steelpy.utils.sqlite.main import ClassBasicSQL
 #from steelpy.process.units.units import Units
-from steelpy.utils.sqlite.utils import create_connection, create_table
+#from steelpy.utils.sqlite.utils import create_connection, create_table
 
 
 
 #
-class WaveBasic(Mapping):
-    
+@dataclass
+class WaveBasic(ClassBasicSQL):
+    """ """
     #__slots__ = ['db_file']
-    #
-    #
-    #
     #
     def __init__(self, db_file: str):
         """
         """
-        self.db_file = db_file
+        super().__init__(db_file)
+    #
+    #
+    def _push_wave(self, conn, wave_data):
+        """ get wave data"""
         #
-        # create table
-        conn = create_connection(self.db_file)
-        with conn:
-            self._create_table(conn)         
-    
-    def __len__(self) -> int:
-        return len(self._label)
-
-    def __iter__(self):
-        """
-        """
-        return iter(self._label)
-    
-    def __contains__(self, value) -> bool:
-        return value in self._label
-    
+        project = (*wave_data, None, self._criteria)
+        table = 'INSERT INTO Wave(name, type, title, criteria_id) \
+                 VALUES(?,?,?,?)'
+        #
+        #push
+        cur = conn.cursor()
+        cur.execute(table, project)
+        wave_id = cur.lastrowid
+        #
+        #project = (self._criteria, )
+        #table = "SELECT * FROM Wave \
+        #         WHERE name = ? AND type = 'regular'"
+        #cur = conn.cursor()
+        #cur.execute(table, project)
+        #wave = cur.fetchone()
+        #wave
+        #1 / 0
+        return wave_id
+    #
+    def _pull_wave(self, conn, wave_name):
+        """ """
+        project = (wave_name, self._criteria)
+        table = "SELECT * FROM Wave \
+                 WHERE name = ? AND criteria_id = ? \
+                 AND type = 'regular'"
+        cur = conn.cursor()
+        cur.execute(table, project)
+        wave = cur.fetchone()
+        return wave
 #

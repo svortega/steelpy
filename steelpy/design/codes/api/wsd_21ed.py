@@ -700,8 +700,8 @@ class APIwsd21ed:
     #
     def Combination(self):
         #
-        # Sections 3.3.1 and 3.3.2 apply to overall member behavior
-        # while Sections 3.3.3 and 3.3.4 apply to local buckling
+        # Section 3.3.1 and 3.3.2 apply to overall member behavior
+        # while Section 3.3.3 and 3.3.4 apply to local buckling
         #
         #
         # 3.3.2 Combined Axial Tension and Bending

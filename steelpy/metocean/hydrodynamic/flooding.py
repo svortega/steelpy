@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports

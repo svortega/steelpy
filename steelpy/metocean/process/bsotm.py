@@ -25,7 +25,7 @@ class BSOTM:
     """
     Calculate the base shear and overturning moment of single pile
 
-    Parameters
+    Parameter
     ----------
     ux : horizontal wave particle velocity
     ax : horizontal wave particle acceleration

@@ -6,8 +6,6 @@ from __future__ import annotations
 
 #
 # package imports
-#from .marine_growth import MarineGrowth
-#from .morison import CdCmCoefficients
 from .hydro_diametre import HydroDiametre
 from .flooding import Flooding
 #
@@ -20,7 +18,7 @@ from steelpy.utils.sqlite.utils import create_connection, create_table
 
 #
 #@dataclass
-class Hydrodynamic:
+class HydroProperty:
     """
     """
     __slots__ = ['flooding', 
@@ -69,13 +67,13 @@ class Hydrodynamic:
     def _create_table(self, conn) -> None:
         """ """
         #
-        table = "CREATE TABLE IF NOT EXISTS tb_Properties (\
+        table = "CREATE TABLE IF NOT EXISTS Property (\
                     number INTEGER PRIMARY KEY NOT NULL,\
-                    condition_number INTEGER NOT NULL REFERENCES tb_Condition(number),\
-                    mg_number INTEGER REFERENCES tb_MarineGrowth(number),\
-                    cdcm_number INTEGER REFERENCES tb_CdCm(number), \
-                    flooding_number INTEGER, \
-                    cshielding_number INTEGER, \
+                    condition_number INTEGER NOT NULL REFERENCES Condition(number),\
+                    mg_id INTEGER REFERENCES MarineGrowth(number),\
+                    cdcm_id INTEGER REFERENCES CdCm(number), \
+                    flooding_id INTEGER, \
+                    cshielding_id INTEGER, \
                     element_refinament INTEGER, \
                     title TEXT);"
         create_table(conn, table)    

@@ -46,33 +46,6 @@ def create_table(conn, create_table_sql):
 #
 # ------------------------------------------------------------------
 #
-#
-def check_nodes(conn, node_name: int|str):
-    """check if node exist"""
-    cur = conn.cursor()
-    if isinstance(node_name, str):
-        cur.execute(f"SELECT * FROM tb_Nodes \
-                      WHERE name = '{node_name}' ;")
-    else:
-        cur.execute(f"SELECT * FROM tb_Nodes \
-                      WHERE name = {node_name} ;")
-    node = cur.fetchone()
-    return node    
-#
-#
-def check_element(conn, element_name: int|str):
-    """ """
-    cur = conn.cursor()
-    if isinstance(element_name, str):
-        cur.execute (f"SELECT * FROM tb_Elements \
-                       WHERE name = '{element_name}';")
-    else:
-        cur.execute (f"SELECT * FROM tb_Elements\
-                       WHERE name = {element_name};")
-    row = cur.fetchone()
-    return row
-#
-#
 # ------------------------------------------------------------------
 # 
 #

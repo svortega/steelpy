@@ -88,7 +88,7 @@ class MaterialIM(Mapping):
         _index = self._labels.index(material_name)
         1/0
         del self._labels[material_name]
-        #del self._labels[material_number]
+        #del self._labels[material_id]
     
     def __len__(self):
         return len(self._labels)
@@ -122,7 +122,7 @@ class MaterialIM(Mapping):
         1/0
         #_items = {_item.number:key for key, _item in self._materials.items()}
         try:
-            #material_name = _items[material_number]
+            #material_name = _items[material_id]
             return self.__getitem__(material_name)
         except KeyError:
             raise KeyError('Invalid material name')
@@ -187,8 +187,8 @@ class MaterialIM(Mapping):
             #
             self._labels.extend(elastic.name)
             self._type.extend(elastic.type)
-            material_number = [next(self.get_number()) for _ in elastic.name]
-            self._number.extend(material_number)
+            material_id = [next(self.get_number()) for _ in elastic.name]
+            self._number.extend(material_id)
             #
             self._elastic.df = elastic
         except AttributeError:

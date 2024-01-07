@@ -18,7 +18,7 @@ def Chapter_G(self, section, material):   # @hami2230 - widespread changes to th
     G1. General Provisions
     G2. I-Shapped Members and Channels
     G3. Single Angles and Tees
-    G4. Rectangular HSS, Box-Shaped Sections and Singly Symmetric Shapes
+    G4. Rectangular HSS, Box-Shaped Section and Singly Symmetric Shapes
     G5. Round HSS
     G6. Weak Axis Shear in Doubly Symmetric and Singly Symmetric Shapes
     G7. Beams and Girders with Web Openings

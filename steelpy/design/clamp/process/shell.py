@@ -7,9 +7,9 @@ from typing import ClassVar # NamedTuple, List,
 
 # package imports
 from steelpy.utils.units.main import Units
-#from steelpy.f2uModel.material.main import Materials
+#from steelpy.f2uModel.material.main import Material
 #from steelpy.sections.tubular import Tubular
-#from steelpy.f2uModel.sections.main import Sections
+#from steelpy.f2uModel.sections.main import Section
 #from steelpy.process.load.actions import Actions
 #from steelpy.codes.api.design import API_design
 #
@@ -35,7 +35,7 @@ class ClampShell:
         Hgap :  pull-up gap
         """
         #self._units = Units()
-        #_material = Materials()
+        #_material = Material()
         #_material[1] = 'elastic'
         self._material = material
         self._material["clamp_shell"] = 'elastic'
@@ -99,7 +99,7 @@ class ClampStiffener:
         h : Height of stiffener
         """
         #self._units = Units()
-        #_material = Materials()
+        #_material = Material()
         #_material[1] = 'elastic'
         #self._material = _material[1]
         #
@@ -121,7 +121,7 @@ class ClampStiffener:
         #
         #db_file = "beam_f2u.db"
         #mesh_type = 'inmemory'
-        #self.Tsection = Sections(mesh_type=mesh_type,
+        #self.Tsection = Section(mesh_type=mesh_type,
         #                         db_file=db_file)        
         self.cls._section["Tsection"] = "T"
         self.cls._material["Tsection"] = 'elastic'

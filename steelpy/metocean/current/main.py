@@ -3,58 +3,52 @@
 #
 from __future__ import annotations
 # Python stdlib imports
-from collections.abc import Mapping
+#from collections.abc import Mapping
 #from array import array
 from dataclasses import dataclass
-from operator import itemgetter
+#from operator import itemgetter
 #from typing import NamedTuple
 import re
 
 # package imports
-from steelpy.metocean.hydrodynamic.utils import HydroBasic, HydroItem
+from steelpy.metocean.current.utils.main import CurrentBasic
+from steelpy.metocean.hydrodynamic.utils.main import HydroItem
 from steelpy.utils.sqlite.utils import create_connection, create_table
-#from steelpy.utils.units.main import Number
+#
 import numpy as np
 #
 #
 #
 #
-class Current(HydroBasic):
+class Current(CurrentBasic):
     """
     """
-    __slots__ = ['_current', 'db_file']
+    __slots__ = ['db_file', '_criteria']
     
-    def __init__(self, db_file: str):
+    def __init__(self, criteria: str|int, db_file: str):
         """
         """
         super().__init__(db_file)
-        #
-        self._current:dict = {}
-        #
-        # create table
-        #conn = create_connection(self.db_file)
-        #with conn:
-        #    self._create_table(conn)        
+        self._criteria = criteria
     #
     #
     def __getitem__(self, name):
         """
         """
-        #
         conn = create_connection(self.db_file)
         with conn:
-            data = self._pull_data(conn, current_name=name)
+            data = self._pull_data(conn, name=name)
         #
         if not data:
             raise IOError(f'Current {name} not found')
         #
         return CurrentItem(name=name,
+                           criteria= self._criteria, 
                            db_file=self.db_file)
-
     #
     #
-    def get_data(self, values):
-        """ [title, profile (linear/exponential/user), velocity_top, velocity_bottom] """
+    def get_dataX(self, values):
+        """ [profile (linear/exponential/user), velocity_top, velocity_bottom] """
         outval = [None, None, None, None]
         #cprofile = outval[2]
         if isinstance(values, dict):
@@ -62,22 +56,22 @@ class Current(HydroBasic):
         else:
             #if isinstance(values[-1], str):
             #    cprofile = values.pop()
-            outval[0] = values[0]
+            #outval[0] = values[0]
             #
             try:
-                outval[1] = values[1]
-                if re.match(r"\b(user)\b", outval[1], re.IGNORECASE):
+                outval[0] = values[0]
+                if re.match(r"\b(user)\b", outval[0], re.IGNORECASE):
                     pass
                 
                 else:
                     try:
-                        outval[2] = values[2].value
+                        outval[1] = values[1].value
                         try:
-                            outval[3] = values[3].value
+                            outval[2] = values[2].value
                         #outval[idx] = item.value
                         except IndexError:
-                            outval[3] = outval[2]
-                            outval[1] = 'uniform' 
+                            outval[2] = outval[1]
+                            outval[0] = 'uniform' 
                     
                     except IndexError:
                         raise IOError('velocity_top missing')
@@ -91,23 +85,23 @@ class Current(HydroBasic):
         return outval
     #
     #
-    # ------------------
+    # --------------------------------------
     # SQL ops
-    # ------------------
     #
     def _create_table(self, conn) -> None:
         """ """
         # Main
-        table = "CREATE TABLE IF NOT EXISTS tb_Current (\
+        table = "CREATE TABLE IF NOT EXISTS Current (\
                     number INTEGER PRIMARY KEY NOT NULL,\
                     name NOT NULL,\
                     type TEXT NOT NULL,\
-                    title TEXT);"
+                    title TEXT, \
+                    criteria_id INTEGER NOT NULL REFERENCES Criteria(number));"
         create_table(conn, table)
         # Profile
-        table = "CREATE TABLE IF NOT EXISTS tb_CurrentProfile (\
+        table = "CREATE TABLE IF NOT EXISTS CurrentProfile (\
                     number INTEGER PRIMARY KEY NOT NULL,\
-                    current_number NOT NULL REFERENCES tb_Current(number),\
+                    current_id NOT NULL REFERENCES Current(number),\
                     elevation DECIMAL NOT NULL,\
                     velocity DECIMAL NOT NULL);"
         create_table(conn, table)
@@ -119,121 +113,99 @@ class Current(HydroBasic):
         """
         cur = conn.cursor()
         #
-        table = 'INSERT INTO tb_Current(name, type, \
-                                        title) \
-                                        VALUES(?,?,?)'
+        table = 'INSERT INTO Current(name, type,\
+                                        title, criteria_id)\
+                                        VALUES(?,?,?,?)'
         # push
         cur = conn.cursor()
         cur.execute(table, current_data)
     #
     #
-    def _pull_data(self, conn, current_name: str|int,
-                  item: str = "*"):
+    #def _pull_data(self, conn, current_name: str|int,
+    #              item: str = "*"):
+    #    """ """
+    #    #
+    #    project = (current_name,)
+    #    sql = 'SELECT {:} FROM Current WHERE name = ?'.format(item)
+    #    cur = conn.cursor()
+    #    cur.execute(sql, project)
+    #    data = cur.fetchone()
+    #    return data
+    #
+    def _pull_data(self, conn, name):
         """ """
-        #
-        project = (current_name,)
-        sql = 'SELECT {:} FROM tb_Current WHERE name = ?'.format(item)
+        project = (name, self._criteria)
+        table = "SELECT * FROM Current \
+                 WHERE name = ? AND criteria_id = ?"
         cur = conn.cursor()
-        cur.execute(sql, project)
+        cur.execute(table, project)
         data = cur.fetchone()
-        return data    
+        return data     
     #
     # --------------------------------------
     #
     def df(self, df, columns:dict|None=None):
         """ """
-        grpname = df.groupby(['name'])
-        for key, item in grpname:
-            #velmax = item["velocity"].max()
-            profile = item[["elevation", "velocity"]].values.tolist()
-            self.__setitem__(name=key[0], value=profile)
-            #item["velocity"] /= value
-            #item["velocity"] =  [vel.value / velmax.value for vel in item["velocity"]]
-            #profile = item[["elevation", "velocity"]].values.tolist()
-            #zlevel =  item["zlevel"].values.tolist()
-            #self._current[key[0]].profile = profile
-            
+        grouptype = df.groupby(['profile'])
+        #grpname = df.groupby(['name'])
+        for ctype, dfdata in grouptype:
+            if re.match(r"\b(constant|linear)\b", ctype[0], re.IGNORECASE):
+                for item in dfdata.itertuples():
+                    profile = [item.profile, item.elevation, item.velocity]
+                    self.__setitem__(name=item.name, value=profile)
+                #print('---')
+                
+            elif re.match(r"\b(user|profile)\b", ctype[0], re.IGNORECASE):
+                grpname = df.groupby(['name'])
+                for key, item in grpname:
+                    #velmax = item["velocity"].max()
+                    profile = item[['elevation', 'velocity']].values.tolist()
+                    self.__setitem__(name=key[0], value=profile)
+                    #item["velocity"] /= value
+                    #item["velocity"] =  [vel.value / velmax.value for vel in item["velocity"]]
+                    #profile = item[["elevation", "velocity"]].values.tolist()
+                    #zlevel =  item["zlevel"].values.tolist()
+                    #self._current[key[0]].profile = profile
+            else:
+                raise IOError(f' Profile {ctype[0]} not valid')
         #print('-->')
 #
 #
 #
 @dataclass
 class CurrentItem(HydroItem):
-    __slots__ = ['name', '_db_file',
+    __slots__ = ['name', '_db_file', '_criteria', 
                  '_depth', '_eta', 'zd']
     
-    def __init__(self, name:int|str, db_file: str):
+    def __init__(self, name:int|str, criteria: str|int,
+                 db_file: str):
         """ """
-        #self.name = name
-        #self.tvelocity = vel_top
-        #self.bvelocity = vel_bottom
-        #self.cprofile = profile
-        #self._profile: list = []
-        self._depth: float = 0.0
-        #
-        #self._db_file = db_file
+        #self._depth: float = 0.0
+        self._criteria = criteria
         super().__init__(name=name, db_file=db_file)
     #
-    #@property
-    #def profile(self):
+    #
+    # -------------------------------------------
+    #
+    #def _pull_itemX(self, conn):
     #    """ """
-    #    if not self._profile:
-    #        Vct = self.tvelocity
-    #        #zd = (self.zd + self._depth) / max(self._depth + self._eta)
-    #        zd = self.zd[::-1]
-    #        val = (zd + self._depth) / max(self._depth + self._eta)
-    #        #1/0
-    #        val = np.power(np.abs(val), 1.0 / 7.0)
-    #        profile = []
-    #        for idx, item in enumerate(zd):
-    #            profile.append([item, val[idx]])
-    #        #self._profile = [self.zd, np.power(np.abs(Vct * zd), 1.0 / 7.0)]
-    #        self._profile = profile
-    #    1/0
-    #    print('-->')
-    #    return self._profile
-    #
-    #@profile.setter
-    #def profile(self, value: list[list]):
-    #    """ """
-    #    prof = []
-    #    for item in value:
-    #        #try:
-    #        elev = item[0].value
-    #        #except AttributeError:
-    #        #    elev = item[0]
-    #        velocity = item[1].value
-    #        prof.append([elev, velocity])
-    #    #
-    #    prof.sort(key=itemgetter(0), reverse=True)
-    #    #
-    #    conn = create_connection(self._db_file)
-    #    with conn:        
-    #        self._push_profile(conn, profile_data=prof)
-    #    #
-    #    #self._profile = prof
-    #    #1 / 0
-    #    #print('-->')
-    #
-    #
-    def _pull_item(self, conn):
-        """ """
-        item_name = (self.name, )
-        cur = conn.cursor()
-        table = 'SELECT * FROM tb_Current WHERE name = ?'
-        cur.execute(table, item_name)
-        item = cur.fetchone() 
-        return item    
+    #    item_name = (self.name, )
+    #    cur = conn.cursor()
+    #    table = 'SELECT * FROM Current WHERE name = ?'
+    #    cur.execute(table, item_name)
+    #    item = cur.fetchone() 
+    #    return item    
     #
     #
     def _pull_profile(self, conn):
         """get profile data"""
-        item = self._pull_item(conn)
+        item = self._pull_current(conn)
         #
+        #1 / 0
         if re.match(r"\b(profile)\b", item[2], re.IGNORECASE):
             mg_name = (item[0], )
             cur = conn.cursor()
-            table = 'SELECT * FROM tb_CurrentProfile WHERE current_number = ?'
+            table = 'SELECT * FROM CurrentProfile WHERE current_id = ?'
             cur.execute(table, mg_name)
             profile = cur.fetchall()
             profile = [item[2:] for item in profile]
@@ -247,18 +219,18 @@ class CurrentItem(HydroItem):
         """ """
         #current_name = (self.name, )
         #
-        #table = f"UPDATE tb_Current \
+        #table = f"UPDATE Current \
         #         SET type = 'profile' \
         #         WHERE name = ?"
         #cur = conn.cursor()
         #cur.execute(table, current_name)        
         #
         #cur = conn.cursor()
-        #table = 'SELECT * FROM tb_Current WHERE name = ?'
+        #table = 'SELECT * FROM Current WHERE name = ?'
         #cur.execute(table, current_name)
         #current = cur.fetchone()        
         #
-        current = self._pull_item(conn)
+        current = self._pull_current(conn)
         #
         # Converting velocity to SI units
         #try:
@@ -268,13 +240,41 @@ class CurrentItem(HydroItem):
         #
         profile = tuple((current[0], *item, ) for item in profile_data)
         cur = conn.cursor()
-        table = 'INSERT INTO tb_CurrentProfile(current_number, \
+        table = 'INSERT INTO CurrentProfile(current_id, \
                                                 elevation, velocity) \
                                                 VALUES(?,?,?)'
         # push
         cur = conn.cursor()
         cur.executemany(table, profile)
         #print('--->')
+    #
+    #
+    def _push_current(self, conn, data):
+        """ get wave data"""
+        #
+        project = (*data, None, self._criteria)
+        table = 'INSERT INTO Current(name, type, title, criteria_id) \
+                 VALUES(?,?,?,?,?)'
+        #
+        #push
+        cur = conn.cursor()
+        cur.execute(table, project)
+        number = cur.lastrowid
+        #
+        return number
+    #
+    def _pull_current(self, conn):
+        """ """
+        project = (self.name, self._criteria)
+        table = "SELECT * FROM Current \
+                 WHERE name = ? AND criteria_id = ?"
+        cur = conn.cursor()
+        cur.execute(table, project)
+        data = cur.fetchone()
+        return data    
+    #
+    #
+    # -------------------------------------------
     #
     def seastate(self, d:float, z:list, eta:list):
         """ """

@@ -10,19 +10,10 @@ from __future__ import annotations
 #from datetime import datetime as dt
 
 # package imports
-#from steelpy.f2uModel.mesh.main import MeshPlane
-# steelpy.trave3D
-#from .preprocessor.mass import form_mass
-from .processor.dynamic import eigen, trnsient
-from .processor.static import StaticSolver
-#from .postprocessor.main import Results
+from steelpy.trave.process.dynamic import eigen, trnsient
+from steelpy.trave.process.solution import UnSolver
+from steelpy.trave.postprocess.main import PostProcess
 #
-from .postprocessor.main import PostProcess
-#
-#from .beam.main import Beam
-#
-#from steelpy.utils.sqlite.main import ClassMainSQL
-#from steelpy.utils.sqlite.utils import create_table
 #
 #
 #
@@ -33,11 +24,12 @@ class TraveItem:
     A program for static & dynamic analysis
     of 3-d framed structures
     """
-    __slots__ = ['_plane2D', '_postprocess',
+    __slots__ = ['_plane2D', '_postprocess', '_solver', 
                  'db_file', '_build', '_name']
     #'_mesh', '_load', '_f2u','_results', 
     
     def __init__(self, mesh,
+                 name: str|None = None, 
                  sql_file: str|None = None, 
                  log: bool = False) -> None:
         """
@@ -64,12 +56,14 @@ class TraveItem:
         #self._postprocess = PostProcess(mesh=self._mesh,
         #                                sql_file=self.db_file)
         #
+        self._solver = UnSolver(mesh=self._mesh)
+        #
         #if not name:
-        name = f'{self._mesh._name}_res'
+        #    name = self._mesh._name
         #
         self._postprocess = PostProcess(mesh=self._mesh,
-                                        name=name,
-                                        sql_file=sql_file)
+                                        name=name)
+                                        #sql_file=sql_file)
         
     #
     #@property
@@ -97,7 +91,8 @@ class TraveItem:
         second_order : Second order (True/False)
         """
         #
-        static = StaticSolver(plane2D=self._plane2D)
+        #static = StaticSolver(plane2D=self._plane2D)
+        static = self._solver.static()
         #
         if self._mesh:
             #self._mesh = mesh
@@ -133,7 +128,7 @@ class TraveItem:
             #
             #self._mesh.Un = Udf
             #
-            self._postprocess.Un = Udf
+            self._postprocess.Un.df = Udf
             #self._postprocess = PostProcess(mesh=self._mesh)
         else:
             return static

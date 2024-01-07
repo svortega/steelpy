@@ -1341,13 +1341,13 @@ def ChapterF(self, section, material):
                         _lambda_pf = self._lambda_p_flange
                         _lambda_rf = self._lambda_r_flange_b
                         #
-                        # a) For Sections With NonCompact Flanges
+                        # a) For Section With NonCompact Flanges
                         if "noncompact" in self.compacness_flexure:                   
                             _Mn_F3_2 = (_Mpx - (_Mpx - 0.7 * material.Fy * section.Zey) *
                                         ((_lambda_F3_2 - _lambda_pf) /
                                          (_lambda_rf - _lambda_pf)))      
                             _Mn_F3_2_flag = '(F3.2a)'
-                        # b) For Sections With Slender Flanges
+                        # b) For Section With Slender Flanges
                         else:             
                             _Mn_F3_2 = (0.9 * material.E * self.kc * section.Zey / _lambda_F3_2**2)
                             _Mn_F3_2_flag = '(F3.2b)'
@@ -1799,18 +1799,18 @@ def ChapterF(self, section, material):
             self.Fcry_flag = '(F6-4)'
             #
             #
-            # (F6.2a) For Sections with Compact Flanges
+            # (F6.2a) For Section with Compact Flanges
             if "compact" in self.compacness_flexure:
                 _Mn_F6_2 = _Mn_F6_1
                 _Mn_F6_2_flag = '(F6.1)'
-            # F6.2b For Sections with Non Compact Flanges 
+            # F6.2b For Section with Non Compact Flanges 
             elif "noncompact" in self.compacness_flexure:    
                 _Mn_F6_2 = (_Mpy - (_Mpy - 0.70 * material.Fy * section.Zez) *
                             ((_lambda_F6 - _lambda_pf) /
                              (_lambda_rf - _lambda_pf)))
                 
                 _Mn_F6_2_flag = '(F6.2)'
-            # F6.2c For Sections with Slender Flanges
+            # F6.2c For Section with Slender Flanges
             else:        
                 _Mn_F6_2 = self.Fcry * section.Zez
                 _Mn_F6_2_flag = '(F6.3)'
@@ -1847,14 +1847,14 @@ def ChapterF(self, section, material):
             #
             # F7.2. Flange Local Buckling
             #
-            # (F7.2a) For Sections with Compact Flanges
+            # (F7.2a) For Section with Compact Flanges
             if self.compacness_flexure == "compact": 
                 #
                 _Mn_F7_2 = _Mn_F7_1
                 _Mn_F7_2_flag = _Mn_F7_1_flag 
                 # 
             #
-            # F7.2b For Sections with Non Compact Flanges 
+            # F7.2b For Section with Non Compact Flanges 
             elif self.compacness_flexure == "noncompact":
                 #
                 _Mn_F7_2 = (_MPx - (_MPx - material.Fy * section.Zey) * 
@@ -1863,7 +1863,7 @@ def ChapterF(self, section, material):
                 _Mn_F7_2_flag = '(F7.2)'
                 #
             #
-            # F7.2c For Sections with Slender Flanges
+            # F7.2c For Section with Slender Flanges
             else:
                 # (F7.4)
                 # Effective section modulus determined with the 
@@ -1932,14 +1932,14 @@ def ChapterF(self, section, material):
             #
             # F7.2. Flange Local Buckling
             #
-            # (F7.2a) For Sections with Compact Flanges
+            # (F7.2a) For Section with Compact Flanges
             if self.ClassWebF == "compact": 
                 #
                 _Mn_F7_2 = _Mn_F7_1
                 _Mn_F7_2_flag = _Mn_F7_1_flag 
                 # 
             #
-            # F7.2b For Sections with Non Compact Flanges 
+            # F7.2b For Section with Non Compact Flanges 
             elif self.ClassWebF == "noncompact":
                 #
                 _Mn_F7_2 = (_MPy - (_MPy - material.Fy * section.Zez) * 
@@ -1948,7 +1948,7 @@ def ChapterF(self, section, material):
                 _Mn_F7_2_flag = '(F7.2)'
                 #
             #
-            # F7.2c For Sections with Slender Flanges
+            # F7.2c For Section with Slender Flanges
             else:
                 # (F7.4)
                 # Effective section modulus determined with the 
@@ -2567,9 +2567,9 @@ def ChapterG(self, section, material):
         print("Cv = {:2.3f}   {:}".format(self.Cvx, self.Cvx_flag))
         print("Vn = {:6.0f} N {:}".format(self.Vnx , self.Vnx_Flag ))
         print("")
-    # Unsymmetric  Sections
+    # Unsymmetric  Section
     else:
-        print ('UNSYMMETRIC Sections no implemented yet')
+        print ('UNSYMMETRIC Section no implemented yet')
     #
     # Determine Max Shear UR
     #

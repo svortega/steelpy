@@ -6,8 +6,8 @@
 from typing import NamedTuple, Tuple, ClassVar, Union, List
 
 # package imports
-#from steelpy.material.material import Materials
-#from steelpy.sections.shape import Sections
+#from steelpy.material.material import Material
+#from steelpy.sections.shape import Section
 #from steelpy.utils.units.main import Units
 from steelpy.utils.io_module.text import match_line
 

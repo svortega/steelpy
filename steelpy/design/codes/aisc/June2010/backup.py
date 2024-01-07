@@ -1021,7 +1021,7 @@ def print_section_compacness(SectionName):
                             _lambda_pf = self.lambda_p_fF
                             _lambda_rf = self.lambda_r_fF
                             #
-                            # a) For Sections With NonCompact Flanges
+                            # a) For Section With NonCompact Flanges
                             #
                             if self.compacness_flexure == "noncompact":
                                 #                        
@@ -1032,7 +1032,7 @@ def print_section_compacness(SectionName):
                                 _Mn_F3_2_flag = '(F3.2a)'
                                 #
                             #
-                            # b) For Sections With Slender Flanges
+                            # b) For Section With Slender Flanges
                             #
                             else:
                                 #                        
@@ -1602,14 +1602,14 @@ def print_section_compacness(SectionName):
                 self.Fcry_flag = '(F6-4)'
                 #
                 #
-                # (F6.2a) For Sections with Compact Flanges
+                # (F6.2a) For Section with Compact Flanges
                 if self.compacness_flexure == "compact":
                     #
                     _Mn_F6_2 = _Mn_F6_1
                     _Mn_F6_2_flag = '(F6.1)'
                     #
                 #
-                # F6.2b For Sections with Non Compact Flanges 
+                # F6.2b For Section with Non Compact Flanges 
                 elif self.compacness_flexure == "noncompact":
                     #            
                     _Mn_F6_2 = (_Mpy - (_Mpy - 0.70 * material.Fy * section.Zez) *
@@ -1619,7 +1619,7 @@ def print_section_compacness(SectionName):
                     _Mn_F6_2_flag = '(F6.2)'            
                     #
                 #
-                # F6.2c For Sections with Slender Flanges
+                # F6.2c For Section with Slender Flanges
                 else:
                     #            
                     _Mn_F6_2 = self.Fcry * section.Zez
@@ -1659,14 +1659,14 @@ def print_section_compacness(SectionName):
                 #
                 # F7.2. Flange Local Buckling
                 #
-                # (F7.2a) For Sections with Compact Flanges
+                # (F7.2a) For Section with Compact Flanges
                 if self.compacness_flexure == "compact": 
                     #
                     _Mn_F7_2 = _Mn_F7_1
                     _Mn_F7_2_flag = _Mn_F7_1_flag 
                     # 
                 #
-                # F7.2b For Sections with Non Compact Flanges 
+                # F7.2b For Section with Non Compact Flanges 
                 elif self.compacness_flexure == "noncompact":
                     #
                     _Mn_F7_2 = (_MPx - (_MPx - material.Fy * section.Zey) * 
@@ -1675,7 +1675,7 @@ def print_section_compacness(SectionName):
                     _Mn_F7_2_flag = '(F7.2)'
                     #
                 #
-                # F7.2c For Sections with Slender Flanges
+                # F7.2c For Section with Slender Flanges
                 else:
                     # (F7.4)
                     # Effective section modulus determined with the 
@@ -1744,14 +1744,14 @@ def print_section_compacness(SectionName):
                 #
                 # F7.2. Flange Local Buckling
                 #
-                # (F7.2a) For Sections with Compact Flanges
+                # (F7.2a) For Section with Compact Flanges
                 if self.ClassWebF == "compact": 
                     #
                     _Mn_F7_2 = _Mn_F7_1
                     _Mn_F7_2_flag = _Mn_F7_1_flag 
                     # 
                 #
-                # F7.2b For Sections with Non Compact Flanges 
+                # F7.2b For Section with Non Compact Flanges 
                 elif self.ClassWebF == "noncompact":
                     #
                     _Mn_F7_2 = (_MPy - (_MPy - material.Fy * section.Zez) * 
@@ -1760,7 +1760,7 @@ def print_section_compacness(SectionName):
                     _Mn_F7_2_flag = '(F7.2)'
                     #
                 #
-                # F7.2c For Sections with Slender Flanges
+                # F7.2c For Section with Slender Flanges
                 else:
                     # (F7.4)
                     # Effective section modulus determined with the 
@@ -1942,7 +1942,7 @@ def print_section_compacness(SectionName):
         if section.build == "rolled":
             _h = self.hw
         #
-        #       Tee Sections
+        #       Tee Section
         elif section.build == 'T':
             print ('TEE No yet defined')
         #
@@ -2439,9 +2439,9 @@ def print_section_compacness(SectionName):
             #
         #---
         #
-        # Unsymmetric  Sections
+        # Unsymmetric  Section
         else:
-            print ('UNSYMMETRIC Sections no implemented yet')
+            print ('UNSYMMETRIC Section no implemented yet')
             #
         #
         #

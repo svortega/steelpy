@@ -1,55 +1,33 @@
 # 
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 #
 # Python stdlib imports
 from __future__ import annotations
 #import math
-from typing import Union
 #
-
+#
 # package imports
-from ..inmemory.tee import TeeBasic
-from .operations import SectionSQLite
-from steelpy.sections.process.operations import get_sect_properties
-
+#from ..inmemory.tee import TeeBasic
+from steelpy.sections.sqlite.utils import SectionItemSQL
+#
 #
 #
 #
 #
 # ----------------------------------------
-#      Standard Sections Profiles
+#      Standard Section Profiles
 # ----------------------------------------
 #
-class TeeSQLite(SectionSQLite):
+class TeeSQLite(SectionItemSQL):
     __slots__ = ['name', 'number', 'db_file', '_properties']
 
-    def __init__(self, db_file: str):
-                 #name: Union[ str, int ],
-                 #d: Union[ float, None ], tw: Union[ float, None ],
-                 #b: Union[ float, None ], tb: Union[ float, None ],
-                 #db_file: str,
-                 #build: str = 'welded',
-                 #shear_stress: str = 'maximum',
-                 #FAvy: float = 1.0, FAvz: float = 1.0):
+    def __init__(self, component: int, db_file: str):
         """ """
-        #TeeBasic.__init__(self)
-        #self.name = name
-        #self._properties = None
         self.db_file = db_file
-        #compactness = None
-        #section = (self.name,
-        #           None,       # title
-        #           "Tee",      # shape type
-        #           None, None, # diameter, wall_thickess
-        #           d, tw,      # height, web_thickness
-        #           b, tb,      # top_flange_width, top_flange_thickness
-        #           None, None,      # bottom_flange_width, bottom_flange_thickness
-        #           FAvy, FAvz,
-        #           shear_stress, build,
-        #           compactness,)
         # push data to sqlite table
-        super().__init__(db_file=self.db_file)
+        super().__init__(component=component,
+                         db_file=self.db_file)
     #
     #
     def __setitem__(self, shape_name: int|str, parameters: list) -> None:
@@ -72,7 +50,6 @@ class TeeSQLite(SectionSQLite):
             build:str = 'welded'            
             compactness = None
             section = (shape_name, 
-                       None,       # title
                        "Tee",      # shape type
                        None, None, # diameter, wall_thickess
                        d, tw,      # height, web_thickness
@@ -81,7 +58,8 @@ class TeeSQLite(SectionSQLite):
                        None,       # root radius
                        FAvy, FAvz,
                        shear_stress, build,
-                       compactness,)
+                       compactness,
+                       None,)     # title
             number = self.push_section(section)
             #self._number.append(number)
     #

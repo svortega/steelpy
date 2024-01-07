@@ -463,7 +463,7 @@ class PipelineDesign:
         return self._geometry
     
     @geometry.setter
-    def geometry(self, value:Sections):
+    def geometry(self, value:Section):
         """
         """
         self._geometry = value  

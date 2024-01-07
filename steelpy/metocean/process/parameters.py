@@ -30,9 +30,9 @@ class HydroDesign:
     def _create_table(self, conn) -> None:
         """ """
         #
-        table = "CREATE TABLE IF NOT EXISTS tb_Parameters (\
+        table = "CREATE TABLE IF NOT EXISTS Parameter (\
                     number INTEGER PRIMARY KEY NOT NULL,\
-                    condition_number INTEGER NOT NULL REFERENCES tb_Condition(number),\
+                    condition_number INTEGER NOT NULL REFERENCES Condition(number),\
                     design_load TEXT, \
                     buoyancy TEXT,\
                     criterion TEXT, \

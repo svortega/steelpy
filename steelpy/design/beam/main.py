@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 
 # Python stdlib imports
 from __future__ import annotations
@@ -9,8 +9,8 @@ from __future__ import annotations
 from steelpy.design.codes.api.main import API_design
 from steelpy.utils.units.main import Units
 ##from steelpy.design.beam.process import BeamDesignParameters
-from steelpy.f2uModel.load.process.actions import Actions
-from steelpy.sections.process.stress import BeamStress
+from steelpy.ufo.load.process.actions import Actions
+from steelpy.sections.utils.stress import BeamStress
 #
 
 class BeamDesign: #(BeamDesignParameters):

@@ -13,10 +13,10 @@ from __future__ import annotations
 
 # package imports
 # 
-from steelpy.f2uModel.load.process.beam.main import BeamBasicLoad
+from steelpy.ufo.load.process.beam.main import BeamBasicLoad
 #
 from steelpy.sections.main import SectionIM
-from steelpy.material.main import Materials
+from steelpy.material.main import Material
 #
 from steelpy.trave.beam.pilkey.main import BeamBasic
 #
@@ -42,7 +42,7 @@ class Beam:
         self.name = name
         self.steps: int = 10
         #
-        self._materials = Materials()
+        self._materials = Material()
         #
         self._sections = SectionIM()
         #

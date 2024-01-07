@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
@@ -8,34 +8,30 @@ from __future__ import annotations
 from dataclasses import dataclass
 #from typing import NamedTuple, List, Union
 import re
-
+#
+#
 # package imports
-from ..inmemory.solid import RectangleBasic, CircleBasic, Trapeziod
-from ..process.operations import get_sect_properties
-from .operations import SectionSQLite
-#from ..inmemory.operations import ShapeBasic
-
+#
+from steelpy.sections.sqlite.utils import SectionItemSQL
+#
+#
 # ----------------------------------------
 #      Basic Solid Shapes
 # ----------------------------------------
 #
 #
 @dataclass
-class SolidSectionSQL(SectionSQLite):
+class SolidSectionSQL(SectionItemSQL):
     
-    def __init__(self, db_file:str):
+    def __init__(self, component, db_file:str):
         """ """
         #super().__init__()
-        #self._d: array = array('f', [])
-        #self._wb: array = array('f', [])
-        #self._wt: array = array('f', [])
         #
-        #self._type = []
         self.db_file = db_file
         # push data to sqlite table
-        #SectionSQLite.__init__(self, db_file=self.db_file,
-        #                       section=section)
-        super().__init__(db_file=self.db_file)        
+        #
+        super().__init__(component=component,
+                         db_file=self.db_file)
     #
     #
     def __setitem__(self, shape_name: int|str, parameters: list) -> None:
@@ -65,7 +61,6 @@ class SolidSectionSQL(SectionSQLite):
                 #self._wt.append(0)
                 #
                 section = (shape_name, 
-                           None,            # title
                            "Circular Bar",  # shape type
                            d, None,         # diameter, wall_thickess
                            None, None, # height, web_thickness
@@ -74,7 +69,8 @@ class SolidSectionSQL(SectionSQLite):
                            None,       # root radius
                            FAvy, FAvz,
                            shear_stress, build,
-                           compactness,)               
+                           compactness,
+                           None,)     # title
 
             elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
                 #self._type.append('rectangle')
@@ -83,7 +79,6 @@ class SolidSectionSQL(SectionSQLite):
                 #self._wt.append(parameters[1])
                 #
                 section = (shape_name,
-                           None,  # title
                            "Rectangle",   # shape type
                            None, None,    # diameter, wall_thickess
                            d, None,       # height, web_thickness
@@ -92,7 +87,8 @@ class SolidSectionSQL(SectionSQLite):
                            None,       # root radius
                            FAvy, FAvz,
                            shear_stress, build,
-                           compactness,)                 
+                           compactness,
+                           None,)     # title
 
             elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
                 #self._type.append('trapeziod')
@@ -101,7 +97,6 @@ class SolidSectionSQL(SectionSQLite):
                 #self._wb.append(parameters[1])
                 #self._wt.append(parameters[2])
                 section = (shape_name,
-                           None,  # title
                            "trapeziod",   # shape type
                            None, None,    # diameter, wall_thickess
                            d, None,       # height, web_thickness
@@ -110,7 +105,8 @@ class SolidSectionSQL(SectionSQLite):
                            None,       # root radius
                            FAvy, FAvz,
                            shear_stress, build,
-                           compactness,)                 
+                           compactness,
+                           None,)     # title)                 
 
             else:
                 raise Exception(f" section type {shape_type} not recognized")
@@ -155,7 +151,7 @@ class SolidSectionSQL(SectionSQLite):
 #
 #
 @dataclass
-class RectangleSQLite(SectionSQLite):
+class RectangleSQLite(SectionItemSQL):
     __slots__ = ['_properties', 'name', 'number', 'db_file']
 
     def __init__(self, name:Union[str, int],
@@ -176,7 +172,6 @@ class RectangleSQLite(SectionSQLite):
         self.db_file = db_file
         compactness = None
         section = (self.name,
-                   None,  # title
                    "Rectangle",   # shape type
                    None, None,    # diameter, wall_thickess
                    d, None,       # height, web_thickness
@@ -184,7 +179,8 @@ class RectangleSQLite(SectionSQLite):
                    w, None,       # bottom_flange_width, bottom_flange_thickness
                    FAvy, FAvz,
                    shear_stress, build,
-                   compactness,)
+                   compactness,
+                   None,)     # title
         # push data to sqlite table
         SectionSQLite.__init__(self, db_file=self.db_file, section=section)
     #
@@ -236,7 +232,7 @@ class RectangleSQLite(SectionSQLite):
 #
 #
 @dataclass
-class CircleSQLite(SectionSQLite):
+class CircleSQLite(SectionItemSQL):
     __slots__ = ['_properties', 'name', 'number', 'db_file']
     
     def __init__(self, name:str|int,
@@ -257,7 +253,6 @@ class CircleSQLite(SectionSQLite):
         self.db_file = db_file
         compactness = None
         section = (self.name, 
-                   None,            # title
                    "Circular Bar",  # shape type
                    d, None,         # diameter, wall_thickess
                    None, None, # height, web_thickness
@@ -265,7 +260,8 @@ class CircleSQLite(SectionSQLite):
                    None, None, # bottom_flange_width, bottom_flange_thickness
                    FAvy, FAvz,
                    shear_stress, build,
-                   compactness,)        
+                   compactness,
+                   None,)     # title
         # push data to sqlite table
         #SectionSQLite.__init__(self, db_file=self.db_file,
         #                       section=section)

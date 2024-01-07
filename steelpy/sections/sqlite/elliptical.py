@@ -15,6 +15,6 @@ from .operations import SectionSQLite
 
 
 # ----------------------------------------
-#      Elliptical Sections Profiles
+#      Elliptical Section Profiles
 # ----------------------------------------
 #

@@ -1,15 +1,15 @@
 # 
-# Copyright (c) 2019 steelpy
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
 from collections.abc import Mapping
-import re
+#import re
 #
 # package imports
 #
-from .inmemory.main import SectionIM
-from .sqlite.main import SectionSQL
+from steelpy.sections.inmemory.main import SectionIM
+from steelpy.sections.sqlite.main import SectionSQL
 #from .process.operations import SectionBasic
 
 
@@ -17,15 +17,20 @@ from .sqlite.main import SectionSQL
 #
 # ---------------------------------
 #
-class Sections(Mapping):
-    __slots__ = ['_sections', '_default']
+class Section(Mapping):
+    __slots__ = ['_sections', '_default', '_component']
 
-    def __init__(self, mesh_type: str = 'inmemory',
-                 db_file: str | None = None):
+    def __init__(self,
+                 component:int,
+                 db_file: str | None = None, 
+                 mesh_type: str = 'inmemory'):
         """
         """
+        self._component = component
+        #
         if mesh_type != "inmemory":
             self._sections = SectionSQL(db_file=db_file,
+                                        component=component, 
                                         db_system=mesh_type)
         else:
             self._sections = SectionIM()
@@ -123,7 +128,7 @@ class Sections(Mapping):
         self._sections._default = shape_name
 
     #
-    def get_properties(self):
+    def get_propertiesX(self):
         """
         """
         summary = {}

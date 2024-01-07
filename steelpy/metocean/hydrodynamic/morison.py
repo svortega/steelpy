@@ -13,7 +13,8 @@ from dataclasses import dataclass
 
 
 # package imports
-from steelpy.metocean.hydrodynamic.utils import BasicProperty, HydroBasic, get_list, HydroItem
+from steelpy.metocean.hydrodynamic.utils.main import (BasicProperty, HydroBasic,
+                                                      get_list, HydroItem)
 from steelpy.utils.sqlite.utils import create_connection, create_table
 import numpy as np
 
@@ -90,16 +91,16 @@ class CdCmCoefficients(HydroBasic):
     def _create_table(self, conn) -> None:
         """ """
         # Main
-        table = "CREATE TABLE IF NOT EXISTS tb_CdCm (\
+        table = "CREATE TABLE IF NOT EXISTS CdCm (\
                         number INTEGER PRIMARY KEY NOT NULL,\
                         name NOT NULL,\
                         type TEXT NOT NULL, \
                         title TEXT);"
         create_table(conn, table)
         # Profile
-        table = "CREATE TABLE IF NOT EXISTS tb_CdCmProfile (\
+        table = "CREATE TABLE IF NOT EXISTS CdCmProfile (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        cdcm_number NOT NULL REFERENCES tb_CdCm(number),\
+                        cdcm_id NOT NULL REFERENCES CdCm(number),\
                         elevation DECIMAL NOT NULL,\
                         cd_coefficient DECIMAL NOT NULL, \
                         cm_coefficient DECIMAL NOT NULL);"
@@ -110,7 +111,7 @@ class CdCmCoefficients(HydroBasic):
         Create a new project into the projects table
         """
         cur = conn.cursor()
-        table = 'INSERT INTO tb_CdCm(name, type, title) \
+        table = 'INSERT INTO CdCm(name, type, title) \
                  VALUES(?,?,?)'
         # push
         cur = conn.cursor()
@@ -121,7 +122,7 @@ class CdCmCoefficients(HydroBasic):
         """ """
         #
         project = (name,)
-        sql = 'SELECT {:} FROM tb_CdCm WHERE name = ?'.format(item)
+        sql = 'SELECT {:} FROM CdCm WHERE name = ?'.format(item)
         cur = conn.cursor()
         cur.execute(sql, project)
         data = cur.fetchone()
@@ -224,7 +225,7 @@ class CdCmitem(HydroItem):
         """ """
         mg_name = (self.name, )
         cur = conn.cursor()
-        table = 'SELECT * FROM tb_CdCm WHERE name = ?'
+        table = 'SELECT * FROM CdCm WHERE name = ?'
         cur.execute(table, mg_name)
         values = cur.fetchone()
         return values
@@ -234,14 +235,14 @@ class CdCmitem(HydroItem):
         """ """
         #mg_name = (self.name, )
         #
-        #table = f"UPDATE tb_CdCm \
+        #table = f"UPDATE CdCm \
         #         SET type = 'profile' \
         #         WHERE name = ?"
         #cur = conn.cursor()
         #cur.execute(table, mg_name)
         #
         #cur = conn.cursor()
-        #table = 'SELECT * FROM tb_CdCm WHERE name = ?'
+        #table = 'SELECT * FROM CdCm WHERE name = ?'
         #cur.execute(table, mg_name)
         #cdcm = cur.fetchone()
         #
@@ -249,7 +250,7 @@ class CdCmitem(HydroItem):
         #
         profile = tuple((cdcm[0], *item, ) for item in profile_data)
         cur = conn.cursor()
-        table = 'INSERT INTO tb_CdCmProfile(cdcm_number, \
+        table = 'INSERT INTO CdCmProfile(cdcm_id, \
                                             elevation, \
                                             cd_coefficient, \
                                             cm_coefficient) \
@@ -265,7 +266,7 @@ class CdCmitem(HydroItem):
         if re.match(r"\b(profile)\b", cdcm[2], re.IGNORECASE):
             item_name = (cdcm[0], )
             cur = conn.cursor()
-            table = 'SELECT * FROM tb_CdCmProfile WHERE cdcm_number = ?'
+            table = 'SELECT * FROM CdCmProfile WHERE cdcm_id = ?'
             cur.execute(table, item_name)
             profile = cur.fetchall()
             profile = [item[2:] for item in profile]

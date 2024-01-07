@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
@@ -10,7 +10,7 @@ from typing import NamedTuple #, Tuple, List, Iterator, Dict, Union
 from collections.abc import Mapping
 
 # package imports
-from steelpy.metocean.hydrodynamic.utils import BasicProperty
+from steelpy.metocean.hydrodynamic.utils.main import BasicProperty
 
 
 #
@@ -82,7 +82,7 @@ class HydroDiametre(Mapping):
             self._diameter.pop(index)
             del self.sets[parameter_name]
         except IndexError:
-            logging.warning(' ** node {:} does not exist'.format(node_number))
+            logging.warning(' ** node {:} does not exist'.format(node_id))
             return
     
     def __len__(self) -> float:

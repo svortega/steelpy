@@ -18,7 +18,7 @@ from SectProp import *
 #
 #
 # ----------------------------------------
-#      Sections Profiles Names
+#      Section Profiles Names
 # ----------------------------------------
 #
 def SecFinder(SecID):
@@ -177,7 +177,7 @@ def unitFactor(UnitsType, UnitIn, UnitOut):
     #
 #
 # ----------------------------------------
-#      Sections Componet Profiles 
+#      Section Componet Profiles 
 # ----------------------------------------
 #
 #

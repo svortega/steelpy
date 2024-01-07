@@ -4,6 +4,10 @@
 
 # Python stdlib imports
 from __future__ import annotations
+from collections.abc import Mapping
+#from dataclasses import dataclass
+#from operator import itemgetter
+#from typing import NamedTuple
 #import sqlite3 as sqlite3
 #from sqlite3 import Error
 #from datetime import datetime as dt
@@ -35,9 +39,9 @@ class ClassMainSQL:
         else:
             self.db_file = self._get_file(name=name)
             self._name = name
-            conn = create_connection(self.db_file)
-            with conn:
-                self._create_table(conn)
+            #conn = create_connection(self.db_file)
+            #with conn:
+            #    self._create_table(conn)
     #
     #
     def _get_file(self, name: str):
@@ -46,8 +50,50 @@ class ClassMainSQL:
         path = os.path.abspath(filename)
         try: # remove file if exist
             os.remove(path)
+        except PermissionError:
+            raise PermissionError(f'close sqlite {name}')
         except FileNotFoundError:
             pass
         #
         return path
-    #    
+    #
+#
+#
+#
+class ClassBasicSQL(Mapping):
+    """ """
+    __slots__ = ['db_file']
+    #
+    #
+    def __init__(self, db_file: str):
+        """
+        """
+        self.db_file = db_file
+        #
+        # create table
+        conn = create_connection(self.db_file)
+        with conn:
+            self._create_table(conn)         
+    
+    def __len__(self) -> int:
+        return len(self._labels)
+
+    def __iter__(self):
+        return iter(self._labels)
+    
+    def __contains__(self, value) -> bool:
+        return value in self._labels
+    #
+    # TODO : get number from database
+    def get_number(self, start:int=0):
+        """
+        """
+        try:
+            n = max(self._labels)
+        except ValueError:
+            n = start
+        #
+        while True:
+            n += 1
+            yield n
+#

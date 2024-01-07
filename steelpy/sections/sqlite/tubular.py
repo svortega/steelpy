@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019 steelpy
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
@@ -8,34 +8,25 @@ from __future__ import annotations
 #
 
 # package imports
-from ..inmemory.tubular import TubularBasic
-#from ..process.operations import get_sect_properties
-from .operations import SectionSQLite
-#from ..inmemory.operations import ShapeBasic
-#from steelpy.f2uModel.mesh.sqlite.utils import create_connection
-#from ..process.operations import get_sect_prop_df
+from steelpy.sections.utils.shape.tubular import TubularBasic
+from steelpy.sections.sqlite.utils import SectionItemSQL
+from steelpy.utils.sqlite.utils import create_connection
 #
 #from steelpy.utils.dataframe.main import DBframework
 #
 # ----------------------------------------
-#      Standard Sections Profiles
+#      Standard Section Profiles
 # ----------------------------------------
 #
 #
 #
-class TubularSQL(SectionSQLite):
+class TubularSQL(SectionItemSQL):
     """ """
     __slots__ = ['diameter', 'thickness', 'build', 'type',
                  'shear_stress', 'compactness', '_properties',
                  'FAvy', 'FAvz', 'name', 'number', 'db_file']
     
-    def __init__(self, db_file:str):
-                 #name:str|int,
-                 #d:float|None, t:float|None,
-                 #db_file:str,
-                 #build:str = 'welded', 
-                 #shear_stress:str = 'maximum',
-                 #FAvy:float = 1.0, FAvz:float = 1.0):
+    def __init__(self, component:int, db_file:str):
         """
         Parameters
         ----------
@@ -44,7 +35,8 @@ class TubularSQL(SectionSQLite):
         Shear Stress: MAXIMUM / AVERAGE
         """
         self.db_file = db_file
-        super().__init__(db_file=self.db_file)
+        super().__init__(component=component,
+                         db_file=self.db_file)
         #
     #
     #
@@ -66,7 +58,6 @@ class TubularSQL(SectionSQLite):
             build:str = 'welded'            
             compactness = None
             section = (shape_name, 
-                       None,       # title
                        "Tubular",  # shape type
                        d, t,       # diameter, wall_thickess
                        None, None, # height, web_thickness
@@ -75,7 +66,8 @@ class TubularSQL(SectionSQLite):
                        None,       # root radius
                        FAvy, FAvz,
                        shear_stress, build,
-                       compactness,)
+                       compactness,
+                       None,)      # title
             number = self.push_section(section)
             #self._number.append(number)
     #
@@ -88,7 +80,10 @@ class TubularSQL(SectionSQLite):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        row = self.get_section(shape_name)
+        conn = create_connection(self.db_file)
+        with conn:        
+            row = self._pull_section(conn, shape_name)        
+        #
         #
         return TubularBasic(name=row[0], 
                             diameter=row[3], thickness=row[4])    
@@ -192,7 +187,7 @@ class TubularSQL(SectionSQLite):
     #    db = DBframework()
     #    conn = create_connection(self.db_file)
     #    #with conn:
-    #    df = db.read_sql_query("SELECT * FROM tb_Sections", conn)          
+    #    df = db.read_sql_query("SELECT * FROM Section", conn)          
     #    return df 
     #
     #@df.setter
@@ -214,7 +209,7 @@ class TubularSQL(SectionSQLite):
     #    #dfmat['title'] = None
     #    conn = create_connection(self.db_file)
     #    with conn:
-    #        dfmat.to_sql('tb_Sections', conn,
+    #        dfmat.to_sql('Section', conn,
     #                     index_label=['name', 'title', 'type',
     #                                  'diameter', 'wall_thickness'], 
     #                     if_exists='append', index=False)        

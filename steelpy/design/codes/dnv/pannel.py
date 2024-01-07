@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union, NamedTuple
 
 # package imports
-from steelpy.material.main import Materials
-from steelpy.sections.main import Sections
+from steelpy.material.main import Material
+from steelpy.sections.main import Section
 from steelpy.utils.units.main import Units
 from steelpy.design.codes.dnv.DVNRPC201 import DNVRPC201
 
@@ -49,8 +49,8 @@ class Stiffener:
     
     def __init__(self):
         """ 
-        section: Sections
-        material : Materials
+        section: Section
+        material : Material
         L: Stiffener Length
         Lt: Stiffener torsional buckling length
         s: Stiffener Spacing
@@ -65,8 +65,8 @@ class Girder:
     
     def __init__(self):
         """
-        section: Sections
-        material : Materials
+        section: Section
+        material : Material
         L : Girder Length
         Lk: Girder Overal Buckling Length
         Lt: Girder Torsional Buckling Length (Length between tripping brackets)

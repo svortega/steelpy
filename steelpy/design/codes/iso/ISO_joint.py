@@ -491,7 +491,7 @@ class  ISO19902:
         print ('tau :',self.tau)
         # 
         # ---------------------------------
-        # 14.2.1 Materials
+        # 14.2.1 Material
         # ---------------------------------
         # Chord
         self.Fy = min(self.Fy, 0.80*self.Fu)

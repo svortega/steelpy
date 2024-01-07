@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 # TODO: host until sure no longer needed
 #
@@ -8,10 +8,10 @@ from steelpy.design.main import ClampDesign as Clamp
 from steelpy.metocean.main import Metocean
 from steelpy.trave.main import Trave2D, Trave3D #, Beam
 #from steelpy.beam.main import Beam #, SimpleBeam
-from steelpy.f2uModel.main import f2uModel
+from steelpy.ufo.main import UFOmodel
 #
-from steelpy.material.main import Materials
-from steelpy.sections.main import Sections
+from steelpy.material.main import Material
+from steelpy.sections.main import Section
 from steelpy.utils.units.main import Units
 
 from steelpy.utils.spreadsheet.main import Spreadsheet

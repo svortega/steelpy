@@ -10,9 +10,9 @@ import re
 from typing import Dict, List, Tuple, Union, NamedTuple
 
 # package imports
-from steelpy.material.main import Materials
+from steelpy.material.main import Material
 from steelpy.utils.units.main import Units
-from steelpy.sections.main import Sections
+from steelpy.sections.main import Section
 from .circular_ring import circular_ring, stress2, RadialForces
 
 #
@@ -237,7 +237,7 @@ class  Ring:
         #self.LocalAxis = 'x y z'
         ##
         ##self._chord = API_design()
-        self._sections = Sections()
+        self._sections = Section()
         #self._stiffness_flag = False
     #
     #     
@@ -248,7 +248,7 @@ class  Ring:
         return self._material
     
     @material.setter
-    def material(self, value:Materials):
+    def material(self, value:Material):
         """
         """
         self._material = value
@@ -260,7 +260,7 @@ class  Ring:
         return self._geometry
     
     @geometry.setter
-    def geometry(self, value:Sections):
+    def geometry(self, value:Section):
         """
         """
         self._geometry = value  

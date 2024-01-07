@@ -5,15 +5,16 @@
 from __future__ import annotations
 #from collections.abc import Mapping
 from dataclasses import dataclass
-from operator import itemgetter
+#from operator import itemgetter
 from typing import NamedTuple
 import re
 
 #
 # package imports
 from steelpy.utils.sqlite.utils import create_connection, create_table
-from steelpy.utils.units.main import Units #Number, 
-from steelpy.metocean.hydrodynamic.utils import BasicProperty, HydroBasic, get_list, HydroItem
+#from steelpy.utils.units.main import Units #Number, 
+from steelpy.metocean.hydrodynamic.utils.main import (BasicProperty, HydroBasic,
+                                                      get_list, HydroItem)
 import numpy as np
 
 
@@ -131,7 +132,7 @@ class MarineGrowth(HydroBasic):
     def _create_table(self, conn) -> None:
         """ """
         # Main
-        table = "CREATE TABLE IF NOT EXISTS tb_MarineGrowth (\
+        table = "CREATE TABLE IF NOT EXISTS MarineGrowth (\
                         number INTEGER PRIMARY KEY NOT NULL, \
                         name NOT NULL, \
                         type TEXT NOT NULL, \
@@ -139,9 +140,9 @@ class MarineGrowth(HydroBasic):
                         title TEXT);"
         create_table(conn, table)
         # Profile
-        table = "CREATE TABLE IF NOT EXISTS tb_MarineGProfile (\
+        table = "CREATE TABLE IF NOT EXISTS MarineGrowthProfile (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        mg_number NOT NULL REFERENCES tb_MarineGrowth(number),\
+                        mg_id NOT NULL REFERENCES MarineGrowth(number),\
                         elevation DECIMAL NOT NULL,\
                         thickness DECIMAL NOT NULL);"
         create_table(conn, table)
@@ -151,7 +152,7 @@ class MarineGrowth(HydroBasic):
         Create a new project into the projects table
         """
         cur = conn.cursor()
-        table = 'INSERT INTO tb_MarineGrowth(name, type, water_density, title) \
+        table = 'INSERT INTO MarineGrowth(name, type, water_density, title) \
                  VALUES(?,?,?,?)'
         # push
         cur = conn.cursor()
@@ -162,7 +163,7 @@ class MarineGrowth(HydroBasic):
         """ """
         #
         project = (mg_name,)
-        sql = 'SELECT {:} FROM tb_MarineGrowth WHERE name = ?'.format(item)
+        sql = 'SELECT {:} FROM MarineGrowth WHERE name = ?'.format(item)
         cur = conn.cursor()
         cur.execute(sql, project)
         data = cur.fetchone()
@@ -224,7 +225,7 @@ class MGitem(HydroItem):
         density = value.convert('kilogram/metre^3').value
         #
         mg_name = (density, self.name, )
-        table = f"UPDATE tb_MarineGrowth \
+        table = f"UPDATE MarineGrowth \
                  SET water_density = ?\
                  WHERE name = ?"
         #
@@ -282,7 +283,7 @@ class MGitem(HydroItem):
         """ """
         item_name = (self.name, )
         cur = conn.cursor()
-        table = 'SELECT * FROM tb_MarineGrowth WHERE name = ?'
+        table = 'SELECT * FROM MarineGrowth WHERE name = ?'
         cur.execute(table, item_name)
         item = cur.fetchone()
         return item
@@ -292,14 +293,14 @@ class MGitem(HydroItem):
         """ """
         #mg_name = (self.name, )
         #
-        #table = f"UPDATE tb_MarineGrowth \
+        #table = f"UPDATE MarineGrowth \
         #         SET type = 'profile' \
         #         WHERE name = ?"
         #cur = conn.cursor()
         #cur.execute(table, mg_name)
         #
         #cur = conn.cursor()
-        #table = 'SELECT * FROM tb_MarineGrowth WHERE name = ?'
+        #table = 'SELECT * FROM MarineGrowth WHERE name = ?'
         #cur.execute(table, mg_name)
         #mg = cur.fetchone()
         #
@@ -313,7 +314,7 @@ class MGitem(HydroItem):
         #
         profile = tuple((mg[0], *item, ) for item in profile_data)
         cur = conn.cursor()
-        table = 'INSERT INTO tb_MarineGProfile(mg_number, \
+        table = 'INSERT INTO MarineGrowthProfile(mg_id, \
                                                 elevation, thickness) \
                                                 VALUES(?,?,?)'
         # push
@@ -327,7 +328,7 @@ class MGitem(HydroItem):
         if re.match(r"\b(profile)\b", mg[2], re.IGNORECASE):
             mg_name = (mg[0], )
             cur = conn.cursor()
-            table = 'SELECT * FROM tb_MarineGProfile WHERE mg_number = ?'
+            table = 'SELECT * FROM MarineGrowthProfile WHERE mg_id = ?'
             cur.execute(table, mg_name)
             mg_profile = cur.fetchall()
             mg_profile = [item[2:] for item in mg_profile]
@@ -398,7 +399,7 @@ class MGprofile(BasicProperty):
         |_ items
         |_ sets
     
-    **Parameters**:  
+    **Parameter**:  
       :number:  integer internal number 
       :name:  string node external name
     """

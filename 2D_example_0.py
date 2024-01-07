@@ -1,13 +1,13 @@
 # Import steelpy modules
 from steelpy import Units
-from steelpy import f2uModel
+from steelpy import UFOmodel
 from steelpy import Trave2D
 from steelpy import Trave3D
 #
 #
 units = Units()
 #
-f2umodel = f2uModel()
+f2umodel = UFOmodel("2D_example_0")
 #
 #
 # ----------------------------------------------------
@@ -16,7 +16,7 @@ f2umodel = f2uModel()
 # ----------------------------------------------------
 # ----------------------------------------------------
 #
-mesh = f2umodel.mesh(name="2D_example_0")
+mesh = f2umodel.mesh()
 #
 #
 # ----------------------------------------------------
@@ -209,7 +209,7 @@ print(bl_blinedf)
 # Structural Analysis Implicit
 # ----------------------------------------------------
 #
-frame = Trave2D(mesh=mesh)
+frame = Trave3D(mesh=mesh)
 frame.static()
 results = frame.results()
 #

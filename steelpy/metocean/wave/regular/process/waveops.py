@@ -117,7 +117,7 @@ class WaveItem:
             surface['title'] = self.title
         else:
             surface['title'] = None
-        #surface['wave_number'] = self.number
+        #surface['wave_id'] = self.number
         surface['type'] = 'order_1'
         #
         self._surface = surface
@@ -147,11 +147,11 @@ class WaveItem:
                               self.finite_depth)
         #
         #surface['wave_name'] = self.name
-        #kindf['wave_number'] = self.number
+        #kindf['wave_id'] = self.number
         kindf['type'] = 'order_1'
         #
         #depth_steps = np.arange(depth_points + 1) / depth_points
-        #kindf['surface_number'] = repmat(surface['number'].to_numpy(),
+        #kindf['surface_id'] = repmat(surface['number'].to_numpy(),
         #                                 depth_steps.size, 1).flatten('F')
         #
         #kindf.drop(columns=['phase', 'x'], inplace=True, axis=1)        

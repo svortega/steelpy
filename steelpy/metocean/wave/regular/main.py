@@ -29,9 +29,10 @@ import numpy as np
 #
 #
 class RegularWaves(WaveBasic):
-    __slots__ = ['db_file', '_condition', 'nstep', 'niter', 'accuracy']
+    __slots__ = ['db_file', '_criteria', 
+                 '_condition', 'nstep', 'niter', 'accuracy']
 
-    def __init__(self, db_file: str,
+    def __init__(self, criteria: str|int, db_file: str,
                  nstep:int=2, niter:int=40, accuracy:float=1e-6)-> None:
         """
         db_file  : sqlite database name
@@ -40,6 +41,7 @@ class RegularWaves(WaveBasic):
         accuracy : Criterion for convergence (1e-6)
         """
         super().__init__(db_file)
+        self._criteria = criteria
         self._condition = 2
         self.nstep = nstep
         self.niter = niter
@@ -102,7 +104,7 @@ class RegularWaves(WaveBasic):
         """ """
         conn = create_connection(self.db_file)
         with conn:        
-            table = "SELECT * FROM tb_Wave \
+            table = "SELECT * FROM Wave \
                      WHERE type = 'regular'"
             cur = conn.cursor()
             cur.execute(table)
@@ -118,9 +120,9 @@ class RegularWaves(WaveBasic):
     def _create_table(self, conn) -> None:
         """ """
         # Wave main
-        table = "CREATE TABLE IF NOT EXISTS tb_WaveRegular (\
+        table = "CREATE TABLE IF NOT EXISTS WaveRegular (\
                     number INTEGER PRIMARY KEY NOT NULL,\
-                    wave_number INTEGER NOT NULL REFERENCES tb_Wave(number),\
+                    wave_id INTEGER NOT NULL REFERENCES Wave(number),\
                     height  DECIMAL NOT NULL,\
                     period DECIMAL NOT NULL,\
                     water_depth DECIMAL NOT NULL,\
@@ -132,9 +134,9 @@ class RegularWaves(WaveBasic):
         create_table(conn, table)
         #
         # Wave surface
-        table = "CREATE TABLE IF NOT EXISTS tb_WaveSurface (\
+        table = "CREATE TABLE IF NOT EXISTS WaveSurface (\
                     number INTEGER PRIMARY KEY NOT NULL,\
-                    wave_number INTEGER NOT NULL REFERENCES tb_Wave(number), \
+                    wave_id INTEGER NOT NULL REFERENCES Wave(number), \
                     type TEXT NOT NULL, \
                     x INTEGER NOT NULL, \
                     eta INTEGER NOT NULL, \
@@ -142,10 +144,10 @@ class RegularWaves(WaveBasic):
         create_table(conn, table)
         #
         # Wave Kinematics
-        table = "CREATE TABLE IF NOT EXISTS tb_WaveKinematics (\
+        table = "CREATE TABLE IF NOT EXISTS WaveKinematic (\
                     number INTEGER PRIMARY KEY NOT NULL,\
-                    wave_number INTEGER NOT NULL REFERENCES tb_Wave(number), \
-                    surface_number INTEGER NOT NULL REFERENCES tb_WaveSurface(number), \
+                    wave_id INTEGER NOT NULL REFERENCES Wave(number), \
+                    surface_id INTEGER NOT NULL REFERENCES WaveSurface(number), \
                     type TEXT NOT NULL, \
                     z INTEGER NOT NULL, \
                     u INTEGER NOT NULL, \
@@ -165,18 +167,12 @@ class RegularWaves(WaveBasic):
         """
         Create a new project into the projects table
         """
-        project = (wave_data[0], wave_data[1])
-        table = 'INSERT INTO tb_Wave(name, type) \
-                 VALUES(?,?)'
-        # push
-        cur = conn.cursor()
-        cur.execute(table, project)
-        wave_number = cur.lastrowid
         #
+        wave_id = self._push_wave(conn, wave_data[:2])
         #
-        project = (wave_number, *wave_data[2:])
+        project = (wave_id, *wave_data[2:])
         cur = conn.cursor()
-        table = 'INSERT INTO tb_WaveRegular(wave_number, \
+        table = 'INSERT INTO WaveRegular(wave_id, \
                                             height, period, water_depth,  \
                                             wave_theory, wave_order, phase, \
                                             wave_length, crest_elevation) \
@@ -188,19 +184,21 @@ class RegularWaves(WaveBasic):
     def _pull_data(self, conn, wave_name: str|int,
                   item: str = "*"):
         """ """
-        project = (wave_name, )
-        table = "SELECT * FROM tb_Wave \
-                 WHERE name = ? AND type = 'regular'"
-        cur = conn.cursor()
-        cur.execute(table, project)
-        wave = cur.fetchone()
+        #project = (wave_name, )
+        #table = "SELECT * FROM Wave \
+        #         WHERE name = ? AND type = 'regular'"
+        #cur = conn.cursor()
+        #cur.execute(table, project)
+        #wave = cur.fetchone()
+        wave = self._pull_wave(conn, wave_name)
         #
         project = (wave[0],)
-        sql = 'SELECT {:} FROM tb_WaveRegular WHERE wave_number = ?'.format(item)
+        sql = 'SELECT {:} FROM WaveRegular WHERE wave_id = ?'.format(item)
         cur = conn.cursor()
         cur.execute(sql, project)
         data = cur.fetchone()
         return [*wave[:3], *data[2:]]
+    #
     #
     # ------------------------------
     #
@@ -351,9 +349,9 @@ class RegWaveItem: # (WaveItem)
         # Update wave lenght
         with conn:
             items = (self.number, )
-            table = f"UPDATE tb_WaveRegular \
+            table = f"UPDATE WaveRegular \
                      SET wave_length = {self._wave._Lw} \
-                     WHERE wave_number = ?"
+                     WHERE wave_id = ?"
             cur = conn.cursor()
             cur.execute(table, items)
         #
@@ -361,14 +359,14 @@ class RegWaveItem: # (WaveItem)
         #
         surface = self._wave.get_surface(surface_points)
         #surface['wave_name'] = self.name
-        surface['wave_number'] = self.number        
-        #surface =  surface[['wave_number', 'type', 'x', 'eta', 'phase']]
+        surface['wave_id'] = self.number        
+        #surface =  surface[['wave_id', 'type', 'x', 'eta', 'phase']]
         #
         conn = create_connection(self.db_file)
         with conn:
             # push surface data
-            surface.to_sql('tb_WaveSurface', conn,
-                         index_label=['wave_number', 'type', 'x', 'eta', 'phase'], 
+            surface.to_sql('WaveSurface', conn,
+                         index_label=['wave_id', 'type', 'x', 'eta', 'phase'], 
                          if_exists='append', index=False)        
             #
             # get surface data from sql 
@@ -382,19 +380,19 @@ class RegWaveItem: # (WaveItem)
         #                      self.d, surface, kpoints,
         #                      self.finite_depth)
         #
-        kindf['wave_number'] = self.number
+        kindf['wave_id'] = self.number
         #kindf['type'] = 'order_1'
         #
         depth_steps = depth_steps = np.arange(depth_points + 1) / depth_points
-        kindf['surface_number'] = repmat(surface['number'].to_numpy(),
+        kindf['surface_id'] = repmat(surface['number'].to_numpy(),
                                          depth_steps.size, 1).flatten('F')
         #
         kindf.drop(columns=['phase', 'x'], inplace=True, axis=1)
         #
         conn = create_connection(self.db_file)
         with conn:
-            kindf.to_sql('tb_WaveKinematics', conn,
-                         index_label=['wave_number', 'surface_number','type', 
+            kindf.to_sql('WaveKinematic', conn,
+                         index_label=['wave_id', 'surface_id','type', 
                                       'z', 'u', 'v', 'dphidt',
                                       'ut', 'vt', 'ux', 'uz',
                                       'pressure', 'Benoulli_check'], 
@@ -417,7 +415,7 @@ class RegWaveItem: # (WaveItem)
             # Update wave lenght
             #with conn:
             #    items = (self.name, )
-            #    table = f"UPDATE tb_Wave \
+            #    table = f"UPDATE Wave \
             #             SET wave_length = {wave_length} \
             #             WHERE name = ?"
             #    cur = conn.cursor()
@@ -445,14 +443,14 @@ class RegWaveItem: # (WaveItem)
     def _pull_wave(self, conn, item: str = "*"):
         """ """
         items = (self.name,)
-        table = "SELECT * FROM tb_Wave \
+        table = "SELECT * FROM Wave \
                  WHERE name = ? AND type = 'regular'"
         cur = conn.cursor()
         cur.execute(table, items)
         wave = data = cur.fetchone()
         #return data
         project = (wave[0],)
-        sql = 'SELECT {:} FROM tb_WaveRegular WHERE wave_number = ?'.format(item)
+        sql = 'SELECT {:} FROM WaveRegular WHERE wave_id = ?'.format(item)
         cur = conn.cursor()
         cur.execute(sql, project)
         data = cur.fetchone()
@@ -468,7 +466,7 @@ class RegWaveItem: # (WaveItem)
         conn = create_connection(self.db_file)
             #
             #df = DBframework()
-            #header = ['wave_name', 'number', 'wave_number', 'type', 'x', 'eta', 'phase']
+            #header = ['wave_name', 'number', 'wave_id', 'type', 'x', 'eta', 'phase']
             #surface = df.DataFrame(data=data, columns=header)
             #surface = surface[['wave_name', 'type', 'x', 'eta', 'phase']]            
         #
@@ -478,12 +476,12 @@ class RegWaveItem: # (WaveItem)
             surface.columns
         except AttributeError:
             #surface = self.get_surface(surface_points)
-            #surface =  surface[['wave_number', 'type', 'x', 'eta', 'phase']]
+            #surface =  surface[['wave_id', 'type', 'x', 'eta', 'phase']]
             #
             #conn = create_connection(self.db_file)
             #with conn:
-            #    surface.to_sql('tb_WaveSurface', conn,
-            #                 index_label=['wave_number', 'type', 'x', 'eta', 'phase'], 
+            #    surface.to_sql('WaveSurface', conn,
+            #                 index_label=['wave_id', 'type', 'x', 'eta', 'phase'], 
             #                 if_exists='append', index=False)
             #    surface['wave_name'] = self.name
             #
@@ -506,13 +504,13 @@ class RegWaveItem: # (WaveItem)
         #surface = get_surface(n, kd, self._Y, self.d, 
         #                      surface_points, self.finite_depth)
         #
-        #surface['wave_number'] = self.number
+        #surface['wave_id'] = self.number
         #surface['type'] = 'order_1'
         #
         #conn = create_connection(self.db_file)
         #with conn:
-        #    surface.to_sql('tb_WaveSurface', conn,
-        #                 index_label=['wave_number', 'type', 'x', 'eta', 'phase'], 
+        #    surface.to_sql('WaveSurface', conn,
+        #                 index_label=['wave_id', 'type', 'x', 'eta', 'phase'], 
         #                 if_exists='append', index=False)
         #
         #surface['wave_name'] = self.name
@@ -537,19 +535,19 @@ class RegWaveItem: # (WaveItem)
         #wave = self._get_wave(self, conn)
         #
         items = (self.number,)
-        table = 'SELECT tb_Wave.name, tb_WaveSurface.* \
-                 FROM tb_Wave, tb_WaveSurface \
-                 WHERE tb_WaveSurface.wave_number = ? \
-                 AND tb_Wave.number = tb_WaveSurface.wave_number'
+        table = 'SELECT Wave.name, WaveSurface.* \
+                 FROM Wave, WaveSurface \
+                 WHERE WaveSurface.wave_id = ? \
+                 AND Wave.number = WaveSurface.wave_id'
         #try:
         cur = conn.cursor()
         cur.execute(table, items)
         data = cur.fetchall()
         #
         df = DBframework()
-        header = ['wave_name', 'number', 'wave_number', 'type', 'x', 'eta', 'phase']
+        header = ['wave_name', 'number', 'wave_id', 'type', 'x', 'eta', 'phase']
         surface = df.DataFrame(data=data, columns=header)
-        return surface[['number', 'wave_name', 'wave_number', 'type', 'x', 'eta', 'phase']]
+        return surface[['number', 'wave_name', 'wave_id', 'type', 'x', 'eta', 'phase']]
         #except sqlite3.OperationalError:
         #    return None
     #
@@ -604,12 +602,12 @@ class RegWaveItem: # (WaveItem)
     def _pull_kinematics(self, conn):
         """read kin from sql"""
         items = (self.number,)
-        table = 'SELECT tb_Wave.name, tb_WaveSurface.x, tb_WaveSurface.phase, \
-                 tb_WaveKinematics.* \
-                 FROM tb_Wave, tb_WaveSurface, tb_WaveKinematics \
-                 WHERE tb_WaveSurface.wave_number = ? \
-                 AND tb_Wave.number = tb_WaveKinematics.wave_number \
-                 AND tb_WaveSurface.number = tb_WaveKinematics.surface_number'
+        table = 'SELECT Wave.name, WaveSurface.x, WaveSurface.phase, \
+                 WaveKinematic.* \
+                 FROM Wave, WaveSurface, WaveKinematic \
+                 WHERE WaveSurface.wave_id = ? \
+                 AND Wave.number = WaveKinematic.wave_id \
+                 AND WaveSurface.number = WaveKinematic.surface_id'
         #try:
         cur = conn.cursor()
         cur.execute(table, items)
@@ -617,7 +615,7 @@ class RegWaveItem: # (WaveItem)
         #
         df = DBframework()
         header = ['wave_name', 'x', 'phase', 'index', 
-                  'wave_number', 'surface_number','type', 
+                  'wave_id', 'surface_id','type', 
                   'z', 'u', 'v', 'dphidt',
                   'ut', 'vt', 'ux', 'uz',
                   'pressure', 'Benoulli_check']

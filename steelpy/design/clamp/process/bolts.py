@@ -7,7 +7,7 @@ from typing import ClassVar # NamedTuple, List,
 
 # package imports
 from steelpy.utils.units.main import Units
-from steelpy.material.main import Materials
+from steelpy.material.main import Material
 
 #-------------------------------------------------
 #
@@ -36,7 +36,7 @@ class BoltData:
         # Bolt Section
         self.d = Diameter * self.units.mm
         # Stud-Bolt Material Properties
-        #_material = Materials()
+        #_material = Material()
         #_material[1] = 'plastic'
         #self._material = _material[1]
         #self._material.Fy = Fyb * self.units.newton / self.units.mm**2
@@ -73,7 +73,7 @@ class Bolts:
         Lsb : Stressed length of the studbolts
         """
         self._units = Units()
-        #_material = Materials()
+        #_material = Material()
         #_material[1] = 'plastic'
         #self._material = _material[1]
         #

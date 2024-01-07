@@ -101,7 +101,7 @@ class WaveCnoidal(WaveItem):
             surface['title'] = self.title
         else:
             surface['title'] = None
-        #surface['wave_number'] = self.number
+        #surface['wave_id'] = self.number
         surface['type'] = 'order_1'
         #
         self._surface = surface

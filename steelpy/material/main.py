@@ -12,12 +12,12 @@ import re
 from .process.operations import find_mat_type, get_isomat_prop #, get_isomat_prop_df
 from .sqlite.isotropic import MaterialSQL
 from .inmemory.isotropic import MaterialIM
-from steelpy.utils.dataframe.main import DBframework
+
 
 #
 #
 #
-class Materials(Mapping):
+class Material(Mapping):
     """This module stores material classes.
        -------------------------------
        Linear material:
@@ -27,12 +27,15 @@ class Materials(Mapping):
     """
     __slots__ = ['_material']
 
-    def __init__(self, mesh_type: str = 'inmemory',
-                 db_file: str | None = None) -> None:
+    def __init__(self,
+                 component:int,
+                 db_file: str | None = None, 
+                 mesh_type: str = 'inmemory') -> None:
         """
         """
         if mesh_type != "inmemory":
             self._material = MaterialSQL(db_file=db_file,
+                                         component=component, 
                                          db_system=mesh_type)
         else:
             self._material = MaterialIM()

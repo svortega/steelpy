@@ -4,7 +4,7 @@
 # Python stdlib imports
 
 # package imports
-#from steelpy.material.main import Materials
+#from steelpy.material.main import Material
 from steelpy.utils.units.main import Units
 from .chapter9.ring_main import Ring
 #import steelpy.formulas.roarks.circular_ring as ring

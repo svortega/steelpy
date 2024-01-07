@@ -10,7 +10,7 @@ import re
 #
 # package imports
 from steelpy.utils.sqlite.utils import create_connection, create_table
-from steelpy.metocean.hydrodynamic.utils import HydroItem, HydroBasic#, get_profile
+from steelpy.metocean.hydrodynamic.utils.main import HydroItem, HydroBasic
 
 
 class WaveKinFactor(HydroBasic):
@@ -47,16 +47,16 @@ class WaveKinFactor(HydroBasic):
     def _create_table(self, conn) -> None:
         """ """
         # Main
-        table = "CREATE TABLE IF NOT EXISTS tb_WaveKinFactor (\
+        table = "CREATE TABLE IF NOT EXISTS WaveKinFactor (\
                         number INTEGER PRIMARY KEY NOT NULL,\
                         name NOT NULL,\
                         type TEXT NOT NULL, \
                         title TEXT);"
         create_table(conn, table)
         # Profile
-        table = "CREATE TABLE IF NOT EXISTS tb_WaveKFProfile (\
+        table = "CREATE TABLE IF NOT EXISTS WaveKinFactorProfile (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        wkf_number NOT NULL REFERENCES tb_WaveKinFactor(number),\
+                        wkf_id NOT NULL REFERENCES WaveKinFactor(number),\
                         elevation DECIMAL NOT NULL,\
                         factor DECIMAL NOT NULL);"
         create_table(conn, table)
@@ -66,7 +66,7 @@ class WaveKinFactor(HydroBasic):
         Create a new project into the projects table
         """
         cur = conn.cursor()
-        table = 'INSERT INTO tb_WaveKinFactor(name, type, title) \
+        table = 'INSERT INTO WaveKinFactor(name, type, title) \
                  VALUES(?,?,?)'
         # push
         cur = conn.cursor()
@@ -77,7 +77,7 @@ class WaveKinFactor(HydroBasic):
         """ """
         #
         project = (name,)
-        sql = 'SELECT {:} FROM tb_WaveKinFactor WHERE name = ?'.format(item)
+        sql = 'SELECT {:} FROM WaveKinFactor WHERE name = ?'.format(item)
         cur = conn.cursor()
         cur.execute(sql, project)
         data = cur.fetchone()
@@ -100,20 +100,20 @@ class WKFitem(HydroItem):
         """ """
         mg_name = (self.name, )
         #
-        table = f"UPDATE tb_WaveKinFactor \
+        table = f"UPDATE WaveKinFactor \
                  SET type = 'profile' \
                  WHERE name = ?"
         cur = conn.cursor()
         cur.execute(table, mg_name)
         #
         cur = conn.cursor()
-        table = 'SELECT * FROM tb_WaveKinFactor WHERE name = ?'
+        table = 'SELECT * FROM WaveKinFactor WHERE name = ?'
         cur.execute(table, mg_name)
         values = cur.fetchone()        
         #
         profile = tuple((values[0], *item, ) for item in profile_data)
         cur = conn.cursor()
-        table = 'INSERT INTO tb_WaveKFProfile(wkf_number, \
+        table = 'INSERT INTO WaveKinFactorProfile(wkf_id, \
                                               elevation, factor) \
                                               VALUES(?,?,?)'
         # push

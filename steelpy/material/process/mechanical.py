@@ -1,14 +1,14 @@
 # 
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 # 
-from __future__ import annotations
 #
 # Python stdlib imports
+from __future__ import annotations
 from array import array
 from collections.abc import Mapping
 from dataclasses import dataclass
-import re
-from typing import NamedTuple,  List, Union, Iterable
+#import re
+from typing import NamedTuple
 
 # package imports
 from steelpy.utils.units.main import Units
@@ -25,7 +25,6 @@ class MaterialItem:
     """
     name: str|int
     number: int
-    #grade: float|None
     Fy: float
     Fu: float|None
     E: float
@@ -35,6 +34,7 @@ class MaterialItem:
     alpha: float
     title: str|None = None
     type: str = "isotropic"
+    #component: float|str | None = None
     #
     def __str__(self) -> str:
         """
@@ -244,12 +244,12 @@ class GetMaterial:
 
     __slots__ = ['number','index', 'cls', 'type', 'units']
 
-    def __init__(self, cls, material_number:int) -> None:
+    def __init__(self, cls, material_id:int) -> None:
         """
         """
-        self.index = cls._labels.index(material_number)
+        self.index = cls._labels.index(material_id)
         self.cls = cls
-        self.number = material_number
+        self.number = material_id
         # get material name
         self.units = Units()
         self.type:str = "elastic"
@@ -430,8 +430,8 @@ class MaterialElastic(Mapping):
                             .format(material_name))
         except ValueError:
             self._labels.append(material_name)
-            material_number = next(self.get_number())
-            self._number.append(material_number)
+            material_id = next(self.get_number())
+            self._number.append(material_id)
             self._grade.append(-1)
             #
             self._title.append(properties.pop(0))
@@ -444,22 +444,22 @@ class MaterialElastic(Mapping):
             self._density.append(properties[5]) # kg/m^3
             self._alpha.append(properties[6])   # K
             #
-            #index = self._labels.index(material_number)
+            #index = self._labels.index(material_id)
             #self._Fy[index] = properties[0]
     #
-    def __getitem__(self, material_number: int) -> tuple:
+    def __getitem__(self, material_id: int) -> tuple:
         """
         """
         try:
-            index = self._labels.index(material_number)
-            #return GetMaterial(self, material_number)
+            index = self._labels.index(material_id)
+            #return GetMaterial(self, material_id)
             return MaterialItem(name=self._labels[index], number=self._number[index],
                                 Fy=self._Fy[index], Fu=self._Fu[index],
                                 E=self._E[index], G=self._G[index],
                                 poisson=self._poisson[index], density=self._density[index],
                                 alpha=self._alpha[index])
         except ValueError:
-            raise IndexError('   *** material {:} does not exist'.format(material_number))        
+            raise IndexError('   *** material {:} does not exist'.format(material_id))        
     #
     def get_number(self, start:int=1)-> Iterable[int]:
         """
@@ -511,10 +511,10 @@ class MaterialElastic(Mapping):
         #elastic = elastic.drop_duplicates(['name'])
         #xx = elastic.Fy.tolist()
         #
-        material_number = [next(self.get_number()) for _ in df.name]
+        material_id = [next(self.get_number()) for _ in df.name]
         #
         self._labels.extend(df.name.tolist())
-        self._number.extend(material_number)
+        self._number.extend(material_id)
         self._grade.extend([-1 for _ in df.name])
         # Fill values
         self._title.extend(df.name.tolist())

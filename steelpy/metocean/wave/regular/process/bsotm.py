@@ -142,7 +142,7 @@ class BSOTM:
     """
     Calculate the base shear and overturning moment of single pile
 
-    Parameters
+    Parameter
     ----------
     ux : horizontal wave particle velocity
     ax : horizontal wave particle acceleration
@@ -613,7 +613,7 @@ def bsotm_reg(kinematics,
     """
     Calculate the base shear and overturning moment of single pile
 
-    Parameters
+    Parameter
     ----------
     ux : horizontal wave particle velocity
     ax : horizontal wave particle acceleration

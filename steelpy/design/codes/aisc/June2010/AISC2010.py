@@ -948,7 +948,7 @@ class AISC2010:
             #
         #
         #
-        # Channel Sections
+        # Channel Section
         elif self.SectionType =='CHANNEL':
             #
             # Table B4.1a 
@@ -1014,7 +1014,7 @@ class AISC2010:
             #
         #
         #
-        # Tee Sections
+        # Tee Section
         elif self.SectionType =='TEE':
             #
             # Table B4.1a 
@@ -2244,7 +2244,7 @@ class AISC2010:
                             _lambda_pf = self.lambda_p_fF
                             _lambda_rf = self.lambda_r_fF
                             #
-                            # a) For Sections With NonCompact Flanges
+                            # a) For Section With NonCompact Flanges
                             #
                             if self.ClassFlangeF == 'NONCOMPACT':
                                 #                        
@@ -2255,7 +2255,7 @@ class AISC2010:
                                 _Mn_F3_2_flag = '(F3.2a)'
                                 #
                             #
-                            # b) For Sections With Slender Flanges
+                            # b) For Section With Slender Flanges
                             #
                             else:
                                 #                        
@@ -2825,14 +2825,14 @@ class AISC2010:
                 self.Fcry_flag = '(F6-4)'
                 #
                 #
-                # (F6.2a) For Sections with Compact Flanges
+                # (F6.2a) For Section with Compact Flanges
                 if self.ClassFlangeF == 'COMPACT':
                     #
                     _Mn_F6_2 = _Mn_F6_1
                     _Mn_F6_2_flag = '(F6.1)'
                     #
                 #
-                # F6.2b For Sections with Non Compact Flanges 
+                # F6.2b For Section with Non Compact Flanges 
                 elif self.ClassFlangeF == 'NONCOMPACT':
                     #            
                     _Mn_F6_2 = (_Mpy - (_Mpy - 0.70 * self.Fy * self.Sy) *
@@ -2842,7 +2842,7 @@ class AISC2010:
                     _Mn_F6_2_flag = '(F6.2)'            
                     #
                 #
-                # F6.2c For Sections with Slender Flanges
+                # F6.2c For Section with Slender Flanges
                 else:
                     #            
                     _Mn_F6_2 = self.Fcry * self.Sy
@@ -2878,13 +2878,13 @@ class AISC2010:
                 _Mn_F7_1 = Mpy
                 _Mn_F7_1_flag = '(F7-1)'
                 #
-                # (F7.2a) For Sections with Compact Flanges
+                # (F7.2a) For Section with Compact Flanges
                 if self.ClassFlangeF == 'COMPACT': 
                     #
                     _Mn_F7_2 = _Mn_F7_1
                     _Mn_F7_2_flag = '(F7.2a)'
                     # 
-                # F7.2b For Sections with Non Compact Flanges 
+                # F7.2b For Section with Non Compact Flanges 
                 elif self.ClassFlangeF == 'NONCOMPACT':
                     #
                     _Mn_F7_2 = _Mn_F7_1
@@ -2998,7 +2998,7 @@ class AISC2010:
         #       Rolled sections
         if self.Build == 'ROLLED':
             _h = self.hw
-        #       Tee Sections
+        #       Tee Section
         elif self.Build == 'T':
             print ('TEE No yet defined')
         #       Welded + rest
@@ -3468,9 +3468,9 @@ class AISC2010:
             #
         #---
         #
-        # Unsymmetric  Sections
+        # Unsymmetric  Section
         else:
-            print ('UNSYMMETRIC Sections no implemented yet')
+            print ('UNSYMMETRIC Section no implemented yet')
             #
         #
         #
@@ -4302,7 +4302,7 @@ class CodeCheck(Shape, AISC2010):
         self.SectionType = SecFinder(self.SectionType)
         print ('SectionFinal --->', self.SectionType)
         # Select Section
-        # I Sections        
+        # I Section        
         if self.SectionType == 'I':
             #         
             Shape.I(self, self.d, self.tw, self.bfc, self.tfc, self.bft, self.tft)

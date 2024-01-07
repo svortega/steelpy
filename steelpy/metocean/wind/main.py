@@ -6,19 +6,20 @@
 from __future__ import annotations
 
 # package imports
-from steelpy.metocean.hydrodynamic.utils import HydroBasic
+from steelpy.metocean.wind.utils.main import WindBasic
 from steelpy.utils.sqlite.utils import create_connection, create_table
 
 
-class Wind(HydroBasic):
+class Wind(WindBasic):
     """
     """
-    __slots__ = ['_wind', 'db_file']
+    __slots__ = ['_wind', 'db_file', '_criteria']
     
-    def __init__(self, db_file: str):
+    def __init__(self, criteria: str, db_file: str):
         """
         """
         super().__init__(db_file)
+        self._criteria = criteria
         #
         self._wind:dict = {}
     #
@@ -47,22 +48,29 @@ class Wind(HydroBasic):
     def _create_table(self, conn) -> None:
         """ """
         # Main
-        table = "CREATE TABLE IF NOT EXISTS tb_Wind (\
+        #table = "CREATE TABLE IF NOT EXISTS Wind (\
+        #            number INTEGER PRIMARY KEY NOT NULL,\
+        #            name NOT NULL,\
+        #            type TEXT NOT NULL,\
+        #            velocity DECIMAL NOT NULL,\
+        #            H0 DECIMAL, \
+        #            formula TEXT, \
+        #            period_ratio DECIMAL, \
+        #            height_exponent DECIMAL, \
+        #            gus_factor DECIMAL, \
+        #            duration DECIMAL);"
+        #
+        table = "CREATE TABLE IF NOT EXISTS Wind (\
                     number INTEGER PRIMARY KEY NOT NULL,\
                     name NOT NULL,\
-                    type TEXT NOT NULL,\
-                    velocity DECIMAL NOT NULL,\
-                    H0 DECIMAL, \
-                    formula TEXT, \
-                    period_ratio DECIMAL, \
-                    height_exponent DECIMAL, \
-                    gus_factor DECIMAL, \
-                    duration DECIMAL);"
+                    type TEXT NOT NULL, \
+                    criteria_id INTEGER NOT NULL REFERENCES Main(number));"
+        #
         create_table(conn, table)
         # Profile
-        #table = "CREATE TABLE IF NOT EXISTS tb_CurrentProfile (\
+        #table = "CREATE TABLE IF NOT EXISTS CurrentProfile (\
         #                number INTEGER PRIMARY KEY NOT NULL,\
-        #                current_number NOT NULL REFERENCES tb_Current(number),\
+        #                current_id NOT NULL REFERENCES Current(number),\
         #                elevation DECIMAL NOT NULL,\
         #                factor DECIMAL NOT NULL);"
         #create_table(conn, table)

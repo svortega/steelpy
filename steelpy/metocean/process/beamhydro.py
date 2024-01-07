@@ -286,7 +286,7 @@ class BeamUnitForce(NamedTuple):
         dftemp = self.solve()
         #
         # setup df's columns
-        header = ['element_type', 'element_name', 'element_number', 
+        header = ['element_type', 'element_name', 'element_id', 
                   'load_type',
                   'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
                   'L0', 'L1', 'BS', 'OTM', 

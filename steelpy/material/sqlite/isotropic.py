@@ -4,7 +4,7 @@
 #
 # Python stdlib imports
 from __future__ import annotations
-from array import array
+#from array import array
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import NamedTuple
@@ -13,7 +13,7 @@ import re
 
 # package imports
 from steelpy.utils.units.main import Units
-#from steelpy.process.units.buckingham import Number
+from steelpy.utils.sqlite.main import ClassBasicSQL
 #from ..process.operations import
 from ..process.print_report import print_isomat
 from steelpy.utils.sqlite.utils import create_connection, create_table
@@ -26,37 +26,31 @@ from steelpy.utils.dataframe.main import DBframework
 #
 # ----------------------------------------
 #
-class MatBasicSQL(Mapping):
+class MatBasicSQL(ClassBasicSQL):
+    __slots__ = ['db_file']
     
     def __init__(self, db_file: str) -> None:
         """
         db_system: sqlite
         """
-        self.db_file = db_file
+        super().__init__(db_file)
     #
     #
     @property
     def _labels(self):
         """ """
-        table = 'SELECT tb_Materials.name FROM tb_Materials'
+        query = (self._component, )
+        table = 'SELECT name FROM Material\
+                 WHERE component_id = ? ;'
+        #
         conn = create_connection(self.db_file)
         with conn:        
             cur = conn.cursor()
-            cur.execute(table)
+            cur.execute(table, query)
             items = cur.fetchall()
-        return [item[0] for item in items]    
+        return [item[0] for item in items]
     #
     #
-    def __len__(self):
-        return len(self._labels)
-
-    def __iter__(self):
-        """
-        """
-        return iter(self._labels)
-
-    def __contains__(self, value):
-        return value in self._labels
     #
     #
     #@property
@@ -82,25 +76,23 @@ class MatBasicSQL(Mapping):
 #
 class MaterialSQL(MatBasicSQL):
     
-    __slots__ = ['db_file', 'db_system', '_default',
-                 '_elastic', '_curve']
+    __slots__ = ['db_file', 'db_system', '_component', 
+                 '_default', '_elastic', '_curve']
 
     def __init__(self, db_file: str,
+                 component: str|int = None,
                  db_system:str="sqlite") -> None:
         """
         db_system: sqlite
         """
         super().__init__(db_file)
         #
-        self.db_system = db_system
+        self._component = component
+        #self.db_system = db_system
         self._default: str|None = None
-        self._elastic = MaterialElasticSQL(self.db_file)
-        #
-        # create node table
-        conn = create_connection(self.db_file)
-        with conn:        
-            self._create_table(conn)
-    #
+        self._elastic = MaterialElasticSQL(component=self._component,
+                                           db_file=self.db_file)
+    #    
     #
     def __setitem__(self, material_name: str|int,
                     properties: list[str|float]) -> None:
@@ -111,23 +103,19 @@ class MaterialSQL(MatBasicSQL):
             raise IOError('   error material {:} already exist'.format(material_name))
         except ValueError:
             material_type = properties[0]
-            #self._labels.append(material_name)
-            #self._type.append(material_type)
             #
             conn = create_connection(self.db_file)
             with conn:
-                push_material(conn, material_name, material_type)
-            #    #conn.commit()
-            #    #self._number.append(mat_number)
+                push_material(conn, material_name, material_type, self._component)
+            #
             # set material
             if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
                 #self._material[material_name]
-                raise Exception('--> No ready')
+                raise NotImplementedError('material type not implemented')
             elif re.match(r"\b(elastic|linear|isotropic)\b", material_type, re.IGNORECASE):
                 self._elastic[material_name] = properties[1:] # [mat_number, *properties[1:]]
             else:
-                raise IOError(' material type {:} not recognised'
-                              .format(material_type))
+                raise IOError(f' material type {material_type} not valid')
         #
         self._default = material_name
     #
@@ -136,15 +124,14 @@ class MaterialSQL(MatBasicSQL):
         """
         try:
             index = self._labels.index(material_name)
-            #mat_number = self._number[index]
-            #material_type = self._type[index]
             self._default = material_name
         except (IndexError, ValueError):
-            raise KeyError('Invalid material name : {:}'.format(material_name))
+            raise KeyError(f'Invalid material: {material_name}')
         #
         conn = create_connection(self.db_file)
         with conn:        
-            mat_number, mat_type = get_mat_specs(conn, material_name)
+            mat_number, mat_type = get_mat_specs(conn, material_name,
+                                                 self._component)
         #
         if re.match(r"\b(curve)\b", mat_type, re.IGNORECASE):
             return self._curve[material_name]
@@ -156,27 +143,26 @@ class MaterialSQL(MatBasicSQL):
             raise IOError(' material type {:} not recognised'
                           .format(mat_type))        
     #
-    #def _push_material(self, conn, material_name: Union[str, int],
-    #                   material_type:str):
-    #    """
-    #    """
-    #    project = (material_name, None, material_type)
-    #    sql = 'INSERT INTO  tb_Materials(name, title, type) VALUES(?,?,?)'
-    #    cur = conn.cursor ()
-    #    cur.execute (sql, project)
-    #    return cur.lastrowid
+    #
+    # ------------------
+    # SQL ops
+    # ------------------    
+    #  
     #
     def _create_table(self, conn) -> None:
         """ """
-        _table_materials = "CREATE TABLE IF NOT EXISTS tb_Materials (\
-                            number INTEGER PRIMARY KEY,\
-                            name NOT NULL,\
-                            title TEXT,\
-                            type TEXT NOT NULL);"
+        table = "CREATE TABLE IF NOT EXISTS Material (\
+                    number INTEGER PRIMARY KEY,\
+                    name NOT NULL,\
+                    component_id INTEGER NOT NULL REFERENCES Component(number), \
+                    type TEXT NOT NULL,\
+                    title TEXT);"
         #
-        #conn = create_connection(self.db_file)
-        create_table(conn, _table_materials)
-    #   
+        create_table(conn, table)
+    #
+    # ------------------
+    # Opretations
+    # ------------------     
     #
     @property
     def default(self):
@@ -222,8 +208,8 @@ class MaterialSQL(MatBasicSQL):
             #
             #self._labels.extend(elastic.name)
             #self._type.extend(elastic.type)
-            #material_number = [next(self.get_number()) for _ in elastic.name]
-            #self._number.extend(material_number)
+            #material_id = [next(self.get_number()) for _ in elastic.name]
+            #self._number.extend(material_id)
             #
             self._elastic.df = elastic
         except AttributeError:
@@ -234,9 +220,13 @@ class MaterialSQL(MatBasicSQL):
                             cls_type=self._elastic, cls=self)
 #
 #
+#
+#
+#
 @dataclass
 class MaterialType:
-    __slots__ = ['_cls_type', '_item_type', 'db_file']
+    __slots__ = ['_cls_type', '_item_type',
+                 'db_file', '_component']
     
     def __init__(self, mat_type: str, cls_type, cls):
         """
@@ -245,7 +235,7 @@ class MaterialType:
         self._item_type = mat_type
         #self._labels = cls._labels
         #self._type = cls._type
-        #self._number = cls._number
+        self._component = cls._component
         self.db_file = cls.db_file
         
     def __setitem__(self, material_name:str|int,
@@ -257,7 +247,9 @@ class MaterialType:
         # set material master
         conn = create_connection(self.db_file)
         with conn:
-            push_material(conn, material_name, self._item_type)
+            push_material(conn, material_name,
+                          self._item_type,
+                          component=self._component)
         #
         #self._number.append(mat_number)
         # set material type
@@ -287,13 +279,17 @@ class MaterialType:
     #        n += 1
     #   
 #
+#  
 #
-def push_material(conn, material_name: str|int,
-                  material_type:str):
+# 
+#
+def push_material(conn, material_name: str|int, 
+                  material_type:str, component: int):
     """
     """
-    project = (material_name, None, material_type)
-    sql = 'INSERT INTO  tb_Materials(name, title, type) VALUES(?,?,?)'
+    project = (material_name, component, material_type, None, )
+    sql = 'INSERT INTO  Material(name, component_id, type, title)\
+           VALUES(?,?,?,?)'
     cur = conn.cursor ()
     cur.execute (sql, project)
     #return cur.lastrowid
@@ -312,17 +308,21 @@ class GetMaterial(NamedTuple):
     alpha:float
 #
 #
-def get_materials(conn, component_name):
+def get_materials(conn, component: int):
     """
     """
-    materials = {}
+    query = (component, )
+    table = "SELECT Material.name, Material.type,\
+                        MatElastoPlastic.*\
+                FROM Material, MatElastoPlastic, Component \
+                WHERE  materials.number = MatElastoPlastic.number \
+                AND Component.number = ?;"
+    #
     cur = conn.cursor()
-    #cur.execute("SELECT * FROM tb_materials;")
-    cur.execute("SELECT tb_Materials.name, tb_Materials.type,\
-                tb_MatElastoPlastic.*\
-                FROM tb_Materials, tb_MatElastoPlastic\
-                WHERE  tb_materials.number = tb_MatElastoPlastic.number;")
+    cur.execute(table, query)
     rows = cur.fetchall()
+    #
+    materials = {}
     for row in rows:
         #print(row)
         #if row[3] == "curve":
@@ -337,22 +337,30 @@ def get_materials(conn, component_name):
     return materials
 #
 #
-def get_materialSQL(conn, material_name:int|str):
+def get_materialSQL(conn, material_name:int|str,
+                    component: int):
     """
     """
-    cur = conn.cursor()
-    cur.execute("SELECT tb_Materials.name, tb_Materials.type,\
-                tb_MatElastoPlastic.*\
-                FROM tb_Materials, tb_MatElastoPlastic\
-                WHERE  tb_Materials.number = tb_MatElastoPlastic.material_number\
-                AND tb_Materials.name = ?",(material_name, ))
-    row = cur.fetchone()
+    query = (material_name, component, )
+    table = "SELECT Material.name, Material.type, \
+                    MaterialElastic.*, Component.name \
+                FROM Component, Material, MaterialElastic\
+                WHERE  Material.number = MaterialElastic.material_id\
+                AND Material.name = ? \
+                AND Component.number = ? ;"
     #
-    return MaterialItem(name=row[0], number=row[3],
+    with conn: 
+        cur = conn.cursor()
+        cur.execute(table, query)
+        row = list(cur.fetchone())
+    #
+    #component = row.pop(0)
+    #
+    return MaterialItem(name=row[0], number=row[3], 
                         Fy=row[4], Fu=row[5],
                         E=row[6], G=row[7],
                         poisson=row[8], density=row[9],
-                        alpha=row[10])    
+                        alpha=row[10])
     #print("--->")
     #return materials
 #
@@ -364,17 +372,23 @@ class GetMaterialSQL:
 
     __slots__ = ['number', 'index', 'cls', 'type', 'db_file', 'units']
 
-    def __init__(self, cls, material_number: int) -> None:
+    def __init__(self, cls, material_id: int) -> None:
         """
         """
-        self.index: int = cls._labels.index(material_number)
+        1 / 0
+        self.index: int = cls._labels.index(material_id)
         self.cls = cls
-        self.number: int = material_number
+        self.number: int = material_id
         self.db_file: str = cls.db_file
         # get material name
         self.type: str = "elastic"
         self.units = Units()
     #
+    #
+    def __str__(self) -> str:
+        return print_isomat(self)    
+    #
+    # -------------------------------------------
     #
     @property
     def Fy(self):
@@ -451,8 +465,9 @@ class GetMaterialSQL:
     def name(self, name: Union[str, int]):
         """ """
         self.cls._title[self.index] = name
-        #
-
+    #
+    # -------------------------------------------
+    #
     def update_item(self, item: str, value: float):
         """ """
         conn = create_connection(self.db_file)
@@ -461,12 +476,15 @@ class GetMaterialSQL:
             conn.commit()
 
     #
-    def _update_item(self, conn, name, item, value):
+    def _update_item(self, conn, number: int,
+                     item: str, value: float):
         """ """
-        project = (value, name)
-        sql = 'UPDATE tb_MatElastoPlastic SET {:} = ? WHERE material_number = ?'.format(item)
+        query = (value, number)
+        table = f'UPDATE MatElastoPlastic SET {item} = ? \
+                  WHERE material_id = ? ;'
+        #
         cur = conn.cursor()
-        cur.execute(sql, project)
+        cur.execute(table, query)
 
     #
     #
@@ -478,12 +496,14 @@ class GetMaterialSQL:
         return value
 
     #
-    def _get_item(self, conn, name, item):
+    def _get_item(self, conn, number: int, item: str):
         """ """
-        project = (name,)
-        sql = 'SELECT {:} FROM tb_MatElastoPlastic WHERE material_number = ?'.format(item)
+        query = (number,)
+        table = f'SELECT {item} FROM MatElastoPlastic \
+                  WHERE material_id = ?'
+        #
         cur = conn.cursor()
-        cur.execute(sql, project)
+        cur.execute(table, query)
         record = cur.fetchone()
         return record[0]
 
@@ -494,112 +514,101 @@ class GetMaterialSQL:
     #    #name = self.cls._cls._labels[]
     #    index = self.cls._number.index(self.number)
     #    self.cls._default = self.cls._labels[index]
-    #
-    def __str__(self) -> str:
-        return print_isomat(self)
-
-
+#
+#
+#
 #
 #
 class MaterialElasticSQL(MatBasicSQL):
-    __slots__ = ['db_file', '_default']
+    __slots__ = ['db_file', '_default', '_component']
 
-    def __init__(self, db_file: str):
+    def __init__(self, component: int, db_file: str):
         """
         """
         super().__init__(db_file)
-        self.db_file = db_file
-        #
-        # create node table
-        conn = create_connection(self.db_file)
-        with conn:            
-            self._create_table()
-
+        self._component = component
     #
-    # @property
-    # def type(self) -> str:
-    #    """ Material type classification"""
-    #    return  "elastic"
     #
-    def __setitem__(self, material_name: int|str,
+    def __setitem__(self, name: int|str,
                     properties: list[float]) -> None:
         """
         """
         try:
-            self._labels.index(material_name)
+            self._labels.index(name)
             conn = create_connection(self.db_file)
             with conn:
-                self._push_material(conn, material_name, properties)
+                self._push_material(conn,
+                                    material_name=name, 
+                                    properties=properties)
                 # conn.commit()            
         except ValueError:
-            raise Exception(f' *** warning material {material_name} missing')
-
-            
-
+            raise Exception(f' *** warning material {name} missing')
     #
     def __getitem__(self, material_name: int|str) -> tuple:
         """
         """
         try:
             index = self._labels.index(material_name)
-            # index = self._cls._number.index(material_number)
-            #material_name = self._cls._labels[index]
-            #return GetMaterialSQL(self, material_number)
             conn = create_connection(self.db_file)
-            return get_materialSQL(conn, material_name)
+            return get_materialSQL(conn, material_name,
+                                   component=self._component)
         except ValueError:
-            raise IndexError('   *** material {:} does not exist'.format(material_name))
+            raise IndexError(f' *** material {material_name} not valid')
 
     #
     #
-    def _create_table(self) -> None:
+    def _create_table(self, conn) -> None:
         """ """
-        _table_material = "CREATE TABLE IF NOT EXISTS tb_MatElastoPlastic(\
-                            number INTEGER PRIMARY KEY,\
-                            material_number INTEGER NOT NULL REFERENCES tb_Materials(number),\
-                            Fy DECIMAL NOT NULL,\
-                            Fu DECIMAL NOT NULL,\
-                            E DECIMAL NOT NULL,\
-                            G DECIMAL NOT NULL,\
-                            poisson DECIMAL NOT NULL,\
-                            density DECIMAL NOT NULL, \
-                            alpha DECIMAL NOT NULL);"
+        table = "CREATE TABLE IF NOT EXISTS MaterialElastic(\
+                    number INTEGER PRIMARY KEY,\
+                    material_id INTEGER NOT NULL REFERENCES Material(number),\
+                    Fy DECIMAL NOT NULL,\
+                    Fu DECIMAL NOT NULL,\
+                    E DECIMAL NOT NULL,\
+                    G DECIMAL NOT NULL,\
+                    poisson DECIMAL NOT NULL,\
+                    density DECIMAL NOT NULL, \
+                    alpha DECIMAL NOT NULL);"
         #
         conn = create_connection(self.db_file)
-        create_table(conn, _table_material)
+        create_table(conn, table)
 
     #
     def _push_material(self, conn, material_name: int|str,
                        properties):
         """
         """
-        mat_number, mat_type = get_mat_specs(conn, material_name)
-        project = (mat_number, *properties)
-        sql = 'INSERT INTO  tb_MatElastoPlastic(material_number,\
-                                                Fy, Fu, E, G, poisson, density , alpha)\
-                                                VALUES(?,?,?,?,?,?,?,?)'
+        mat_number, mat_type = get_mat_specs(conn, material_name,
+                                             self._component)
+        query = (mat_number, *properties)
+        table = 'INSERT INTO  MaterialElastic(material_id,\
+                                            Fy, Fu, E, G, poisson, density , alpha)\
+                                VALUES(?,?,?,?,?,?,?,?)'
         cur = conn.cursor()
-        cur.execute(sql, project)
+        cur.execute(table, query)
         #return cur.lastrowid
-
     #
     #
     @property
     def df(self):
         """ raw data for dataframe"""
+        query = (self._component, )
+        table = "SELECT Material.name, Material.type, Material.title, \
+                        MaterialElastic.*\
+                        FROM Material, MaterialElastic, Component\
+                        WHERE  Material.number = MaterialElastic.material_id \
+                        AND Component.number = ? ;"
+        #
         conn = create_connection(self.db_file)
         with conn:
             cur = conn.cursor()
-            cur.execute("SELECT tb_Materials.name, tb_Materials.type, tb_Materials.title, \
-                        tb_MatElastoPlastic.*\
-                        FROM tb_Materials, tb_MatElastoPlastic\
-                        WHERE  tb_Materials.number = tb_MatElastoPlastic.material_number")
+            cur.execute(table, query)
             rows = cur.fetchall()            
         
         #
         db = DBframework()
         header = ['name', 'type', 'title',
-                  'number', 'material_number',
+                  'number', 'material_id',
                   'Fy', 'Fu', 'E', 'G', 'poisson', 'density', 'alpha']
         matdf = db.DataFrame(data=rows, columns=header)        
         #
@@ -615,44 +624,52 @@ class MaterialElasticSQL(MatBasicSQL):
         #
         # push material header
         dfmat = df[['name', 'type']].copy()
-        dfmat['title'] = None        
+        dfmat['title'] = None
+        dfmat['component_id'] = self._component
         with conn:
-            dfmat.to_sql('tb_Materials', conn,
-                         index_label=['name', 'title', 'type'], 
+            dfmat.to_sql('Material', conn,
+                         index_label=['name', 'component_id',
+                                      'type', 'title'], 
                          if_exists='append', index=False)
         #
         #
+        query = (self._component, )
+        table = "SELECT * from Material \
+                 WHERE Material.component_id = ?"
+        #
         cur = conn.cursor()
-        cur.execute("SELECT * from tb_Materials")
+        cur.execute(table, query)
         rows = cur.fetchall()
         mat_name = {item[1]: item[0] for item in rows}
         #
         # push elastic material
         dfel = df[['Fy', 'Fu', 'E', 'G',
                    'poisson', 'density' , 'alpha']].copy()
-        dfel['material_number'] = [mat_name[item] for item in df.name]
-        #dfel['material_number'] = dfel['material_number'].astype(int)
+        dfel['material_id'] = [mat_name[item] for item in df.name]
+        #dfel['material_id'] = dfel['material_id'].astype(int)
         with conn:
-            dfel.to_sql('tb_MatElastoPlastic', conn,
-                        index_label=['material_number',
+            dfel.to_sql('MatElastoPlastic', conn,
+                        index_label=['material_id',
                                      'Fy', 'Fu', 'E', 'G',
                                      'poisson', 'density' , 'alpha'], 
                         if_exists='append', index=False)
         #
         # TODO: update matIM
-        #self._number.extend(dfel['material_number'].tolist())
+        #self._number.extend(dfel['material_id'].tolist())
         #self._labels.extend(dfmat['name'].tolist())
         #print('--')
 #
 #
 #
-def get_mat_specs(conn, material_name:int|str):
+def get_mat_specs(conn, material_name:int|str, component: int):
     """
     """
+    query = (material_name, component, )
+    table = "SELECT number, type FROM Material \
+             WHERE  name = ? AND component_id =?;"
+    
     cur = conn.cursor()
-    cur.execute("SELECT tb_Materials.number, tb_Materials.type \
-                FROM tb_Materials \
-                WHERE  tb_Materials.name = ?",(material_name, ))
+    cur.execute(table, query)
     row = cur.fetchone()
     return list(row)
 #

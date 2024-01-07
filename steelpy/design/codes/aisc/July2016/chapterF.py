@@ -198,13 +198,13 @@ def Chapter_F(self, section, material):
                     _lambda_pf = self._lambda_p_flange
                     _lambda_rf = self._lambda_r_flange_b
                     #
-                    # a) For Sections With NonCompact Flanges
+                    # a) For Section With NonCompact Flanges
                     if "noncompact" in self.compactness.flexure:                   
                         _Mn_F3_2 = (_Mpx - (_Mpx - 0.7 * material.Fy * section.Zey) *
                                     ((_lambda_F3_2 - _lambda_pf) /
                                      (_lambda_rf - _lambda_pf)))      
                         _Mn_F3_2_flag = '(F3.2a)'
-                    # b) For Sections With Slender Flanges
+                    # b) For Section With Slender Flanges
                     else:             
                         _Mn_F3_2 = (0.9 * material.E * self.kc * section.Zey / _lambda_F3_2**2)
                         _Mn_F3_2_flag = '(F3.2b)'
@@ -689,18 +689,18 @@ def Chapter_F(self, section, material):
             self.Fcry_flag = '(F6-4)'
             #
             #
-            # (F6.2a) For Sections with Compact Flanges
+            # (F6.2a) For Section with Compact Flanges
             if self.compactness.flange.flexure.compactness == "compact":                        # @hami2230 - error updated
                 _Mn_F6_2 = _Mn_F6_1
                 _Mn_F6_2_flag = '(F6.1)'
-            # F6.2b For Sections with Non Compact Flanges 
+            # F6.2b For Section with Non Compact Flanges 
             elif self.compactness.flange.flexure.compactness == "noncompact":                   # @hami2230 - error updated
                 _Mn_F6_2 = (_Mpy - (_Mpy - 0.70 * material.Fy * section.Zez) *
                             ((_lambda_F6 - _lambda_pf) /
                              (_lambda_rf - _lambda_pf)))
                 
                 _Mn_F6_2_flag = '(F6.2)'
-            # F6.2c For Sections with Slender Flanges
+            # F6.2c For Section with Slender Flanges
             else:        
                 _Mn_F6_2 = self.Fcry * section.Zez
                 _Mn_F6_2_flag = '(F6.3)'

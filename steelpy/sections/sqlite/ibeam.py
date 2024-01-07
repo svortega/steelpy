@@ -1,24 +1,25 @@
 # 
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
 from __future__ import annotations
-from collections import namedtuple
-#from typing import Union, NamedTuple
+#from collections import namedtuple
+#from typing import NamedTuple
 #
-
+#
 # package imports
-from ..inmemory.ibeam import IbeamBasic
-from .operations import SectionSQLite
-from steelpy.sections.process.operations import get_sect_properties
+from steelpy.sections.utils.shape.ibeam import IbeamBasic
+from steelpy.sections.sqlite.utils import SectionItemSQL
+from steelpy.utils.sqlite.utils import create_connection
 #
 #
-
-class IbeamSQLite(SectionSQLite):
+#
+#
+class IbeamSQLite(SectionItemSQL):
     __slots__ = ['_default', 'db_file']
 
-    def __init__(self, db_file:str):
+    def __init__(self, component: int, db_file:str):
         """ 
         Parameters
         ----------
@@ -31,7 +32,8 @@ class IbeamSQLite(SectionSQLite):
         r   : root radius
         """
         self.db_file = db_file
-        super().__init__(db_file=self.db_file)
+        super().__init__(component=component,
+                         db_file=self.db_file)
     #
     #
     #
@@ -59,7 +61,7 @@ class IbeamSQLite(SectionSQLite):
             shear_stress:str = 'maximum'
             build:str = 'welded'
             compactness = None
-            section = (shape_name, title, 
+            section = (shape_name, 
                        "I section",   # shape type
                        None, None,    # diameter, wall_thickess
                        d, tw,         # height, web_thickness
@@ -68,7 +70,8 @@ class IbeamSQLite(SectionSQLite):
                        r,             # fillet_radius
                        FAvy, FAvz,
                        shear_stress, build,
-                       compactness,)
+                       compactness,
+                       title, )
             number = self.push_section(section)
             #self._number.append(number)
     #
@@ -81,8 +84,11 @@ class IbeamSQLite(SectionSQLite):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        row = self.get_section(shape_name)
+        conn = create_connection(self.db_file)
+        with conn:        
+            row = self._pull_section(conn, shape_name)
         #
+        #1 / 0
         return IbeamBasic(name=row[0], 
                           d=row[5], tw=row[6],
                           bft=row[7], tft=row[8],

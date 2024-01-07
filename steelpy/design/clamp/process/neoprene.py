@@ -7,7 +7,7 @@
 
 # package imports
 #from steelpy.process.units.main import Units
-#from steelpy.f2uModel.material.main import Materials
+#from steelpy.f2uModel.material.main import Material
 
 #
 class Neoprene:
@@ -32,7 +32,7 @@ class Neoprene:
         gamma : factor of safety 
         """
         #self._units = Units()
-        #_material = Materials()
+        #_material = Material()
         #_material[1] = 'plastic'
         self._material = material
         self._material['neoprene'] = 'linear'

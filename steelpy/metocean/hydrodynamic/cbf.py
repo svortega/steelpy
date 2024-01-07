@@ -9,7 +9,7 @@ from dataclasses import dataclass
 #
 # package imports
 from steelpy.utils.sqlite.utils import create_connection, create_table
-from steelpy.metocean.hydrodynamic.utils import HydroItem, HydroBasic
+from steelpy.metocean.hydrodynamic.utils.main import HydroItem, HydroBasic
 
 
 class CurrentBlockFactor(HydroBasic):
@@ -46,7 +46,7 @@ class CurrentBlockFactor(HydroBasic):
     def _create_table(self, conn) -> None:
         """ """
         # Main
-        table = "CREATE TABLE IF NOT EXISTS tb_CurrentBlockageFactor (\
+        table = "CREATE TABLE IF NOT EXISTS CurrentBlockageFactor (\
                         number INTEGER PRIMARY KEY NOT NULL,\
                         name NOT NULL,\
                         title TEXT NOT NULL, \
@@ -54,9 +54,9 @@ class CurrentBlockFactor(HydroBasic):
                         factor DECIMAL);"
         create_table(conn, table)
         # Profile
-        table = "CREATE TABLE IF NOT EXISTS tb_CurrentBFProfile (\
+        table = "CREATE TABLE IF NOT EXISTS CurrentBlockFactorProfile (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        wkf_number NOT NULL REFERENCES tb_CurrentBlockageFactor(number),\
+                        wkf_id NOT NULL REFERENCES CurrentBlockageFactor(number),\
                         elevation DECIMAL NOT NULL,\
                         factor DECIMAL NOT NULL);"
         create_table(conn, table)
@@ -66,7 +66,7 @@ class CurrentBlockFactor(HydroBasic):
         Create a new project into the projects table
         """
         cur = conn.cursor()
-        table = 'INSERT INTO tb_CurrentBlockageFactor(name, title, type) \
+        table = 'INSERT INTO CurrentBlockageFactor(name, title, type) \
                  VALUES(?,?,?)'
         # push
         cur = conn.cursor()
@@ -77,7 +77,7 @@ class CurrentBlockFactor(HydroBasic):
         """ """
         #
         project = (name,)
-        sql = 'SELECT {:} FROM tb_CurrentBlockageFactor WHERE name = ?'.format(item)
+        sql = 'SELECT {:} FROM CurrentBlockageFactor WHERE name = ?'.format(item)
         cur = conn.cursor()
         cur.execute(sql, project)
         data = cur.fetchone()
@@ -134,20 +134,20 @@ class CBFitem(HydroItem):
         """ """
         mg_name = (self.name, )
         #
-        table = f"UPDATE tb_CurrentBlockageFactor \
+        table = f"UPDATE CurrentBlockageFactor \
                  SET type = 'profile' \
                  WHERE name = ?"
         cur = conn.cursor()
         cur.execute(table, mg_name)
         #
         cur = conn.cursor()
-        table = 'SELECT * FROM tb_CurrentBlockageFactor WHERE name = ?'
+        table = 'SELECT * FROM CurrentBlockageFactor WHERE name = ?'
         cur.execute(table, mg_name)
         values = cur.fetchone()        
         #
         profile = tuple((values[0], *item, ) for item in profile_data)
         cur = conn.cursor()
-        table = 'INSERT INTO tb_CurrentBFProfile(wkf_number, \
+        table = 'INSERT INTO CurrentBlockFactorProfile(wkf_id, \
                                                 elevation, factor) \
                                                 VALUES(?,?,?)'
         # push

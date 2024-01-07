@@ -28,30 +28,30 @@ def material_set_mean(materials, fy_mod:float=1.10):
 # material section
 #
 def new_materialXX(materials, new_mat, 
-                 material_id:str|int='name',
-                 material_number:int|None=None):
+                   material_name:str|int='name',
+                   material_id:int|None=None):
     """
     Add new material to exisitng fe model materail
     """
     print('    * Adding new materials by {:}'.format(material_id))
     #
     #
-    if not material_number:
+    if not material_id:
         _mat_list = [_mat.number for _mat in materials.values()]
-        material_number = max(_mat_list)
+        material_id = max(_mat_list)
     
     for _mat in new_mat.values():
-        if material_id != 'name':
-            material_number = int(float(_mat.number))
+        if material_name != 'name':
+            material_id = int(float(_mat.number))
             _mat_name = 'new_material_' + str(_mat.number)
-            #material_number = _mat.number
+            #material_id = _mat.number
         else:
             _mat_name = _mat['name']
-            material_number += 1
+            material_id += 1
         
-        #materials[_mat_name] = material.Material(_mat_name, material_number)
+        #materials[_mat_name] = material.Material(_mat_name, material_id)
         materials[_mat_name] = 'Plastic'
-        materials[_mat_name].number = material_number
+        materials[_mat_name].number = material_id
         materials[_mat_name].Fy = float(_mat['Fy'])
         materials[_mat_name].E = float(_mat['E'])
         materials[_mat_name].poisson = float(_mat['poisson'])
@@ -75,7 +75,7 @@ def new_materialXX(materials, new_mat,
 # Jelly section
 def add_mod_material(material_type, materials, elements, sets,
                      _member_no, _group_no, _factor,
-                     material_number:int|None=None):
+                     material_id:int|None=None):
     """
     Create new material with modified elastic modulus and assing it to
     defined elements\n
@@ -114,14 +114,14 @@ def add_mod_material(material_type, materials, elements, sets,
     #
     mat_name = {}
     #mat_number = {}
-    #material_number = 0
+    #material_id = 0
     for key, _mat in materials.items():
         #mat_number[_mat.number] = key
         mat_name[str(_mat.name.lower())] = key
     #
-    if not material_number:
+    if not material_id:
         _mat_list = [_mat.number for _mat in materials.values()]
-        material_number = max(_mat_list)    
+        material_id = max(_mat_list)    
 
     # filter materials
     _new_mat = list(set(_new_mat))
@@ -130,11 +130,11 @@ def add_mod_material(material_type, materials, elements, sets,
     _mat_residual = []
     for _mat in _new_mat:
         _mat_name = mat_name[_mat]
-        material_number += 1
+        material_id += 1
         
         if material_type == 'jelly':
-            _new_name = materials[_mat_name].name + '_jelly_' + str(material_number)
-            materials[_new_name] = material.Material(_new_name, material_number)
+            _new_name = materials[_mat_name].name + '_jelly_' + str(material_id)
+            materials[_new_name] = material.Material(_new_name, material_id)
             #
             # jelly set Fy to zero
             materials[_new_name].Fy = 0  # materials[_mat].Fy
@@ -144,7 +144,7 @@ def add_mod_material(material_type, materials, elements, sets,
         #
         elif material_type == 'reinforced':
             _new_name = materials[_mat_name].name + '_reinforced_' + str(_mat_name)
-            materials[_new_name] = material.Material(_new_name, material_number)
+            materials[_new_name] = material.Material(_new_name, material_id)
             #
             # reinforced set Fy value
             if materials[_mat_name].Fy == 0:
@@ -189,7 +189,7 @@ def update_material_name(materials, _units,
     """
     #
     #
-    print('    * Updating Materials')
+    print('    * Updating Material')
     #
     try:
         base_units = units.Number(1, dims=_units[5])
@@ -225,7 +225,7 @@ def get_material_step(_member, _buckets):
 def simplify_material(materials, _element):
     """
     """
-    print('    * simplifying Materials')
+    print('    * simplifying Material')
     _buckets = get_buckets(materials)
     _duplicated = filter_bucket(_buckets)
     
@@ -307,7 +307,7 @@ def add_new_materialXX(structure, foundation, _mat_name, _mat_number):
     Input:\n
     structure  : fe model _structure
     _mat_name : list with new material's name\n
-    material_number   : list with new material's fe number\n
+    material_id   : list with new material's fe number\n
     """
     #
     
@@ -320,12 +320,12 @@ def add_new_materialXX(structure, foundation, _mat_name, _mat_number):
     except AttributeError:
         pass
     # find maximum load number
-    material_number = max(_mat_list)
+    material_id = max(_mat_list)
     #
     if _mat_name:
         _type = 'name'
         new_material(structure.materials,
-                     _mat_name, _type, material_number)
+                     _mat_name, _type, material_id)
 
     if _mat_number:
         _type = 'number'
@@ -376,7 +376,7 @@ def add_modified_material(_type, geometry, foundation,
     except AttributeError:
         pass
     # find maximum load number
-    material_number = max(_mat_list)
+    material_id = max(_mat_list)
     
     for _member_list in member_list:
         _factor = _member_list[1]
@@ -388,11 +388,11 @@ def add_modified_material(_type, geometry, foundation,
                          geometry.sets,
                          _member_list[0],
                          _group_no,
-                         _factor, material_number)
+                         _factor, material_id)
     #
     # find material number
     _mat_list.extend([_mat.number for _mat in geometry.materials.values()])
-    material_number = max(_mat_list)
+    material_id = max(_mat_list)
     
     for _group_list in group_list:
         _factor = _group_list[1]
@@ -404,7 +404,7 @@ def add_modified_material(_type, geometry, foundation,
                          geometry.sets,
                          _member_no,
                          _group_list[0],
-                         _factor, material_number)
+                         _factor, material_id)
 
     #return geometry
 #
@@ -531,13 +531,13 @@ def update_Fu(geometry, foundation, Fu_update):
                       'grade' : str(int(_Fu['grade'] * 10)) + "EM",
                       'poisson' : _material.poisson}
             #
-            new_material_number = {}
+            new_material_id = {}
             new_material_name, _type = assign_material_item(kwargs)
             # new material
             add_new_material(geometry,
                              foundation,
                              new_material_name,
-                             new_material_number)
+                             new_material_id)
             
             new_mat.append(_Fu['number'])
             #new_grade.append(_Fu['grade'])

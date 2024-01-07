@@ -426,8 +426,8 @@ class APIwsd22ed:
         6.3 COMBINED STRESSES FOR CYLINDRICAL MEMBERS
         """        
         #
-        # Sections 6.3.1 and 6.3.2 apply to overall member behavior
-        # while Sections 6.3.3 and 6.3.4 apply to local buckling
+        # Section 6.3.1 and 6.3.2 apply to overall member behavior
+        # while Section 6.3.3 and 6.3.4 apply to local buckling
         #fa = stress.sigma_x
         #fa = max(abs(item) for item in stress.sigma_x)
         #fbx = stress.sigma_y

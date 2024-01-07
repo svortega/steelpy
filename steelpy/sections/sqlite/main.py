@@ -1,13 +1,13 @@
 # 
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
-
+#
 # Python stdlib imports
 from __future__ import annotations
 #from collections.abc import Mapping
-import re
+#import re
 #
-
+#
 # package imports
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #
@@ -18,76 +18,52 @@ from .channel import ChannelSQLite
 from .box import BoxSQLite
 from .ibeam import IbeamSQLite
 from .solid import SolidSectionSQL
-#from ..process.operations import get_sect_properties #, SectionBasic
 #
-from ..inmemory.tubular import TubularBasic
-from ..inmemory.solid import RectangleBasic, CircleBasic, Trapeziod
-from ..inmemory.ibeam import IbeamBasic
-from ..inmemory.box import BoxBasic
-from ..inmemory.channel import ChannelBasic
-from ..inmemory.tee import TeeBasic
-from ..inmemory.angle import AngleBasic
-#from ..inmemory.operations import SectionBasic
-from steelpy.sections.process.utils import SectionMain
+from steelpy.sections.sqlite.utils import SectionMainSQL
+#from steelpy.utils.dataframe.main import DBframework
 #
-from steelpy.utils.dataframe.main import DBframework
-
 #
-class SectionSQL(SectionMain):
+#
+class SectionSQL(SectionMainSQL):
     __slots__ = ['_tubular', '_solid', '_ibeam', '_box',
                  '_channel', '_tee', '_angle', '_default',
-                 'db_file']    # '_labels', '_number', '_title', '_type',
+                 'db_file', '_component']
+                 # '_labels', '_number', '_title', '_type',
 
     def __init__(self, db_file: str,
+                 component:int, 
                  db_system: str = "sqlite"):
         """
         """
-        #super().__init__()
+        super().__init__(db_file)
         #
-        self.db_file = db_file
+        #self.db_file = db_file
+        self._component = component
         #
-        self._tubular = TubularSQL(db_file=db_file)
-        self._solid = SolidSectionSQL(db_file=db_file)
-        self._ibeam = IbeamSQLite(db_file=db_file)
-        self._box = BoxSQLite(db_file=db_file)
-        self._channel = ChannelSQLite(db_file=db_file)
-        self._tee = TeeSQLite(db_file=db_file)
-        self._angle = AngleSQLite(db_file=db_file)
+        self._tubular = TubularSQL(component=component,
+                                   db_file=db_file)
+        
+        self._solid = SolidSectionSQL(component=component,
+                                      db_file=db_file)
+        
+        self._ibeam = IbeamSQLite(component=component,
+                                  db_file=db_file)
+        
+        self._box = BoxSQLite(component=component,
+                              db_file=db_file)
+        
+        self._channel = ChannelSQLite(component=component,
+                                      db_file=db_file)
+        #
+        self._tee = TeeSQLite(component=component,
+                              db_file=db_file)
+        
+        self._angle = AngleSQLite(component=component,
+                                  db_file=db_file)
         #
         conn = create_connection(self.db_file)
         with conn:         
             self._create_table()
-    #
-    #
-    @property
-    def _labels(self):
-        """ """
-        conn = create_connection(self.db_file)
-        with conn:           
-            cur = conn.cursor()
-            cur.execute("SELECT tb_Sections.name from tb_Sections ")
-            items = cur.fetchall()
-        return [item[0] for item in items]
-    #
-    @property
-    def _type(self):
-        """ """
-        conn = create_connection(self.db_file)
-        with conn:           
-            cur = conn.cursor()
-            cur.execute("SELECT tb_Sections.type from tb_Sections ")
-            items = cur.fetchall()
-        return [item[0] for item in items]
-    #
-    @property
-    def _title(self):
-        """ """
-        conn = create_connection(self.db_file)
-        with conn:           
-            cur = conn.cursor()
-            cur.execute("SELECT tb_Sections.title from tb_Sections ")
-            items = cur.fetchall()
-        return [item[0] for item in items]    
     #
     #
     # def push_sections(self):
@@ -104,7 +80,7 @@ class SectionSQL(SectionMain):
     # def _push_property_table(self, conn, section):
     #    """ """
     #    project = (section.number, *section.properties)
-    #    sql = 'INSERT INTO  tb_SecProperties(number, area, Zc, Yc,\
+    #    sql = 'INSERT INTO  SectionProperty(number, area, Zc, Yc,\
     #                                        Iy, Zey, Zpy, ry,\
     #                                        Iz, Zez, Zpz, rz,\
     #                                        J, Cw)\
@@ -116,7 +92,7 @@ class SectionSQL(SectionMain):
     #    """
     #    """
     #    project = section._get_section_table()
-    #    sql = 'INSERT INTO  tb_Sections(name, title, type, diameter, wall_thickness,\
+    #    sql = 'INSERT INTO  Section(name, title, type, diameter, wall_thickness,\
     #                                    height, web_thickness,\
     #                                    top_flange_width, top_flange_thickness,\
     #                                    bottom_flange_width, bottom_flange_thickness)\
@@ -127,163 +103,60 @@ class SectionSQL(SectionMain):
     #
     def _create_table(self) -> None:
         """ """
-        table_sections = "CREATE TABLE IF NOT EXISTS tb_Sections (\
-                            number INTEGER PRIMARY KEY NOT NULL,\
-                            name NOT NULL,\
-                            title TEXT,\
-                            type TEXT NOT NULL,\
-                            diameter DECIMAL,\
-                            wall_thickness DECIMAL,\
-                            height DECIMAL,\
-                            web_thickness DECIMAL,\
-                            top_flange_width DECIMAL,\
-                            top_flange_thickness DECIMAL,\
-                            bottom_flange_width DECIMAL,\
-                            bottom_flange_thickness DECIMAL,\
-                            fillet_radius DECIMAL, \
-                            SA_inplane DECIMAL, \
-                            SA_outplane DECIMAL,\
-                            shear_stress TEXT, \
-                            build TEXT, \
-                            compactness TEXT);"
-        #
-        table_properties = "CREATE TABLE IF NOT EXISTS tb_SecProperties (\
-                            number INTEGER PRIMARY KEY NOT NULL REFERENCES tb_Sections(number),\
-                            area DECIMAL,\
-                            Zc DECIMAL,\
-                            Yc DECIMAL,\
-                            Iy DECIMAL,\
-                            Zey DECIMAL,\
-                            Zpy DECIMAL,\
-                            ry DECIMAL,\
-                            Iz DECIMAL,\
-                            Zez DECIMAL,\
-                            Zpz DECIMAL,\
-                            rz DECIMAL,\
-                            J DECIMAL,\
-                            Cw DECIMAL);"
         conn = create_connection(self.db_file)
-        create_table(conn, table_sections)
-        create_table(conn, table_properties)
-    #
-    #
-    @property
-    def df(self):
-        """ """
-        db = DBframework()
         #
-        conn = create_connection(self.db_file)
-        with conn:
-            df = db.read_sql_query("SELECT * FROM tb_Sections", conn)
+        table = "CREATE TABLE IF NOT EXISTS Section (\
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    name NOT NULL,\
+                    component_id INTEGER NOT NULL REFERENCES Component(number),\
+                    SA_inplane DECIMAL, \
+                    SA_outplane DECIMAL,\
+                    shear_stress TEXT, \
+                    build TEXT, \
+                    compactness TEXT, \
+                    title TEXT);"
+        create_table(conn, table)
         #
-        df.drop(columns=['number'], inplace=True)
-        title = df.pop('title')
-        df.insert(len(df.columns), 'title', title)
-        return df
-    
-    @df.setter
-    def df(self, df):
-        """ """
-        super().df(df)
-#
-#
-#
-# def get_properties(self):
-#    """
-#    """
-#    summary = {}
-#    for key, item in self._sections.items():
-#        summary[key] = item._get_properties()
-#    return summary
-#
-#
-def get_section2(conn, section_name):
-    """ """
-    with conn:
-        row = _get_section(conn, section_name)
-    return row[1:]
-#
-def _get_section(conn, section_number:int):
-    """
-    """
-    cur = conn.cursor()
-    cur.execute("SELECT * from tb_Sections \
-                WHERE tb_Sections.number = {:};".format(section_number))
-    row = cur.fetchone()
-    #print("--->")
-    return row
-#
-# TODO: repeated code
-def get_section(conn, section_name: int|str):
-    """ """
+        # Section Geometry
+        #
+        table = "CREATE TABLE IF NOT EXISTS SectionGeometry (\
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    section_id INTEGER NOT NULL REFERENCES Section(number),\
+                    type TEXT NOT NULL,\
+                    diameter DECIMAL,\
+                    wall_thickness DECIMAL,\
+                    height DECIMAL,\
+                    web_thickness DECIMAL,\
+                    top_flange_width DECIMAL,\
+                    top_flange_thickness DECIMAL,\
+                    bottom_flange_width DECIMAL,\
+                    bottom_flange_thickness DECIMAL,\
+                    fillet_radius DECIMAL);"
+        create_table(conn, table)
+        #
+        # Section Properties
+        #
+        table = "CREATE TABLE IF NOT EXISTS SectionProperty (\
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    section_id INTEGER NOT NULL REFERENCES Section(number),\
+                    area DECIMAL,\
+                    Zc DECIMAL,\
+                    Yc DECIMAL,\
+                    Iy DECIMAL,\
+                    Zey DECIMAL,\
+                    Zpy DECIMAL,\
+                    ry DECIMAL,\
+                    Iz DECIMAL,\
+                    Zez DECIMAL,\
+                    Zpz DECIMAL,\
+                    rz DECIMAL,\
+                    J DECIMAL,\
+                    Cw DECIMAL);"
+        
+        create_table(conn, table)
     #
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT * from tb_Sections \
-                    WHERE tb_Sections.name = {:};".format(section_name))
-        row = cur.fetchone()
-
-    except :
-        cur.execute("SELECT * from tb_Sections")
-        rows = cur.fetchall()
-        for item in rows:
-            if item[1] ==  section_name:
-                row = item
-                break
-        #1 / 0
     #
-    row = row[1:]
-    shape_type = row[2]    
-    #
-    if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
-        return TubularBasic(name=row[0], 
-                            diameter=row[3], thickness=row[4]) 
 
-    #elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
-    #    return self._solid[shape_name]
-    elif re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
-        d = row[3]
-        return CircleBasic(name=row[0], d=d, type=shape_type)
+#
+#
 
-    elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
-        d = row[3]
-        wb = row[7]
-        return RectangleBasic(name=row[0], depth=d, width=wb,
-                              type=shape_type)
-
-    elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
-        d = row[5]
-        wb = row[7]
-        wt = row[9]            
-        c = abs(wt - wb) / 2.0
-        return Trapeziod(name=row[0], depth=d, width=wb,
-                         a=wt, c=c, type=shape_type)    
-    
-    elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
-        return IbeamBasic(name=row[0], 
-                          d=row[5], tw=row[6],
-                          bft=row[7], tft=row[8],
-                          bfb=row[9], tfb=row[10])
-    
-    elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-        return BoxBasic(name=row[0], 
-                d=row[5], tw=row[6],
-                b=row[7], tb=row[8])
-    
-    elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-        return ChannelBasic(name=row[0], 
-                    d=row[5], tw=row[6],
-                    b=row[7], tb=row[8])
-    
-    elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-        return TeeBasic(name=row[0], 
-                        d=row[5], tw=row[6],
-                        b=row[7], tb=row[8])
-    
-    elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-        return AngleBasic(name=row[0], 
-                          d=row[5], tw=row[6],
-                          b=row[7], r=0)
-    
-    else:
-        raise IOError(f' Section type {shape_type} not recognised')    

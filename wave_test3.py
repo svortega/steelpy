@@ -3,7 +3,7 @@
 #
 #import matplotlib.pyplot as plt
 
-from steelpy import f2uModel
+from steelpy import UFOmodel
 from steelpy import Metocean
 from steelpy import Trave2D, Trave3D
 from steelpy import Units
@@ -13,9 +13,9 @@ units = Units()
 #
 # ----------------------------------------------------
 #
-f2umodel = f2uModel()
+f2umodel = UFOmodel(name="wave_test3")
 #
-mesh = f2umodel.mesh(name="wave_test3")
+mesh = f2umodel.mesh()
 #
 # ----------------------------------------------------
 # Material input
@@ -143,7 +143,11 @@ cbf['cbf1'] = [[ 10 * units.m, 0.85],
 # ----------------------------------------------------
 # Current
 #
-current = meto.current()
+#
+MetCriteria = meto.criteria()
+MetCriteria[1] = 'test_1'
+#
+current = MetCriteria[1].current()
 #
 # [title, profile (linear/exponential/user), velocity_top, velocity_bottom]
 #current['curr_1'] = 'current_1' # [1.5 * units.m/units.sec, 0.10 * units.m/units.sec]
@@ -166,7 +170,7 @@ current['curr_1'] = [[  5 * units.m, 1.0 * cvel],
 # Regular wave [Stokes/Fourier/Cnoidal]
 # ----------------------------------------------------
 #
-wave = meto.wave()
+wave = MetCriteria[1].wave()
 #
 # -------------------------------------------------------------------
 #
@@ -223,7 +227,7 @@ regwave['100yrs_2'] = [15*units.m, 12.0*units.sec, 100*units.m]
 #meto.get_load(mesh=mesh, kinematic=kinematic,
 #              condition=2)
 #
-metcond = meto.condition()
+metcond = MetCriteria[1].condition()
 # [title]
 metcond[10] = 'storm_0deg'    #['storm_0deg', 'MG_1', False, 0.85]
 # wave =[wave_id, Direction(deg), Kinematics, crest_elevation]
@@ -246,8 +250,8 @@ metcond[10].parameters = ['max_BS', None, 'local']
 #wave.solve(surface_points=36,
 #           depth_points=100)
 #
-meto.solve(surface_points=36,
-           depth_points=100)
+MetCriteria.solve(surface_points=36,
+                  depth_points=100)
 #
 #
 # ----------------------------------------------------
