@@ -307,7 +307,7 @@ class KinematicResults:
         dfkin = np.zeros((xx.size, zdepth.size))
         for i, step in enumerate(xx):
             #new = []
-            item = items.get_group(name=step)
+            item = items.get_group(name=(step, ))
             for j, point in enumerate(zdepth):
                 dfkin[i, j] = np.interp(point,
                                         item.iloc[:, 0],
