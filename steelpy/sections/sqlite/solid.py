@@ -12,7 +12,11 @@ import re
 #
 # package imports
 #
-from steelpy.sections.sqlite.utils import SectionItemSQL
+from steelpy.sections.sqlite.utils import SectionMainSQL
+from steelpy.sections.utils.shape.utils import get_sect_properties
+from steelpy.sections.utils.shape.solid import (CircleSolid,
+                                                RectangleSolid,
+                                                TrapeziodSolid)
 #
 #
 # ----------------------------------------
@@ -21,7 +25,7 @@ from steelpy.sections.sqlite.utils import SectionItemSQL
 #
 #
 @dataclass
-class SolidSectionSQL(SectionItemSQL):
+class SolidSectionSQL(SectionMainSQL):
     
     def __init__(self, component, db_file:str):
         """ """
@@ -128,13 +132,13 @@ class SolidSectionSQL(SectionItemSQL):
         row = self.get_section(shape_name)
         
         if re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
-            d = row[3]
-            return CircleBasic(name=shape_name, d=d, type=shape_type)
+            d = row[5]
+            return CircleSolid(name=shape_name, d=d, type=shape_type)
 
         elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
-            d = row[3]
+            d = row[5]
             wb = row[7]
-            return RectangleBasic(name=shape_name, depth=d, width=wb,
+            return RectangleSolid(name=shape_name, depth=d, width=wb,
                                   type=shape_type)
 
         elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
@@ -142,8 +146,8 @@ class SolidSectionSQL(SectionItemSQL):
             wb = row[7]
             wt = row[9]            
             c = abs(wt - wb) / 2.0
-            return Trapeziod(name=shape_name, depth=d, width=wb,
-                             a=wt, c=c, type=shape_type)
+            return TrapeziodSolid(name=shape_name, depth=d, width=wb,
+                                  a=wt, c=c, type=shape_type)
 
         else:
             raise Exception(f" section type {shape_type} not recognized")
@@ -151,7 +155,7 @@ class SolidSectionSQL(SectionItemSQL):
 #
 #
 @dataclass
-class RectangleSQLite(SectionItemSQL):
+class RectangleSQLite(SectionMainSQL):
     __slots__ = ['_properties', 'name', 'number', 'db_file']
 
     def __init__(self, name:Union[str, int],
@@ -190,7 +194,7 @@ class RectangleSQLite(SectionItemSQL):
         return self.get_item(item="height")
 
     @d.setter
-    def d(self, value:Union[Units,float]):
+    def d(self, value:float):
         """ """
         value = get_sect_properties([value])
         self.update_item(item='height', value=value[0])
@@ -202,7 +206,7 @@ class RectangleSQLite(SectionItemSQL):
         return self.get_item(item="top_flange_width")
 
     @w.setter
-    def w(self, value:Union[Units,float]):
+    def w(self, value:float):
         """ """
         value = get_sect_properties([value])
         self.update_item(item='top_flange_width', value=value[0])
@@ -232,7 +236,7 @@ class RectangleSQLite(SectionItemSQL):
 #
 #
 @dataclass
-class CircleSQLite(SectionItemSQL):
+class CircleSQLite(SectionMainSQL):
     __slots__ = ['_properties', 'name', 'number', 'db_file']
     
     def __init__(self, name:str|int,

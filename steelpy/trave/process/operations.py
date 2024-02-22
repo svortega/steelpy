@@ -1,8 +1,8 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
-from __future__ import annotations
 # Python stdlib imports
+from __future__ import annotations
 #from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import NamedTuple

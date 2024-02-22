@@ -234,13 +234,18 @@ def get_connectivities(conn, component: int):
     #return [x for _, x in sorted(connodes)]
     return connodes
 #
-def get_unitvector(conn, beam_id: int):
+def get_unitvector(conn, beam_name: int,
+                   component: int):
     """get direction cosines"""
-    query = (beam_id, )
-    table = 'SELECT x,y,z\
-             FROM ElementDirectionCosine \
-             WHERE element_id = ? \
-             ORDER BY axis ASC;'
+    query = (beam_name, component, )
+    table = 'SELECT ElementDirectionCosine.x, \
+                    ElementDirectionCosine.y, \
+                    ElementDirectionCosine.z \
+             FROM Element, ElementDirectionCosine \
+             WHERE Element.number = ElementDirectionCosine.element_id \
+             AND element.name = ? \
+             AND Element.component_id = ? \
+             ORDER BY ElementDirectionCosine.axis ASC;'
     cur = conn.cursor()
     cur.execute (table, query)
     items = cur.fetchall()

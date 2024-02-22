@@ -430,7 +430,7 @@ class CoordCartesian(NamedTuple):
     name: int | str
     number: int
     index:int
-    #boundaries: tuple = (0, 0, 0, 0, 0, 0)
+    boundary: list | tuple #= (0, 0, 0, 0, 0, 0)
     system: str = "cartesian"
     #sets: List[Tuple]
     #
@@ -469,7 +469,23 @@ class CoordCartesian(NamedTuple):
         """ distance between two nodes"""
         #print("here")
         node1 = [self.x, self.y, self.z]
-        return dist(node1[:3], other[:3])      
+        return dist(node1[:3], other[:3])
+    #
+    @property
+    def fixity(self) -> str:
+        """ """
+        boundary = tuple(self.boundary)
+        match boundary:
+            case (1, 1, 1, 1, 1, 1):
+                return 'fixed'
+            case (0, 0, 0, 0, 0, 0):
+                return 'free'
+            case (1, 1, 1, 1, 0, 0):
+                return 'pinned'
+            case (0, 1, 1, 1, 0, 0):
+                return 'guide'
+            case _:
+                return 'user_defined'
 
 class CoordCylindrical(NamedTuple):
     """
@@ -521,6 +537,7 @@ class NodePoint:
     phi: float | None
     title: str | None
     index: float | None
+    boundary : list | tuple
     #
     def system(self):
         """ """
@@ -531,7 +548,8 @@ class NodePoint:
         else:
             return CoordCartesian(x=self.x, y=self.y, z=self.z,
                                   name=self.name, number=self.number,
-                                  index=self.index)
+                                  index=self.index, boundary=self.boundary)
+#
 #
 def check_point_list(data, steps:int=6) -> list[float]:
     """ """

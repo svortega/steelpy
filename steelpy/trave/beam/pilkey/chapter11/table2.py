@@ -7,12 +7,12 @@ from __future__ import annotations
 #from collections.abc import Mapping
 from dataclasses import dataclass
 from math import factorial
-from typing import NamedTuple
+#from typing import NamedTuple
 #import re
 #
 # package imports
-from .table2B import BeamLoad
-from .table2C import BeamBendingSupports
+#from .table2B import BeamLoad
+#from .table2C import BeamBendingSupports
 #
 #
 #
@@ -83,15 +83,19 @@ class BendingGE:
     #
     def theta(self, x: float,  I: float) -> float:
         """ Slope"""
-        return (self.theta0 + self.V0 * x**2 / (2 * self.E * I)
-                + self.M0 * x / (self.E * I) + self.Ftheta)
+        return (self.theta0
+                + self.V0 * x**2 / (2 * self.E * I)
+                + self.M0 * x / (self.E * I)
+                + self.Ftheta)
 
     #
     def w(self, x: float, I: float) -> float:
         """ Deflection"""
-        return (self.w0 - self.theta0 * x
+        return (self.w0
+                - self.theta0 * x
                 - self.V0 * x**3 / (factorial(3) * self.E * I)
-                - self.M0 * x**2 / (2 * self.E * I) + self.Fw)
+                - self.M0 * x**2 / (2 * self.E * I)
+                + self.Fw)
     #
     def response(self, x:float) -> list[float]:
         """

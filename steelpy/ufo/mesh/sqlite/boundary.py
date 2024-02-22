@@ -117,6 +117,9 @@ class BoundaryNodeSQL(BoundaryNode):
             title = fixity[6]
         except IndexError:
             title = None
+        except TypeError:
+            title = None
+            fixity = [0, 0, 0, 0, 0, 0] # free
 
         project = (node_id, *fixity[:6], title, )
         sql = 'INSERT INTO NodeBoundary(node_id,\
@@ -313,7 +316,7 @@ class BoundarySQL:
         #
         return self._nodes     
     #
-    def supports(self, values:list|None=None):
+    def support(self, values:list|None=None):
         """"""
         return self.nodes(values)
     #

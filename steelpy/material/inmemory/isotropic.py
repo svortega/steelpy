@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 stdlib
 # 
 #
 #
@@ -12,7 +12,7 @@ import re
 #
 # package imports
 from ..process.mechanical import MaterialElastic, Curve #, MaterialIsotropic
-from ..process.operations import get_isomat_prop, get_isomat_prop_df # find_mat_type,
+from ..process.operations import get_isomat_prop, get_isomat_prop_df, find_mat_type
 #
 #
 class MaterialIM(Mapping):
@@ -47,17 +47,28 @@ class MaterialIM(Mapping):
             mat_number = next(self.get_number())
             self._number.append(mat_number)
             #
+            #
+            # get material type
+            if isinstance(properties, str):
+                material_type = find_mat_type(properties)
+                properties = []
+            else:
+                material_type = find_mat_type(properties[0])
+                properties = properties[1:]            
+            #
+            #
             if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
-            #if 'curve' == material_type :
                 raise Exception('--> Mat type No ready')
                 #self._material[mat_number] = CurveIsotropic(material_name, *properties[1:])
             elif re.match(r"\b(elastic|linear|isotropic)\b", material_type, re.IGNORECASE):
-            #elif 'elastic' == material_type :
-                self._elastic[material_name] = [material_name, *properties[1:]]
+                properties = get_isomat_prop(properties)
+                self._elastic[material_name] = [material_name, *properties]
                 #self._material[mat_number] = MaterialIsotropic(material_name, *properties[1:])
             else:
                 raise IOError(' material type {:} not recognised'
                               .format(material_type))
+            #
+            #self._material[material_name] = [material_type, *properties]
         #
         self._default = material_name
     

@@ -10,13 +10,13 @@ from __future__ import annotations
 #
 # package imports
 from steelpy.sections.utils.shape.ibeam import IbeamBasic
-from steelpy.sections.sqlite.utils import SectionItemSQL
+from steelpy.sections.sqlite.utils import SectionMainSQL
 from steelpy.utils.sqlite.utils import create_connection
 #
 #
 #
 #
-class IbeamSQLite(SectionItemSQL):
+class IbeamSQL(SectionMainSQL):
     __slots__ = ['_default', 'db_file']
 
     def __init__(self, component: int, db_file:str):

@@ -149,30 +149,8 @@ class UnSQL:
     def df(self, df):
         """ """
         conn = create_connection(self.db_file)
-        #with conn:        
-        #    cur = conn.cursor()
-        #    cur.execute("SELECT Nodes.name, Nodes.number FROM Nodes;")
-        #    nodes = cur.fetchall()
-        #    nodes = {item[0]:item[1] for item in nodes}
-        #    #
-        #    #cur.execute("SELECT Elements.name, Elements.number FROM Elements;")
-        #    #elements = cur.fetchall()
-        #    #elements = {item[0]:item[1] for item in elements}            
-        #    #
-        #    cur.execute("SELECT Load.name, Load.number FROM Load \
-        #                 WHERE Load.level = 'basic';")
-        #    basic = cur.fetchall()
-        #    basic = {item[0]:item[1] for item in basic}
         #
-        #
-        #df['load_id'] = df['name'].apply(lambda x: basic[x])
-        #df['element_id'] = None # df['name'].apply(lambda x: elements[x])
-        #df['node_id'] = df['node_name'].apply(lambda x: nodes[x])
-        #df['system'] = 'global'
-        #df['type'] = df['type'].apply(lambda x: x.lower())
-        #df['type'] = 'displacement'
-        #
-        #df.rename(columns={"load_system": "system"}, inplace=True)        
+        # TODO: here combine with load displacement
         #
         # TODO: check this works
         # combination

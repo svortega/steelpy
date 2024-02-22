@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from steelpy.sections.utils.shape.main import SectionMain
 from steelpy.utils.sqlite.utils import create_connection #, create_table
 from steelpy.sections.utils.shape.utils import ShapeProperty, get_sect_prop_df
-from steelpy.sections.utils.shape.main import ShapeGeometry
-from steelpy.sections.utils.shape.utils import ShapeBasic
+from steelpy.sections.utils.shape.main import ShapeGeometry #, get_shape
+from steelpy.sections.utils.shape.stress import ShapeStressBasic
 from steelpy.utils.dataframe.main import DBframework
 #
 #
@@ -23,10 +23,12 @@ class SectionMainSQL(SectionMain):
     """ """
     __slots__ = ['db_file']
     
-    def __init__(self, db_file: str):
+    def __init__(self, component:int, db_file: str):
         """
         """
         self.db_file = db_file
+        self._component = component
+        self._properties = None        
     #
     # -----------------------------------------------
     #
@@ -75,16 +77,31 @@ class SectionMainSQL(SectionMain):
             items = cur.fetchall()
         return [item[0] for item in items]    
     #
-    #-------------------------------------------------
+    # ------------------------------------------------
+    # SQL operations
     #
-    def _update_item(self, conn, name, item, value):
+    #
+    def push_section(self, data):
         """ """
-        query = (value, name, self._component, )
-        table = f'UPDATE Section SET {item} = ? \
-                  WHERE number = ? AND component_id = ?;'
-        cur = conn.cursor()
-        cur.execute(table, query)
-    #
+        name = data[0]
+        # Section ID
+        #section = (name, self._component, *data[11:])       
+        conn = create_connection(self.db_file)
+        with conn:
+            number = self._push_section(conn, section_id=name,
+                                        properties=data[11:])
+            # Geometry
+            geometry = (number, *data[1:11])
+            self._push_geometry(conn, geometry)
+        #
+        # Property
+        item = self.__getitem__(name)
+        properties =  item.properties()
+        with conn:
+            self._push_property(conn, number, properties)
+        #
+        return number    
+    #    
     #
     def _pull_item(self, conn, name, item):
         """ """
@@ -96,36 +113,6 @@ class SectionMainSQL(SectionMain):
         record = cur.fetchone()
         return record[0]
     #    
-    #
-    def _push_section(self, conn, section: list|tuple) -> int:
-        """
-        name, component_id, title
-        """
-        query = section
-        table = 'INSERT INTO  Section(name, component_id,\
-                                          SA_inplane, SA_outplane,\
-                                          shear_stress, build, compactness,\
-                                          title)\
-                    VALUES(?,?,?,?,?,?,?,?)'
-        #
-        cur = conn.cursor()
-        cur.execute(table, query)
-        return cur.lastrowid
-    #
-    #
-    def _push_geometry(self, conn, geometry):
-        """ """
-        query = geometry
-        table = 'INSERT INTO  SectionGeometry(section_id, type,\
-                                            diameter, wall_thickness,\
-                                            height, web_thickness,\
-                                            top_flange_width, top_flange_thickness,\
-                                            bottom_flange_width, bottom_flange_thickness,\
-                                            fillet_radius)\
-                            VALUES(?,?,?,?,?,?,?,?,?,?,?)'
-        cur = conn.cursor()
-        cur.execute(table, query)        
-    #
     #
     def _pull_section(self, conn, section_name:int|str):
         """
@@ -145,12 +132,93 @@ class SectionMainSQL(SectionMain):
         #out = [*row[1:3], *row[6:]]
         #return [*row[1:3], *row[6:]]
         return [*row[1:3], *row[11:], *row[3:9]]
+    #
+    #
+    def _push_section(self, conn, section_id: int,
+                      properties :tuple|list) -> int:
+        """
+        name, component_id, title
+        """
+        query = (section_id, self._component, *properties)
+        table = 'INSERT INTO  Section(name, component_id,\
+                                          SA_inplane, SA_outplane,\
+                                          shear_stress, build, compactness,\
+                                          title)\
+                    VALUES(?,?,?,?,?,?,?,?)'
+        #
+        cur = conn.cursor()
+        cur.execute(table, query)
+        return cur.lastrowid
     #    
+    def _push_property(self, conn, section_id: int,
+                       properties :tuple|list):
+        """ """
+        query = (section_id, *properties)
+        table = 'INSERT INTO  SectionProperty(section_id, \
+                                               area, Zc, Yc,\
+                                               Iy, Zey, Zpy, ry,\
+                                               Iz, Zez, Zpz, rz,\
+                                               J, Cw)\
+                                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+        #
+        #conn = create_connection(self.db_file)
+        #with conn:
+        #self._push_property_table(conn, number, properties)
+        cur = conn.cursor()
+        cur.execute(table, query)    
+    #
+    def _push_geometry(self, conn, geometry):
+        """ """
+        query = geometry
+        table = 'INSERT INTO  SectionGeometry(section_id, type,\
+                                            diameter, wall_thickness,\
+                                            height, web_thickness,\
+                                            top_flange_width, top_flange_thickness,\
+                                            bottom_flange_width, bottom_flange_thickness,\
+                                            fillet_radius)\
+                            VALUES(?,?,?,?,?,?,?,?,?,?,?)'
+        cur = conn.cursor()
+        cur.execute(table, query)
+    #
+    #
+    def _update_section(self, conn, section_id: int,
+                        item: str, value: float):
+        """ """
+        query = (value, section_id, self._component, )
+        table = f'UPDATE Section SET {item} = ? \
+                  WHERE number = ? \
+                  AND component_id = ?;'
+        cur = conn.cursor()
+        cur.execute(table, query)
+    #
+    #-------------------------------------------------
+    #
+    def _properties(self):
+        """ """
+        query = (self.number, )
+        table = f'SELECT * FROM SectionProperty \
+                 WHERE section_id = ?;'
+        #
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table, query)
+            row = cur.fetchone()
+        #
+        return ShapeProperty(*row[2:])
+    #
+    def get_section(self, section_name):
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:
+            row = self._pull_section(conn, section_name)
+        return row    
+    #
 #
 #
 # -----------------------------------------------
 #
-class SectionItemSQL(SectionMainSQL):
+class SectionItemSQLXX(SectionMainSQL):
     """ """
     __slots__ = ['db_file', '_component', '_properties']
 
@@ -261,6 +329,7 @@ class SectionItemSQL(SectionMainSQL):
     @property
     def df(self):
         """ """
+        1 / 0
         db = DBframework()
         conn = create_connection(self.db_file)
         #with conn:
@@ -270,7 +339,7 @@ class SectionItemSQL(SectionMainSQL):
     @df.setter
     def df(self, df):
         """ """
-        # 
+        1 / 0
         df = get_sect_prop_df(df)
         conn = create_connection(self.db_file)
         with conn:
@@ -350,7 +419,7 @@ def _get_section(conn, section_id:int,
 #
 #
 @dataclass
-class ShapeGeometrySQL(ShapeBasic):
+class ShapeGeometrySQL(ShapeStressBasic):
     name: str | int
     number: int
     geometry: iter
@@ -384,8 +453,27 @@ class ShapeGeometrySQL(ShapeBasic):
         return self.section._stress
 #
 #
-# 
 def get_section(conn, section_name: int|str,
+              component: int):
+    """ """
+    #
+    query = (section_name, component, )
+    table = f"SELECT Section.*, SectionGeometry.* \
+              FROM Section, SectionGeometry, Component \
+              WHERE Section.name = ? \
+              AND Component.number = ? \
+              AND Section.number = SectionGeometry.section_id ;"              
+    #
+    cur = conn.cursor()
+    cur.execute(table, query)
+    row = cur.fetchone()
+    #
+    geometry = [*row[1:3], *row[11:]]
+    #
+    shape = get_shape()
+#    
+# 
+def get_sectionXX(conn, section_name: int|str,
                 component: int):
     """ """
     1 / 0

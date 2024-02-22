@@ -22,13 +22,14 @@ from steelpy.utils.dataframe.main import DBframework
 @dataclass
 class BeamMorisonWave:
     __slots__ = ['_beam', 'surface', 'rho', 
-                 '_data', '_type']
+                 '_data', '_type', 'uvector']
     def __init__(self, beam, rho: float):
         """
         rho : : Sea water density (1025)
         """
         self._beam = beam
         self.rho = rho
+        self.uvector = self._beam.dircosines
     #
     def elevations(self, nelev:int):
         """ Elevation Range"""
@@ -53,7 +54,8 @@ class BeamMorisonWave:
     #
     def Dh(self, mg):
         """Diamtre hydrodynamic"""
-        section = self._beam.section
+        # TODO: section naming
+        section = self._beam.section.section
         D = section.diameter
         #mg = self.MG(Z)
         Dh = D + 2 * mg * 0
@@ -68,7 +70,7 @@ class BeamMorisonWave:
         Vc : current
         """
         #
-        uvector = np.array(self._beam.unit_vector)
+        uvector = self.uvector
         # uvector = [0.447, 0.525, 0.724]
         # print(f'Unit Vector [{uvector[0]}, {uvector[1]}, {uvector[2]}]')
         # print('')
@@ -115,7 +117,7 @@ class BeamMorisonWave:
         Vc : current velocity
         """
         # Absolute Water velocity normal to the cylinder axis
-        uvector = np.array(self._beam.unit_vector)
+        uvector = self.uvector
         #
         vn = Vc + np.sqrt(np.power(kin['ux'], 2) + np.power(kin['uz'], 2)
                           - np.power(uvector[0] * kin['ux'] + uvector[1] * kin['uz'], 2))
@@ -128,7 +130,7 @@ class BeamMorisonWave:
         Vc : current velocity
         """
         # Components of velocity local to the member
-        uvector = np.array(self._beam.unit_vector)
+        uvector = self.uvector
         #
         Un = Vc + kin['ux'] - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
         Vn = kin['uz'] - uvector[1] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
@@ -144,7 +146,7 @@ class BeamMorisonWave:
         kin : 
         """
         # Components of acceleration local to the member
-        uvector = np.array(self._beam.unit_vector)
+        uvector = self.uvector
         #
         Anx = kin['ax'] - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
         Anz = kin['az'] - uvector[1] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
@@ -317,13 +319,20 @@ class BeamUnitForce(NamedTuple):
         qz = self._get_line(qname='qy', qitem=qitem)
         qitem = self.qz.to_dataframe(name='qz').reset_index()
         qx = self._get_line(qname='qz', qitem=qitem)
+        # TODO : fix torsion
+        qitem['qt'] = float(0.0)
+        qt = self._get_line(qname='qt', qitem=qitem)
         #
         # TODO: L1 and L2 should not be zero for all cases
         dftemp = []
         for x, row in enumerate(rows):
             for idx, wstep in enumerate(wlength):
                 for hstep, col in enumerate(cols):
-                    ldata = list(zip(qx[idx][hstep], qy[idx][hstep], qz[idx][hstep]))
+                    ldata = list(zip(qx[idx][hstep],
+                                     qy[idx][hstep],
+                                     qz[idx][hstep],
+                                     qt[idx][hstep]))
+                    #
                     dftemp.append(['beam', self.beam_name, self.beam_number, 'line',
                                    *ldata[0], *ldata[1], 0, 0,
                                    float(Fx[x, hstep, idx].values),

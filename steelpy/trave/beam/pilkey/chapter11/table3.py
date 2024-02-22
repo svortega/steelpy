@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009vsteelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -11,8 +11,8 @@ from typing import NamedTuple
 #import re
 #
 # package imports
-from .table2B import BeamLoad
-from .table2C import BeamBendingSupports
+#from .table2B import BeamLoad
+#from .table2C import BeamBendingSupports
 #
 #
 #

@@ -9,7 +9,7 @@ from collections.abc import Mapping
 #from typing import NamedTuple
 
 # package imports
-from steelpy.ufo.mesh.process.elements.bstiffness import Rmatrix2, beam3D_K # beam3D_Klocal, Rmatrix, 
+from steelpy.ufo.mesh.process.elements.bstiffness import Rmatrix2, beam3D_K, beam3D_Klocal #, Rmatrix, 
 from steelpy.ufo.mesh.process.elements.bgeometry import kg_beam
 from steelpy.ufo.mesh.process.elements.bmass import beam_mass
 from steelpy.utils.geometry.L3D import DistancePointLine3D #, LineLineIntersect3D
@@ -145,11 +145,11 @@ class BeamItemBasic:
         #
         #
         # solve K matrix
-        #Kb = beam3D_Klocal(self.L,
-        #                    self.area, self.J,
-        #                    self.Iy, self.Iz,
-        #                    self.E, self.G,
-        #                    self.area, self.area)
+        #kb = beam3D_Klocal(self.L,
+        #                   section.area, section.J,
+        #                   section.Iy, section.Iz,
+        #                   material.E, material.G,
+        #                   section.area, section.area)
         #        
         kb = beam3D_K(self.L,
                       section.area, section.J,

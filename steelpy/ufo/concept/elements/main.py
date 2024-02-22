@@ -6,7 +6,7 @@
 from __future__ import annotations
 #import math 
 from itertools import chain
-from array import array
+#from array import array
 #from collections import OrderedDict
 from collections import Counter
 from collections.abc import Mapping
@@ -22,7 +22,7 @@ import re
 #
 # steelpy.f2uModel.mesh.inmemory
 #from .beam_ import BeamIM
-from .beam import ConceptBeam
+from steelpy.ufo.concept.elements.beam import ConceptBeam
 #
 #
 #
@@ -98,7 +98,7 @@ class ConceptElements(Mapping):
             element_type = parameters[0]
             #mnumber = next(self.get_number())
             # default
-            #self._labels.append(element_name)
+            self._labels.append(element_name)
             #self._number.append(mnumber)
             self._type.append(element_type)
             #
@@ -201,7 +201,7 @@ class ConceptElements(Mapping):
     #
     #
     #@property
-    def beams(self, values:None|list=None,
+    def beam(self, values:None|list=None,
               df=None):
         """
         """

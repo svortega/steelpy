@@ -71,10 +71,10 @@ class MeshingConcept:
         """ """
         print('--- Meshing Concepts')
         mesh = self._mesh
-        melements = mesh.elements()
+        melements = mesh.element()
         #elem_number = elements.get_number()
-        celements = self.concept.elements()
-        cbeams = celements.beams()
+        celements = self.concept.element()
+        cbeams = celements.beam()
         #
         for key, beam in cbeams.items():
             total_length = beam.L
@@ -109,7 +109,7 @@ class MeshingConcept:
     #
     def _get_node_name(self, coord):
         """ """
-        nodes = self._mesh.nodes()
+        nodes = self._mesh.node()
         try:
             return nodes.get_point_name(coord)
         except IOError:
@@ -121,16 +121,16 @@ class MeshingConcept:
         units = Units()
         # Mesh
         mesh = self._mesh
-        mnodes = mesh.nodes()
-        melements = mesh.elements()
-        mbeams = melements.beams()
-        mboundaries = mesh.boundaries()
-        msupports = mboundaries.supports()
+        mnodes = mesh.node()
+        melements = mesh.element()
+        mbeams = melements.beam()
+        mboundaries = mesh.boundary()
+        msupports = mboundaries.support()
         # concepts
-        cboundary = self.concept.boundaries()
-        csupports = cboundary.supports()
-        celements = self.concept.elements()
-        cbeams = celements.beams()
+        cboundary = self.concept.boundary()
+        csupports = cboundary.support()
+        celements = self.concept.element()
+        cbeams = celements.beam()
         #
         # FIXME : check if new loops this works properly
         #
@@ -225,19 +225,19 @@ class MeshingConcept:
         print( '--- Meshing Basic Load' )
         # Mesh
         mesh = self._mesh
-        Mnodes = mesh.nodes()
-        melements = mesh.elements()
-        Mbeams = melements.beams()
+        Mnodes = mesh.node()
+        melements = mesh.element()
+        Mbeams = melements.beam()
         # Mesh Load
         mload = mesh.load()
         Mlbasic = mload.basic()
         # Concept
         Concept = self.concept
-        Celements = Concept.elements()
-        Cbeams = Celements.beams()
+        Celements = Concept.element()
+        Cbeams = Celements.beam()
         Cloads = Concept.load()
         Clbasic = Cloads.basic()
-        CPoints = Concept.points()
+        CPoints = Concept.point()
         #
         for Clb_name, Clb_item in Clbasic.items():
             # clone mesh load
@@ -247,10 +247,12 @@ class MeshingConcept:
             #
             # Beam load process
             # TODO : update linefit
-            for bname, CBloads in Clb_item.beams.items():
-                cbeam = Cbeams[bname]
+            for bcname, CBloads in Clb_item.beams.items():
+                cbeam = Cbeams[bcname]
                 Lc = cbeam.L #.value
-                #print(f'---> Load: {load_name} Beam: {bname} L: {Lb:4.2f}')
+                #
+                #print(f'---> Load: {load_name} Beam: {bcname} L: {Lb:4.2f}')
+                lcoord_system = CBloads.coordinate_system
                 # Beam line load process
                 for rows in CBloads.line.values():
                     for lbload in rows:
@@ -262,48 +264,58 @@ class MeshingConcept:
                                            Lc, lbload.L0, lbload.L1)
                         woutplane = linefit(lbload.qz0, lbload.qz1,
                                             Lc, lbload.L0, lbload.L1)
+                        wtorsion = linefit(lbload.qt0, lbload.qt1,
+                                            Lc, lbload.L0, lbload.L1)
                         # start loop beam steps
                         xi = 0
                         for step in cbeam.step:
-                            bname = step._mesh
-                            beam = Mbeams[bname]
+                            bmid = step._mesh
+                            beam = Mbeams[bmid]
                             Lbi = beam.L
                             xi += Lbi
                             qaxial = waxial.qi(xi)
                             qinp = winplane.qi(xi)
                             qoutp = woutplane.qi(xi)
+                            qtorsion = wtorsion.qi(xi)
                             # check load on segment
                             try:
                                 Li = winplane.Li(xi, Lbi)
                             except RuntimeWarning:
                                 continue # no load should be applied to this segment
                             # set load for mesh element
-                            print(f'Element: {bname} --> {Lbi:4.2f} {xi:4.2f} {qinp} {qoutp} {Li}')
-                            mlb_beam[bname].line = [qaxial[0], qinp[0], qoutp[0],
-                                                    qaxial[1], qinp[1], qoutp[1],
-                                                    Li[0], Li[1], lbload.title]
+                            print(f'Element: {bmid} --> {Lbi:4.2f} {xi:4.2f} {qinp} {qoutp} {Li}')
+                            mlbeam = mlb_beam[bmid]
+                            mlbeam.coordinate_system = lcoord_system
+                            mlbeam.line = [qaxial[0], qinp[0], qoutp[0], qtorsion[0], 
+                                           qaxial[1], qinp[1], qoutp[1], qtorsion[1], 
+                                           Li[0], Li[1], lbload.title]
                 #
                 # Beam point load process
                 for rows in CBloads.point.values():
                     for pbload in rows:
                         label = pbload.load_name
                         print(f'Load Title: {label} - Point Load')
-                        L1 = pbload.distance
+                        L1 = pbload.L0
                         # start loop beam steps
                         xi = 0                    
                         for step in cbeam.step:
-                            bname = step._mesh
-                            beam = Mbeams[bname]
+                            bmid = step._mesh
+                            beam = Mbeams[bmid]
                             Lbs = beam.L
                             xi += Lbs
+                            #
+                            mlbeam = mlb_beam[bmid]
+                            mlbeam.coordinate_system = lcoord_system
                             #
                             if xi < L1: # no load for this beam step
                                 continue
                             else:
                                 L2 = xi - L1
                                 Li = (Lbs - L2)
-                                self._beam_pload(beam, pbload,
-                                                 mlb_node, mlb_beam,
+                                self._beam_pload(beam,
+                                                 pbload,
+                                                 mlb_node,
+                                                 mlbeam,
                                                  Li=Li)
                                 break
             #
@@ -338,7 +350,7 @@ class MeshingConcept:
     #
     #
     def _beam_pload(self, beam, pload,
-                    node_load, beam_load,
+                    node_load, mlbeam,
                     Li=None, point=None):
         """ """
         n1, n2 = beam.nodes
@@ -349,16 +361,23 @@ class MeshingConcept:
             L1 = Li
             L2 = beam.L - Li
         #
+        load = (pload.fx, pload.fy, pload.fz,
+                pload.mx, pload.my, pload.mz,
+                pload.title)
+        #1 / 0 # pload
         # TODO : adjust tolerancea
         if math.isclose(L1, 0, rel_tol=1e-09, abs_tol=0.0):
             print(f'Node {n1.name} Load')
-            node_load[n1.name].load = [*pload[:6], pload.title]
+            1 / 0 # FIXME: check load coord_system
+            node_load[n1.name].load = load
         elif math.isclose(L2, 0, rel_tol=1e-09, abs_tol=0.0):
             print(f'Node {n2.name} Load')
-            node_load[n2.name].load = [*pload[:6], pload.title]
+            1 / 0 # FIXME: check load coord_system
+            node_load[n2.name].load = load
         else:
             print(f'Beam {beam.name} Point load L1: {L1:4.2f}')
-            beam_load[beam.name].point = [L1, *pload[:6], pload.title]
+            #beam_load[beam.name].point = [L1, *load]
+            mlbeam.point = [L1, *load]
         #
 #
 #

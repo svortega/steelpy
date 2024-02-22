@@ -68,7 +68,7 @@ class BasicLoadMain(Mapping):
     def process(self, elements, steps:int):
         """process element load"""
         #
-        beams = elements.beams()
+        beams = elements.beam()
         #
         #beamload = self.beam()
         #dftemp = beamload.beam_function(beams=beams, steps=steps)
@@ -125,7 +125,8 @@ class BasicLoadMain(Mapping):
         # [Fx, Fy, Fz, Mx, My, Mz]
         # [V, M, w, theta]
         header = ['load_name', 'component_name',
-                  'load_comment', 'load_level', 'load_system',
+                  'load_comment', 'load_type', 
+                  'load_level', 'load_system',
                   'element_name', 'node_end',
                   'axial', 'torsion', 'VM_inplane', 'VM_outplane']
         #
@@ -141,7 +142,7 @@ class BasicLoadMain(Mapping):
     def FER(self, elements):
         """Convert element load to global fixed end reactions"""
         #
-        beams = elements.beams()
+        beams = elements.beam()
         load_name = list(self.keys())
         for lname in load_name:
             lcase = self.__getitem__(lname)
@@ -166,22 +167,26 @@ class BasicLoadMain(Mapping):
     #
     #
     def Fn(self):
-        """Nodal Load vector dataframe"""
+        """
+        Global matrix consisting of summation of force & displacement 
+        """
         dfnodal = self._nodes.df
         dfnodal = dfnodal.reindex(columns=['load_name', 'component_name', 
                                            'load_id', 'load_level',
                                           'load_title', 'load_comment', 'load_system',
                                           'element_name', 'node_name',
-                                          'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
-        #
-        #
+                                          'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                                          'x', 'y', 'z', 'rx', 'ry', 'rz'])
+        # Select FER's force & displacement
+        # [Fx, Fy, Fz, Mx, My, Mz] and [x, y, z, rx, ry, rz]
+        columns = [*self._plane.hforce, *self._plane.hdisp]
+        # Sum total 
         dfnodal = (dfnodal.groupby(['load_name', 'component_name',
                                     'load_id', 'load_level',
-                                    'load_title','load_system', 'node_name'])
-                   [self._plane.hforce].sum())
-        #
+                                    'load_title','load_system',
+                                    'node_name'])
+                   [columns].sum())
         dfnodal.reset_index(inplace=True)
-        #
         return dfnodal
         
     #

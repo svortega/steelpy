@@ -290,7 +290,7 @@ class ElementsSQL(ClassBasicSQL):
         return [k for k, v in Counter(flat).items() if v == 1]
     #
     #@property
-    def beams(self, values:None|list=None,
+    def beam(self, values:None|list=None,
               df=None):
         """
         """

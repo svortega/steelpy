@@ -14,7 +14,7 @@ from steelpy.trave.process.dynamic import eigen, trnsient
 from steelpy.trave.process.solution import UnSolver
 from steelpy.trave.postprocess.main import PostProcess
 #
-#
+from steelpy.trave.beam.main import Beam
 #
 #
 #
@@ -102,7 +102,7 @@ class TraveItem:
             # Get K matrix
             # ------------------------------
             #mesh = self._mesh
-            K = self._mesh.K(solver=method) 
+            Kg = self._mesh.K(solver=method) 
             jbc = self._mesh.jbc()
             #
             # ------------------------------
@@ -112,7 +112,7 @@ class TraveItem:
             #load =  mesh.load()
             #basic_load = load.basic()
             #Fn_df = self._mesh.load().case().Fn()
-            Fn_df = self._mesh._load._basic.Fn()
+            Fn = self._mesh._load._basic.Fn()
             #
             # ------------------------------
             # Static solution
@@ -120,7 +120,7 @@ class TraveItem:
             #
             # plane=mesh._plane, method=method
             #      
-            Udf = static.solve(Kg=K, Fn=Fn_df, jbc=jbc)
+            Udf = static.solve(Kg=Kg, Fn=Fn, jbc=jbc)
             #
             # -----------------------------------
             # Postprocess

@@ -166,6 +166,7 @@ class WaveLoadItemIM(WaveLoadItem):
     def fer(self):
         """ Return Fix End Reactions (FER) global system"""
         #beams = self._f2u_beams
+        1 / 0
         #conn = create_connection(self._bd_file)       
         for load_name in set(self._labels):
             #with conn: 
@@ -183,11 +184,11 @@ class WaveLoadItemIM(WaveLoadItem):
                 #
                 for item in items.itertuples():
                     #
-                    data = [item.qx1, item.qy1, item.qz1,
-                            item.qx2, item.qy2, item.qz2,
-                            item.L_end1, item.L_end2,
-                            item.element_name, item.load_comment,
-                            item.load_name, item.load_system,
+                    data = [item.qx1, item.qy1, item.qz1,         # q_inplane [qx, qy, qz, qt]
+                            item.qx2, item.qy2, item.qz2,         # q_outplane [qx, qy, qz, qt]
+                            item.L_end1, item.L_end2,             # L0, L1,
+                            item.element_name, item.load_comment, # name, title, load_name, component_name
+                            item.load_name, item.load_system,     # system, load_complex,
                             1, 'Line Load']
                     load = LineBeam._make(data)
                     gnload = load.fer_beam(L=beam.L)
@@ -224,6 +225,7 @@ class WaveLoadItemIM(WaveLoadItem):
     #
     def beam_load(self, steps:int = 10):
         """ """
+        1 / 0
         conn = create_connection(self._bd_file)
         #beamfun = defaultdict(list)
         beamfun = []
@@ -242,11 +244,11 @@ class WaveLoadItemIM(WaveLoadItem):
                 Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
                 #
                 for item in items.itertuples():
-                    data = [item.qx1, item.qy1, item.qz1,
-                            item.qx2, item.qy2, item.qz2,
-                            item.L_end1, item.L_end2,
-                            item.element_name, item.load_comment,
-                            item.load_name, item.load_system,
+                    data = [item.qx1, item.qy1, item.qz1,        # q_inplane [qx, qy, qz, qt]
+                            item.qx2, item.qy2, item.qz2,        # q_outplane [qx, qy, qz, qt]
+                            item.L_end1, item.L_end2,            # L0, L1,
+                            item.element_name, item.load_comment, # name, title, load_name, component_name
+                            item.load_name, item.load_system,     # system, load_complex,
                             1, 'Line Load']
                     bitem = LineBeam._make(data)
                     lout = bitem.Fx(x=Lsteps, L=beam.L,

@@ -8,8 +8,8 @@ from __future__ import annotations
 #
 
 # package imports
-#from ..inmemory.angle import AngleBasic
-from steelpy.sections.sqlite.utils import SectionItemSQL
+from steelpy.sections.utils.shape.angle import AngleBasic
+from steelpy.sections.sqlite.utils import SectionMainSQL
 
 #
 #
@@ -19,7 +19,7 @@ from steelpy.sections.sqlite.utils import SectionItemSQL
 # ----------------------------------------
 #
 
-class AngleSQLite(SectionItemSQL):
+class AngleSQL(SectionMainSQL):
     """ """
     __slots__ = ['_properties', # 'diameter', 'thickness', 
                  'name', 'number', 'db_file']

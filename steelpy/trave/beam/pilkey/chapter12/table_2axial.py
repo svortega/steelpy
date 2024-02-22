@@ -257,6 +257,9 @@ class PBarSupports:
             elif re.match(r"\b(guide(d)?)\b", supp2, re.IGNORECASE):
                 return FixedFixed(self.L, self.E, self.A)
             
+            #elif re.match(r"\b(free)\b", supp2, re.IGNORECASE):
+            #    return FixedFree(self.L, self.E, self.A)            
+            
             else:
                 raise IOError("unstable")
         

@@ -199,11 +199,11 @@ class Mesh(ufoBasicModel):
     # Mesh items
     # -------------------- 
     #
-    def nodes(self, values:None|list|tuple=None,
+    def node(self, values:None|list|tuple=None,
               df=None):
         """
         """
-        supports = self._boundaries.supports()
+        supports = self._boundaries.support()
         #if values:
         if isinstance(values, (list,tuple)):
             if isinstance(values[0], (list,tuple)):
@@ -237,7 +237,7 @@ class Mesh(ufoBasicModel):
 
     #
     #
-    def boundaries(self, values:None|list|tuple=None,
+    def boundary(self, values:None|list|tuple=None,
                    df=None):
         """
         """

@@ -3,6 +3,7 @@
 #
 # Python stdlib imports
 from __future__ import annotations
+from collections import namedtuple
 from dataclasses import dataclass
 import time
 from typing import NamedTuple
@@ -18,6 +19,7 @@ from steelpy.utils.math.operations import linspace
 from steelpy.utils.dataframe.main import DBframework
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #
+#from steelpy.trave.beam.roark.chapter10.table103_point import BTOpenSupports
 #
 import numpy as np
 #
@@ -231,7 +233,7 @@ class MainProcess:
         create_table(conn, table_nodes)
         #
         # Beam Local internal forces
-        table_nodes = "CREATE TABLE IF NOT EXISTS ResultBeamForce (\
+        table_nodes = ("CREATE TABLE IF NOT EXISTS ResultBeamForce (\
                         number INTEGER PRIMARY KEY NOT NULL,\
                         load_name NOT NULL,\
                         component_name NOT NULL, \
@@ -245,8 +247,9 @@ class MainProcess:
                         Mx DECIMAL,\
                         My DECIMAL,\
                         Mz DECIMAL,\
+                        psi DECIMAL,\
                         B DECIMAL,\
-                        Tw DECIMAL);"
+                        Tw DECIMAL);")
         #
         create_table(conn, table_nodes)
         #
@@ -307,26 +310,29 @@ class MainProcess:
         Beam's internal forces along its lenght
         """
         #
-        ndgrp = df_ndisp.groupby(['load_name', 
+        ndgrp = df_ndisp.groupby(['load_name', 'component_name',
                                   #'load_id', 'load_title',
-                                  'load_level', 'component_name', 'load_system'])
+                                  'load_level',  'load_system'])
         #nfgrp = df_nforce.groupby(['load_name',  'load_type', 'load_id', 'load_title'])
         #
-        nlgrp = df_nload.groupby(['load_name',
+        nlgrp = df_nload.groupby(['load_name', 'component_name',
                                   #'load_id', 'load_title',
-                                  'load_level', 'component_name', 'load_system'])
+                                  'load_level', 'load_system'])
         #
-        blgrp = bload_func.groupby(['load_name',  'load_level', 'component_name'])
+        blgrp = bload_func.groupby(['load_name', 'component_name',
+                                    'load_level'])
         #
         # Dummy Bending [V, M, theta, w]
         Fblank = [0, 0, 0, 0]
-        # Dummy Torsion [T, B, Psi, Phi, Tw]
+        # Dummy Torsion [T, Phi, Psi, B, Tw] - [T, theta, theta1, theta2, theta3]
         Fblank_t = [0, 0, 0, 0, 0]
         dummyf = np.array([0]*self._plane.ndof)
         #
         ndof = self._plane.ndof
         hdisp = ['node_name', *self._plane.hdisp]
-        hforce = ['node_name', *self._plane.hforce]
+        hforce = [*self._plane.hforce]
+        #rforce = ['x', 'y', 'z', 'rx', 'ry', 'rz']
+        tforce = ['rx', 'psi', 'B', 'Tw'] # torsion part
         #hload = ['node_name', *self._plane.hload]
         hload = ['axial', 'torsion', 'VM_inplane', 'VM_outplane']
         #
@@ -334,7 +340,7 @@ class MainProcess:
         member_load: list = []
         for key, noded in ndgrp:
             # TODO: select basic only
-            if key[1] != 'basic':
+            if key[2] != 'basic':
                 continue
             ndisp = noded[hdisp]
             ndisp.set_index('node_name', inplace=True)        
@@ -365,6 +371,83 @@ class MainProcess:
                 # displacement
                 gndisp = np.concatenate((ndisp.loc[nodes[0]],
                                          ndisp.loc[nodes[1]]), axis=None)
+                #       
+                # ---------------------------------------------
+                # convert global end-node disp in beam's local system
+                # [x,y,z,rx,ry,rz]
+                lndisp = Tlg @ gndisp
+                #
+                # --------------------------------------------
+                # set beam to general response expresions --> R0
+                # [V, M, theta, w]
+                #
+                #TODO: confirm change reactions sign
+                eq = NodeGenRespEq(lndisp, self._plane)
+                #
+                # ---------------------------------------------
+                #
+                try:   # Beam load (udl/point)
+                    #
+                    # [load_name, member_load_title, load_type, load_system, 
+                    # beam_number, x, Fx, Fy, Fz]
+                    #
+                    mnload = mbload.get_group((mname, ))
+                    mnload = mnload.groupby(['node_end'],
+                                            as_index=False)[hload].sum()
+                    #
+                    bnload = nlval.get_group((mname, ))
+                    #
+                    # Displacement
+                    #rload = bnload.groupby(['node_name'],
+                    #                        as_index=False)[rforce].sum()
+                    #rload.set_index('node_name', inplace=True)                     
+                    #
+                    # Torsion
+                    mtload = bnload.groupby(['node_name'],
+                                            as_index=False)[tforce].sum()
+                    mtload.set_index('node_name', inplace=True)                    
+                    #
+                    # get beam end loads
+                    #
+                    nodeloads = bnload.groupby(['node_name'],
+                                               as_index=False)[hforce].sum()
+                    nodeloads.set_index('node_name', inplace=True)                 
+                    #
+                    #blitem = np.concatenate((nodeloads.loc[nodes[0]],
+                    #                         nodeloads.loc[nodes[1]]), axis=None)
+                    #
+                    #blitem = Tlg @ blitem
+                    #  
+                    #
+                    # get reactions with correct sign for postprocessing
+                    #
+                    #bload0 = nodeloads.loc[nodes[0]]
+                    #tload0 = mtload.loc[nodes[0]]
+                    R0 = eq.R0(bload=nodeloads.loc[nodes[0]],
+                               tload=mtload.loc[nodes[0]])
+                    #
+                    lbforce = [['local', mname, bstep.node_end,
+                                *beam.response(x=bstep.node_end,
+                                               R0=[R0.x, R0.t, R0.y, R0.z],
+                                               Fx=[*bstep[2:]])]
+                               for bstep in mnload.itertuples()]
+                    #print('-->')
+                except (KeyError, AttributeError, TypeError): # No load on beam
+                    # --------------------------------------------
+                    # convert beam end-node disp to force [F = Kd] in global system
+                    # [Fx,Fy,Fz,Mx,My,Mz]
+                    lnforce = element.k @ lndisp
+                    #bload = Pload(lnforce[:6])
+                    #tload = Tload(0, 0, 0, 0)
+                    R0 = eq.R0(bload=Pload(*lnforce[:6]),
+                               tload=Tload(0, 0, 0, 0))
+                    # [beam_number, load_title, x, Fx, Fy, Fz, Mx, My, Mz]
+                    Lsteps = linspace(start=0, stop=element.L, num=steps+1, endpoint=True)
+                    lbforce = [['local', mname,  xstep,
+                                *beam.response(x=xstep, R0=[R0.x, R0.t, R0.y, R0.z],
+                                               Fx=[Fblank, Fblank_t, Fblank, Fblank])]
+                               for xstep in Lsteps]
+                #
                 #
                 # ---------------------------------------------
                 # convert beam end-node disp to force [F = Kd] in global system
@@ -375,69 +458,16 @@ class MainProcess:
                 #
                 dftemp.append([*key, mname, nodes[0], *gnforce[:ndof]])
                 dftemp.append([*key, mname, nodes[1], *gnforce[ndof:]])                
-                #             
-                # ---------------------------------------------
-                # convert global end-node disp in beam's local system
-                #
-                lndisp = Tlg @ gndisp
-                #
-                # --------------------------------------------
-                # convert beam end-node disp to force [F = Kd] in global system
-                #
-                lnforce = element.k @ lndisp
-                #
-                # --------------------------------------------
-                # set beam to general response expresions --> R0
-                # [V, M, theta, w]
-                #
-                #TODO: confirm change reactions sign
-                eq = NodeGenRespEq(lnforce, lndisp,
-                                   ndof, self._plane.plane2D)
-                #
-                # ---------------------------------------------
-                #
-                try:
-                    # Beam load (udl/point)
-                    # [load_name, member_load_title, load_type, load_system, 
-                    # beam_number, x, Fx, Fy, Fz]
-                    mnload = mbload.get_group(mname)
-                    mnload = mnload.groupby(['node_end'], as_index=False)[hload].sum()
-                    #
-                    nodeloads = nlval.get_group(mname)
-                    nodeloads = nodeloads.groupby(['node_name'], as_index=False)[hforce].sum()
-                    nodeloads = nodeloads.set_index('node_name')                 
-                    #
-                    blitem = np.concatenate((nodeloads.loc[nodes[0]],
-                                             nodeloads.loc[nodes[1]]), axis=None)                
-                    #
-                    blitem = Tlg @ blitem
-                    #
-                    R0 = eq.R0(bload=blitem)
-                    #R0 = eq.R0()
-                    lbforce = [['local', mname, bstep.node_end,
-                                *beam.response(x=bstep.node_end,
-                                               R0=[R0.x, R0.t, R0.y, R0.z],
-                                               Fx=[*bstep[2:]])]
-                               for bstep in mnload.itertuples()]
-                    #print('-->')
-                except (KeyError, AttributeError, TypeError):
-                    # No load on beam
-                    R0 = eq.R0()
-                    # [beam_number, load_title, x, Fx, Fy, Fz, Mx, My, Mz]
-                    Lsteps = linspace(start=0, stop=element.L, num=steps+1, endpoint=True)
-                    lbforce = [['local', mname,  xstep,
-                                *beam.response(x=xstep, R0=[R0.x, R0.t, R0.y, R0.z],
-                                               Fx=[Fblank, Fblank_t, Fblank, Fblank])]
-                               for xstep in Lsteps]
+                #                      
                 #
                 # ---------------------------------------------
                 # Member total force in local system
                 #
                 # Axial   [FP, blank, blank, Fu]
-                # Torsion [T, B, Psi, Phi, Tw]
+                # Torsion [T, Phi, Psi, B, Tw] - [T, theta, theta1, theta2, theta3]
                 # Bending [V, M, theta, w]
                 #
-                member_load.extend([[*key[:3], # load_name, component_name, load_type,
+                member_load.extend([[*key[:3], # load_name, component_name, load_level,
                                      *lbf[:3], # load_system, element_name, node_end
                                      *lbf[3],  # Axial
                                      *lbf[4],  # Torsion
@@ -448,13 +478,6 @@ class MainProcess:
                 # ---------------------------------------------
                 #
         #
-        #
-        # ---------------------------------------------
-        #
-        #conn = create_connection(self._db_file)
-        #with conn:
-        #    self.push_Qm(conn, data=dftemp)
-        #    self.push_Qf(conn, data=member_load)
         #
         # ---------------------------------------------
         #        
@@ -480,36 +503,37 @@ class MainProcess:
         # Seting member df
         # --------------------------------------------
         #
-        header = ['load_name', 'load_level', 'component_name',
+        #1/0
+        header = ['load_name', 'component_name', 'load_level',
                   #'load_id','load_title',
                   'load_system',
                   'element_name', 'node_end',
-                  'F_Vx', 'blank1', 'blank2', 'F_wx',          # axial
-                  'F_Mx', 'F_B', 'F_psi', 'F_phix', 'F_Tw',    # torsion
-                  'F_Vy', 'F_Mz', 'F_thetaz', 'F_wy',          # bending in plane
-                  'F_Vz', 'F_My', 'F_thetay', 'F_wz']          # bending out plane
+                  'Fx', 'blank1', 'blank2', 'x',  # axial
+                  'Mx', 'rx', 'Psi',  'B',  'Tw', # torsion
+                  'Fy', 'Mz', 'rz', 'y',          # bending in plane
+                  'Fz', 'My', 'ry', 'z']          # bending out plane
         #
         db = DBframework()
         df_membf = db.DataFrame(data=member_load, columns=header, index=None)
         # reorder columns
+        df_membf.drop(columns=['blank1', 'blank2'])
         df_membf = df_membf[['load_name', 'component_name',
                              #'load_id',
                              'load_level',
                              #'load_title', 
                              'load_system',
                              'element_name', 'node_end',
-                             'F_Vx', 'F_Vy', 'F_Vz',
-                             'F_Mx', 'F_My', 'F_Mz',
-                             'F_wx', 'F_wy', 'F_wz',
-                             'F_phix', 'F_thetay', 'F_thetaz',
-                             'F_B', 'F_Tw']]
+                             'Fx', 'Fy', 'Fz',
+                             'Mx', 'My', 'Mz',
+                             'x', 'y', 'z',
+                             'rx', 'ry', 'rz',
+                             'Psi', 'B', 'Tw']]
         #
-        df_membf.rename({'F_Vx': 'Fx','F_Vy': 'Fy', 'F_Vz': 'Fz',
-                         'F_Mx': 'Mx', 'F_My': 'My', 'F_Mz': 'Mz',
-                         'F_wx': 'x', 'F_wy': 'y', 'F_wz': 'z',
-                         'F_phix': 'rx', 'F_thetay': 'ry', 'F_thetaz': 'rz',
-                         'F_B': 'B','F_Tw': 'Tw'},
-                        axis=1, inplace=True)
+        #df_membf.rename({'F_Vx': 'Fx','F_Vy': 'Fy', 'F_Vz': 'Fz',
+        #                 'F_Mx': 'Mx', 'F_My': 'My', 'F_Mz': 'Mz',
+        #                 'F_wx': 'x', 'F_wy': 'y', 'F_wz': 'z',
+        #                 'F_thetax': 'rx', 'F_thetay': 'ry', 'F_thetaz': 'rz'},
+        #                axis=1, inplace=True)
         #
         return df_membf
     #
@@ -519,16 +543,20 @@ class MainProcess:
         hforce = ['node_name', *self._plane.hforce]
         # get df 
         db = DBframework()
-        header: list[str] = ['load_name', 'load_level', 'component_name',
-                             #'load_id', 'load_title',
-                             'load_system', 'element_name',
+        header: list[str] = ['load_name', 'component_name',
+                             #'load_id',
+                             'load_level', 
+                             # 'load_title',
+                             'load_system',
+                             'element_name',
                              *hforce]
         df_nforce = db.DataFrame(data=dftemp, columns=header, index=None)
-        return df_nforce[['load_name', 'component_name',
-                          #'load_id','load_title',
-                          'load_level',
-                          'load_system', 'element_name',
-                          *hforce]]    
+        #return df_nforce[['load_name', 'component_name',
+        #                  #'load_id','load_title',
+        #                  'load_level',
+        #                  'load_system', 'element_name',
+        #                  *hforce]]
+        return df_nforce
     #
     #
     def get_reactions(self, nforce):
@@ -537,13 +565,13 @@ class MainProcess:
         nforce = (nforce.groupby(['load_name', 'component_name',
                                   #'load_id',
                                   'load_level',
-                                  'load_system',
                                   #'load_title',
+                                  'load_system',
                                   'node_name'],
                                   as_index=False)
                    [self._plane.hforce].sum())
         #
-        supports = self._mesh._boundaries.supports()
+        supports = self._mesh._boundaries.support()
         nname = list(supports)
         #
         nrsupp = nforce.loc[nforce['node_name'].isin(nname)]
@@ -580,7 +608,9 @@ class MainProcess:
         for key, item in members:
             member = elements[key[0].tolist()]
             section = member.section
-            stressdf = section.stress(df=item)
+            material = member.material
+            stressdf = section.stress(df=item,
+                                      E=material.E, G=material.G)
             conn = create_connection(self._db_file)
             with conn:            
                 stressdf.to_sql('ResultBeamStress', conn,
@@ -610,13 +640,14 @@ class MainProcess:
                                   dfcomb=df_comb,
                                   values=['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                                           'x', 'y', 'z', 'rx', 'ry', 'rz',
-                                          'B', 'Tw'])
+                                          'Psi', 'B', 'Tw'])
         #
         df_Qbeam = df_beam[['load_name', 'component_name', 
                             'load_level', 'load_system',
                             'element_name', 'node_end',
                             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                            'B', 'Tw']]
+                            #'rx', 'ry', 'rz',
+                            'Psi', 'B', 'Tw']]
         #
         df_Dbeam = df_beam[['load_name', 'component_name', 
                             'load_level', 'load_system',
@@ -812,57 +843,77 @@ class MainProcess:
 @dataclass
 class NodeGenRespEq:
     """ Local system"""
-    def __init__(self, force:list, disp: list,
-                 ndof: int, m2D: bool) -> None:
-        self.force = force
+    def __init__(self, disp: list,
+                 plane: bool) -> None:
+        """ """
+        #self.force = force
         self.disp = disp
-        self.ndof = ndof
-        self.m2D = m2D
+        #self.ndof = ndof
+        self.plane = plane
+        
     #
-    def R0(self, bload: list|None = None) -> tuple:
+    def R0(self,
+           bload: list|None = None,
+           tload: list|None = None) -> tuple:
         """
         Axial   [FP, blank, blank, Fu]
         Bending [V, M, theta, w]
-        Torsion [T, B, Psi, Phi, Tw]
+        Torsion [T, Phi, Psi, B, Tw] 
         """
-        bload0 = [0] * self.ndof
-        try:
-            if bload:
-                bload0 = bload[:self.ndof]
-        except (TypeError, ValueError):
-            bload0 = bload[:self.ndof]
+        #bload0 = [0] * self.ndof
+        #try:
+        #    if bload:
+        #        bload0 = bload[:self.ndof]
+        #except (TypeError, ValueError):
+        #    bload0 = bload[:self.ndof]
         #
-        lnforce0 = self.force[:self.ndof]
-        lndisp0 = self.disp[:self.ndof]
-        if self.m2D:
-            R0x = [1 * (lnforce0[0] + bload0[0]),
-                   0, 0,
-                   1 * lndisp0[0]] # Fx,0,0,Fu
+        #lnforce0 = self.force[:self.ndof]
+        #lndisp0 = self.disp[:self.plane.ndof]
+        lndisp0 = self.disp[:6]
+        #
+        # Axial
+        R0x = [bload.Fx,                  # Fx
+               #lnforce0[0] + bload.Fx,   # Fx
+               0, 0,                      # blank, blank
+               1 * lndisp0[0]]            # dx   
+        #
+        # In plane
+        R0y = [-1 *  bload.Fy,  # Vy
+                1 *  bload.Mz, # Mz
+               #1 * (lnforce0[1] - bload.Fy),  # Vy
+              #-1 * (lnforce0[5] - bload.Mz), # Mz               
+               1 * lndisp0[5],                # thetaz
+               1 * lndisp0[1]]                # dy
+        #
+        if self.plane.plane2D:
             #
-            R0y = [-1 * (lnforce0[1] - bload0[1]), # Vy
-                   1 * (lnforce0[2] - bload0[2]), # Mz
-                   -1 * lndisp0[2],  # thetaz
-                   1 * lndisp0[1]]  # wy
-            #
-            R0z = [0, 0, 0, 0] # 0,0,0,0
-            R0t = [0, 0, 0, 0, 0] # 0,0,0,0
+            R0z = [0, 0, 0, 0]    # [Vz, My, thetay, dz]
+            R0t = [0, 0, 0, 0, 0] # [T, Phi, Psi, B, Tw] 
         else:
-            R0x = [lnforce0[0] + bload0[0],
-                   0, 0, 1 * lndisp0[0]]
+            R0z = [-1 *  bload.Fz,                  # Vz
+                    1 *  bload.My,                  # My
+                   #1 * (lnforce0[2] - bload.Fz),   # Vz
+                   #-1 * (lnforce0[4] - bload.My),  # My                   
+                   1 * lndisp0[4],                  # thetay
+                   1 * lndisp0[2]]                  # dz
             #
-            R0y = [-1 * (lnforce0[1] - bload0[1]),
-                   1 * lnforce0[5] - bload0[5],
-                   -1 * lndisp0[5],
-                   1 * lndisp0[1]]
+            # Torsion
+            #T0 = 1 * (lnforce0[3] + bload.Mx)
+            T0 = 1 * bload.Mx
+            rx = 1 * lndisp0[3] 
             #
-            R0z = [-1 * (lnforce0[2] - bload0[2]),
-                   1 * lnforce0[4] - bload0[4],
-                   -1 * lndisp0[4],
-                   1 * lndisp0[2]]
-            #
-            R0t = [1 * (lnforce0[3] + bload0[3]),
-                   0, 0, 1 * lndisp0[3], 0]
+            #try: # Thin walled sections (Ibeam, Channel & Z)
+            #    1 / self.section.Cw
+            thetas = [1 * tload.psi,
+                      1 * tload.B,
+                      1 * tload.Tw]
+            #except ZeroDivisionError: # the rest (Pilky)
+            #    thetas = [0, 0, 0]
+            R0t = [T0,  rx,  *thetas]  # [T, Phi, Psi, B, Tw]
+        #
         return Req(R0x, R0t, R0y, R0z)
+    #
+    #    
 #
 #
 class Req(NamedTuple):
@@ -873,6 +924,8 @@ class Req(NamedTuple):
     z: list
 #
 #
+Pload = namedtuple('PointLoad', ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
+Tload = namedtuple('TorsionLoad', ['rx', 'psi', 'B', 'Tw'])
 #
 # -----------------------------------------------------------
 # Combination process

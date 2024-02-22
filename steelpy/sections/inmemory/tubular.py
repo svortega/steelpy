@@ -12,14 +12,10 @@ from array import array
 #
 
 # package imports
-#from steelpy.utils.io_module.text import search_line
-#from ..process.operations import ShapeProperty #, get_sect_properties
-#from ..process.stress import BeamStress
+from steelpy.sections.utils.shape.tubular import TubularBasic
 from steelpy.sections.utils.shape.main import ShapeBasic
-#from steelpy.utils.dataframe.main import DBframework
 
-#import pandas as pd
-#import numpy as np
+
 #
 #
 #
@@ -107,7 +103,8 @@ class TubularIM(ShapeBasic):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        return TubularBasic(name=self._labels[index], diameter=self._d[index], thickness=self._tw[index])
+        return TubularBasic(name=self._labels[index],
+                            diameter=self._d[index], thickness=self._tw[index])
     #
     @property
     def df(self):

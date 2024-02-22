@@ -174,7 +174,7 @@ class BoundaryConcept:
     #    return value in self._labels    
     #
     #
-    def supports(self):
+    def support(self):
         """ """
         return self._supports
     #

@@ -11,12 +11,12 @@ from __future__ import annotations
 # package imports
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #
-from .angle import AngleSQLite
+from .angle import AngleSQL
 from .tubular import TubularSQL
 from .tee import TeeSQLite
-from .channel import ChannelSQLite
-from .box import BoxSQLite
-from .ibeam import IbeamSQLite
+from .channel import ChannelSQL
+from .box import BoxSQL
+from .ibeam import IbeamSQL
 from .solid import SolidSectionSQL
 #
 from steelpy.sections.sqlite.utils import SectionMainSQL
@@ -35,10 +35,11 @@ class SectionSQL(SectionMainSQL):
                  db_system: str = "sqlite"):
         """
         """
-        super().__init__(db_file)
+        super().__init__(component=component,
+                         db_file=db_file)
         #
         #self.db_file = db_file
-        self._component = component
+        #self._component = component
         #
         self._tubular = TubularSQL(component=component,
                                    db_file=db_file)
@@ -46,20 +47,20 @@ class SectionSQL(SectionMainSQL):
         self._solid = SolidSectionSQL(component=component,
                                       db_file=db_file)
         
-        self._ibeam = IbeamSQLite(component=component,
-                                  db_file=db_file)
+        self._ibeam = IbeamSQL(component=component,
+                               db_file=db_file)
         
-        self._box = BoxSQLite(component=component,
-                              db_file=db_file)
+        self._box = BoxSQL(component=component,
+                           db_file=db_file)
         
-        self._channel = ChannelSQLite(component=component,
-                                      db_file=db_file)
+        self._channel = ChannelSQL(component=component,
+                                   db_file=db_file)
         #
         self._tee = TeeSQLite(component=component,
                               db_file=db_file)
         
-        self._angle = AngleSQLite(component=component,
-                                  db_file=db_file)
+        self._angle = AngleSQL(component=component,
+                               db_file=db_file)
         #
         conn = create_connection(self.db_file)
         with conn:         
@@ -159,4 +160,61 @@ class SectionSQL(SectionMainSQL):
 
 #
 #
+#
+def get_shapeSQL(shape_type, geometry):
+    """ """
+    if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
+        shape = TubularQSL()
+        return TubularQSL(name=geometry[0], 
+                            diameter=geometry[3], thickness=geometry[4]) 
+
+    #elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
+    #    return self._solid[shape_name]
+    elif re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
+        d = geometry[3]
+        return CircleBasic(name=geometry[0], d=d, type=shape_type)
+
+    elif re.match(r"\b((solid|bar(\_)?)?square|rectangle)\b", shape_type, re.IGNORECASE):
+        d = geometry[3]
+        wb = geometry[7]
+        return RectangleBasic(name=geometry[0], depth=d, width=wb,
+                              type=shape_type)
+
+    elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
+        d = geometry[5]
+        wb = geometry[7]
+        wt = geometry[9]            
+        c = abs(wt - wb) / 2.0
+        return Trapeziod(name=geometry[0], depth=d, width=wb,
+                         a=wt, c=c, type=shape_type)    
+    
+    elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
+        return IbeamBasic(name=geometry[0], 
+                          d=geometry[5], tw=geometry[6],
+                          bft=geometry[7], tft=geometry[8],
+                          bfb=geometry[9], tfb=geometry[10])
+    
+    elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
+        return BoxBasic(name=geometry[0], 
+                d=geometry[5], tw=geometry[6],
+                b=geometry[7], tb=geometry[8])
+    
+    elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
+        return ChannelBasic(name=geometry[0], 
+                    d=geometry[5], tw=geometry[6],
+                    b=geometry[7], tb=geometry[8])
+    
+    elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
+        return TeeBasic(name=geometry[0], 
+                        d=geometry[5], tw=geometry[6],
+                        b=geometry[7], tb=geometry[8])
+    
+    elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
+        return AngleBasic(name=geometry[0], 
+                          d=geometry[5], tw=geometry[6],
+                          b=geometry[7], r=0)
+    
+    else:
+        raise IOError(f' Section type {shape_type} not recognised')
+
 

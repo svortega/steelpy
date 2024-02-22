@@ -4,6 +4,7 @@
 
 # Python stdlib imports
 from __future__ import annotations
+from array import array
 #from dataclasses import dataclass
 from collections.abc import Mapping
 #import math
@@ -12,10 +13,10 @@ import re
 
 # package imports
 #
-from steelpy.sections.utils.shape.utils import get_sect_properties, get_Isection
+from steelpy.sections.utils.shape.utils import get_sect_properties
 from steelpy.sections.utils.shape.tubular import TubularBasic
-from steelpy.sections.utils.shape.solid import RectangleBasic, CircleBasic, Trapeziod
-from steelpy.sections.utils.shape.ibeam import IbeamBasic
+from steelpy.sections.utils.shape.solid import RectangleSolid, CircleSolid, TrapeziodSolid
+from steelpy.sections.utils.shape.ibeam import IbeamBasic, get_Isection
 from steelpy.sections.utils.shape.box import BoxBasic
 from steelpy.sections.utils.shape.channel import ChannelBasic
 from steelpy.sections.utils.shape.tee import TeeBasic
@@ -31,12 +32,15 @@ from steelpy.utils.dataframe.main import DBframework
 #
 class ShapeBasic(Mapping):
     """ """
-    #__slots__ = []
+    __slots__ = ['_labels', '_title', '_number', '_type']
     
     def __init__(self):
         """
         """
-        pass
+        self._labels:list = []
+        self._title:list = []
+        self._type:list = []
+        self._number:array= array('i', [])        
     # -----------------------------------------------
     #
     def __len__(self):
@@ -64,17 +68,17 @@ class ShapeBasic(Mapping):
     #    1/0
     #    return self._properties()    
     #
-    #def get_number(self, start: int = 1):
-    #    """
-    #    """
-    #    try:
-    #        n = max(self._labels) + 1
-    #    except ValueError:
-    #        n = start
-    #    #
-    #    while True:
-    #        yield n
-    #        n += 1
+    def get_number(self, start: int = 1):
+        """
+        """
+        try:
+            n = max(self._number) + 1
+        except ValueError:
+            n = start
+        #
+        while True:
+            yield n
+            n += 1
     #
     
 #
@@ -117,7 +121,7 @@ class SectionMain(ShapeBasic):
             elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
                 self._tubular[shape_name] = properties
 
-            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b",
+            elif re.match(r"\b((solid|bar(\_)?)?square|rectangle|trapeziod|circular|round)\b",
                           shape_type, re.IGNORECASE):
                 self._solid[shape_name] = [shape_type, *properties] 
 
@@ -146,7 +150,7 @@ class SectionMain(ShapeBasic):
         if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
             return self._tubular[shape_name]
 
-        elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b((solid|bar(\_)?)?square|rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
             return self._solid[shape_name]
         
         elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
@@ -400,13 +404,13 @@ def ShapeGeometry(shape_type: str, geometry: list):
         #elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
         #    return self._solid[shape_name]
         elif re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
-            d = geometry[3]
-            return CircleBasic(name=geometry[0], d=d, type=shape_type)
+            d = geometry[5]
+            return CircleSolid(name=geometry[0], d=d, type=shape_type)
     
         elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
-            d = geometry[3]
+            d = geometry[5]
             wb = geometry[7]
-            return RectangleBasic(name=geometry[0], depth=d, width=wb,
+            return RectangleSolid(name=geometry[0], depth=d, width=wb,
                                   type=shape_type)
     
         elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
@@ -414,7 +418,7 @@ def ShapeGeometry(shape_type: str, geometry: list):
             wb = geometry[7]
             wt = geometry[9]            
             c = abs(wt - wb) / 2.0
-            return Trapeziod(name=geometry[0], depth=d, width=wb,
+            return TrapeziodSolid(name=geometry[0], depth=d, width=wb,
                              a=wt, c=c, type=shape_type)    
         
         elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
@@ -445,4 +449,4 @@ def ShapeGeometry(shape_type: str, geometry: list):
         
         else:
             raise IOError(f' Section type {shape_type} not recognised')
-# 
+#

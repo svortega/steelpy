@@ -9,7 +9,7 @@ from __future__ import annotations
 
 # package imports
 from steelpy.sections.utils.shape.tubular import TubularBasic
-from steelpy.sections.sqlite.utils import SectionItemSQL
+from steelpy.sections.sqlite.utils import SectionMainSQL
 from steelpy.utils.sqlite.utils import create_connection
 #
 #from steelpy.utils.dataframe.main import DBframework
@@ -20,7 +20,7 @@ from steelpy.utils.sqlite.utils import create_connection
 #
 #
 #
-class TubularSQL(SectionItemSQL):
+class TubularSQL(SectionMainSQL):
     """ """
     __slots__ = ['diameter', 'thickness', 'build', 'type',
                  'shear_stress', 'compactness', '_properties',

@@ -272,12 +272,13 @@ def get_force(conn, element_name: int|str|None=None,
     else:
         query = f'SELECT {item} FROM ResultBeamForce'
     
-    cols = ['number', 'component_name', 
-            'load_name', 'load_level', 'load_system', 
+    cols = ['number', 'load_name', 'component_name', 
+            'load_level', 'load_system', 
             'element_name', 'node_end',
-            'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz', 'B', 'Tw']
+            'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+            'theta1', 'theta2', 'theta3']
     df = pull_data(conn, query, cols)
-    df.drop(columns=['B', 'Tw'], inplace=True)
+    df.drop(columns=['theta1', 'theta2', 'theta3'], inplace=True)
     return df
 #
 #
@@ -312,7 +313,8 @@ def get_stress(conn, element_name: int|str|None=None,
     cols = ['number', 'load_name', 'component_name', 
             'load_level', 'load_system', 
             'element_name', 'node_end', 'stress_points', 
-            'y', 'z', 'tau_x', 'tau_y', 'tau_z','sigma_x', 'sigma_y', 'sigma_z']
+            'y', 'z', 'tau_x', 'tau_y', 'tau_z',
+            'sigma_x', 'sigma_y', 'sigma_z']
     
     return pull_data(conn, query, cols)
 #

@@ -12,21 +12,23 @@ import math
 #
 
 # package imports
-from steelpy.sections.utils.shape.utils import ShapeProperty, ShapeBasic
-#from steelpy.sections.process.stress import BeamStress
+from steelpy.sections.utils.shape.utils import ShapeProperty
+from steelpy.sections.utils.shape.stress import ShapeStressBasic
 
 #
+#-------------------------------------------------
 #
 points = namedtuple('Points', ['y', 'z'])
+axis = namedtuple('Axis', ['y', 'z'])
 #
 #
-# ----------------------------------------
+#-------------------------------------------------
 #      Standard Section Profiles
-# ----------------------------------------
+#-------------------------------------------------
 #
 #
 @dataclass
-class BoxBasic(ShapeBasic):
+class BoxBasic(ShapeStressBasic):
     """
     Calculate the section properties of a box section
 
@@ -82,39 +84,8 @@ class BoxBasic(ShapeBasic):
     tb: float
     type:str = 'box'
     #
-    #
-    def _stress(self, actions, stress=None, stress_type: str='average'):
-        """
-        """
-        # get section's coordinates
-        coord =  self.section_coordinates()
-        prop = self.properties()
-        #
-        # ----------------------------------------------
-        # Torsion
-        ta = (self.tw + self.tb) * 0.50
-        tau_x = [actions.Mx / (2 * ta * (self.b - self.tw) * (self.d - self.tb))
-                 for item in coord.y]
-        #
-        # In Plane
-        tau_y = [actions.Fy / prop.area
-                 for item in coord.y]
-        # Out Plane
-        tau_z = [actions.Fz / prop.area
-                 for item in coord.z]
-        #
-        # get bending stress
-        sigma_x = [actions.Fx / prop.area for item in coord.y]
-        sigma_y = [actions.My * item / prop.Iy for item in coord.z]
-        sigma_z = [actions.Mz * item / prop.Iz for item in coord.y]
-        #
-        stress_out = BeamStress(sigma_x, sigma_y, sigma_z, 
-                                tau_x, tau_y, tau_z, coord)
-        #
-        if stress:
-            stress_out = self.add_stress(stress=stress, other=stress_out)
-        #
-        return stress_out        
+    # --------------------------------------------
+    #      
     #
     #
     def _properties(self):
@@ -138,7 +109,7 @@ class BoxBasic(ShapeBasic):
         area = self.b * self.d - _bi * _hi
         # -------------------------------------------------
         #   Elastic Neutral Centre 
-        Zc = self.b / 2.0
+        Zc = 0
         Yc = 0
         # -------------------------------------------------
         #   Shear Centre 
@@ -150,8 +121,9 @@ class BoxBasic(ShapeBasic):
         # -------------------------------------------------
         #               Section Properties
         # -------------------------------------------------
+        Iy, Iz = self.I
         #   Second Moment of Area about Mayor Axis
-        Iy = ((self.b * self.d ** 3 - _bi * _hi ** 3) / 12.0)
+        #Iy = ((self.b * self.d ** 3 - _bi * _hi ** 3) / 12.0)
         #   Elastic Modulus about Mayor Axis
         Zey = ((self.b * self.d ** 3 - _bi * _hi ** 3) / (6.0 * self.d))
         #   Plastic Modulus about Mayor Axis
@@ -163,7 +135,7 @@ class BoxBasic(ShapeBasic):
         ry = math.sqrt(Iy / area)
         # -------------------------------------------------
         #   Second Moment of Area about Minor Axis
-        Iz = ((self.d * self.b ** 3 - _hi * _bi ** 3) / 12.0)
+        #Iz = ((self.d * self.b ** 3 - _hi * _bi ** 3) / 12.0)
         #   Elastic Modulus about Minor Axis
         Zez = ((self.d * self.b ** 3 - _hi * _bi ** 3) / (6.0 * self.b))
         #   Plastic Modulus about Minor Axis
@@ -192,10 +164,9 @@ class BoxBasic(ShapeBasic):
         rp = math.sqrt(Jx / area)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
-                           Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
-                           Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
-                           J=J, Cw=Cw)
-
+                             Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
+                             Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
+                             J=J, Cw=Cw)
     #
     def curved(self, R):
         """
@@ -251,16 +222,88 @@ class BoxBasic(ShapeBasic):
                   * (4 * _D2 ** 2 / (10 * _r ** 2)))
         #
         # Shear factor (section 8.1 equ 8.1-13)
-
     #
-    def _dimension(self) -> str:
-        """ Print section dimensions"""
-        out = "{:<32s}{:1.4e} {:1.4e} {:1.4e}\n" \
-            .format(self.type, self.d, self.b, self.b)
-        out += "{:<48s}{:1.4e} {:1.4e} {:1.4e}\n" \
-            .format("", self.tw, self.tb, self.tb)
-        return out
+    def taux_max(self, Mt):
+        """
+        """
+        #K = ((2 * self.tw * self.tb
+        #      * (self.d * self.tw)**2 * (self.b * self.tb)**2)
+        #     / (self.d * self.tw + self.b * self.tb - self.tw**2 - self.tb**2))
+        #
+        #tau_short = Mt / (2 * self.tb * (self.d - self.tb) * (self.b - self.tw))
+        tau_long = Mt / (2 * self.tw * (self.d - self.tb) * (self.b - self.tw))
+        #
+        #tau_max = max(tau_short, tau_long)
+        return tau_long    
     #
+    # --------------------------------------------
+    #
+    @property
+    def I(self):
+        """Second moment of inertia"""
+        hi = self.d - 2 * self.tb
+        bi = self.b - 2 * self.tw        
+        #   Second Moment of Area about Mayor Axis
+        Iy = ((self.b * self.d ** 3 - bi * hi ** 3) / 12.0)
+        #   Second Moment of Area about Minor Axis
+        Iz = ((self.d * self.b ** 3 - hi * bi ** 3) / 12.0)
+        #
+        return axis(Iy, Iz)        
+    #
+    def Qb(self):
+        """
+        Returns
+        ----------
+        Qb: Q/b
+        Where: 
+        Q : Ax - Shear's first moment of area
+        b : cross section width
+        """
+        #
+        coord = self.section_coordinates()
+        #
+        # -----------------------------------------------------
+        #
+        def _qi(coord: list, d: float, td: float,
+                b: float, tb: float):
+            """qi = Ax/Ib"""
+            H = d - tb
+            D = b - 2 * td
+            Qout = []
+            for item in coord:
+                Hi = abs(item)
+                di = d - Hi
+                if Hi < H: # C section
+                    area = tb * D + 2 * di * td
+                    B = di
+                    C = di - tb * 0.50
+                    Zi = (d - ((2 * B**2 * td + D * tb**2)
+                               / (2 * B * b - 2 * D * C)))
+                    #print('web', Hi, area, Zi)
+                else: # Flange
+                    area = di * b
+                    Zi = 0.5 * di + Hi
+                    #print('flange', Hi, area, Zi)
+                #
+                Qout.append(area * Zi)
+            return Qout
+        #
+        # -----------------------------------------------------
+        #
+        d = self.b * 0.50
+        Qy = _qi(coord=coord.y, d=d, td=self.tb,
+                 b=self.d, tb=self.tw)
+        #
+        #
+        # -----------------------------------------------------
+        #
+        d = self.d * 0.50
+        Qz = _qi(coord=coord.z, d=d, td=self.tw,
+                 b=self.b, tb=self.tb)
+        #
+        return axis(Qy, Qz)
+    #
+    # --------------------------------------------
     #
     def section_coordinates(self):
         """
@@ -277,29 +320,32 @@ class BoxBasic(ShapeBasic):
        12 13 14 15 16
         """
         # horizontal
-        coord_y = [-1 * (self.b - self.tw * 0.50), #1
-                   -1 * (self.b - self.tw), 0,     #2, 3
-                   (self.b - self.tw),            #4
-                   (self.b - self.tw * 0.50),     #5
-                   -1 * (self.b - self.tw * 0.50), #6
-                   (self.b - self.tw * 0.50),     #7
-                   -1 * (self.b - self.tw * 0.50), #8
-                   (self.b - self.tw * 0.50),     #9
-                   -1 * (self.b - self.tw * 0.50), #10
-                   (self.b - self.tw * 0.50),     #11
-                   -1 * (self.b - self.tw * 0.50), #12
-                   -1 * (self.b - self.tw), 0,     #13, 14
-                   (self.b - self.tw), #15
-                   (self.b - self.tw * 0.50)] #16
+        Yc = self.b * 0.50
+        h1 = Yc - self.tw * 0.50
+        h2 = Yc - self.tw
+        coord_y = [-1 * h1, -1 * h2, 0, h2,  h1,   # 1-5
+                   -1 * h1, h1, # 6-7
+                   -1 * h1, h1, # 8-9
+                   -1 * h1, h1, # 10-11
+                   -1 * h1, -1 * h2, 0, h2,  h1,] # 12-16
         # vertical
-        top1 = (self.d - self.tb * 0.50)
-        top2 = (self.d - self.tb)
-        coord_z = [top1, top1, top1, top1, top1, #1-5
-                   top2, top2,  #6,7
-                   0, 0,        # 8,9
+        Zc = self.d * 0.50
+        top1 = (Zc - self.tb * 0.50)
+        top2 = (Zc - self.tb)
+        top3 = -1 * top1
+        coord_z = [top1, top1, top1, top1, top1, # 1-5
+                   top2, top2,           # 6,7
+                   0, 0,                 # 8,9
                    -1 * top2, -1 * top2, # 10,11
-                   -1 * top1, -1 * top1, -1 * top1,
-                   -1 * top1, -1 * top1]
-        
+                   top3, top3, top3, top3, top3] # 12-16
+        #
         return points(coord_y, coord_z)
     #
+    def _dimension(self) -> str:
+        """ Print section dimensions"""
+        out = "{:<32s}{:1.4e} {:1.4e} {:1.4e}\n" \
+            .format(self.type, self.d, self.b, self.b)
+        out += "{:<48s}{:1.4e} {:1.4e} {:1.4e}\n" \
+            .format("", self.tw, self.tb, self.tb)
+        return out
+    #    

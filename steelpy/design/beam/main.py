@@ -10,7 +10,7 @@ from steelpy.design.codes.api.main import API_design
 from steelpy.utils.units.main import Units
 ##from steelpy.design.beam.process import BeamDesignParameters
 from steelpy.ufo.load.process.actions import Actions
-from steelpy.sections.utils.stress import BeamStress
+from steelpy.sections.utils.shape.stress import BeamStress
 #
 
 class BeamDesign: #(BeamDesignParameters):

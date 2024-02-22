@@ -7,14 +7,15 @@ from __future__ import annotations
 #from array import array
 from dataclasses import dataclass
 from collections import namedtuple
+from typing import NamedTuple
 import math
 #import re
 #
 #
 # package imports
 #
-from steelpy.sections.utils.shape.utils import ShapeProperty, ShapeBasic
-from steelpy.sections.utils.stress import BeamStress
+from steelpy.sections.utils.shape.utils import ShapeProperty
+from steelpy.sections.utils.shape.stress import BeamStress, ShapeStressBasic
 #
 #from steelpy.utils.dataframe.main import DBframework
 #
@@ -28,18 +29,6 @@ from steelpy.sections.utils.stress import BeamStress
 #    keyWord, line_out, _match = search_line(line_in, _key)
 #    return keyWord
 #
-#
-#
-#def get_dimension(self, dim: str, value: float):
-#    """
-#    """
-#    # Section Definition
-#    if dim == 'diameter':
-#        self.diameter = value
-#    elif dim == 'thickness':
-#        self.thickness = value
-#    else:
-#        raise IOError('   *** error Tubular geometry {:} not found'.format(dim))#
 #
 #
 #
@@ -59,9 +48,98 @@ from steelpy.sections.utils.stress import BeamStress
 #    return compactness
 #
 #
+#-------------------------------------------------
 #
-points = namedtuple('Points', ['y', 'z'])
-
+points = namedtuple('Points', ['y', 'z', 'alpha_y', 'alpha_z'])
+axis = namedtuple('Axis', ['y', 'z'])
+#
+#-------------------------------------------------
+#
+class TubularPoint(NamedTuple):
+    """
+                 1   
+              .  +   . 
+          2 +    :      + 3   ^ z
+           .     :       .    |
+        4 +      :       + 5  +--> y
+           .     :       .
+          6 +    :      + 7
+              .  +   .
+                 8
+    """
+    y: list
+    z: list
+    #
+    d: float
+    tw: float
+    #
+    alpha_y: list[float]
+    alpha_z: list[float]
+    #
+    def Qarea(self):
+        """
+        returns:  
+        Qy,z : Shear first moment of area (m^3)
+        """
+        #
+        R = self.d * 0.50
+        #alpha = self.alpha       
+        #
+        # -----------------------------------------------------
+        #        
+        Qay = [self._area(R=R, tw=self.tw, alpha=item)
+               for item in self.alpha_y]
+        #
+        Yy = [self._Cz(R=R, tw=self.tw, alpha=item)
+              for item in self.alpha_y]
+        #
+        #Qy = [Qay[x] * Yy[x] / self._base(R=R, alpha=item)
+        #      for x, item in enumerate(self.alpha)]
+        #
+        Qy = []
+        for x, item in enumerate(self.alpha_y):
+            try:
+                Qy.append(Qay[x] * Yy[x] / (2*self.tw))
+            except ZeroDivisionError:
+                Qy.append(0)
+        #
+        # -----------------------------------------------------
+        #
+        Qaz = [self._area(R=R, tw=self.tw, alpha=item)
+               for item in self.alpha_z]        
+        #
+        Yz = [self._Cz(R=R, tw=self.tw, alpha=item)
+              for item in self.alpha_z]
+        #
+        Qz = []
+        for x, item in enumerate(self.alpha_z):
+            try:
+                Qz.append(Qaz[x] * Yz[x] / (2*self.tw))
+            except ZeroDivisionError:
+                Qz.append(0)        
+        #
+        # -----------------------------------------------------
+        #
+        return Qy, Qz
+    #
+    def _area(self, R: float, tw: float,
+              alpha: float):
+        """Sector of hollow circle"""
+        return alpha * tw * (2 * R - tw)
+    #
+    def _base(self, R: float, alpha: float):
+        """base """
+        Xc = R * math.sin(alpha)
+        return 2 * Xc
+    #
+    def _Cz(self, R: float, tw: float, alpha: float):
+        """ """
+        try:
+            yc = (R * (1 - (2 * math.sin(alpha) / (3 * alpha))
+                       * (1 - tw / R + 1 / (2 - tw / R))))
+        except ZeroDivisionError:
+            yc = tw * 0.50
+        return R - yc
 
 #
 # ----------------------------------------
@@ -71,11 +149,13 @@ points = namedtuple('Points', ['y', 'z'])
 #
 #
 @dataclass
-class TubularBasic(ShapeBasic):
+class TubularBasic(ShapeStressBasic):
     #name:str | int
     diameter:float
     thickness:float
     type:str = 'tubular'
+    #
+    # --------------------------------------------
     #
     def _properties(self):
         """
@@ -88,8 +168,9 @@ class TubularBasic(ShapeBasic):
         area = (math.pi / 4.
                 * (diameter ** 2 - (diameter - 2 * thickness) ** 2))
         # Centroid
-        Zc = diameter / 2.0
-        Yc = diameter / 2.0
+        #Zc = diameter / 2.0
+        #Yc = diameter / 2.0
+        Yc, Zc = self.centroid
         # Shear centre
         SCz = diameter * 0
         SCy = diameter * 0
@@ -98,9 +179,11 @@ class TubularBasic(ShapeBasic):
         # -------------------------------------------------
         #   Second Moment of Area about Mayor Axis
         #   --------------------------------------
-        Iy = (math.pi / 64.0
-              * (diameter ** 4 - (diameter - 2 * thickness) ** 4))
-        Iz = Iy
+        #Iy = (math.pi / 64.0
+        #      * (diameter ** 4 - (diameter - 2 * thickness) ** 4))
+        #Iz = Iy
+        Iy, Iz = self.I
+        #
         #   Elastic Modulus about Mayor Axis
         #   --------------------------------------
         Zey = (2 * Iy / diameter)
@@ -134,36 +217,28 @@ class TubularBasic(ShapeBasic):
         rp = (Jx / area) ** 0.50
         #
         # -------------------------------------------------
-        #self.section_coordinates()
         #
-        # return _Area, _Zc, _Yc, _Iy, _Zey, _Zpy, _ry, _Iz, _Zez, _Zpz, _rz
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
-                             Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
-                             Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
+                             Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
+                             Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
                              J=J, Cw=Cw)
 
     #
-    def shear_stress(self, Vy, Vz,
-                     stress_type:str ='average',
-                     alpha: float = 2.0):
+    #
+    def taux_max(self, Mt):
         """
-        alpha: Shape factor (section 8.10 roakrs 7ed) 
         """
-        # -------------------------------------------------
-        #            Shear Stress Calculation
-        prop = self.properties()
-        coord =  self.section_coordinates()
+        ro = self.d * 0.50
+        #ri = ro - self.tw
+        #di = self.d - 2 * self.tw
+        #alpha = di / self.d 
         #
-        tau_z = [Vz / prop.area for item in coord.z]
+        thin = Mt / (2 * math.pi * ro**2 * self.tw)
         #
-        tau_y = [Vy / prop.area for item in coord.y]
+        #hollow = 2 * Mt / (math.pi * ro ** 3 * (1 - alpha ** 4))
+        #roar = 2 * Mt * ro/ (math.pi * (ro ** 4 - ri ** 4) )
         #
-        if stress_type != 'average':
-            # Shape factor (section 8.10 roakrs 7ed)        
-            tau_z = tau_z * alpha
-            tau_y = tau_y * alpha
-        
-        return tau_y, tau_z
+        return thin
     #
     def curved(self, R: float):
         """
@@ -237,79 +312,112 @@ class TubularBasic(ShapeBasic):
         return output
 
     #
-    def _stress(self, actions, stress=None, stress_type: str='average'):
-        """
-        """
-        D, t = self.get_geometry()
-        r = D * 0.50
-        prop = self.properties()
-        #
-        coord =  self.section_coordinates()
-        #coord_y = self.section_coordinates.y  # lateral
-        #coord_z = self.section_coordinates.z  # vertical
-        #
-        # ---------------------------------
-        #spoints = [x for x, item in enumerate(coord_y)]
-        #
-        #actions['sigma_y'] = actions.apply(lambda row: row.Fy/prop.Zey, axis=1)
-        #test = actions[['load_title', 'node_end', 'Fy']].copy()
-        #test['sigma_y'] = test['Fy']/prop.Zey
-        #sigma_yy = [[actions.node_end.iloc[xx], item, step * item / prop.Zey]
-        #            for item in coord.z
-        #            for xx, step in enumerate(actions.My)]
-        #
-        # ----------------------------------------------
-        # shear/torsion stress
-        #
-        # FIXME: what is Ip?
-        # tau_x = 0 # actions.Mx * D / (2 * prop.Ip)
-        tau_x = [actions.Mx / (2 * math.pi * r**2 * t)
-                 for item in coord.y]
-        #
-        #1 / 0
-        # In Plane
-        # tau_y = 2*actions.Fy / prop.area
-        #tau_y = [2 * actions.Fy / prop.area
-        #         for item in coord.y]
-        # Out Plane
-        # tau_z = 2*actions.Fy / prop.area
-        #tau_z = [2 * actions.Fz / prop.area
-        #         for item in coord.z]
-        tau_y, tau_z = self.shear_stress(Vz=actions.Fz, Vy=actions.Fy, 
-                                         stress_type=stress_type)        
-        #
-        # ----------------------------------------------
-        # torsional/bending stress
-        #
-        # sigma_x = actions.Fx / prop.area
-        # sigma_z = actions.My/ prop.Zey
-        # sigma_y = actions.Mz / prop.Zez
-        #
-        # get bending stress
-        sigma_x = [actions.Fx / prop.area
-                   for item in coord.y]
-        #
-        sigma_y = [actions.My * item / prop.Zey
-                   for item in coord.z]
-        #
-        sigma_z = [actions.Mz * item / prop.Zez
-                   for item in coord.y]
-        #
-        stress_out = BeamStress(sigma_x, sigma_y, sigma_z, 
-                                tau_x, tau_y, tau_z, coord)        
-        #
-        if stress:
-            stress_out = self.add_stress(stress=stress, other=stress_out)
-        #
-        return stress_out
-
     #
-    def section_coordinates(self, theta: float = 90, steps: int = 6):
+    # --------------------------------------------
+    #
+    @property
+    def I(self):
+        """Moments of inertia"""
+        #   Second Moment of Area about Mayor Axis
+        #   --------------------------------------
+        Iy = (math.pi / 64.0
+              * (self.diameter ** 4 - (self.diameter - 2 * self.thickness)**4))
+        #
+        return axis(Iy, Iy)        
+        
+    #
+    @property
+    def centroid(self):
+        """ Elastic Neutral Centre """
+        Zc = self.diameter / 2.0
+        return axis(Zc, Zc)
+    #
+    def Qb(self):
+        """
+        Returns
+        ----------
+        Qb: Q/b
+        Where: 
+        Q : Ax - Shear's first moment of area
+        b : cross section width
+        """
+        #
+        R = self.diameter * 0.50 
+        coord = self.section_coordinates()
+        #I = self.I
+        #
+        # -----------------------------------------------------
+        #
+        def _area(R: float, tw: float,
+                  alpha: float):
+            """Sector of hollow circle"""
+            return alpha * tw * (2 * R - tw)
+        #
+        def _Cz(R: float, tw: float, alpha: float):
+            """ """
+            try:
+                yc = (R * (1 - (2 * math.sin(alpha) / (3 * alpha))
+                           * (1 - tw / R + 1 / (2 - tw / R))))
+            except ZeroDivisionError:
+                yc = tw * 0.50
+            return R - yc
+        #
+        def _qi(alpha: list, Qa: list,
+                Yi: list, tw: float):
+            """
+            qi = Ax/Ib
+            """
+            Qout = []
+            for x, item in enumerate(alpha):
+                try:
+                    Qout.append(Qa[x] * Yi[x] / (2*tw))
+                except ZeroDivisionError:
+                    Qout.append(0)
+            return Qout
+        #
+        # -----------------------------------------------------
+        #        
+        Qay = [_area(R=R, tw=self.tw, alpha=item)
+               for item in coord.alpha_y]
+        #
+        Yy = [_Cz(R=R, tw=self.tw, alpha=item)
+              for item in coord.alpha_y]
+        #
+        Qy = _qi(alpha=coord.alpha_y, Qa=Qay,
+                 Yi=Yy, tw=self.tw)
+        #
+        # -----------------------------------------------------
+        #
+        Qaz = [_area(R=R, tw=self.tw, alpha=item)
+               for item in coord.alpha_z]        
+        #
+        Yz = [_Cz(R=R, tw=self.tw, alpha=item)
+              for item in coord.alpha_z]
+        #
+        Qz = _qi(alpha=coord.alpha_z, Qa=Qaz,
+                 Yi=Yz, tw=self.tw)
+        #
+        return axis(Qy, Qz)
+    #
+    # --------------------------------------------
+    #
+    def section_coordinates(self, theta: float = 90, steps: int = 2):
         """
         theta : Arch internal angle
         steps : arch division
         :return:
         arch coordinates: list[y, z]
+        
+
+                 1   
+              .  +  . 
+          2 +    :     + 3     ^ z
+           .     :       .     |
+        4 +      :        + 5  +--> y
+           .     :       .
+          6 +    :     + 7
+              .  +  .
+                 8
         """
         diameter, thickness = self.get_geometry()
         radius = diameter * 0.50
@@ -318,25 +426,58 @@ class TubularBasic(ShapeBasic):
         r_theta = 360 * sinc / (radius * math.tau)
         coord_1 = []
         #coord_2 = []
+        alpha = []
         for i in range(steps + 1):
             rad = math.radians(i * r_theta)
             _x, _z = self._circunference_line(x=rad, r=radius)
             coord_1.append(_x)
             #coord_2.append(_z)
+            alpha.append(rad)
         #
-        coordx = list(reversed(coord_1))
-        coordx.extend([-item for item in coord_1[1:]])
-        coordx.extend(list(reversed(coordx[1:-1])))
+        alpha_z = [alpha[0],
+                   alpha[1], alpha[1],
+                   alpha[2], alpha[2],
+                   alpha[1], alpha[1],
+                   alpha[0]]
         #
-        coordz = coord_1.copy()
-        coordz.extend(list(reversed(coord_1[:steps])))
-        coordz.extend([-item for item in coordz[1:-1]])
+        alpha_y = [alpha[2],
+                   alpha[1], alpha[1],
+                   alpha[0], alpha[0],
+                   alpha[1], alpha[1],
+                   alpha[2]]
+        #
+        #coordx = list(reversed(coord_1))
+        #coordx.extend([-item for item in coord_1[1:]])
+        #coordx.extend(list(reversed(coordx[1:-1])))
+        coordy = [coord_1[0],
+                  -1 * coord_1[1], coord_1[1],
+                  -1 * coord_1[2], coord_1[2],
+                  -1 * coord_1[1], coord_1[1],
+                  coord_1[0]]
+        #
+        #coordz = coord_1.copy()
+        #coordz.extend(list(reversed(coord_1[:steps])))
+        #coordz.extend([-item for item in coordz[1:-1]])
         #coordz.extend([-item for item in coord_1[1:]])
+        #
+        coordz = [coord_1[2],
+                  coord_1[1], coord_1[1],
+                  coord_1[0], coord_1[0],
+                  -1 * coord_1[1], -1 * coord_1[1],
+                  -1 * coord_1[2]]
+        #
         #coord_1.reverse()
         #coord = coord_1 + [-item for item in coord_1[1:]]
         # return [coord, coord]
         #self.section_coordinates = points(coordx, coordz)
-        return points(coordx, coordz)
+        return points(coordy, coordz, alpha_y, alpha_z)
+        #
+        #
+        #return TubularPoint(y=coordy, z=coordz,
+        #                    d=self.diameter,
+        #                    tw=self.thickness,
+        #                    alpha_y=alpha_y, 
+        #                    alpha_z=alpha_z)
 
     #
     def _circunference_line(self, x: float, r: float, xp1: float = 0, yp1: float = 0):
@@ -367,6 +508,8 @@ class TubularBasic(ShapeBasic):
     def get_geometry(self):
         """ """
         return self.diameter, self.thickness
+    #
+    # --------------------------------------------
     #
     #def __getattr__(self, attr):
     #    """
@@ -407,6 +550,7 @@ class TubularBasic(ShapeBasic):
     #        except KeyError:
     #            raise AttributeError(f"Variable {attr} not found")
     #
+    # --------------------------------------------
     #
     @property
     def d(self):

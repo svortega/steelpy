@@ -98,7 +98,7 @@ class PlotMesh(PlotMain):
         #lims = nodes.get_maxmin()
         #
         mbc = self._cls._boundaries
-        supports = mbc.supports()        
+        supports = mbc.support()        
         #
         ax = self._frame.frame(nodes, elements, supports)
         #

@@ -41,9 +41,10 @@ class NodesIM(NodeBasic):
         set with node/element
     """
     __slots__ = ['_labels', '_number', '_x', '_y', '_z', 
-                 '_system',  '_sets', '_component'] # , 'f2u_units' , '_boundary'
+                 '_system',  '_sets', '_component', '_boundary'] # , 'f2u_units' , 
     
-    def __init__(self, component: str, system:str = 'cartesian') -> None:
+    def __init__(self, component: str, boundary, 
+                 system:str = 'cartesian') -> None:
         """
         """
         super().__init__(system)
@@ -55,6 +56,7 @@ class NodesIM(NodeBasic):
         self._number : array = array('I', [])
         #
         self._component = component
+        self._boundary = boundary
     #
     # ---------------------------------
     #
@@ -83,6 +85,12 @@ class NodesIM(NodeBasic):
         """
         try:
             _index = self._labels.index(node_name)
+            # FIXME : boundary shouldbe free or fixed?
+            try:
+                boundary = self._boundary[node_name]
+            except TypeError:
+                boundary = [0, 0, 0, 0, 0, 0]
+            #
             #system = get_coordinate_system(self._system)
             node = NodePoint(name=node_name,
                              component=self._component, 
@@ -93,8 +101,8 @@ class NodesIM(NodeBasic):
                              z=self._z[_index],
                              r=None, theta=None, phi=None,
                              title=None, 
-                             index=self._number[_index]-1,)
-                               #boundaries=self._boundary[node_name])
+                             index=self._number[_index]-1,
+                             boundary=boundary)
             return node.system()
         except ValueError:
             raise IndexError('   *** node {:} does not exist'.format(node_name))

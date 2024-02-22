@@ -12,13 +12,15 @@ import math
 #
 #
 # package imports
-from steelpy.sections.utils.shape.utils import ShapeProperty, ShapeBasic
-#from steelpy.sections.process.stress import BeamStress
+from steelpy.sections.utils.shape.utils import ShapeProperty
+from steelpy.sections.utils.shape.stress import ShapeStressBasic
 #
 #
 #
+# ----------------------------------------
 #
 points = namedtuple('Points', ['y', 'z'])
+axis = namedtuple('Axis', ['y', 'z'])
 #
 # ----------------------------------------
 #      Standard Section Profiles
@@ -26,7 +28,7 @@ points = namedtuple('Points', ['y', 'z'])
 #
 #
 @dataclass
-class TeeBasic(ShapeBasic):
+class TeeBasic(ShapeStressBasic):
     """
     Calculate the section properties of a T section
 
@@ -80,7 +82,7 @@ class TeeBasic(ShapeBasic):
     type:str = 'T Section'
     #
     #
-    def _stress(self, actions, stress=None, stress_type: str='average'):
+    def _stressX(self, actions, stress=None, stress_type: str='average'):
         """
         """
         # get section's coordinates
@@ -126,9 +128,10 @@ class TeeBasic(ShapeBasic):
         area = self.b * self.tb + self.tw * _D2
         #-------------------------------------------------
         #   Elastic Neutral Centre 
-        Zc = (((self.d**2 * self.tw) + (_C * self.tb**2)) /
-                   (2 * (self.b*self.tb + _D2*self.tw)))
-        Yc = 0
+        #Zc = (((self.d**2 * self.tw) + (_C * self.tb**2)) /
+        #           (2 * (self.b*self.tb + _D2*self.tw)))
+        #Yc = 0
+        Yc, Zc = self.centroid
         #-------------------------------------------------
         #   Shear Centre 
         SCz = self.tb / 2.0
@@ -178,22 +181,10 @@ class TeeBasic(ShapeBasic):
         rp = (Jx / area)**0.50
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
-                             Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
-                             Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
+                             Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
+                             Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
                              J=J, Cw=Cw)
     #
-    @property
-    def CoG(self):
-        """ """
-        _C = self.b - self.tw
-        _D2 = self.d - self.tb        
-        #-------------------------------------------------
-        #   Elastic Neutral Centre 
-        Zc = (((self.d**2 * self.tw) + (_C * self.tb**2)) /
-                   (2 * (self.b*self.tb + _D2*self.tw)))
-        Yc = 0
-        #
-        return Yc, Zc
     #
     def curved(self, R):
         """
@@ -245,6 +236,134 @@ class TeeBasic(ShapeBasic):
         # Shear factor (section 8.1 equ 8.1-13)
         #    
     #
+    #
+    def taux_max(self, Mt, alpha: float = 1.12):
+        """
+        Mt : Torsional moment
+        
+        Roark Torsion chapter
+        """
+        ti = self.tb + self.tw
+        h = self.d - 0.50 * self.tb
+        J = alpha / 3.0 * (self.b * self.tb**3
+                           + h * self.tw ** 3)
+        return Mt * ti / J
+    #    
+    #
+    # ----------------------------------------
+    #
+    @property
+    def centroid(self):
+        """ """
+        C = self.b - self.tw
+        D2 = self.d - self.tb        
+        #-------------------------------------------------
+        #   Elastic Neutral Centre 
+        Zc = ((self.d**2 * self.tw + C * self.tb**2)
+              / (2 * (self.b*self.tb + D2*self.tw)))
+        Yc = 0
+        #
+        return axis(Yc, Zc)
+    #
+    @property
+    def I(self):
+        """Seconf modemnt of inertia"""
+        Yc, Zc = self.centroid
+        C = self.b - self.tw
+        D2 = self.d - self.tb
+        #
+        #   Second Moment of Area about Mayor Axis
+        Iy = ((self.tw * (self.d - Zc)**3 + self.b * Zc**3
+               - C * (Zc - self.tb)**3) / 3.0)
+        #   Second Moment of Area about Minor Axis
+        Iz = (self.b**3 * self.tb + D2 * self.tw**3) / 12.0
+        #
+        return axis(Iy, Iz)
+    #
+    def Qb(self):
+        """
+        Returns
+        ----------
+        Qb: Q/bI
+        Where: 
+        Q : Ax - Shear's first moment of area
+        b : cross section width
+        """
+        #
+        coord = self.section_coordinates()
+        Yc, Zc = self.centroid
+        #
+        # -----------------------------------------------------
+        #
+        bmin = self.b * 0.50
+        #
+        Qy = []
+        for item in coord.y:
+            Hi = abs(item)
+            di = bmin - Hi
+            area = di * self.tb
+            Zi = 0.5 * di + Hi
+            Qy.append(area * Zi)
+        #
+        # -----------------------------------------------------
+        #
+        
+        bf = self.b
+        tf = self.tb
+        Qz = []
+        for item in coord.z:
+            Hi = abs(item)
+            if item < 0: # Bottom section
+                d = self.d - Zc
+            else: # Top flange
+                d = Zc
+            #
+            di = d - Hi
+            if Hi < (d - tf): # T section
+                area = bf * tf + self.tw * di
+                C = bf - self.tw
+                D = di - tf
+                Zi = (d - ((di**2 * self.tw + C * tf**2)
+                           / (2 * (bf * tf + D * self.tw))))
+                #print('T', item, area, Zi)
+            else: # Flange
+                area = bf * di
+                Zi = 0.5 * di + Hi
+                #print('flange', item, area, Zi)
+            #
+            Qz.append(area * Zi)
+        #
+        #1 / 0
+        return axis(Qy, Qz)
+    #
+    # ----------------------------------------
+    #
+    def section_coordinates(self):
+        """
+        1    2     3
+        +----------+
+        |____+_____|      ^ z
+             +      4     |
+             |            |
+             + 5          +--> y
+             |
+             +  6
+        """
+        CoG = self.centroid
+        # horizontal
+        h1 = self.b * 0.50
+        coord_y = [-1 * h1, 0, h1, # 1-3
+                   0, 0, 0]        # 4-6
+        #
+        # vertical
+        Zc = CoG.z
+        Zcb = Zc - self.d
+        coord_z = [Zc, Zc - self.tb * 0.50, Zc, # 1-3
+                   Zc - self.tb, # 4
+                   0 , Zcb]      # 5, 6
+        #
+        return points(coord_y, coord_z)
+    #
     def _dimension(self) -> str:
         """ Print section dimensions"""
         out = "{:<32s}{:1.4e} {:1.4e}\n"\
@@ -252,27 +371,5 @@ class TeeBasic(ShapeBasic):
         out += "{:<48s}{:1.4e} {:1.4e}\n"\
                .format("", self.tw, self.tb)         
         return out
-    #
-    def section_coordinates(self):
-        """
-        1    2     3
-        +----+-----+
-        |____+_____| 4    ^ z
-             |            |
-             + 5          +--> y
-             |
-             +  6
-        """
-        CoG = self.CoG
-        # horizontal
-        coord_y = [-1 * self.b * 0.50, 0, self.b * 0.50, 
-                   0, 0, 0]
-        # vertical
-        Zc = CoG[0]
-        _Zcb = Zc - self.d
-        coord_z = [Zc, Zc, Zc, 
-                   Zc - self.tb, 0 , _Zcb + self.tb]
-        #
-        return points(coord_y, coord_z)    
-    #
+    #    
 #

@@ -12,26 +12,28 @@ from __future__ import annotations
 
 
 # package imports
-# 
-from steelpy.ufo.load.process.beam.main import BeamBasicLoad
+#
+from steelpy.ufo.concept.elements.beam import ConceptBeam
+from steelpy.ufo.load.concept.beam import BeamLoadItemIM #,  ConceptBeam
+#from steelpy.ufo.load.concept.combination import LoadCombConcept
+#from steelpy.ufo.load.process.beam.main import BeamBasicLoad
 #
 from steelpy.sections.main import SectionIM
-from steelpy.material.main import Material
+from steelpy.material.main import MaterialIM
 #
-from steelpy.trave.beam.pilkey.main import BeamBasic
+from steelpy.trave.beam.operation import BeamBasic
 #
 #import pandas as pd
 from steelpy.utils.dataframe.main import DBframework
 #
-
 # 
 #
 class Beam:
-    __slots__ = ['_support', 'load', '_sections', '_materials',
-                 'steps', 'length', '_response',
-                 '_load_combination', '_design', 'name', '_db']
+    __slots__ = ['_support', '_basic', '_sections', '_materials',
+                 'steps', '_length', '_response',
+                 '_combination', '_design', 'name', '_db']
 
-    def __init__(self, name:int|str):
+    def __init__(self, name:int|str, steps: int = 10):
         """
         beam_length : total length of the beam 
         section_type:str
@@ -40,30 +42,46 @@ class Beam:
         print('{:}'.format(52*'-'))
         #
         self.name = name
-        self.steps: int = 10
+        self.steps: int = steps
         #
-        self._materials = Material()
+        self._materials = MaterialIM()
         #
         self._sections = SectionIM()
         #
+        #self._beam = ConceptBeam(beam_type="beam",
+        #                         points,
+        #                         materials,
+        #                         sections,
+        #                         labels,
+        #                         element_type)
+        #
         self._db = DBframework()
         #
-        self.load = BeamBasicLoad(beam=self)
+        self._basic = BeamLoadItemIM(load_name="beam", 
+                                     load_title="beam",
+                                     component=self.name)
+                                     #beams=self)
+        self._basic._load.local_system()
+        #self._combination = LoadCombConcept(basic_load)
+        #self.load = BeamBasicLoad(beam=self)
+        
     #
     #
     #
     @property
     def L(self):
         """ """
-        return self.length
+        return self._length
     
     @L.setter
-    def L(self, beam_length):
+    def L(self, length):
         """ """
         try:
-            self.length = beam_length.value
+            self._length = length.value
         except AttributeError: # unit must be in metres
-            self.length = beam_length
+            self._length = length
+        #
+        
     #
     # -----------------------------------------------------
     #    
@@ -133,35 +151,37 @@ class Beam:
     @property
     def selfweight(self):
         """ """
-        return self.load.basic._selfweight
+        return self._basic._load._selfweight
     
     @selfweight.setter
     def selfweight(self, value:list|dict):
         """ """
-        self.load.basic._selfweight = value
+        self._basic._load._selfweight = value
     #
     #
     @property
     def P(self):
         """
         """
-        return self.load.basic.point # (beam_name=self._name)
+        return self._basic._load._point # (beam_name=self._name)
 
     @P.setter
     def P(self, value:list|dict):
         """
         """
-        self.load.basic.point = value
+        self._basic._load._point[self.name] = value
     #
     @property
     def q(self):
         """line load"""
-        return self.load.basic.line
+        return self._basic._load._line
 
     @q.setter
     def q(self, value:list|dict):
         """line load"""
-        self.load.basic.line = value
+        self._basic[self.name].line = value
+        #self._basic[self.name] = ['line', value]
+        #self._basic._load._line[self.name] = value
     #
     @property
     def load_combination(self):
@@ -217,19 +237,39 @@ class Beam:
         material = self.material
         section = self.section.properties()
         #
-        return BeamBasic(L=self.length, area=section.area, 
-                          Iy=section.Iy, Iz=section.Iz,
-                          J=section.J, Cw=section.Cw, 
-                          E=material.E, G=material.G)
+        return BeamBasic(L=self._length, area=section.area, 
+                         Iy=section.Iy, Iz=section.Iz,
+                         J=section.J, Cw=section.Cw, 
+                         E=material.E, G=material.G)
     #
     def _getloads(self):
-        """get beam loading""" 
+        """get beam loading"""
         bloads = []
+        #bloads.extend(item for item in self.load.basic.line.values())
+        #bloads.extend(item for item in self.load.basic.point.values())
         # line load
-        bloads.extend(self.load.basic.line)
+        #bloads.extend(self.load.basic.line)
         # point load
-        bloads.extend(self.load.basic.point)
+        #bloads.extend(self.load.basic.point)
         #
+        #for item in self._basic._load.line.values():
+        #    bloads.extend(item)
+        for item in self._basic._load.line.values():
+            bloads.extend(item)
+            
+        #if self._basic._load.line:
+        #    bloads.extend(self._basic._load.line)
+        #
+        for item in self._basic._load.point.values():
+            bloads.extend(item)
+        #
+        #if self._basic._load.point:
+        #    bloads.extend(self._basic._load.point)
+        #    
+        #rex = self.load._basic.reactions()
+        #
+        #line = self.load.basic.line
+        #point = self.load.basic.point
         return bloads
     #
     #    
@@ -273,7 +313,8 @@ class Beam:
         beam.supports(*self.support)
         #
         # load_name : [load_title, load_type,
-        #              load_system, beam_name,
+        #              load_level, load_system, 
+        #              beam_name,
         #              R0[Fa, Tx, Ry, Rz],
         #              R1[Fa, Tx, Ry, Rz]]
         #
@@ -285,7 +326,7 @@ class Beam:
         msupport = []
         for key, item in reactions.items():
             for reac in item:
-                msupport.extend([[key, *reac[0:4],       # load details & beam name
+                msupport.extend([[*reac[:7],            # load details & beam name
                                   self._support[x], x+1, # support type & beam end
                                   lbf[0][0],  # Fx [axial]
                                   lbf[1][0],  # Mx [torsion]
@@ -293,23 +334,27 @@ class Beam:
                                   lbf[0][3],  # delta_x [axial]
                                   *lbf[2],    # Bending in_plane
                                   *lbf[3]]    # Bending out_plane
-                                 for x, lbf in enumerate(reac[4:])]) # R0 & R1
+                                 for x, lbf in enumerate(reac[7:])]) # R0 & R1
         #
         # Dataframe setup 
         #
-        header = ['load_name', 'load_title','load_type',
-                  'system', 'element_name', 
+        header = ['load_name', 'component',
+                  'load_title', 'load_type',
+                  'load_level', 'load_system',
+                  'element_name', 
                   'support_type', 'support_end',
-                  'Fx', 'Mx', 'phi_x', 'delta_x',
+                  'Fx', 'Mx', 'theta_x', 'delta_x',
                   'Fy', 'Mz', 'theta_z', 'delta_y',
                   'Fz', 'My', 'theta_y', 'delta_z']
         #
         df_mload = self._db.DataFrame(data=msupport, columns=header, index=None)
-        df_mload = df_mload[['load_name', 'load_title', 'load_type', 'system',
+        df_mload = df_mload[['load_name', 'component',
+                             'load_title', 'load_type',
+                             'load_level', 'load_system',
                              'element_name', 'support_type', 'support_end',
                              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                              'delta_x', 'delta_y', 'delta_z',
-                             'phi_x', 'theta_y', 'theta_z']]
+                             'theta_x', 'theta_y', 'theta_z']]
         #
         return df_mload    
     #
@@ -324,7 +369,7 @@ class Beam:
                    Fx, Fy, Fz, Mx, My, Mz,
                    delta_x, delta_y, delta_z,
                    phi_x, theta_y, theta_z,
-                   B(bimoment), Tw(Warping torque)]
+                   psi_t (phi_x'), B(bimoment), Tw(Warping torque)]
         """
         bloads = self._getloads()
         #        
@@ -355,14 +400,31 @@ class Beam:
         #
         #
         #
-        df_mload = beam.forces(bloads, steps)
-        return df_mload        
+        df_mload = beam.forces(bloads, steps=self.steps)
+        return df_mload
     #
     #
     def stress(self, steps: int = 10):
         """calculate beam stress"""
-        actions_df = self.response(steps=steps)
-        stress = self.section.stress(df=actions_df)
+        mat = self.material
+        #
+        actions_df = self.response(steps=self.steps)
+        members = actions_df.groupby(['element_name',
+                                      'load_name', 'component_name',
+                                      'load_title', 
+                                      'load_level', 'load_system'])
+        #
+        frames = []
+        for key, item in members:
+            frames.append(self.section.stress(df=item,
+                                              E=mat.E, G=mat.G))
+            #stress = self.section.stress(df=item)
+        #
+        try:
+            stress = DBframework.concat(frames, ignore_index=True)
+        except TypeError:
+            stress = frames[0]
+        #1 / 0
         return stress
     #
     @property

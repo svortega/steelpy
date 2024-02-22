@@ -290,12 +290,13 @@ class NodeSQL(NodeBasic):
     def get_maxmin(self):
         """
         """
-        1 / 0
         def maxmin(head: str, col: str):
             #
             query = (self._component, )
-            table = f'SELECT {head.upper()}({col}) FROM Node \
-            WHERE component_id = ? '
+            table = f'SELECT {head.upper()}(NodeCoordinate.{col}) \
+                      FROM Node, NodeCoordinate \
+            WHERE Node.component_id = ? \
+            AND Node.number = NodeCoordinate.node_id'
             
             cur = conn.cursor()
             cur.execute(table, query)
@@ -425,7 +426,9 @@ def get_node(conn, node_name:int, component: int, item:str='*'):
     #              name=node_name, number=data[0], 
     #              index=data[10])
     #
-    node = NodePoint(*data)
+    boundary = get_boundary(conn, node_id=data[2])
+    #
+    node = NodePoint(*data, boundary=boundary)
     return node.system()
 #
 def get_item_table(conn, node_name, component, item):
@@ -452,6 +455,24 @@ def get_nodes(conn, component):
     cur.execute(table, query)
     record = cur.fetchall()
     return record
+#
+#
+#
+def get_boundary(conn, node_id, item:str="*"):
+    """
+    """
+    #
+    project = (node_id,)
+    sql = 'SELECT {:} FROM NodeBoundary WHERE node_id = ?'.format(item)
+    cur = conn.cursor()
+    cur.execute(sql, project)
+    record = cur.fetchone()
+    try:
+        boundary = record[2:8]
+    except TypeError:
+        boundary = [1, 1, 1, 1, 1, 1]
+    return boundary
+#
 #
 #def update_table(conn, nodes):
 #    """ """

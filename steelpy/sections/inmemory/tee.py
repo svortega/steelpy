@@ -12,9 +12,8 @@ from collections import namedtuple
 #
 #
 # package imports
-#from steelpy.sections.process.operations import ShapeProperty
+from steelpy.sections.utils.shape.tee import TeeBasic
 from steelpy.sections.utils.shape.main import ShapeBasic
-#from steelpy.sections.process.stress import BeamStress
 
 #
 #

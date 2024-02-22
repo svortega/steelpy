@@ -72,10 +72,13 @@ def solver_Mbanded(stf, nloads):
 # solver using numpy
 # ---------------------------------------------
 #
-def solver_np(stf, nloads):
-    """ """
+def solver_np(a, b):
+    """
+    a : Global stiffness matrix
+    b : Global force vector
+    """
     #nloads = df2.stack() #.values
-    ndisp = np.linalg.solve(stf, nloads)
+    ndisp = np.linalg.solve(a, b)
     #if not np.allclose(np.dot(stf, ndisp), nload): #, rtol=1e-05, atol=1e-08
     #    raise RuntimeError('Solution fail')
     #
@@ -115,7 +118,7 @@ class StaticSolver:
         
         Input: 
         Kg  : Global stiffness matrix
-        Fn  : Node load dataframe
+        Fn  : FER Node load dataframe
         jbc : Node boundary condition dataframe
         
         Return: 
@@ -126,57 +129,98 @@ class StaticSolver:
         print(f"** Solving U = K^-1 F [{order} order] ")
         start_time = time.time()
         #
-        #file = open("stfmx.f2u", "rb")
-        #df_jbc = pickle.load( file )
-        #stf = pickle.load( file )
-        #file.close()
-        #
-        #dfnload = self._load_update(Fn)
-        #
+        # Select solver
         solver = solver_np
         #if self._method == 'banded':
         #    solver = solver_Mbanded
+        # Solution f = Ku
+        Us = self.DSM(Kg, Fn, jbc, solver)
         #
-        Udf = self.DSM(Kg, Fn, jbc, solver)
         #
         uptime = time.time() - start_time
         print(f"** Finish Time: {uptime:1.4e} sec")
-        return Udf
+        return Us
     #
-    def DSM(self, stf, dfnload, df_jbc, solver):
+    def DSM(self, Kg, Fn, jbc, solver):
         """
         Direct Stiffness Method
+        
+        Kg : Global stiffness matrix
+        Fn : Global force & displacement matrix
+        jbc = Nodes with boundary
+        
+        Return:
+        U : Global node displacement
         """
-        dfbool, dfzeros = self._mask(df_jbc)
-        jbcc = df_jbc.stack()
-        blgrp = dfnload.groupby(['load_name', 'load_id', 
-                                 'load_level','load_system',
-                                 'component_name'])
-        #       
-        dftemp = []
-        for key, litem in blgrp:
-            # map loading 
-            df1 = litem.set_index(litem['node_name'])
-            df2 = dfzeros.copy()
-            df2.loc[df2.index.isin(df1['node_name'])] = df1[self._plane.hforce] #.astype('float64')
-            # get load vector flatted
-            df2 = df2.stack()
-            nloads = df2[dfbool]
-            # Solve displcements
-            ndisp = iter(solver(stf, nloads))
-            # reshape vector in matrix form [row, col]
-            ndisp = [next(ndisp) if ieqnum != 0 else ieqnum
-                     for ieqnum in jbcc]
-            #
-            ndisp = to_matrix(ndisp, self._plane.ndof)
-            filldata = [[*key,  litem['load_title'].iloc[0],
-                        nname, *ndisp[x]]
-                        for x, nname in enumerate(df_jbc.index)]
-            #
-            dftemp.extend(filldata)
+        # TODO : must be better ways to manipulate dfs
+        db = DBframework()
+        # group FER node load
+        colgrp = ['load_name', 'load_id', 
+                  'load_level','load_system',
+                  'component_name']        
         #
-        return self.df(dftemp)
-        #return df_ndisp
+        # Select nodes' free DOF
+        DOFbool, DOFzeros = self._mask_DOF(jbc)
+        # jbc Matrix to vector 
+        jbcflat = jbc.stack()
+        # group FER node load
+        fergrp = Fn.groupby(colgrp)
+        #
+        Utemp = []
+        for key, item in fergrp:
+            # set FER df by nodes
+            fernodes = item.set_index(['node_name'])
+            # Select load nodes with free DOF
+            DOFindex = DOFzeros.index.isin(item['node_name'])
+            #
+            # Select load vector comprising nodes with free DOF 
+            Fs = DOFzeros.copy() #.astype('float64')
+            Fs.loc[DOFindex] = fernodes[self._plane.hforce] 
+            Fs = Fs.stack() # get load matrix as vector
+            # Select invidual free nodes DOF
+            Fs = Fs[DOFbool]
+            #
+            #Fs2 = fernodes[self._plane.hforce].stack()
+            # Select invidual free nodes DOF 
+            #Fs2 = Fs2[DOFbool]
+            #
+            # Solve displacements U
+            Us = iter(solver(Kg, Fs))
+            #
+            # reshape vector in matrix form [row, col]
+            Us = [next(Us) if ieqnum != 0 else ieqnum
+                  for ieqnum in jbcflat]
+            # bak to matrix form
+            Us = to_matrix(Us, self._plane.ndof)
+            # pack basic load data for df's dumping 
+            Utemp.extend([[*key,  item['load_title'].iloc[0],
+                           nname, *Us[x]]
+                           for x, nname in enumerate(jbc.index)])
+        #
+        #
+        Us = self.df(Utemp)
+        #
+        # add displacements from beam solution
+        #fergrp = Fn.groupby(colgrp)
+        # group Us
+        Usgrp = Us.groupby(colgrp)
+        cols = self._plane.hdisp
+        Utemp = []
+        for key, item in fergrp:
+            #Usitem = Usgrp.get_group(key)
+            Usitem = Usgrp.get_group(key).set_index(['node_name'])
+            fernodes = item.set_index(['node_name'])
+            # Select load nodes with free DOF
+            DOFindex = DOFzeros.index.isin(item['node_name'])            
+            #
+            #Usitem.loc[DOFindex][cols] = Usitem.loc[DOFindex][cols].sub(fernodes[cols])
+            Usitem.loc[item['node_name']][cols] = Usitem.loc[item['node_name']][cols].sub(fernodes[cols])
+            #
+            Utemp.append(Usitem.reset_index())
+        # Update U results
+        Us = db.concat(Utemp, ignore_index=True)        
+        #
+        return Us
     #
     #@property
     def df(self, dftemp):
@@ -188,22 +232,26 @@ class StaticSolver:
         return db.DataFrame(data=dftemp, columns=header, index=None)
     #
     #
-    def _mask(self, df_jbc):
+    def _mask_DOF(self, jbc):
         """ """
         # remove rows with zeros
-        dfjbc = df_jbc.rename(columns=self._plane.colrename)
-        dfjbc = dfjbc[df_jbc.any(axis=1)]
+        dfjbc = jbc.copy()
+        dfjbc.rename(columns=self._plane.colrename, inplace=True)
+        dfjbc = dfjbc[jbc.any(axis=1)]
         dfjbc = dfjbc.replace(float(0.0), np.nan)
-        dfjbc = dfjbc.notnull()
         #
-        dfbool = dfjbc.stack()
+        dfbool = dfjbc.copy()
+        dfbool = dfbool.notnull()
+        dfbool = dfbool.stack(future_stack=True)
         # Copy dataframe 
         #dfzeros = dfjbc.copy()
-        #dfzeros.iloc[:] = 0
+        #dfzeros.iloc[:] = float(0.0)
         #
         dfjbc.iloc[:] = float(0.0)
+        #for col in dfjbc.columns:
+        #    dfjbc[col].values[:] = float(0.0)
         #
-        return dfbool, dfjbc
+        return dfbool, dfjbc.astype('float64')
     #
     # -----------------------------------------------------------
     # Post-process

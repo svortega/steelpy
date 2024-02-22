@@ -9,7 +9,8 @@ from __future__ import annotations
 #
 # package imports
 #
-from steelpy.sections.sqlite.utils import SectionItemSQL
+from steelpy.sections.sqlite.utils import SectionMainSQL
+from steelpy.sections.utils.shape.box import BoxBasic
 #
 #
 #
@@ -18,7 +19,7 @@ from steelpy.sections.sqlite.utils import SectionItemSQL
 #      Standard Section Profiles
 # ----------------------------------------
 
-class BoxSQLite(SectionItemSQL):
+class BoxSQL(SectionMainSQL):
     __slots__ = [ '_properties',
                   'name', 'number', 'db_file' ]
 

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 #from itertools import chain
 #import math
 from typing import NamedTuple
-#from operator import sub, add
+from operator import sub, add
 #from operator import itemgetter
 #import os.path
 #from itertools import groupby
@@ -19,7 +19,7 @@ from math import dist
 #
 #
 # package imports
-from steelpy.sections.sqlite.utils import ShapeGeometrySQL #get_section 
+from steelpy.sections.sqlite.utils import ShapeGeometrySQL, get_section 
 from steelpy.material.sqlite.isotropic import  get_materialSQL
 from steelpy.ufo.mesh.sqlite.nodes import get_node
 from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
@@ -400,9 +400,13 @@ class BeamItemSQL(BeamItemBasic):
             #
             cur = conn.cursor()
             cur.execute(table, query)
-            row = cur.fetchone()             
+            row = cur.fetchone()
+            #
+            #get_section(conn, section_name=data[5],
+            #            component=self._component)
         #
         geometry = [*row[1:3], *row[11:]]
+        #
         #
         sect =  ShapeGeometrySQL(number=row[0], 
                                  name=row[1],
@@ -419,9 +423,9 @@ class BeamItemSQL(BeamItemBasic):
         with conn:
             update_element_item(conn, self.name, item, section_name)
     #
-    def _pull_section(self):
-        """ get section """
-        
+    #def _pull_section(self):
+    #    """ get section """
+    #    1 / 0
     #
     #
     @property
@@ -500,24 +504,29 @@ class BeamItemSQL(BeamItemBasic):
     def unit_vector(self) -> list[ float ]:
         """
         """
-        #nodes = self.connectivity
-        #conn = create_connection(self.db_file)
-        #with conn:
-        #    node1 = get_node(conn, node_name=nodes[0],
-        #                     component=self._component)
-        #    node2 = get_node(conn, node_name=nodes[1],
-        #                     component=self._component)
-        # direction cosines
-        #L =  dist(node1[:3], node2[:3])
-        #uv = list(map(sub, node2[:3], node1[:3]))
-        #return [item / L for item in uv]
-        #
         conn = create_connection(self.db_file)
         with conn:        
-            unitvec = get_unitvector(conn, beam_id=self.name)
+            unitvec = get_unitvector(conn,
+                                     beam_name=self.name,
+                                     component=self._component)
         #
         return unitvec
     #
+    @property
+    def dircosines(self) -> list[ float ]:
+        """
+        """
+        conn = create_connection(self.db_file)
+        nodes = self.connectivity
+        with conn:
+            node1 = get_node(conn, node_name=nodes[0],
+                             component=self._component)
+            node2 = get_node(conn, node_name=nodes[1],
+                             component=self._component)
+        # direction cosines
+        L = dist(node1[:3], node2[:3])
+        uv = list(map(sub, node2[:3], node1[:3]))
+        return np.array([item / L for item in uv])      
     #
     def T3D(self):
         """ """

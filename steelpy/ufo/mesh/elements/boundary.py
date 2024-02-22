@@ -56,17 +56,22 @@ class BoundaryNode(Mapping):
     # ----------------------------
     # Operations
     # ----------------------------
-    #
+    # TODO : why two ?
     def get_boundary(self, name:str):
         """ """
         if re.match(r"\b(fix(ed)?|encastre)\b", name, re.IGNORECASE):
             #self._title.append('fixed')
             value = [1,1,1,1,1,1]
-        elif re.match(r"\b(pinn(ed)?|roll)\b", name, re.IGNORECASE):
+        elif re.match(r"\b(pinn(ed)?|roll(er)?)\b", name, re.IGNORECASE):
             #self._title.append('pinned')
-            value = [1,1,1,0,0,0]
+            value = [1,1,1,1,0,0]
+        
+        #elif re.match(r"\b(guide(d)?|roll(ed)?)\b", name, re.IGNORECASE):
+        #    return [0,1,1,1,0,0]
+        
         elif re.match(r"\b(free)\b", name, re.IGNORECASE):
             value = [0,0,0,0,0,0]
+            
         else:
             raise IOError("boundary type {:} not implemented".format(name))
         #
@@ -77,17 +82,26 @@ class BoundaryNode(Mapping):
         if isinstance(fixity, str):
             if re.match(r"\b(fix(ed)?)\b", fixity, re.IGNORECASE):
                 return [1,1,1,1,1,1]
-            elif re.match(r"\b(pinn(ed)?|roll)\b", fixity, re.IGNORECASE):
-                return [1,1,1,0,0,0]
+            
+            elif re.match(r"\b(pinn(ed)?|roll(er)?)\b", fixity, re.IGNORECASE):
+                return [1,1,1,1,0,0]
+            
+            #elif re.match(r"\b(guide(d)?|roll(ed)?)\b", fixity, re.IGNORECASE):
+            #    return [0,1,1,1,0,0]
+            
             elif re.match(r"\b(free)\b", fixity, re.IGNORECASE):
-                return None
+                return [0,0,0,0,0,0]
+            
             else:
                 raise IOError("boundary type {:} not implemented".format(fixity))
+        
         elif isinstance(fixity, (list, tuple)):
             return fixity
+        
         elif isinstance(fixity, dict):
             return [fixity['x'], fixity['y'], fixity['z'], 
                     fixity['rx'], fixity['ry'], fixity['rz']]
+        
         else:
             raise Exception('   *** Boundary input format not recognized')
     #

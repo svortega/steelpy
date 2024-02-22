@@ -17,7 +17,7 @@ from steelpy.utils.units.main import Units
 #
 #
 @dataclass
-class Element:
+class ElementConcept:
     """
     """
     __slots__ = ['name', 'index', '_cls']
@@ -237,197 +237,6 @@ class Steps:
         return len(self.indices)
 #
 #
-@dataclass
-class Beam(Element):
-    __slots__ = ['name', 'index', '_cls', '_steps']
-
-    def __init__(self, cls, element_index) -> None:
-        """
-        """
-        super().__init__(cls, element_index)
-        self._steps = Steps(self)
-    #
-    #
-    # TODO: offset should be set directly in fem file
-    @property
-    def offsets(self):
-        """
-        return eccentricities
-        """
-        return self.eccentricities
-
-    @offsets.setter
-    def offsets(self, eccentricities: list) -> None:
-        """
-        input
-        eccentricities : list [eccentricities number per node]
-        """
-        _offsets = []
-        for _item in eccentricities:
-            try:
-                self._cls._f2u_eccentricities[_item]
-                _offsets.append(_item)
-            except KeyError:
-                _offsets.append(None)
-        if any(_offsets):
-            self._cls._eccentricities.append(_offsets)
-            _index = len(self._cls._eccentricities) - 1
-            self._cls._offset_index[self.index] = _index
-        else:
-            raise ValueError(' no valid eccentricities were given')
-
-    @property
-    def eccentricities(self):
-        """
-        return eccentricities
-        """
-        _index = self.offset_index
-        _list = []
-        for _item in self._cls._eccentricities[_index]:
-            _list.append(self._cls._f2u_direction_cosines[_item])
-        return _list
-
-    @property
-    def offset_index(self):
-        """
-        """
-        # _index = self._cls._labels.index(self.number)
-        _index_ecc = self._cls._offset_index[self.index]
-        if _index_ecc == -1:
-            raise ValueError(' no eccentricity defined')
-        else:
-            return _index_ecc
-
-    #
-    @property
-    def releases(self) -> tuple:
-        """
-        """
-        _list = []
-        for _item in self._cls._releases[self.index]:
-            _list.append(self._cls._f2u_releases[_item])
-        return _list
-
-    #
-    @property
-    def hinges(self) -> tuple:
-        """
-        """
-        return self.releases
-
-    #
-    @property
-    def type(self) -> str:
-        """
-        """
-        return self._cls._type[self.index]
-    
-    @type.setter
-    def type(self, beam_type:str):
-        """
-        """
-        self._cls._type[self.index] = beam_type
-    #
-    @property
-    def beta(self):
-        """beta angle roll"""
-        return self._cls._roll_angle[self.index]
-    
-    @beta.setter
-    def beta(self, value):
-        """beta angle roll"""
-        self._cls._roll_angle[self.index] = value
-    #
-    #
-    @property
-    def step(self):
-        """
-        """
-        return self._steps
-    #
-    @property
-    def L(self) -> Units:
-        """
-        """
-        _nodes = self.nodes
-        length = math.dist([_nodes[0].x, _nodes[0].y, _nodes[0].z], 
-                           [_nodes[1].x, _nodes[1].y, _nodes[1].z])
-        return length #* self._cls.f2u_units.m
-    #
-    def find_coordinate(self, node_distance:float, node_end:int=0) -> tuple:
-        """
-        """
-        _node = self.nodes
-        _nodeNo3 = [0, 0, 0]
-        #
-        if math.isclose(node_distance, 0, rel_tol=0.01):
-        #if distance <= 0.0001:
-            _nodeNo3[0] = _node[node_end].x
-            _nodeNo3[1] = _node[node_end].y
-            _nodeNo3[2] = _node[node_end].z
-        else:
-            if node_end == 1:
-                _v1 = (_node[0].x - _node[1].x)
-                _v2 = (_node[0].y - _node[1].y)
-                _v3 = (_node[0].z - _node[1].z)
-            else:
-                _v1 = (_node[1].x - _node[0].x)
-                _v2 = (_node[1].y - _node[0].y)
-                _v3 = (_node[1].z - _node[0].z)
-            #
-            _norm = (_v1**2 + _v2**2 + _v3**2)**0.50
-            _v1 /= _norm
-            _v2 /= _norm
-            _v3 /= _norm
-            _nodeNo3[0] = (_node[node_end].x + _v1 * node_distance)
-            _nodeNo3[1] = (_node[node_end].y + _v2 * node_distance)
-            _nodeNo3[2] = (_node[node_end].z + _v3 * node_distance)
-        #
-        #Coordinates = get_coordinate_system(_node[0].system)
-        #return Coordinates(*_nodeNo3)
-        return _nodeNo3
-    #
-    #
-    @property
-    def unit_vector(self) -> list[float]:
-        """
-        """
-        node1, node2 = self.nodes
-        #dx = _node2.x.value - _node1.x.value
-        #dy = _node2.y.value - _node1.y.value
-        #dz = _node2.z.value - _node1.z.value
-        # direction cosines
-        #L = math.dist([_node1.x.value, _node1.y.value, _node1.z.value], 
-        #              [_node2.x.value, _node2.y.value, _node2.z.value])
-        #l = dx / L
-        #m = dy / L
-        #n = dz / L
-        #return [l, m, n]
-        L = math.dist(node1[:3], node2[:3])
-        #
-        uv = list(map(sub, node2[:3], node1[:3]))
-        return [item / L for item in uv]        
-    #
-    #
-    def T3D(self):
-        """
-        Returns the transformation matrix for the member
-        """
-        #if m2D:
-            # Element length and orientation
-            #node1,  node2 = self.nodes
-            #Tlg = Rmatrix2D(node1, node2)
-            #return Tlg
-            #raise NotImplementedError()
-        #else:        
-        #if self.type in ['beam', 'truss']:
-        #return Rmatrix(*self.unit_vector, self.beta)
-        nodei, nodej = self.nodes
-        L = self.L #.value
-        #r3 = Rmatrix2(nodei, nodej, L=L)
-        #return Rmatrix(*self.unit_vector, self.beta)
-        return Rmatrix2(nodei, nodej, L=L)
-#
 #
 class ConceptBeam(Mapping):
     """
@@ -447,7 +256,6 @@ class ConceptBeam(Mapping):
         """
         Manages f2u elements
         """
-        #global f2u_materials, f2u_sections, f2u_units, f2u_points
         self.f2u_materials = materials
         self.f2u_sections = sections
         #self.f2u_units = Units()
@@ -473,12 +281,12 @@ class ConceptBeam(Mapping):
         #self._releases: List = []        
     #
     #
-    def _get_labels(self):
-        """ """
-        idx = [x for x, item in enumerate(self._type)
-               if item == self._beam_type]
-        labels = [self._labels[x] for x in idx]
-        return labels    
+    #def _get_labels(self):
+    #    """ """
+    #    idx = [x for x, item in enumerate(self._type)
+    #           if item == self._beam_type]
+    #    labels = [self._labels[x] for x in idx]
+    #    return labels    
     #
     #
     def __setitem__(self, element_name: int|str, 
@@ -540,12 +348,12 @@ class ConceptBeam(Mapping):
                         if element_name == name]
             _index = _indices[0]
             if self._type[_index] in ["beam", "truss"]:
-                return Beam(self, _index)
+                return BeamItemConcept(self, _index)
             else:
-                return Element(self, _index)
+                return ElementConcept(self, _index)
         except ValueError:
             raise IndexError(' ** element {:} does not exist'.format(element_name))
-
+    #
     #
     def __iter__(self):
         """
@@ -700,5 +508,197 @@ def alphaNumOrder(string):
     """
     return ''.join([format(int(x), '05d') if x.isdigit()
                    else x for x in re.split(r'(\d+)', string)])
+#
+#
+@dataclass
+class BeamItemConcept(ElementConcept):
+    __slots__ = ['name', 'index', '_cls', '_steps']
+
+    def __init__(self, cls, element_index) -> None:
+        """
+        """
+        super().__init__(cls, element_index)
+        self._steps = Steps(self)
+    #
+    #
+    # TODO: offset should be set directly in fem file
+    @property
+    def offsets(self):
+        """
+        return eccentricities
+        """
+        return self.eccentricities
+
+    @offsets.setter
+    def offsets(self, eccentricities: list) -> None:
+        """
+        input
+        eccentricities : list [eccentricities number per node]
+        """
+        _offsets = []
+        for _item in eccentricities:
+            try:
+                self._cls._f2u_eccentricities[_item]
+                _offsets.append(_item)
+            except KeyError:
+                _offsets.append(None)
+        if any(_offsets):
+            self._cls._eccentricities.append(_offsets)
+            _index = len(self._cls._eccentricities) - 1
+            self._cls._offset_index[self.index] = _index
+        else:
+            raise ValueError(' no valid eccentricities were given')
+
+    @property
+    def eccentricities(self):
+        """
+        return eccentricities
+        """
+        _index = self.offset_index
+        _list = []
+        for _item in self._cls._eccentricities[_index]:
+            _list.append(self._cls._f2u_direction_cosines[_item])
+        return _list
+
+    @property
+    def offset_index(self):
+        """
+        """
+        # _index = self._cls._labels.index(self.number)
+        _index_ecc = self._cls._offset_index[self.index]
+        if _index_ecc == -1:
+            raise ValueError(' no eccentricity defined')
+        else:
+            return _index_ecc
+
+    #
+    @property
+    def releases(self) -> tuple:
+        """
+        """
+        _list = []
+        for _item in self._cls._releases[self.index]:
+            _list.append(self._cls._f2u_releases[_item])
+        return _list
+
+    #
+    @property
+    def hinges(self) -> tuple:
+        """
+        """
+        return self.releases
+
+    #
+    #@property
+    #def type(self) -> str:
+    #    """
+    #    """
+    #    return self._cls._type[self.index]
+    #
+    #@type.setter
+    #def type(self, beam_type:str):
+    #    """
+    #    """
+    #    self._cls._type[self.index] = beam_type
+    #
+    @property
+    def beta(self):
+        """beta angle roll"""
+        return self._cls._roll_angle[self.index]
+    
+    @beta.setter
+    def beta(self, value):
+        """beta angle roll"""
+        self._cls._roll_angle[self.index] = value
+    #
+    #
+    @property
+    def step(self):
+        """
+        """
+        return self._steps
+    #
+    @property
+    def L(self) -> Units:
+        """
+        """
+        _nodes = self.nodes
+        length = math.dist([_nodes[0].x, _nodes[0].y, _nodes[0].z], 
+                           [_nodes[1].x, _nodes[1].y, _nodes[1].z])
+        return length #* self._cls.f2u_units.m
+    #
+    def find_coordinate(self, node_distance:float, node_end:int=0) -> tuple:
+        """
+        """
+        _node = self.nodes
+        _nodeNo3 = [0, 0, 0]
+        #
+        if math.isclose(node_distance, 0, rel_tol=0.01):
+        #if distance <= 0.0001:
+            _nodeNo3[0] = _node[node_end].x
+            _nodeNo3[1] = _node[node_end].y
+            _nodeNo3[2] = _node[node_end].z
+        else:
+            if node_end == 1:
+                _v1 = (_node[0].x - _node[1].x)
+                _v2 = (_node[0].y - _node[1].y)
+                _v3 = (_node[0].z - _node[1].z)
+            else:
+                _v1 = (_node[1].x - _node[0].x)
+                _v2 = (_node[1].y - _node[0].y)
+                _v3 = (_node[1].z - _node[0].z)
+            #
+            _norm = (_v1**2 + _v2**2 + _v3**2)**0.50
+            _v1 /= _norm
+            _v2 /= _norm
+            _v3 /= _norm
+            _nodeNo3[0] = (_node[node_end].x + _v1 * node_distance)
+            _nodeNo3[1] = (_node[node_end].y + _v2 * node_distance)
+            _nodeNo3[2] = (_node[node_end].z + _v3 * node_distance)
+        #
+        #Coordinates = get_coordinate_system(_node[0].system)
+        #return Coordinates(*_nodeNo3)
+        return _nodeNo3
+    #
+    #
+    @property
+    def unit_vector(self) -> list[float]:
+        """
+        """
+        node1, node2 = self.nodes
+        #dx = _node2.x.value - _node1.x.value
+        #dy = _node2.y.value - _node1.y.value
+        #dz = _node2.z.value - _node1.z.value
+        # direction cosines
+        #L = math.dist([_node1.x.value, _node1.y.value, _node1.z.value], 
+        #              [_node2.x.value, _node2.y.value, _node2.z.value])
+        #l = dx / L
+        #m = dy / L
+        #n = dz / L
+        #return [l, m, n]
+        L = math.dist(node1[:3], node2[:3])
+        #
+        uv = list(map(sub, node2[:3], node1[:3]))
+        return [item / L for item in uv]
+    #
+    #
+    def T3D(self):
+        """
+        Returns the transformation matrix for the member
+        """
+        #if m2D:
+            # Element length and orientation
+            #node1,  node2 = self.nodes
+            #Tlg = Rmatrix2D(node1, node2)
+            #return Tlg
+            #raise NotImplementedError()
+        #else:        
+        #if self.type in ['beam', 'truss']:
+        #return Rmatrix(*self.unit_vector, self.beta)
+        nodei, nodej = self.nodes
+        L = self.L #.value
+        #r3 = Rmatrix2(nodei, nodej, L=L)
+        #return Rmatrix(*self.unit_vector, self.beta)
+        return Rmatrix2(nodei, nodej, L=L)
 #
 #

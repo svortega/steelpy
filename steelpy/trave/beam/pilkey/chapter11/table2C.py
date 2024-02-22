@@ -1,12 +1,12 @@
 #
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
 #from array import array
 #from collections.abc import Mapping
 from dataclasses import dataclass
-from math import factorial
+#from math import factorial
 from typing import NamedTuple
 import re
 #
@@ -242,12 +242,13 @@ class PinnedPinned(ArbitrarySupport):
     @property
     def V0(self) -> float:
         """ Shear force"""
-        return -1*self.FM_bar/self.L
+        return -1 * self.FM_bar / self.L
     #
     @property
     def theta0(self) -> float:
         """ Slope"""
-        return self.Fw_bar/self.L + self.FM_bar * self.L/(6*self.E*self.I)
+        return (self.Fw_bar / self.L
+                + self.FM_bar * self.L / (6 * self.E * self.I))
 #
 @dataclass
 class PinnedFixed(ArbitrarySupport):

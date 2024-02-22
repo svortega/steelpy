@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2019 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -52,16 +52,19 @@ class TorsionBarGE:
         self.FB = FB
         self.Fphi = Fphi
     #
-    def R0(self, T0: float, B0: float,
-           psi0: float, phi0: float,
+    def R0(self, T0: float,
+           phi0: float,
+           psi0: float, 
+           B0: float,
            Tw0: float) -> None:
         """
         Initial Parameters
+        [T, Phi, Psi, B, Tw]
         """
         self.T0 = T0
-        self.B0 = B0
-        self.Psi0 = psi0
         self.Phi0 = phi0
+        self.Psi0 = psi0
+        self.B0 = B0
     #
     def phi(self, x: float, J: float) -> float:
         """ Angle of twist (rad)"""
@@ -88,12 +91,12 @@ class TorsionBarGE:
         x : distance from end 1
 
         results:
-        [T, B, Psi, Phi, Tw]
+        [T, Phi, Psi, B, Tw]
         """
         return [self.T(x),
-                self.B(x, self.J),
-                self.psi(x, self.J),
                 self.phi(x, self.J),
+                self.psi(x, self.J),
+                self.B(x, self.J),
                 self.Tw(x, self.J)]
 #
 #
@@ -151,12 +154,12 @@ class ArbitraryLoading:
     def __call__(self, x: float, E: float, G: float, J: float):
         """
         Formulas positive (+) is downwards 
-        return: [FT, FB, Fpsi, Fphi, Tw]
+        return: [FT, Fphi, Fpsi, FB, Tw]
         """
-        return [1 * self.FT(x, E, G, J),
-                self.FB(x, E, G, J),
+        return [self.FT(x, E, G, J),
                 self.Fphi(x, E, G, J),
-                1 * self.Fphi(x, E, G, J),
+                self.Fpsi(x, E, G, J),
+                self.FB(x, E, G, J),
                 self.Tw(x, E, G, J)]
 
 #
@@ -338,7 +341,7 @@ class BTBarSupports:
 
         return :
         Initial Parameters x = 0 (support 1)
-        [T0, B0, Psi0, Phi0]
+        [T0, Phi0, Psi0, B0, Tw0]
         """
         return self._support0.initial_parameters(F_bar=F_bar)
 #
@@ -346,7 +349,8 @@ class BTBarSupports:
 @dataclass
 class ArbitrarySupport:
     __slots__ = ['L', 'E', 'G', 'J',
-                 'FT_bar', 'FB_bar', 'Fpsi_bar', 'Fphi_bar']
+                 'FT_bar', 'FB_bar', 'Fpsi_bar',
+                 'Fphi_bar', 'FTw_bar']
 
     def __init__(self, L:float, E: float, G: float, J: float) -> None:
         """
@@ -380,23 +384,31 @@ class ArbitrarySupport:
         """ Angle of twist """
         return 0
     #
+    @property
+    def Tw0(self) -> float:
+        """ Warping torque """
+        return 0     
     #
-    #
-    def Tbar(self, FT_bar:float, FB_bar:float, 
-             Fpsi_bar:float, Fphi_bar:float):
+    def Tbar(self, FT_bar:float,
+             Fphi_bar:float,
+             Fpsi_bar:float, 
+             FB_bar:float, 
+             FTw_bar: float):
         """ """
         self.FT_bar = FT_bar
-        self.FB_bar = FB_bar
-        self.Fpsi_bar = Fpsi_bar
         self.Fphi_bar = Fphi_bar
+        self.Fpsi_bar = Fpsi_bar
+        self.FB_bar = FB_bar
+        self.FTw_bar = FTw_bar
     #
     def initial_parameters(self, F_bar:list[float]):
         """
         F_bar : [T0, B0, Psi0, Phi0]
+        Torsion [T, Phi, Psi, B, Tw]
         """
         # [FT,FB,Fpsi,Fphi]
         self.Tbar(*F_bar)
-        return [self.T0, self.B0, self.Psi0, self.Phi0]
+        return [self.T0, self.Phi0, self.Psi0, self.B0, self.Tw0]
 #
 #
 # ---------------------------------------------------------------

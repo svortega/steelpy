@@ -73,27 +73,29 @@ def get_beam_concept_load_X(load):
     return load
 #
 #
-def get_beam_udl_load(data, steps:int=6)->list[float]:
-    """ """
+def get_beam_udl_load(data)->list[float]:
+    """
+    new_data = [q1x,q1y,q1z,q1t,q2x,q2y,q2z,q2t,L0,L1]
+    """
     new_data = []
-    # q0
-    for x in range(3):
+    # q0 [x,y,z,t]
+    for x in range(4):
         try:
             new_data.append(data[x].convert("newton/metre").value)
         except AttributeError:
             new_data.append(data[x])
         except IndexError:
             new_data.append(0.0)
-    # q1
-    for x in range(3,6):
+    # q1 [x,y,z,t]
+    for x in range(4,8):
         try:
             new_data.append(data[x].convert("newton/metre").value)
         except AttributeError:
             new_data.append(data[x])
         except IndexError:
             new_data.append(new_data[x-3])
-    # L
-    for x in range(6,8):
+    # L0 & L1
+    for x in range(8,10):
         try:
             new_data.append(data[x].value)
         except AttributeError:
@@ -153,29 +155,31 @@ def get_value_point(data, label:str, steps:int):
     return new_data
 #
 #
-def get_value_line(data, label:str, steps:int):
-    """ """
-    new_data = [0,0,0, None,None,None]
+def get_value_line(data, label:str, steps:int = 8):
+    """
+    new_data = [q0x,q0y,q0z,q0t, q1x,q1y,q1z,q1t]
+    """
+    new_data = [0,0,0,0, None,None,None, None]
     for x in range(steps):
         try:
             new_data[x] = data[label][x]
         except IndexError:
             continue
     #
-    if new_data[3] == None:
-        new_data[3] = new_data[0]
-
-    if new_data[4] == None:
-        new_data[4] = new_data[1]
-
-    if new_data[5] == None:
-        new_data[5] = new_data[2]
+    start = steps // 2
+    for x in range(start, steps):
+        #print(x)
+        if new_data[x] == None:
+            new_data[x] = new_data[x-start]
     #
     return new_data
 #
 #
-def check_list_units(data)->list[float]:
-    """ """
+def check_list_units(data) -> list[float] :
+    """
+    line = [q1x,q1y,q1z,q1t,q2x,q2y,q2z,q2t,L0,L1]
+    point = [Fx, Fy, Fz, Mx, My, Mz, L0]
+    """
     load = defaultdict(list)
     L = []
     lendata = len(data)
@@ -192,37 +196,41 @@ def check_list_units(data)->list[float]:
             raise IOError("units {:} not compatible"
                           .format(data[x].units()))
     #
+    # L0 & L1 
     for x in range(2):
         try:
             L[x]
         except IndexError:
             L.append(0)
     #
-    new_data = []
-    # point and beam point load
-    if 'N' in load:
-        new_data = get_value_point(load, label='N', steps=3)
-
-    if 'N*m' in load:
-        if not new_data:
-            new_data = [0,0,0]
-        new_data.extend(get_value_point(load, label='N*m', steps=3))
-
-    if new_data:
-       for x in range(6):
-           try:
-               new_data[x]
-           except IndexError:
-               new_data.append(0)
-       new_data.append(L[0])
-       return new_data
     #
-    # beam line load
-    elif 'N/m' in load:
-        new_data = get_value_line(load, label='N/m', steps=6)
+    # beam line load 
+    if 'N/m' in load:
+        # [q1x,q1y,q1z,q1t,q2x,q2y,q2z,q2t,L0,L1]
+        new_data = get_value_line(load, label='N/m')
         new_data.extend(L)
         return new_data
-    else:
+    else: # point and beam point load
+        new_data = []
+        # point and beam point load [Fx, Fy, Fz]
+        if 'N' in load:
+            new_data = get_value_point(load, label='N', steps=3)
+        # point and beam point load [Mx, My, Mz]
+        if 'N*m' in load:
+            if not new_data:
+                new_data = [0,0,0]
+            new_data.extend(get_value_point(load, label='N*m', steps=3))
+        #
+        if new_data:
+            for x in range(6):
+                try:
+                    new_data[x]
+                except IndexError:
+                    new_data.append(0)
+            new_data.append(L[0])
+            # [Fx, Fy, Fz, Mx, My, Mz, L0]
+            return new_data
+        #
         raise IOError("units not compatible")
 #
 #
@@ -273,39 +281,64 @@ def check_point_dic(data)->list[float]:
 #
 def check_beam_dic(data)->list[float]:
     """
-    new_data: [qx1, qy1, qz1, qx2, qy2, qz2, d1, d2, title]
+    new_data: [qx1, qy1, qz1, qt1,
+               qx2, qy2, qz2, qt2,
+               d1, d2,
+               title]
     """
-    new_data = [0,0,0, None,None,None, 0,0, 'NULL']
+    #1 / 0
+    new_data = [0,0,0,0, None,None,None,None, 0,0, 'NULL']
     for key, item in data.items():
+        #
+        # End 1
         if re.match(r"\b((qx|qa(xial)?)(_)?(1|start)?)\b", key, re.IGNORECASE):
             new_data[0] = item.convert("newton/metre").value
+            
         elif re.match(r"\b((qy|in(_)?plane)(_)?(1|start)?)\b", key, re.IGNORECASE):
             new_data[1] = item.convert("newton/metre").value
+            
         elif re.match(r"\b((qz|out(_)?plane)(_)?(1|start)?)\b", key, re.IGNORECASE):
             new_data[2] = item.convert("newton/metre").value
-        elif re.match(r"\b((qx|qa(xial)?)(_)?(2|end))\b", key, re.IGNORECASE):
+            
+        elif re.match(r"\b(qt(orsion)?|mx(_)?(1|start)?)\b", key, re.IGNORECASE):
             new_data[3] = item.convert("newton/metre").value
-        elif re.match(r"\b((qy|in(_)?plane)(_)?(2|end))\b", key, re.IGNORECASE):
+        #
+        # End 2
+        elif re.match(r"\b((qx|qa(xial)?)(_)?(2|end))\b", key, re.IGNORECASE):
             new_data[4] = item.convert("newton/metre").value
-        elif re.match(r"\b((qz|out(_)?plane)(_)?(2|end))\b", key, re.IGNORECASE):
+        
+        elif re.match(r"\b((qy|in(_)?plane)(_)?(2|end))\b", key, re.IGNORECASE):
             new_data[5] = item.convert("newton/metre").value
+        
+        elif re.match(r"\b((qz|out(_)?plane)(_)?(2|end))\b", key, re.IGNORECASE):
+            new_data[6] = item.convert("newton/metre").value
+        
+        elif re.match(r"\b(qt(orsion)?|mx(_)?(2|end)?)\b", key, re.IGNORECASE):
+            new_data[7] = item.convert("newton/metre").value
+        #
+        # L0, L2
         elif re.match(r"\b((l|d(istance)?)(_)?(1|start))\b", key, re.IGNORECASE):
-            new_data[6] = item.value
+            new_data[8] = item.value
         elif re.match(r"\b((l|d(istance)?)(_)?(2|end))\b", key, re.IGNORECASE):
-            new_data[7] = item.value
+            new_data[9] = item.value
+        #
+        # Comment
         elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
-            new_data[8] = item
+            new_data[10] = item
     #
     # for uniform load
     # qx2
-    if new_data[3] == None:
-        new_data[3] = new_data[0]
-    # qy2
     if new_data[4] == None:
-        new_data[4] = new_data[1]
-    # qz2
+        new_data[4] = new_data[0]
+    # qy2
     if new_data[5] == None:
-        new_data[5] = new_data[2]
+        new_data[5] = new_data[1]
+    # qz2
+    if new_data[6] == None:
+        new_data[6] = new_data[2]
+    # qt2
+    if new_data[7] == None:
+        new_data[7] = new_data[3]    
     #
     return new_data
 #

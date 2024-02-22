@@ -1020,7 +1020,8 @@ class CombTypes:
         #
         header = ['element_type', 'element_name', 'element_id', 
                   'type',
-                  'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
+                  'qx0', 'qy0', 'qz0', 'qt0', 
+                  'qx1', 'qy1', 'qz1', 'qt1',
                   'L0', 'L1', 'BS', 'OTM', 
                   'x', 'y', 'z']        
         #
@@ -1061,8 +1062,8 @@ class CombTypes:
         #
         header = ['load_id', 'element_id',
                   'title', 'system', 'type',
-                  'L0', 'qx0', 'qy0', 'qz0',
-                  'L1', 'qx1', 'qy1', 'qz1',
+                  'L0', 'qx0', 'qy0', 'qz0', 'qt0',
+                  'L1', 'qx1', 'qy1', 'qz1', 'qt1',
                   'BS', 'OTM', 'x', 'y', 'z']
         #
         df_bload['load_id'] = self.number

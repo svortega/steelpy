@@ -12,8 +12,7 @@ from collections import namedtuple
 
 # package imports
 from steelpy.sections.utils.shape.main import ShapeBasic
-#from steelpy.sections.process.section import SectionBasic, ShapeBasic
-#from steelpy.sections.process.stress import BeamStress
+from steelpy.sections.utils.shape.channel import ChannelBasic
 
 #
 #

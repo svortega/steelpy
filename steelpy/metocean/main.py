@@ -84,7 +84,7 @@ class Metocean(ClassMainSQL):
     #
     # ------------------------------------------
     #@property
-    def properties(self):
+    def property(self):
         """
         """
         return self._properties

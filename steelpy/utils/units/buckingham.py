@@ -21,14 +21,13 @@ This version works with 3.x only
 **Note
 N/m^2  without conversion result is: g/(m*s^2)
 """
-
+from __future__ import annotations
 import re
 import math
-from typing import Dict, List, Tuple
 
 #
 #
-__all__ : List[str] = ['Number', 'allunits', 'pm', 'exp', 'log', 'sin', 'cos']
+__all__ : list[str] = ['Number', 'allunits', 'pm', 'exp', 'log', 'sin', 'cos']
 
 class Fraction:
     @staticmethod
@@ -199,7 +198,7 @@ def extend_units(units:Dict):
 #
 extend_units(UNITS)
 #
-def buckingham(units:str, d:Dict):
+def buckingham(units:str, d:dict):
     """
     """
     items = units.split('/')
@@ -352,7 +351,7 @@ class Number:
 
 
     """
-    regex = re.compile('([a-zA-Z]+)(\^\-?\d+(/\d+)?)?(\*([a-zA-Z]+)(\^\-?\d+(/\d+)?)?)*(\/([a-zA-Z]+)(\^\-?\d+(/\d+)?)?)*')
+    regex = re.compile(r'([a-zA-Z]+)(\^\-?\d+(/\d+)?)?(\*([a-zA-Z]+)(\^\-?\d+(/\d+)?)?)*(\/([a-zA-Z]+)(\^\-?\d+(/\d+)?)?)*')
     c_n = dict((key,value[0]) for key,value in UNITS.items())
     c_l = dict((key,value[1]) for key,value in UNITS.items())
     c_t = dict((key,value[2]) for key,value in UNITS.items())

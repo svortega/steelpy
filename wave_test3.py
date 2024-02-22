@@ -21,7 +21,7 @@ mesh = f2umodel.mesh()
 # Material input
 # ----------------------------------------------------
 #
-material = mesh.materials()
+material = mesh.material()
 matlinear = material.linear()
 matlinear[1] = [345.0 * units.MPa]
 print(material)
@@ -31,7 +31,7 @@ print(material)
 # Section Input
 # ----------------------------------------------------
 #
-section = mesh.sections()
+section = mesh.section()
 section[2] = ['Tubular', 500 * units.mm, 25 * units.mm]
 print(section)
 #
@@ -41,7 +41,7 @@ print(section)
 #
 #
 # Node input
-nodes = mesh.nodes()
+nodes = mesh.node()
 nodes[10] = [0 * units.m, -100* units.m, 0 * units.m]
 nodes[20] = [0 * units.m, -75 * units.m, 0 * units.m]
 nodes[30] = [0 * units.m, -50 * units.m, 0 * units.m]
@@ -53,7 +53,7 @@ print(nodes)
 #
 #
 # boundary Input
-boundary = mesh.boundaries()
+boundary = mesh.boundary()
 #
 supports = boundary.nodes()
 supports[10] = 'fixed'
@@ -69,9 +69,9 @@ print(boundary)
 # Element input
 #
 #
-elements = mesh.elements()
+elements = mesh.element()
 #
-beams = elements.beams()
+beams = elements.beam()
 # beam[number] = [material, section, node1, node2, roll_angle]
 beams[12] = [10, 20, 1, 2, 0]
 beams[23] = [20, 30, 1, 2, 0]
@@ -93,7 +93,7 @@ meto = Metocean(name="metocean_1")
 # hydrodynamic parameters input
 # ----------------------------------------------------
 #
-proph = meto.properties()
+proph = meto.property()
 #
 cdcm = proph.CdCm()
 # ['coefficients', Cd, Cm]

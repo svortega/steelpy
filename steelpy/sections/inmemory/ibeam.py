@@ -12,8 +12,7 @@ from array import array
 #
 
 # package imports
-#from steelpy.sections.process.stress import BeamStress
-#from steelpy.sections.process.operations import ShapeProperty
+from steelpy.sections.utils.shape.ibeam import IbeamBasic
 from steelpy.sections.utils.shape.main import ShapeBasic
 
 #
@@ -25,15 +24,15 @@ from steelpy.sections.utils.shape.main import ShapeBasic
 #
 class Ibeam(ShapeBasic):
     __slots__ = ['_labels', '_number', '_title', '_type', '_default', 
-                 '_d', '_tw', '_bf', '_tf', '_bfb', '_tfb',
+                 '_d', '_tw', '_bft', '_tft', '_bfb', '_tfb',
                  '_r']
     def __init__(self):
         """ """
         super().__init__()
         self._d: array = array('f', [])
         self._tw: array = array('f', [])
-        self._bf: array = array('f', [])
-        self._tf: array = array('f', [])
+        self._bft: array = array('f', [])
+        self._tft: array = array('f', [])
         self._bfb: array = array('f', [])
         self._tfb: array = array('f', [])
         self._r: array = array('f', [])   # fillet radius
@@ -53,8 +52,8 @@ class Ibeam(ShapeBasic):
             #
             self._d.append(parameters[0])
             self._tw.append(parameters[1])
-            self._bf.append(parameters[2])
-            self._tf.append(parameters[3])
+            self._bft.append(parameters[2])
+            self._tft.append(parameters[3])
             self._bfb.append(parameters[4])
             self._tfb.append(parameters[5])
             self._r.append(parameters[6])
@@ -71,7 +70,7 @@ class Ibeam(ShapeBasic):
         #
         return IbeamBasic(name=self._labels[index], 
                           d=self._d[index], tw=self._tw[index],
-                          bft=self._bf[index], tft=self._tf[index],
+                          bft=self._bft[index], tft=self._tft[index],
                           bfb=self._bfb[index], tfb=self._tfb[index], 
                           root_radius=self._r[index])
 #

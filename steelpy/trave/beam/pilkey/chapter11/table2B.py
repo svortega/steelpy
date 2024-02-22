@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
@@ -365,25 +365,25 @@ class Point(ArbitraryLoading):
     def V(self, x: float) -> float:
         """ Shear Force"""
         step = x - self.L1
-        return -self.P * self.function_n(step, 0)
+        return -1 * self.P * self.function_n(step, 0)
         #
 
     def M(self, x: float) -> float:
         """ Bending Moment"""
         step = x - self.L1
-        return -self.P * self.function_n(step, 1)
+        return -1 * self.P * self.function_n(step, 1)
 
     #
     def theta(self, x: float, E: float, I: float) -> float:
         """ Slope = EIy' """
         step = x - self.L1
-        return self.function_n(step, 2) * -self.P / (2 * E * I)
+        return -1 * self.P * self.function_n(step, 2) / (2 * E * I)
 
     #
     def w(self, x: float, E: float, I: float) -> float:
         """ Deflection = EIy"""
         step = x - self.L1
-        return self.function_n(step, 3) * self.P / (factorial(3) * E * I)
+        return self.P * self.function_n(step, 3)  / (factorial(3) * E * I)
 
 #
 #

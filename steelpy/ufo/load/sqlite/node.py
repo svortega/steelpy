@@ -224,7 +224,10 @@ class NodeLoadItemSQL(ClassBasicSQL):
                 z DECIMAL,\
                 rx DECIMAL,\
                 ry DECIMAL,\
-                rz DECIMAL);"
+                rz DECIMAL,\
+                psi DECIMAL,\
+                B DECIMAL,\
+                Tw DECIMAL);"
         #
         create_table(conn, table)
     #    
@@ -927,7 +930,8 @@ def get_nodedf(conn, load_name: int|str,
             'load_id', 'element_id', 'node_id',
             'load_comment', 'load_system','load_type',
             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-            'x', 'y', 'z', 'rx', 'ry', 'rz']
+            'x', 'y', 'z', 'rx', 'ry', 'rz',
+            'psi', 'B', 'Tw']
     #
     # dataframe
     db = DBframework()
@@ -940,5 +944,6 @@ def get_nodedf(conn, load_name: int|str,
              'load_id', 'load_system', 'load_comment',
              'element_name', 'node_name', 'load_type',
              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-             'x', 'y', 'z', 'rx', 'ry', 'rz']]
+             'x', 'y', 'z', 'rx', 'ry', 'rz',
+             'psi', 'B', 'Tw']]
     return df

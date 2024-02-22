@@ -23,20 +23,23 @@ mesh = f2umodel.mesh()
 # Material input
 # ----------------------------------------------------
 # [elastic, Fy, Fu, E, G, Poisson, density, alpha]
-mesh.materials([[10, 'linear', 345.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa],
-                [15, 'linear', 245.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa]])
+mesh.material([[10, 'linear', 345.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa],
+               [15, 'linear', 245.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa]])
 #
-print(mesh.materials())
+material = mesh.material()
+print(material)
 #
+
 #
 # ----------------------------------------------------
 # Section Input
 # ----------------------------------------------------
 #
-mesh.sections([[20, 'ub', 240*units.mm, 6.2*units.mm, 120*units.mm, 9.8*units.mm],
-               [25, 'Tubular', 300 * units.mm, 10 * units.mm]])
+mesh.section([[15, 'rectangle', 8 * units.inch, 4 * units.inch],
+              [20, 'ub', 240*units.mm, 6.2*units.mm, 120*units.mm, 9.8*units.mm],
+              [25, 'Tubular', 300 * units.mm, 10 * units.mm]])
 #
-print(mesh.sections())
+print(mesh.section())
 #
 #
 # ----------------------------------------------------
@@ -48,14 +51,14 @@ storeyHeight1 = 6.0 * units.m
 storeyHeight2 = 3.0 * units.m
 bayWidth = 4.0 * units.m
 #
-# nodes corrdinates [node_id, x, y, z=0]
+# nodes coordinates [node_id, x, y, z=0]
 #
-mesh.nodes([(1, storeyBase,   storeyBase),
-            (2, storeyBase, storeyHeight1),
-            (3, bayWidth, storeyHeight2),
-            (4, bayWidth,   storeyBase)])
+mesh.node([(1, storeyBase,   storeyBase),
+           (2, storeyBase, storeyHeight1),
+           (3, bayWidth, storeyHeight2),
+           (4, bayWidth,   storeyBase)])
 #
-print(mesh.nodes())
+print(mesh.node())
 #
 #
 # ----------------------------------------------------
@@ -63,10 +66,10 @@ print(mesh.nodes())
 # ----------------------------------------------------
 #
 # [node_id, type, fixity]
-mesh.boundaries([[1, 'support', 'fixed'],
-                 [4, 'support', 'fixed']])
+mesh.boundary([[1, 'support', 'fixed'],
+               [4, 'support', 'fixed']])
 #
-print(mesh.boundaries())
+print(mesh.boundary())
 #
 # ----------------------------------------------------
 # Element input
@@ -77,11 +80,11 @@ print(mesh.boundaries())
 # Elements[number] = [plate, material, section, node1, node2, node3, node4]
 #
 #
-mesh.elements([(1,  'beam',  1, 2, 10, 20, 0),
-               (2,  'beam',  2, 3, 15, 25, 0),
-               (3,  'beam',  3, 4, 10, 20, 0)])
+mesh.element([(1,  'beam',  1, 2, 10, 15, 0),
+              (2,  'beam',  2, 3, 15, 20, 0),
+              (3,  'beam',  3, 4, 10, 25, 0)])
 #
-print(mesh.elements().beams())
+print(mesh.element().beam())
 #
 #
 # ----------------------------------------------------
@@ -111,23 +114,23 @@ Punit = units.kN
 Munit = units.kN * units.m
 Lunit = units.N/units.m
 #
-load.basic([['wind load', 'node', 2, 'load', 400 * Punit, Pnull, Pnull, 100 * Munit, 100 * Munit, 'nodex_1'],
-            ['wind load', 'node', 3, 'load', -200 * Punit, 'nodex_2'],
-            ['snow load', 'beam', 2, 'line', Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_1'],
-            ['snow load', 'beam', 3, 'line', Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_2'],
-            ['snow load', 'beam', 1, 'point', 3* units.m, 10 * Punit, 'point_1']])
+#load.basic([['wind load', 'node', 2, 'load', 400 * Punit, Pnull, Pnull, 100 * Munit, 100 * Munit, 'nodex_1'],
+#            ['wind load', 'node', 3, 'load', -200 * Punit, 'nodex_2'],
+#            ['snow load', 'beam', 2, 'line', Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_1'],
+#            ['snow load', 'beam', 3, 'line', Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_2'],
+#            ['snow load', 'beam', 1, 'point', 3* units.m, 10 * Punit, 'point_1']])
 #
 #print(basic)
 #
 basic = load.basic()
 #
-basic.node([['wind load', 2, 'load', 400 * Punit, Pnull, Pnull, 100 * Munit, 100 * Munit, 'nodex_3'],
-            ['wind load', 3, 'load', -200 * Punit, 'nodex_4']])
+#basic.node([['wind load', 2, 'load', 400 * Punit, Pnull, Pnull, 100 * Munit, 100 * Munit, 'nodex_3'],
+#            ['wind load', 3, 'load', -200 * Punit, 'nodex_4']])
 #
 #
-basic.beam([['snow load', 2, 'line', Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_3'],
-            ['snow load', 3, 'line', Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_4'],
-            ['snow load', 1, 'point', 3* units.m, 10 * Punit, 'point_2']])
+basic.beam([['snow load', 2, 'line', 1.5* units.m, Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_3']])
+#            ['snow load', 3, 'line', Lnull, -50_000 * Lunit, 20_000 * Lunit, 'udly_4'],
+#            ['snow load', 1, 'point', 3* units.m, 10 * Punit, 'point_2']])
 #
 #
 #basic.nodal([['gust load', 2, 'load', 400 * Punit, Pnull, Pnull, 100 * Munit, 100 * Munit, 'nodex_5'],
@@ -156,17 +159,17 @@ print(basic)
 mesh.build()
 #
 print("Nodes")
-nodes = mesh.nodes()
+nodes = mesh.node()
 nodedf = nodes.df
 print(nodedf)
 #
 print("boundaries")
-bds = mesh.boundaries()
+bds = mesh.boundary()
 bdsdf = bds.df
 print(bdsdf)
 #
 print("Elements")
-elements = mesh.elements()
+elements = mesh.element()
 elementsdf = elements.df
 print(elements)
 #
@@ -219,7 +222,7 @@ ndisp = noderes.displacement()
 # get pandas df
 ndisp_df = ndisp.df
 nreacc = noderes.reaction()
-# get indidual node results
+# get individual node results
 ndisp = noderes[1].displacement()
 #
 beamres = results.beam()
@@ -227,7 +230,7 @@ beamres = results.beam()
 bdisp = beamres.displacement()
 bforce = beamres.force()
 bstress = beamres.stress()
-# get indidual beam results
+# get individual beam results
 bforce = beamres[1].displacement()
 bdisp = beamres[2].force()
 bstress = beamres[3].stress()

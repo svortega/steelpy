@@ -10,9 +10,8 @@ from __future__ import annotations
 #
 
 # package imports
-#from ..inmemory.channel import ChannelBasic
-from steelpy.sections.sqlite.utils import SectionItemSQL
-#from steelpy.sections.process.operations import  get_sect_properties
+from steelpy.sections.utils.shape.channel import ChannelBasic
+from steelpy.sections.sqlite.utils import SectionMainSQL
 
 #
 #
@@ -23,7 +22,7 @@ from steelpy.sections.sqlite.utils import SectionItemSQL
 # ----------------------------------------
 
 #
-class ChannelSQLite(SectionItemSQL):
+class ChannelSQL(SectionMainSQL):
     __slots__ = ['name', 'number', 'db_file', '_properties']
 
     def __init__(self, component: int, db_file: str):

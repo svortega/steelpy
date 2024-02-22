@@ -77,7 +77,7 @@ class PlotBasic:
     #
     def init_frame(self, elements, lims:list):
         """ """
-        beams = elements.beams()
+        beams = elements.beam()
         fig, ax = self.init_plot(lims)
         ax = init_frame(beams, ax)
         return fig, ax
@@ -140,7 +140,7 @@ class PlotFrame(PlotBasic):
                 #ln.figure.canvas.draw_idle()
             fig.canvas.draw()
         #
-        beams = elements.beams()
+        beams = elements.beam()
         #nodes = self._cls._nodes
         #lims = nodes.get_maxmin()
         #

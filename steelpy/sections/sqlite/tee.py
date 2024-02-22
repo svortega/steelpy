@@ -8,8 +8,8 @@ from __future__ import annotations
 #
 #
 # package imports
-#from ..inmemory.tee import TeeBasic
-from steelpy.sections.sqlite.utils import SectionItemSQL
+from steelpy.sections.utils.shape.tee import TeeBasic
+from steelpy.sections.sqlite.utils import SectionMainSQL
 #
 #
 #
@@ -19,7 +19,7 @@ from steelpy.sections.sqlite.utils import SectionItemSQL
 #      Standard Section Profiles
 # ----------------------------------------
 #
-class TeeSQLite(SectionItemSQL):
+class TeeSQLite(SectionMainSQL):
     __slots__ = ['name', 'number', 'db_file', '_properties']
 
     def __init__(self, component: int, db_file: str):

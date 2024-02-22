@@ -11,20 +11,22 @@ import math
 #
 
 # package imports
-from steelpy.sections.utils.shape.utils import ShapeProperty, ShapeBasic
-#from steelpy.sections.process.stress import BeamStress
+from steelpy.sections.utils.shape.utils import ShapeProperty
+from steelpy.sections.utils.shape.stress import ShapeStressBasic
 
 #
+#-------------------------------------------------
 #
 points = namedtuple('Points', ['y', 'z'])
+axis = namedtuple('Axis', ['y', 'z'])
 #
 #
-# ----------------------------------------
+#-------------------------------------------------
 #      Standard Section Profiles
-# ----------------------------------------
+#-------------------------------------------------
 #
 @dataclass
-class ChannelBasic(ShapeBasic):
+class ChannelBasic(ShapeStressBasic):
     """
     Calculate the section properties of a channel section
 
@@ -78,9 +80,9 @@ class ChannelBasic(ShapeBasic):
     tb: float
     type:str = 'Channel'
     #
+    # --------------------------------------------
     #
-    #
-    def _stress(self, actions, stress=None, stress_type: str='average'):
+    def _stressX(self, actions, stress=None, stress_type: str='average'):
         """
         """
         # get section's coordinates
@@ -124,10 +126,11 @@ class ChannelBasic(ShapeBasic):
         #   Cross-Sectional Area
         area = (_h * self.tw) + (2 * _b * self.tb)
         # -------------------------------------------------
-        #   Elastic Neutral Centre 
-        Zc = 0.50 * self.d
-        Yc = ((2 * self.b ** 2 * self.tb + _D2 * self.tw ** 2) /
-              (2 * self.b * self.d - 2 * _D2 * _C))
+        #   Elastic Neutral Centre
+        Yc, Zc = self.centroid
+        #Zc = 0.50 * self.d
+        #Yc = ((2 * self.b ** 2 * self.tb + _D2 * self.tw ** 2) /
+        #      (2 * self.b * self.d - 2 * _D2 * _C))
         # -------------------------------------------------
         #   Shear Centre 
         SCz = 0.50 * self.d
@@ -141,8 +144,9 @@ class ChannelBasic(ShapeBasic):
         # -------------------------------------------------
         #               Section Properties
         # -------------------------------------------------
+        Iy, Iz = self.I
         #   Second Moment of Area about Mayor Axis
-        Iy = (self.b * self.d ** 3 - _C * _D2 ** 3) / 12.0
+        #Iy = (self.b * self.d ** 3 - _C * _D2 ** 3) / 12.0
         #   Elastic Modulus about Mayor Axis
         Zey = 2 * Iy / self.d
         #   Plastic Modulus about Mayor Axis
@@ -154,8 +158,8 @@ class ChannelBasic(ShapeBasic):
         ry = math.sqrt(Iy / area)
         # -------------------------------------------------
         #   Second Moment of Area about Minor Axis
-        Iz = ((self.d * self.b ** 3 / 3.0) - (_C ** 3 * _D2 / 3.0)
-              - (area * (self.b - Yc) ** 2))
+        #Iz = ((self.d * self.b ** 3 / 3.0) - (_C ** 3 * _D2 / 3.0)
+        #      - (area * (self.b - Yc) ** 2))
         #   Elastic Modulus about Minor Axis
         Zez = Iz / (self.b - Yc)
         #   Plastic Modulus about Minor Axis
@@ -180,23 +184,10 @@ class ChannelBasic(ShapeBasic):
         #
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
-                           Iy=Iy, Zey=Zey, Zpy=Zpy, ry=ry,
-                           Iz=Iz, Zez=Zez, Zpz=Zpz, rz=rz,
-                           J=J, Cw=Cw)
+                             Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
+                             Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
+                             J=J, Cw=Cw)
 
-    #
-    @property
-    def CoG(self):
-        """ """
-        _C = self.b - self.tw
-        _D2 = self.d - 2 * self.tb        
-        # -------------------------------------------------
-        #   Elastic Neutral Centre 
-        Zc = 0
-        Yc = ((2 * self.b ** 2 * self.tb + _D2 * self.tw ** 2) /
-              (2 * self.b * self.d - 2 * _D2 * _C))
-        #
-        return Yc, Zc
     #
     def curved(self, R):
         """
@@ -248,44 +239,215 @@ class ChannelBasic(ShapeBasic):
         # Shear factor (section 8.1 equ 8.1-13)
         #
 
+    #    
+    # --------------------------------------------
     #
+    def tau_t(self, phi, G: float, alpha: float = 1.31):
+        """
+        Torsional stress due to pure torsion
+        
+        psi : theta' (Rate of angle of twist theta with respect to lengh)
+        G   : Shear modulus of elasticity 
+        
+        sigma_t : 
+        """
+        #ti = self.tw + self.tb
+        h = self.d - 0.50 * self.tb
+        J = alpha / 3.0 * (self.b * self.tb**3
+                           + h * self.tw**3)
+        return phi * G * J
+    #  
+    def warping_stress(self, psi, Tw, B, G: float):
+        """
+        psi : theta' (Rate of angle of twist theta with respect to lengh)
+        Tw  : Twisting moment
+        B   : Bimoment warping moment
+        G   : Shear modulus of elasticity 
+
+        sigma_t : 
+        sigma_w : Normal stress due to warping
+        tau_w   : Shear stress due to warping 
+        """
+        1 / 0
     #
+    def warping_properties(self):
+        """
+        Returns:
+        Cw, J, K, w, Qw
+        """
+        1 / 0
+    #
+    # --------------------------------------------
+    #
+    @property
+    def I(self):
+        """Second moment of inertia"""
+        b = self.b - 0.50 * self.tw
+        h = self.d - self.tb
+        area = h * self.tw + 2 * b * self.tb
+        #C = self.b - self.tw
+        #D = h - self.tb
+        #
+        Yc, Zc = self.centroid
+        #
+        #   Second Moment of Area about Mayor Axis
+        #Iy = (self.b * self.d**3 - C * D**3) / 12.0
+        #
+        Iy = (self.b  * self.d**3
+              - (self.b - self.tw)
+              * (self.d - 2 * self.tb)**3) / 12.0
+        #
+        #   Second Moment of Area about Minor Axis
+        #Iz = ((2 * self.tb * self.b**3 + D * self.tw**3) / 3.0
+        #      - area * (self.b - Yc)**2)
+        #
+        Iz = (self.d / 3.0 * self.b**3
+              - (self.b - self.tw)**3 / 3.0 * (self.d - 2 * self.tb)
+              - area * (self.b - Yc)**2)
+        #
+        return axis(Iy, Iz)
+    #
+    def Qb(self):
+        """
+        Returns
+        ----------
+        Qb: Q/b
+        Where: 
+        Q : Ax - Shear's first moment of area
+        b : cross section width
+        """
+        #
+        coord = self.section_coordinates()
+        Yc, Zc = self.centroid       
+        #
+        # -----------------------------------------------------
+        #
+        #h = self.d - self.tb
+        #D = self.d - 2 * self.tb
+        #
+        Qy = []
+        for item in coord.y:
+            Hi = abs(item)
+            if item < 0: # left
+                b = self.b - Yc
+                #bmin = b
+                #di = b - Hi
+            else: # right 
+                b = Yc
+                #bmin = b - self.tw
+                #di = Hi
+            #
+            #if Hi > bmin: # C area
+            #    area = di * self.tw + 2 * bmin * self.tb
+            #    Zi = (b - ((2 * Hi**2 * self.tb + D * self.tw**2)
+            #               / (2 * Hi * self.d - 2 * D * bmin)))
+            #    print('C', item, area, Zi)
+            #else: # two flanges
+            di = b - Hi
+            area = 2 * (di * self.tb)
+            Zi = 0.5 * di
+            #print('flange', item, area, Zi)
+            #
+            Qy.append(area * Zi)
+        #
+        # -----------------------------------------------------
+        #
+        Qz = []
+        for item in coord.z:
+            Hi = abs(item)
+            #if item < 0: # bottom
+            #    d = self.d - Zc
+            #    #hmin = d
+            #    #di = d - Hi
+            #else: # top 
+            #    d = Zc
+            #    #hmin = d - self.tb
+            #    #di = Hi            
+            #
+            d = Zc
+            #hmin = self.tb
+            di = d - Hi
+            if Hi < (d - self.tb): # L area
+                Zi = (d - ((self.b**2 + di * self.tw)
+                           / (2 * (self.b + di))))
+                #
+                b1 = self.b - self.tw
+                area = di * self.tw + b1 * self.tb
+                #print('L', item, di, area, Zi)
+            else: # one area
+                #di = hmin - Hi
+                Zi = 0.5 * di + Hi
+                area =  di * self.tb
+                #print('web', item, di, area, Zi)            
+            #
+            Qz.append(area * Zi)
+        #
+        #1 / 0
+        return axis(Qy, Qz)
+    #
+    # --------------------------------------------
+    #
+    @property
+    def centroid(self):
+        """ """
+        #h = self.d - self.tb
+        C = self.b - self.tw
+        D = self.d - 2 * self.tb        
+        # -------------------------------------------------
+        #   Elastic Neutral Centre 
+        Zc = 0.50 * self.d
+        Yc = ((2 * self.b ** 2 * self.tb + D * self.tw ** 2)
+              / (2 * self.b * self.d - 2 * D * C))
+        #
+        return axis(Yc, Zc)
+    #    
+    @property
+    def shear_center(self):
+        """ """
+        #   Shear Centre
+        b = self.b - 0.50 * self.tw
+        h = self.d - self.tb        
+        Zc = 0 # 0.50 * self.d
+        Yc = ((3 * self.tb * self.b ** 2)
+               / (6 * b * self.tb + h * self.tw))
+        return axis(Yc, Zc)
     #
     def section_coordinates(self):
         """
-        1      2 3 4
-        +------+-+-+
-                   |       ^ z
-                   + 5     |
-                   |       |
-                   + 6     +--> y
-                   |
-                   + 7
-                   | 
-        +------+-+-+      
-        8     9 10 11
+        1   2    3 4
+        +---+----+-+
+        |           
+        +5  ^ z
+        |   |      
+        +6  +-->    
+        |       y
+        + 7
+        | 
+        +---+----+-+
+        8   9   10 11
         """
+        #
+        CoG = self.centroid
+        #CoG = self.shear_center        
         # horizontal
-        
-        CoG = self.CoG
+        h1 = CoG.y - self.b + self.tw * 0.50
+        h2 = CoG.y - self.tw
+        h3 = CoG.y # - self.tw * 0.50
         #
-        hzt1 = (self.b - CoG[0])
-        hzt2 = 0
-        hzt3 = CoG[0] - self.tw
-        hzt4 = CoG[0] - self.tw * 0.50
+        coord_y = [h1, 0.0, h2, h3, # 1,2,3,4
+                   h1, h1, h1,     # 5,6,7
+                   h1, 0.0, h2, h3] # 8,9,10,11
         #
-        coord_y = [-1 * hzt1, hzt2, hzt3, hzt4, # 1,2,3,4
-                   hzt4, hzt4, hzt4, # 5,6,7
-                   -1 * hzt1, hzt2, hzt3, hzt4] # 8,9,10,11
         # vertical
-        top1 = (self.d * 0.50 - self.tb * 0.50)
-        top2 = (self.d * 0.50 - self.tb)
-        coord_z = [top1, top1, top1, top1, #1-4
-                   top2, 0,  # 5,6
-                   -1 * top2, # 10,11
-                   -1 * top1, -1 * top1, -1 * top1, -1 * top1]
+        #d = self.d * 0.50
+        top1 = CoG.z - self.tb * 0.50
+        top2 = CoG.z - self.tb
+        top3 = -1 * top1
+        coord_z = [top1, top1, top1, top1, # 1-4
+                   top2, 0.0,  -1 * top2,    # 5,6,7
+                   top3, top3, top3, top3] # 8-11
         
-        return points(coord_y, coord_z)    
+        return points(coord_y, coord_z)
     #
     #
     def _dimension(self) -> str:

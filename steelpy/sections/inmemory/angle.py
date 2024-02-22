@@ -11,8 +11,7 @@ import math
 #
 
 # package imports
-#from steelpy.sections.process.operations import SectionProperty, ShapeProperty
-#from steelpy.sections.process.stress import BeamStress
+from steelpy.sections.utils.shape.angle import AngleBasic
 from steelpy.sections.utils.shape.main import ShapeBasic
 
 #

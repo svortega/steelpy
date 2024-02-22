@@ -135,8 +135,6 @@ class ConceptItem(ufoBasicModel):
         #
         #self._sections = Section(mesh_type="inmemory")        
         #
-        # Points
-        self._point = NodesIM(component=component)
         # 
         self.joints = Connection(points=self._nodes)
         #
@@ -145,6 +143,9 @@ class ConceptItem(ufoBasicModel):
         #
         self._boundaries = BoundaryConcept(points=self._nodes)
         #
+        # Points
+        self._point = NodesIM(component=component,
+                              boundary=self._boundaries)        
         #
         self._elements = ConceptElements(points=self._nodes,
                                          materials=self._materials,
@@ -165,13 +166,13 @@ class ConceptItem(ufoBasicModel):
     # Element
     # --------------------
     #
-    def points(self, values: None|list|dict=None,
-                 df=None):
+    def point(self, values: None|list|dict=None,
+              df=None):
         return self._point
     #
     #
-    def boundaries(self, values: None|list|dict = None,
-                   df = None):
+    def boundary(self, values: None|list|dict = None,
+                 df = None):
         """
         """
         if values:

@@ -15,12 +15,12 @@ concept[10] =  'Concept_1'
 #
 # -----------------------------------
 # define material
-material = concept[10].materials()
+material = concept[10].material()
 material["MAT345"] = ['elastic', 345.0 * units.MPa]
 #
 # -----------------------------------
 # Define sections
-section = concept[10].sections()
+section = concept[10].section()
 # Caisson
 section["T1350x40"] = ['Tubular', 1350 * units.mm, 40 * units.mm]
 section["T1350x25"] = ['Tubular', 1350 * units.mm, 25 * units.mm]
@@ -39,7 +39,7 @@ section["T100x25"] = ['Tubular', 100 * units.mm, 25 * units.mm]
 #
 # -----------------------------------
 # define Elevations
-elevation = concept[10].points()
+elevation = concept[10].point()
 #elevation[1] = [0*units.m, 14.2*units.m, 0*units.m]
 elevation[2] = [0*units.m, 8.0*units.m, 0*units.m]
 elevation[3] = [0*units.m, -14.0*units.m, 0*units.m]
@@ -47,7 +47,7 @@ elevation[3] = [0*units.m, -14.0*units.m, 0*units.m]
 #elevation[5] = [0*units.m, -64.0*units.m, 0*units.m]
 #elevation[6] = [0*units.m, -74.0*units.m, 0*units.m]
 #
-point = concept[10].points()
+point = concept[10].point()
 point[22] = [0*units.m, 8.0*units.m, -1.5*units.m]
 point[33] = [0*units.m, -14.0*units.m, -1.5*units.m]
 #point[44] = [2.7*units.m, -39.0*units.m, 0*units.m]
@@ -60,8 +60,8 @@ point[33] = [0*units.m, -14.0*units.m, -1.5*units.m]
 #
 # -----------------------------------
 # Start beam modelling
-elements = concept[10].elements()
-beam = elements.beams()
+elements = concept[10].element()
+beam = elements.beam()
 # set material & section default
 material.default = "MAT345"
 #
@@ -108,8 +108,8 @@ beam["bm15"] = elevation[3], point[33]
 #
 # -----------------------------------
 # Define boundary conditions
-boundary = concept[10].boundaries()
-supports = boundary.supports()
+boundary = concept[10].boundary()
+supports = boundary.support()
 #
 supports['fixed'] = 'fixed'
 supports['pinned'] = 'pinned'
@@ -163,13 +163,14 @@ point_load.load = {'mz': 100 * units.kN*units.m, 'title': "point_M22"}
 ##basic[1].beam.line_load["snow_2"] = {'qy1': 0 * units.kN / units.m, # in plane triangular load
 ##                                     'qy2':-2 * units.kN / units.m} # from node to node
 ## trapezoidal out plane load
-#basic[1].beam.global_system # reset load coord system global
 basic[1].beam = beam["bm3"]
+basic[1].beam.global_system()
+#basic[1].beam.global_system # reset load coord system global
 #beam_load = basic[1].beam["bm3"]
 basic[1].beam.line = {'qy1': 2 * units.kN / units.m, # start load value
                       'qy2': 4 * units.kN / units.m, # end load value
-                       'd1': 0.5 * units.m, # load start 0.5m from node 1
-                       'd2': 1.0 * units.m, # load end 1m from node 2
+                      'd1': 0.5 * units.m, # load start 0.5m from node 1
+                      'd2': 1.0 * units.m, # load end 1m from node 2
                       'title': "snow_3"}
 ##
 #basic[2] = 'point_loading'
@@ -229,15 +230,15 @@ print(material)
 print("Sections")
 print(section)
 #
-nodes = mesh.nodes()
+nodes = mesh.node()
 print(nodes)
 #
-bds = mesh.boundaries()
+bds = mesh.boundary()
 print("boundaries")
 print(bds)
 #
 print("")
-elements = mesh.elements()
+elements = mesh.element()
 print(elements)
 #
 print("Load")

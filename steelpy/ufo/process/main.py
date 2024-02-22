@@ -24,7 +24,7 @@ class ufoBasicModel:
     # Common
     # --------------------
     #    
-    def materials(self, values: None|list|dict=None,
+    def material(self, values: None|list|dict=None,
                   df=None):
         """
         """
@@ -83,7 +83,7 @@ class ufoBasicModel:
         return self._materials
     #
     #
-    def sections(self, values: None|list|dict=None,
+    def section(self, values: None|list|dict=None,
                  df=None):
         """
         """
@@ -172,7 +172,7 @@ class ufoBasicModel:
         return self._sections
     #
     #
-    def groups(self):
+    def group(self):
         """
         """
         return self._groups    
@@ -182,7 +182,7 @@ class ufoBasicModel:
     # -------------------- 
     #
     #
-    def elements(self, values:None|list|tuple=None,
+    def element(self, values:None|list|tuple=None,
                  df=None):
         """
         """
