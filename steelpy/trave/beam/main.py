@@ -13,7 +13,7 @@ from __future__ import annotations
 
 # package imports
 #
-from steelpy.ufo.concept.elements.beam import ConceptBeam
+#from steelpy.ufo.concept.elements.beam import ConceptBeam
 from steelpy.ufo.load.concept.beam import BeamLoadItemIM #,  ConceptBeam
 #from steelpy.ufo.load.concept.combination import LoadCombConcept
 #from steelpy.ufo.load.process.beam.main import BeamBasicLoad
@@ -177,7 +177,7 @@ class Beam:
         return self._basic._load._line
 
     @q.setter
-    def q(self, value:list|dict):
+    def q(self, value:list|tuple|dict):
         """line load"""
         self._basic[self.name].line = value
         #self._basic[self.name] = ['line', value]

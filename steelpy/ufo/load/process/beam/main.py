@@ -16,9 +16,11 @@ from steelpy.ufo.load.process.actions import SelfWeight
 from steelpy.utils.units.buckingham import Number
 from steelpy.utils.math.operations import trnsload, linspace
 
-from steelpy.ufo.load.process.operations import (check_point_dic, check_list_units,
-                                                 check_beam_dic,  
-                                                 get_beam_node_load, get_beam_udl_load)
+from steelpy.ufo.load.process.operations import (get_BeamLoad_dic,
+                                                 get_BeamLoad_list_units,
+                                                 get_BeamLine_dic,  
+                                                 get_BeamNode_load,
+                                                 get_BeamLine_load)
 
 #
 class BeamBasicLoad:
@@ -162,7 +164,6 @@ class BeamTypeBasic:
     #
     # -----------------------------------------------
     #
-    #
     @property
     def line(self):
         """
@@ -183,7 +184,8 @@ class BeamTypeBasic:
     def line(self, values: list):
         """
         Linear Varying Load (lvl) - Non Uniformly Distributed Load
-                value : [qx1, qy1, qz1, qx2, qy2, qz2, L1, L2]
+        
+        value : [qx1, qy1, qz1, qt1,  qx2, qy2, qz2, qt2,  L1, L2, title]
     
                         |
              q0         | q1
@@ -196,22 +198,19 @@ class BeamTypeBasic:
         #
         #
         if isinstance(values, dict):
-            #load = self._get_line(values)
-            #load.insert(0, 'load')
+            values.update({'type':'line', })
             self._line[beam_name] = values
     
         elif isinstance(values[0], (list, tuple)):
             for item in values:
-                #load =  self._get_line(item)
-                #load.insert(0, 'load')
+                item.insert(0, 'line')
                 self._line[beam_name] = item
         else:
-            #load =  self._get_line(values)
-            #load.insert(0, 'load')
+            values.insert(0, 'line')
             self._line[beam_name] = values
     #
     #
-    # ------------------
+    # -----------------------------------------------
     #
     @property
     def point(self):
@@ -227,29 +226,19 @@ class BeamTypeBasic:
         beam_name = self._beam_id
         #
         if isinstance(values, dict):
-            #load = self._get_point(values)
-            #load.insert(0, 'force')
+            values.update({'type':'point', })
             self._point[beam_name] = values
     
         elif isinstance(values[0], (list, tuple)):
             for item in values:
-                #value.insert(0, self._Lbeam)
-                #load = get_beam_point_load(load=values)
-                #load = self._get_point(item)
-                #load.insert(0, 'force')
+                item.insert(0, 'point')
                 self._point[beam_name] = item
         else:
-            #values.insert(0, self._Lbeam)
-            #load = get_beam_point_load(load=values)
-            #load =  self._get_point(values)
-            #load.insert(0, 'force')
+            values.insert(0, 'point')
             self._point[beam_name] = values
-    #
-    #     
+    #  
     #
     # -----------------------------------------------
-    #
-    # ---------------------------------
     #
     @property
     def coordinate_system(self):
@@ -442,23 +431,19 @@ class BeamLineBasic(BeamLoadBasic):
     # -----------------------------------------------
     #
     # TODO : chekc if works for dict
-    def _get_line(self, line_load: list|dict):
+    def _get_line(self, line_load: list|tuple|dict):
         """ get line load in beam local system"""
         #
-        # update inputs
-        if isinstance(line_load, dict):
-            udl = check_beam_dic(line_load)
-            title = udl.pop()
-            
-        elif isinstance(line_load[-1], str):
-            title = line_load.pop()
-            if isinstance(line_load[0], Number):
-                udl = check_list_units(line_load)
-            else:
-                udl = get_beam_udl_load(line_load)
-        else:
-            title ='NULL'
-            udl = get_beam_udl_load(line_load)
+        if isinstance(line_load, (list, tuple)):
+            try:
+                udl = get_BeamLoad_list_units(line_load.copy())
+            except AttributeError:
+                udl = get_BeamLine_load(line_load)
+        elif isinstance(line_load, dict):
+            udl = get_BeamLine_dic(line_load)
+        #
+        load_type = udl.pop(0)
+        title = udl.pop()
         #
         # get system local = 1
         try:
@@ -491,20 +476,17 @@ class BeamPointBasic(BeamLoadBasic):
     def _get_point(self, point_load: list|dict):
         """ get point load in beam local system"""
         # update inputs
-        if isinstance(point_load, dict):
-            point = check_point_dic(point_load)
-            title = point.pop()
-        
-        elif isinstance(point_load[-1], str):
-            title = point_load.pop()
-            if isinstance(point_load[0], Number):
-                point = check_list_units(point_load)
-            else:
-                point = get_beam_node_load(point_load)
-        
-        else:
-            title = 'NULL'
-            point = get_beam_node_load(point_load)
+        if isinstance(point_load, (list, tuple)):
+            try:
+                point = get_BeamLoad_list_units(point_load.copy())
+            except AttributeError:
+                point = get_BeamNode_load(point_load)            
+        # update inputs
+        elif isinstance(point_load, dict):
+            point = get_BeamLoad_dic(point_load)       
+        #
+        load_type = point.pop(0)
+        title = point.pop()        
         #
         # get system local = 1
         try: # Local system

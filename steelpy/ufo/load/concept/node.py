@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -7,9 +7,10 @@ from collections.abc import Mapping
 import re
 #
 # package imports
-# steelpy.f2uModel.load
-from ..process.nodes import (NodeLoadMaster, NodeItem,
-                             get_nodal_load, PointNode)
+# 
+from steelpy.ufo.load.process.nodes import (NodeLoadMaster,
+                                            get_nodal_load,
+                                            PointNode)
 
 
 # ---------------------------------
@@ -115,20 +116,116 @@ class NodeLoadItemIM(Mapping):
     #    self._load
 
 #
-class NodeItemIM(NodeItem):
+# ---------------------------------
+#
+class NodeItemIM:
     __slots__ = ['_load', #'_load_name',
                  '_displacement', '_mass', '_node_id']
 
     def __init__(self, load_name:str|int, load_title:str):
         """
         """
-        super().__init__()
         #self._load_name = load_name
         self._load = NodeLoadIM(load_name, load_title, "load")
         self._displacement = NodeLoadIM(load_name, load_title, "displacement")
         self._mass = NodeLoadIM(load_name, load_title, "mass")
     #
+    def __call__(self, node_id):
+        self._node_id = node_id
+        return self
+    #
+    #
+    @property
+    def load(self):
+        """
+        """
+        try:
+            point_id = self._node_id
+            return self._load[point_id]
+        except :
+            raise IndexError
+
+    @load.setter
+    def load(self, values: list):
+        """
+        Point Load
+        """
+        node_name = self._node_id
+        if isinstance(values, dict):
+            values.update({'type': 'load',})
+            self._load[node_name] = values
+        
+        elif isinstance(values[0], list):
+            for item in values:
+                item.insert(0, 'load')
+                self._load[node_name] = item
+        
+        else:
+            values.insert(0, 'load')
+            self._load[node_name] = values
+
+    #
+    @property
+    def mass(self):
+        """
+        """
+        point_id = self._node_id
+        return self._mass[point_id]
+
+    @mass.setter
+    def mass(self, values: list):
+        """
+        """
+        node_name = self._node_id
+        if isinstance(values, dict):
+            values.update({'type': 'mass',})
+            self._load[node_name] = values
+            
+        elif isinstance(values[0], list):
+            for item in values:
+                item.insert(0, 'mass')
+                self._mass[node_name] = item
+        else:
+            values.insert(0, 'mass')
+            self._mass[node_name] = values
+
+    #
+    @property
+    def displacement(self):
+        """
+        """
+        point_id = self._node_id
+        return self._displacement[point_id]
+
+    @displacement.setter
+    def displacement(self, values: list):
+        """
+        """
+        node_name = self._node_id
+        if isinstance(values, dict):
+            values.update({'type': 'displacement',})
+            self._load[node_name] = values
+            
+        elif isinstance(values[0], list):
+            for item in values:
+                item.insert(0, 'displacement')
+                self._displacement[node_name] = item
+        else:
+            values.insert(0, 'displacement')
+            self._displacement[node_name] = values
+
+    #   
+    #
+    def __str__(self, units: str = "si") -> str:
+        """ """
+        output = ""
+        # output += "--- Nodal Load \n"
+        output += self._load.__str__()
+        output += self._mass.__str__()
+        output += self._displacement.__str__()
+        return output
 #
+# ---------------------------------
 #
 class NodeLoadIM(NodeLoadMaster):
     """
@@ -148,9 +245,9 @@ class NodeLoadIM(NodeLoadMaster):
       :number:  integer internal number 
       :name:  string node external name
     """
-    __slots__ = ['_title', '_labels', '_index', '_complex',
-                 '_fx', '_fy', '_fz', '_mx', '_my', '_mz',
-                 '_system', '_system_flag', '_load_name', '_load_title']
+    __slots__ = ['_labels', '_title', '_complex', '_load_id', '_system',
+                 '_type', '_fx', '_fy', '_fz', '_mx', '_my', '_mz',
+                 '_load_name', '_load_title', '_system_flag']
 
     def __init__(self, load_name:str|int, load_title:str, 
                  load_type:str) -> None:
@@ -168,27 +265,13 @@ class NodeLoadIM(NodeLoadMaster):
         """
         #
         self._labels.append(node_name)
-        #self._index = len(self._labels) - 1
         self._load_id.append(self._load_name)
         #
-        if isinstance(point_load, dict):
-            point_load = get_nodal_load(point_load)
-            self._title.append(point_load[-1])
-            point_load.pop()
-        elif isinstance(point_load[-1], str):
-            title = point_load.pop()
-            self._title.append(title)
-            point_load = get_nodal_load(point_load)
-        else:
-            try:
-                point_load[6]
-                self._title.append(point_load.pop())
-            except IndexError:
-                self._title.append("NULL")
-            point_load = get_nodal_load(point_load)
+        point_load = get_nodal_load(point_load)
+        load_type = point_load.pop(0)
+        load_title = point_load.pop(-1)        
         #
         self._system.append(self._system_flag)
-        #self._distance.append(-1)
         self._complex.append(0)
         #
         # point_load = get_nodal_load(point_load)
@@ -199,6 +282,8 @@ class NodeLoadIM(NodeLoadMaster):
         self._my.append(point_load[4])
         self._mz.append(point_load[5])
         #
+        self._title.append(load_title)
+        #self._type.append(load_type)
         # print('--')
     #
     # @property

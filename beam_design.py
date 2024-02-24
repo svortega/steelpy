@@ -39,7 +39,7 @@ print(beam.material)
 #
 # set supports : pinned/fixed/free/guided/spring [k=F/x]
 #
-beam.support = ["pinned", "pinned"]
+beam.support = ["fixed", "free"]
 #
 #beam.support[1] = "pinned"
 #beam.support[1] = ["spring", 200 * units.kN/units.m]
@@ -173,30 +173,73 @@ mesh.node([(1, 0*units.ft,   0*units.ft),
            #(2, 15*units.ft,  0*units.ft),
            (2, 5*units.m,  0*units.m)])
 
-mesh.boundary([[1, 'support', 'pinned'],
-               [2, 'support', 'pinned']])
+mesh.boundary([[1, 'support', 'fixed'],
+               [2, 'support', 'free']])
 
 mesh.element([(1,  'beam',  1, 2, 10, 15, 0)])
 
 load = mesh.load()
 basic = load.basic()
+#
+
 
 #
+#basic[1] = 'dispExample'
+#nodeload = basic[1].node()
+#nodeload[2].displacement = {'y': -0.103 * units.m,
+#                            'rz': 0.03 * units.rad,}
+#
 # load_title, 'beam', beam_id, 'point',  L0,x,y,z,mx,my,mz, comment(optional)
-basic.beam([
-             #['snow load', 1, 'point',
-             #90 * units.inch,  # L0
-             #0 * units.kip,  # x
-             #15 * units.kip, # y
-             #0 * units.kip,  # z
-             #90 * units.kip*units.inch,  # mx
-             #'point_3'],
-            ['snow load', 1, 'line',
-             0 * units.N / units.m,   # qx
-             15 * units.kN / units.m, # qy
-             0 * units.N / units.m,   # qz
-             0 * units.N / units.m,   # qt
-             'udly_3']])
+#basic.beam([
+#             ['snow load', 1, 'point',
+#             90 * units.inch,  # L0
+#             0 * units.kip,  # x
+#             15 * units.kip, # y
+#             0 * units.kip,  # z
+#             90 * units.kip*units.inch,  # mx
+#             'point_3'],
+#            ['snow load', 1, 'line',
+#             0 * units.N / units.m,   # qx
+#             15 * units.kN / units.m, # qy
+#             0 * units.N / units.m,   # qz
+#             0 * units.N / units.m,   # qt
+#             'udly_3']])
+#
+#
+#basic.beam(
+           #{'load':'snow load',
+           # 'beam': 1,
+           # 'type': 'point',
+           # 'L0': 90 * units.inch,
+           # 'y': 15 * units.kip,
+           # 'mx': 90 * units.kip*units.inch,
+           # 'title': 'point_3',},
+           #{'load':'snow load',
+           # 'beam': 1,
+           # 'type': 'line',
+           # 'qy': 15 * units.kN / units.m,
+           # 'title': 'udly_3'})
+#
+#
+# [load_title, 'node', node_id, 'point',  Fx,Fy,Fz,mx,my,mz, comment(optional)],
+# [load_title, 'node', node_id, 'displacement',  x,y,z,rx,ry,rz, comment(optional)],
+# [load_title, 'node', node_id, 'mass' ,  x,y,z, comment(optional)]
+#
+#basic.node([['dispExample', 2, 'displacement',
+#             0 * units.m,
+#             -0.103 * units.m,
+#             0 * units.m, # x,y,z,
+#             0 * units.rad,
+#             0 * units.rad,
+#             0.03 * units.rad,  # rx,ry,rz
+#             'nodey_2']])
+#            ['wind load', 3, 'load', -200 * Punit, 'nodex_4']])
+#
+basic.node({'load': 'dispExample',
+            'node': 2,
+            'type': 'displacement',
+            'y': -0.103 * units.m,
+            'rz': 0.03 * units.rad,})
 #
 mesh.build()
 #

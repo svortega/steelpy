@@ -105,7 +105,7 @@ class NodeSQL(NodeBasic):
             self._labels.index(node_number)
             conn = create_connection(self.db_file)
             with conn:
-                node = get_node(conn, node_number, self._component)
+                node = pull_Node(conn, node_number, self._component)
             return node
         except ValueError:
             raise IndexError(f' node id : {node_number} not valid')
@@ -417,21 +417,21 @@ class NodeSQL(NodeBasic):
 #
 #
 #
-def get_node(conn, node_name:int, component: int, item:str='*'):
+def pull_Node(conn, node_name:int, component: int, item:str='*'):
     """ """
     #with conn:
-    data = get_item_table(conn, node_name, component, item)
+    data = pull_node_item(conn, node_name, component, item)
     #system = get_coordinate_system(data[3])
     #return system(x=data[4], y=data[5], z=data[6],
     #              name=node_name, number=data[0], 
     #              index=data[10])
     #
-    boundary = get_boundary(conn, node_id=data[2])
+    boundary = pull_node_boundary(conn, node_id=data[2])
     #
     node = NodePoint(*data, boundary=boundary)
     return node.system()
 #
-def get_item_table(conn, node_name, component, item):
+def pull_node_item(conn, node_name, component, item):
     """ """
     project = (node_name, component)
     sql = f'SELECT NodeCoordinate.{item}, \
@@ -445,20 +445,7 @@ def get_item_table(conn, node_name, component, item):
     record = cur.fetchone()
     return [*project, *record[1:]]
 #
-def get_nodes(conn, component):
-    """ """
-    query = (component, )
-    table = 'SELECT * FROM Node \
-            WHERE component_id = ?\
-            ORDER BY number ASC'
-    cur = conn.cursor()
-    cur.execute(table, query)
-    record = cur.fetchall()
-    return record
-#
-#
-#
-def get_boundary(conn, node_id, item:str="*"):
+def pull_node_boundary(conn, node_id, item:str="*"):
     """
     """
     #
@@ -473,47 +460,7 @@ def get_boundary(conn, node_id, item:str="*"):
         boundary = [1, 1, 1, 1, 1, 1]
     return boundary
 #
-#
-#def update_table(conn, nodes):
-#    """ """
-#    # drop table
-#    sql = 'DROP TABLE Node'
-#    cur = conn.cursor()
-#    cur.execute(sql)
-#    #
-#    new_node_table(conn)
-#    push_nodes(conn, nodes)
-#
-#
-#def push_nodes(conn, nodes):
-#    """
-#    Create a new project into the projects table
-#    :param conn:
-#    :param project:
-#
-#    :return: project id
-#    """
-#    project = nodes
-#    #project = [item[1:] for item in nodes]
-#    # number = len(self._labels) - 1
-#    #if csystem == 'cylindrical':  # z, r, theta,
-#    #    project = (node_name, csystem,
-#    #               None, None, *coordinates, None)
-#    #
-#    #elif csystem == 'spherical':  # r, theta, phi
-#    #    project = (node_name, csystem,
-#    #               None, None, None, *coordinates)
-#    #
-#    #else:
-#    #    project = (node_name, csystem,
-#    #               *coordinates, None, None, None)
-#    #
-#    sql = 'INSERT INTO Node(name, type,\
-#                                x, y, z, r, theta, phi)\
-#                                VALUES(?,?,?,?,?,?,?,?)'
-#    cur = conn.cursor()
-#    cur.executemany(sql, project)
-#
+# ---------------------------------
 #
 def update_colum(conn, colname: str, newcol: list):
     """update entire column values"""

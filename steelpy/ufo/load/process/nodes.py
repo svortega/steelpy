@@ -7,18 +7,21 @@ from __future__ import annotations
 from array import array
 from typing import NamedTuple
 from collections.abc import Mapping
+from collections import defaultdict, Counter
+import re
 
 # package imports
 #import pandas as pd
 # steelpy.f2uModel.load.process
-from .operations import (check_list_units,
-                         check_list_number,
-                         check_point_dic)
+from .operations import (get_value_point,
+                         check_list_number)
+                         #check_point_dic)
  
 from steelpy.utils.dataframe.main import DBframework
 # from steelpy.f2uModel.load.sqlite.node import NodeLoadSQL
 
 #
+# ---------------------------------
 #
 class PointNode(NamedTuple):
     """
@@ -64,10 +67,43 @@ class PointNode(NamedTuple):
 
 
 #
+# ---------------------------------
+#
+class NodeForce(NamedTuple):
+    """
+    """
+    fx: float
+    fy: float
+    fz: float
+    mx: float
+    my: float
+    mz: float
+    name: int|str
+    load_name: str
+    system:str
+    load_complex:int
+    #
+    def __str__(self, units:str="si") -> str:
+        """ """
+        output  = (f"{str(self.name):12s} {10*' '} "
+                   f"{self.fx: 1.3e} {self.fy: 1.3e} {self.fy: 1.3e}"
+                   f"{0: 1.3e} {0: 1.3e} {0: 1.3e}\n")
+        #step = 12*" "
+        output += (f"{self.coordinate_system.upper():12s} {10*' '} "
+                   f"{self.mx: 1.3e} {self.my: 1.3e} {self.mz: 1.3e}\n")
+        return output
+    #
+    @property
+    def coordinate_system(self):
+        if self.system != 0:
+            return "local"
+        return "global" 
+#
+# ---------------------------------
+#
 class NodeLoadBasic(Mapping):
-    """
-    """
-    #__slots__ = ['_nodes']
+    __slots__ = ['_labels', '_title', '_complex',
+                 '_load_id', '_system']
 
     def __init__(self) -> None:
         """
@@ -106,30 +142,6 @@ class NodeLoadBasic(Mapping):
                 output += item.__str__()
                 # print('---')
         return output
-    #
-    #
-    #def _get_point_load(self, point_load:str|dict):
-    #    """ return point load in correct format"""
-    #    #print('-->')
-    #    if isinstance(point_load, dict):
-    #        point_load = get_nodal_load(point_load)
-    #        self._title.append(point_load[-1])
-    #        point_load.pop()
-    #    elif isinstance(point_load[-1], str):
-    #        title = point_load.pop()
-    #        self._title.append(title)
-    #        point_load = get_nodal_load(point_load)
-    #    else:
-    #        try:
-    #            point_load[6]
-    #            self._title.append(point_load.pop())
-    #        except IndexError:
-    #            self._title.append("NULL")
-    #        point_load = get_nodal_load(point_load)
-    #    1/0
-    #
-    #
-
 #
 #
 class NodeLoadMaster(NodeLoadBasic):
@@ -150,9 +162,8 @@ class NodeLoadMaster(NodeLoadBasic):
       :number:  integer internal number 
       :name:  string node external name
     """
-    #__slots__ = ['_title', '_labels', '_index', '_complex',
-    #             '_fx', '_fy', '_fz', '_mx', '_my', '_mz',
-    #             '_system', '_system_flag'] #, '_distance'
+    __slots__ = ['_labels', '_title', '_complex', '_load_id', '_system',
+                 '_type', '_fx', '_fy', '_fz', '_mx', '_my', '_mz']
 
     def __init__(self, load_type:str) -> None:
         """
@@ -203,23 +214,6 @@ class NodeLoadMaster(NodeLoadBasic):
             self._system.pop(_index)
             #self._distance.pop(_index)
             self._complex.pop(_index)
-    #
-    #
-    #
-    #@property
-    #def coordinate_system(self):
-    #    if self._system_flag != 0:
-    #        return "local"
-    #    return "global"
-    #
-    #@coordinate_system.setter
-    #def coordinate_system(self, system:str|int):
-    #    """
-    #    Coordinate system for load : global or local (member)
-    #    """
-    #    self._system_flag = 0
-    #    if system in ['local', 'member', 1]:
-    #        self._system_flag = 1
     #
     #
     @property
@@ -289,138 +283,199 @@ class NodeLoadMaster(NodeLoadBasic):
         #print('nodes df out')
     
 #
+# ---------------------------------
 #
-def get_nodal_load(load, steps: int = 6):
+def get_nodal_load(load: list|tuple|dict)->list:
     """ """
     if isinstance(load, (list, tuple)):
         try:
-            load = check_list_units(load)
-            load = load[:steps]
+            load = get_NodeLoad_list_units(load.copy())
         except AttributeError:
-            load = check_list_number(load, steps=steps)
+            load = get_NodeLoad_list(load)
     elif isinstance(load, dict):
-        load = check_point_dic(load)
+        load = get_NodeLoad_dic(load)
     else:
         raise Exception('   *** Load input format not recognized')
     return load
 #
-#
-#
-class NodeForce(NamedTuple):
+def get_NodeLoad_list(data: list|tuple,
+                      steps: int = 6) -> list :
     """
+    froce = [Fx, Fy, Fz, Mx, My, Mz, title]
+    displacement = [x, y, z, rx, ry, rz, title]
+    mass = [x, y, z, mx, my, mz, title]
     """
-    fx: float
-    fy: float
-    fz: float
-    mx: float
-    my: float
-    mz: float
-    name: int|str
-    load_name: str
-    system:str
-    load_complex:int
+    loat_type = data.pop(0)
+    if isinstance(data[-1], str):
+        load_title = data.pop()
+    else:
+        load_title = None
     #
-    def __str__(self, units:str="si") -> str:
-        """ """
-        output  = (f"{str(self.name):12s} {10*' '} "
-                   f"{self.fx: 1.3e} {self.fy: 1.3e} {self.fy: 1.3e}"
-                   f"{0: 1.3e} {0: 1.3e} {0: 1.3e}\n")
-        #step = 12*" "
-        output += (f"{self.coordinate_system.upper():12s} {10*' '} "
-                   f"{self.mx: 1.3e} {self.my: 1.3e} {self.mz: 1.3e}\n")
-        return output
-    #
-    @property
-    def coordinate_system(self):
-        if self.system != 0:
-            return "local"
-        return "global" 
+    new_data = check_list_number(data, steps)
+    new_data.append(load_title)
+    new_data.insert(0, loat_type)
+    return new_data
 #
 #
+def get_NodeLoad_list_units(data: list|tuple) -> list :
+    """
+    froce = [Fx, Fy, Fz, Mx, My, Mz, title]
+    displacement = [x, y, z, rx, ry, rz, title]
+    mass = [x, y, z, mx, my, mz, title]
+    """
+    loat_type = data.pop(0)
+    if isinstance(data[-1], str):
+        load_title = data.pop()
+    else:
+        load_title = None
+    #
+    new_data = [] # [None, 0,0,0, 0,0,0, 'NULL']
+    load = defaultdict(list)
+    #
+    if re.match(r"\b((prescribed)?disp(lacement)?)\b", loat_type, re.IGNORECASE):
+        for item in data:
+            if item.units() == 'metre': # m
+                load['m'].append(item.value)
+            
+            elif item.units() == 'radian': # rad
+                load['rad'].append(item.value)
+        #
+        if 'm' in load:
+            new_data = get_value_point(load, label='m', steps=3)
+        
+        if 'rad' in load:
+            if not new_data:
+                new_data = [0,0,0]
+            new_data.extend(get_value_point(load, label='rad', steps=3))        
+        #
+        new_data.insert(0, 'displacement')
+    
+    elif re.match(r"\b(force|load)\b", loat_type, re.IGNORECASE):
+        for item in data:
+            if item.units() == 'metre*second^-2*gram': # N 
+                load['N'].append(item.convert("newton").value)
+            
+            elif item.units() == 'metre^2*second^-2*gram': # N*m
+                load['N*m'].append(item.convert("newton*metre").value)
+        #
+        # point and beam point load [Fx, Fy, Fz]
+        if 'N' in load:
+            new_data = get_value_point(load, label='N', steps=3)
+        # point and beam point load [Mx, My, Mz]
+        if 'N*m' in load:
+            if not new_data:
+                new_data = [0,0,0]
+            new_data.extend(get_value_point(load, label='N*m', steps=3))
+        #
+        new_data.insert(0, 'load')
+    
+    elif re.match(r"\b(mass)\b", loat_type, re.IGNORECASE):
+        for item in data:
+            # Mass
+            if item.units() == 'gram': # m
+                load['kg'].append(item.convert("kilogram").value)
+        #
+        if 'kg' in load: # mass
+            new_data = get_value_point(load, label='kg', steps=6)
+            #return new_data
+        #
+        new_data.insert(0, 'mass')
+    
+    else:
+        raise IOError(f'node load type {loat_type} not available')
+    #
+    new_data.append(load_title)
+    return new_data
 #
 #
-class NodeItem:
-    #__slots__ = ['_load', '_displacement', '_mass', '_node_id']
-
-    def __init__(self):
-        """
-        """
-        pass
-    #
-    def __call__(self, node_id):
-        self._node_id = node_id
-        return self
-    #
-    #
-    @property
-    def load(self):
-        """
-        """
-        try:
-            point_id = self._node_id
-            return self._load[point_id]
-        except :
-            raise IndexError
-
-    @load.setter
-    def load(self, values: list):
-        """
-        Point Load
-        """
-        node_name = self._node_id
-        if isinstance(values, dict):
-            self._load[node_name] = values
-        elif isinstance(values[0], list):
-            for value in values:
-                self._load[node_name] = value
-        else:
-            self._load[node_name] = values
-
-    #
-    @property
-    def mass(self):
-        """
-        """
-        point_id = self._node_id
-        return self._mass[point_id]
-
-    @mass.setter
-    def mass(self, values: list):
-        """
-        """
-        node_name = self._node_id
-        if isinstance(values[0], list):
-            for value in values:
-                self._mass[node_name] = value
-        else:
-            self._mass[node_name] = values
-
-    #
-    @property
-    def displacement(self):
-        """
-        """
-        point_id = self._node_id
-        return self._displacement[point_id]
-
-    @displacement.setter
-    def displacement(self, values: list):
-        """
-        """
-        node_name = self._node_id
-        if isinstance(values[0], list):
-            for value in values:
-                self._displacement[node_name] = value[1:]
-        else:
-            self._displacement[node_name] = values
-
-    #   
-    #
-    def __str__(self, units: str = "si") -> str:
-        """ """
-        output = ""
-        # output += "--- Nodal Load \n"
-        output += self._load.__str__()
-        output += self._mass.__str__()
-        output += self._displacement.__str__()
-        return output
+def get_NodeLoad_dic(data: dict)->list:
+    """
+    force : [fx, fy, fz, mx, my, mz, title]
+    displacement : [x, y, z, rx, ry, rz, title]
+    mass = : [x, y, z, rx, ry, rz, title]
+    """
+    new_data = [None, 0,0,0, 0,0,0, None]
+    loat_type = data['type']
+    
+    if re.match(r"\b((prescribed)?disp(lacement)?)\b", loat_type, re.IGNORECASE):
+        new_data[0] = 'displacement'
+        
+        for key, item in data.items():
+            
+            if re.match(r"\b(x)\b", str(key), re.IGNORECASE):
+                new_data[1] = item.value
+                
+            elif re.match(r"\b(y)\b", str(key), re.IGNORECASE):
+                new_data[2] = item.value
+                
+            elif re.match(r"\b(z)\b", str(key), re.IGNORECASE):
+                new_data[3] = item.value
+            
+            elif re.match(r"\b(rx)\b", str(key), re.IGNORECASE):
+                new_data[4] = item.value
+                
+            elif re.match(r"\b(ry)\b", str(key), re.IGNORECASE):
+                new_data[5] = item.value
+                
+            elif re.match(r"\b(rz)\b", str(key), re.IGNORECASE):
+                new_data[6] = item.value
+                
+            elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
+                new_data[7] = item            
+    
+    elif re.match(r"\b(force|load)\b", loat_type, re.IGNORECASE):
+        new_data[0] = 'load'
+        
+        for key, item in data.items():
+            
+            if re.match(r"\b(fx|fa(xial)?)\b", key, re.IGNORECASE):
+                new_data[1] = item.convert("newton").value
+                
+            elif re.match(r"\b(py|fy|in(_)?plane)\b", key, re.IGNORECASE):
+                new_data[2] = item.convert("newton").value
+                
+            elif re.match(r"\b(pz|fz|out(_)?plane)\b", key, re.IGNORECASE):
+                new_data[3] = item.convert("newton").value
+            # 
+            elif re.match(r"\b(mx|t(orsion)?)\b", key, re.IGNORECASE):
+                new_data[4] = item.convert("newton*metre").value
+                
+            elif re.match(r"\b(my|out(_)?plane)\b", key, re.IGNORECASE):
+                new_data[5] = item.convert("newton*metre").value
+                
+            elif re.match(r"\b(mz|in(_)?plane)\b", key, re.IGNORECASE):
+                new_data[6] = item.convert("newton*metre").value
+            
+            elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
+                new_data[7] = item            
+    
+    elif re.match(r"\b(mass)\b", loat_type, re.IGNORECASE):
+        new_data[0] = 'mass'
+        
+        for key, item in data.items():
+            
+            if re.match(r"\b(x)\b", key, re.IGNORECASE):
+                new_data[1] = item.convert("newton").value
+                
+            elif re.match(r"\b(y)\b", key, re.IGNORECASE):
+                new_data[2] = item.convert("newton").value
+                
+            elif re.match(r"\b(z)\b", key, re.IGNORECASE):
+                new_data[3] = item.convert("newton").value
+            #
+            elif re.match(r"\b(rx?)\b", key, re.IGNORECASE):
+                new_data[4] = item.convert("newton*metre").value
+                
+            elif re.match(r"\b(ry)\b", key, re.IGNORECASE):
+                new_data[5] = item.convert("newton*metre").value
+                
+            elif re.match(r"\b(rz)\b", key, re.IGNORECASE):
+                new_data[6] = item.convert("newton*metre").value            
+            
+            elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
+                new_data[7] = item            
+    
+    else:
+        raise IOError(f'node load type {loat_type} not available')
+    #        
+    return new_data

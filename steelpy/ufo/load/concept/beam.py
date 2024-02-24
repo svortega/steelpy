@@ -25,11 +25,11 @@ from steelpy.ufo.load.process.beam.main import BeamTypeBasic, BeamLineBasic, Bea
 from steelpy.utils.dataframe.main import DBframework
 #from steelpy.utils.math.operations import trnsload
 
-from steelpy.ufo.load.process.operations import (check_point_dic,
-                                                 check_list_units,
-                                                 check_beam_dic,  
-                                                 get_beam_node_load,
-                                                 get_beam_udl_load)
+from steelpy.ufo.load.process.operations import (get_BeamLoad_dic,
+                                                 get_BeamLoad_list_units,
+                                                 get_BeamLine_dic,  
+                                                 get_BeamNode_load,
+                                                 get_BeamLine_load)
 #
 #
 # ---------------------------------
@@ -484,21 +484,17 @@ class BeamDistributedIM(BeamLineBasic):
     #
     def _get_line(self, line_load: list|dict):
         """ get line load in beam local system"""
+        
+        if isinstance(line_load, (list, tuple)):
+            try:
+                udl = get_BeamLoad_list_units(line_load.copy())
+            except AttributeError:
+                udl = get_BeamLine_load(line_load)
+        elif isinstance(line_load, dict):
+            udl = get_BeamLine_dic(line_load)
         #
-        # update inputs
-        if isinstance(line_load, dict):
-            udl = check_beam_dic(line_load)
-            title = udl.pop()
-            
-        elif isinstance(line_load[-1], str):
-            title = line_load.pop()
-            if isinstance(line_load[0], Number):
-                udl = check_list_units(line_load)
-            else:
-                udl = get_beam_udl_load(line_load)
-        else:
-            title ='NULL'
-            udl = get_beam_udl_load(line_load)
+        load_type = udl.pop(0)
+        title = udl.pop()
         #
         return [*udl, self._system_flag, title]
     #
@@ -697,20 +693,17 @@ class BeamPointIM(BeamPointBasic):
     def _get_point(self, point_load: list|dict):
         """ get point load in beam local system"""
         # update inputs
-        if isinstance(point_load, dict):
-            point = check_point_dic(point_load)
-            title = point.pop()
-        
-        elif isinstance(point_load[-1], str):
-            title = point_load.pop()
-            if isinstance(point_load[0], Number):
-                point = check_list_units(point_load)
-            else:
-                point = get_beam_node_load(point_load)
-        
-        else:
-            title = 'NULL'
-            point = get_beam_node_load(point_load)
+        if isinstance(point_load, (list, tuple)):
+            try:
+                point = get_BeamLoad_list_units(point_load.copy())
+            except AttributeError:
+                point = get_BeamNode_load(point_load)            
+        # update inputs
+        elif isinstance(point_load, dict):
+            point = get_BeamLoad_dic(point_load)       
+        #
+        load_type = point.pop(0)
+        title = point.pop() 
         #
         return [*point, self._system_flag, title]
     #

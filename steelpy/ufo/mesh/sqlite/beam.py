@@ -21,7 +21,7 @@ from math import dist
 # package imports
 from steelpy.sections.sqlite.utils import ShapeGeometrySQL, get_section 
 from steelpy.material.sqlite.isotropic import  get_materialSQL
-from steelpy.ufo.mesh.sqlite.nodes import get_node
+from steelpy.ufo.mesh.sqlite.nodes import pull_Node
 from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            get_element_data ,
                                            get_connectivity,
@@ -346,7 +346,7 @@ class BeamItemSQL(BeamItemBasic):
         conn = create_connection(self.db_file)
         for node in self.connectivity:
             with conn:
-                nodes.append(get_node(conn, node_name=node,
+                nodes.append(pull_Node(conn, node_name=node,
                                        component=self._component))
         return nodes
     #
@@ -478,7 +478,7 @@ class BeamItemSQL(BeamItemBasic):
         conn = create_connection(self.db_file)
         dof = [ ]
         for node_name in self.connectivity:
-            node = get_node(conn, node_name=node_name,
+            node = pull_Node(conn, node_name=node_name,
                             component=self._component)
             #number = node[0] - 1
             number = node.index
@@ -492,9 +492,9 @@ class BeamItemSQL(BeamItemBasic):
         nodes = self.connectivity
         conn = create_connection(self.db_file)
         with conn:
-            node1 = get_node(conn, node_name=nodes[0],
+            node1 = pull_Node(conn, node_name=nodes[0],
                              component=self._component)
-            node2 = get_node(conn, node_name=nodes[1],
+            node2 = pull_Node(conn, node_name=nodes[1],
                              component=self._component)
         return dist(node1[:3], node2[:3])
         #return dist(node1[3:6], node2[3:6])
@@ -519,9 +519,9 @@ class BeamItemSQL(BeamItemBasic):
         conn = create_connection(self.db_file)
         nodes = self.connectivity
         with conn:
-            node1 = get_node(conn, node_name=nodes[0],
+            node1 = pull_Node(conn, node_name=nodes[0],
                              component=self._component)
-            node2 = get_node(conn, node_name=nodes[1],
+            node2 = pull_Node(conn, node_name=nodes[1],
                              component=self._component)
         # direction cosines
         L = dist(node1[:3], node2[:3])

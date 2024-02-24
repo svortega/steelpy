@@ -27,7 +27,7 @@ from steelpy.ufo.mesh.sqlite.utils import (get_connectivity,
                                            get_element_data,
                                            check_element)
 from steelpy.sections.sqlite.utils import get_section
-from steelpy.ufo.mesh.sqlite.nodes import get_node 
+from steelpy.ufo.mesh.sqlite.nodes import pull_Node 
 #
 from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.math.operations import linspace, trnsload
@@ -1036,7 +1036,7 @@ class BeamItemWave:
         conn = create_connection(self.db_file)
         for _node in self.connectivity:
             with conn:
-                _nodes.append(get_node(conn, node_name=_node))
+                _nodes.append(pull_Node(conn, node_name=_node))
         return _nodes
     #
     def _unit_vector(self) -> list[ float ]:
@@ -1045,8 +1045,8 @@ class BeamItemWave:
         nodes = self.connectivity
         conn = create_connection(self.db_file)
         with conn:
-            node1 = get_node(conn, node_name=nodes[0])
-            node2 = get_node(conn, node_name=nodes[1])
+            node1 = pull_Node(conn, node_name=nodes[0])
+            node2 = pull_Node(conn, node_name=nodes[1])
         # direction cosines
         L =  dist(node1[:3], node2[:3])
         uv = list(map(sub, node2[:3], node1[:3]))

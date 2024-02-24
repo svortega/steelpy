@@ -268,25 +268,18 @@ class BeamLoadItemSQL(BeamSQLMaster):
                     beam_load: list) -> None:
         """
         """
-        #conn = create_connection(self.db_file)
-        #with conn:  
-        #    beam = check_element(conn, beam_name,
-        #                         component=self._component)        
-        #try:
-        #    beam_number = beam[0]
-        #except TypeError:
-        #    raise IOError(f"beam {beam_name} not found")
         #
-        # TODO: check if _beam_id affects something else
-        #self._beam_id = beam_name
-        #self._labels.append(beam_name)
+        if isinstance(beam_load, dict):
+            load_type = beam_load['type']
+        else:
+            load_type = beam_load[0]
         #
-        if re.match(r"\b(point)\b", str(beam_load[0]), re.IGNORECASE):
-            self._load._point[beam_name] = beam_load[1:]
+        if re.match(r"\b(point|mass)\b", load_type, re.IGNORECASE):
+            self._load._point[beam_name] = beam_load
             
         elif re.match(r"\b(line|u(niform(ly)?)?d(istributed)?l(oad)?)\b",
-                       str(beam_load[0]), re.IGNORECASE):
-            self._load._line[beam_name] = beam_load[1:]
+                      load_type, re.IGNORECASE):
+            self._load._line[beam_name] = beam_load
         
         else:
             raise IOError(f'Beam lod type {beam_load[0]} not implemented')    

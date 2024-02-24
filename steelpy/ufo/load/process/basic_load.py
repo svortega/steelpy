@@ -337,18 +337,22 @@ class LoadCaseBasic(BasicLoadMain):
         """ """
         # Input data for specific basic node load 
         if isinstance(values, (list, tuple)):
-            #1 / 0
-            if isinstance(values[0], (list, tuple)):
+            if isinstance(values[0], (list, tuple, dict)):
                 for item in values:
-                    load_name = item[0]
+                    if isinstance(item, dict):
+                        load_name = item['load']
+                        nodeid = item['node']
+                    elif isinstance(item, (list, tuple)):
+                        nodeid = item.pop(1)
+                        load_name = item.pop(0)
+                    #
                     try:
                         self.__setitem__(load_name, load_name)
                     except Warning:
                         pass
                     #
                     bload = self.__getitem__(load_name)
-                    nodeid = item[1]
-                    bload._node[nodeid] = item[2:]
+                    bload._node[nodeid] = item
             else:
                 load_name = values[0]
                 try:
@@ -359,6 +363,17 @@ class LoadCaseBasic(BasicLoadMain):
                 bload = self.__getitem__(load_name)
                 nodeid = values[1]
                 bload._node[nodeid] = values[2:]
+        
+        elif isinstance(values, dict):
+            load_name = values['load']
+            try:
+                self.__setitem__(load_name, load_name)
+            except Warning:
+                pass
+            #
+            nodeid = values['node']
+            bload = self.__getitem__(load_name)
+            bload._node[nodeid] = values
         #
         #
         # dataframe input
@@ -414,18 +429,26 @@ class LoadCaseBasic(BasicLoadMain):
              df=None):
         """ """
         if isinstance(values, (list, tuple)):
-            #1 / 0
-            if isinstance(values[0], (list, tuple)):
+            if isinstance(values[0], (list, tuple, dict)):
+                #1 / 0
+                #if isinstance(values[0], (list, tuple)):
                 for item in values:
-                    load_name = item[0]
+                    if isinstance(item, dict):
+                        load_name = item['load']
+                        beamid = item['beam']
+                    elif isinstance(item, (list, tuple)):
+                        beamid = item.pop(1)
+                        load_name = item.pop(0)
+                    
+                    #load_name = item[0]
                     try:
                         self.__setitem__(load_name, load_name)
                     except Warning:
                         pass
                     #
                     bload = self.__getitem__(load_name)
-                    beamid = item[1]
-                    bload._beam[beamid] = item[2:]
+                    #beamid = item[1]
+                    bload._beam[beamid] = item
             else:
                 load_name = values[0]
                 try:
@@ -436,6 +459,17 @@ class LoadCaseBasic(BasicLoadMain):
                 bload = self.__getitem__(load_name)
                 beamid = values[1]
                 bload._beam[beamid] = values[2:]
+        
+        elif isinstance(values, dict):
+            load_name = values['load']
+            beamid = values['beam']
+            try:
+                self.__setitem__(load_name, load_name)
+            except Warning:
+                pass
+            #
+            bload = self.__getitem__(load_name)
+            bload._beam[beamid] = values    
         #
         # dataframe input
         try:

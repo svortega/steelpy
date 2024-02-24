@@ -19,11 +19,11 @@ from steelpy.utils.units.buckingham import Number
 from steelpy.utils.math.operations import trnsload
 from steelpy.utils.math.operations import linspace
 # steelpy.
-from steelpy.ufo.load.process.operations import(check_list_units,
-                                                check_beam_dic,
-                                                check_point_dic,
-                                                get_beam_node_load,
-                                                get_beam_udl_load)
+from steelpy.ufo.load.process.operations import(get_BeamLoad_list_units,
+                                                get_BeamLine_dic,
+                                                get_BeamLoad_dic,
+                                                get_BeamNode_load,
+                                                get_BeamLine_load)
 #
 #
 # steelpy.
@@ -448,18 +448,18 @@ class BeamLoadBasic:
         #
         # update inputs
         if isinstance(line_load, dict):
-            udl = check_beam_dic(line_load)
+            udl = get_BeamLine_dic(line_load)
             title = udl.pop()
             
         elif isinstance(line_load[-1], str):
             title = line_load.pop()
             if isinstance(line_load[0], Number):
-                udl = check_list_units(line_load)
+                udl = get_BeamLoad_list_units(line_load)
             else:
-                udl = get_beam_udl_load(line_load)
+                udl = get_BeamLine_load(line_load)
         else:
             title ='NULL'
-            udl = get_beam_udl_load(line_load)
+            udl = get_BeamLine_load(line_load)
         #
         # get system local = 1
         try:
@@ -480,19 +480,19 @@ class BeamLoadBasic:
         """ get point load in beam local system"""
         # update inputs
         if isinstance(point_load, dict):
-            point = check_point_dic(point_load)
+            point = get_BeamLoad_dic(point_load)
             title = point.pop()
         
         elif isinstance(point_load[-1], str):
             title = point_load.pop()
             if isinstance(point_load[0], Number):
-                point = check_list_units(point_load)
+                point = get_BeamLoad_list_units(point_load)
             else:
-                point = get_beam_node_load(point_load)
+                point = get_BeamNode_load(point_load)
         
         else:
             title = 'NULL'
-            point = get_beam_node_load(point_load)
+            point = get_BeamNode_load(point_load)
         #
         # get system local = 1
         try: # Local system

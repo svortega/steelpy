@@ -13,9 +13,9 @@ from typing import NamedTuple
 #from steelpy.process.units.main import Units
 from steelpy.utils.io_module.text import match_line
 # steelpy.f2uModel.load.process
-from .operations import (check_list_units, 
+from .operations import (get_BeamLoad_list_units, 
                          check_list_number, 
-                         check_point_dic)
+                         get_BeamLoad_dic)
 
 #
 #
@@ -116,9 +116,10 @@ class SelfWeight:
 #
 def get_gravity_load(load, steps: int=3):
     """ """
+    1 / 0
     if isinstance(load, (list, tuple)):
         try:
-            load = check_list_units(load)
+            load = get_BeamLoad_list_units(load)
             load = load[:steps]
         except AttributeError:
             load = check_list_number(load, steps=steps)
