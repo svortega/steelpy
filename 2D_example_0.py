@@ -66,7 +66,7 @@ print(mesh.node())
 # ----------------------------------------------------
 #
 # [node_id, type, fixity]
-mesh.boundary([[1, 'support', 'fixed'],
+mesh.boundary([[1, 'support', 'pinned'],
                [4, 'support', 'fixed']])
 #
 print(mesh.boundary())

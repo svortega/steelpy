@@ -167,7 +167,7 @@ class LoadTypeSQL(LoadTypeBasic):
     @property
     def _labels(self):
         """ """
-        query = (self._component)
+        query = (self._component, )
         table = 'SELECT Load.name \
                  FROM Load WHERE component_id = ?;'
         conn = create_connection(self._db_file)

@@ -75,8 +75,10 @@ class BoundaryNodeSQL(BoundaryNode):
             self._labels.index(node_name)
             conn = create_connection (self._db_file)
             data = get_boundary(conn, node_id)
-            return BoundaryItem(*data[2:8], number=data[0],
-                                name=data[1], node=node_name)
+            return BoundaryItem(*data[2:8],
+                                number=data[0],
+                                name=data[1],
+                                node=node_name)
         except ValueError:
             return False
     #
@@ -117,10 +119,11 @@ class BoundaryNodeSQL(BoundaryNode):
             title = fixity[6]
         except IndexError:
             title = None
-        except TypeError:
-            title = None
-            fixity = [0, 0, 0, 0, 0, 0] # free
-
+        #except TypeError:
+        #    title = None
+        #    fixity = [0, 0, 0, 0, 0, 0] # free
+        #
+        #
         project = (node_id, *fixity[:6], title, )
         sql = 'INSERT INTO NodeBoundary(node_id,\
                                          x, y, z, rx, ry, rz,\

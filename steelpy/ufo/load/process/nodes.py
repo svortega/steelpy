@@ -18,7 +18,7 @@ from .operations import (get_value_point,
                          #check_point_dic)
  
 from steelpy.utils.dataframe.main import DBframework
-# from steelpy.f2uModel.load.sqlite.node import NodeLoadSQL
+import numpy as np
 
 #
 # ---------------------------------
@@ -69,29 +69,65 @@ class PointNode(NamedTuple):
 #
 # ---------------------------------
 #
-class NodeForce(NamedTuple):
+class DispNode(NamedTuple):
     """
     """
-    fx: float
-    fy: float
-    fz: float
-    mx: float
-    my: float
-    mz: float
+    x: float
+    y: float
+    z: float
+    rx: float
+    ry: float
+    rz: float
     name: int|str
-    load_name: str
-    system:str
-    load_complex:int
+    title: str
+    load_name: int|str
+    system: int
+    load_complex: int
+    load_type:str = "Nodal Displacement"
     #
     def __str__(self, units:str="si") -> str:
         """ """
-        output  = (f"{str(self.name):12s} {10*' '} "
-                   f"{self.fx: 1.3e} {self.fy: 1.3e} {self.fy: 1.3e}"
-                   f"{0: 1.3e} {0: 1.3e} {0: 1.3e}\n")
-        #step = 12*" "
-        output += (f"{self.coordinate_system.upper():12s} {10*' '} "
-                   f"{self.mx: 1.3e} {self.my: 1.3e} {self.mz: 1.3e}\n")
+        output = (f"{str(self.name):12s} {10 * ' '} "
+                  f"{self.x: 1.3e} {self.y: 1.3e} {self.z: 1.3e} "
+                  f"{self.coordinate_system.upper():6s} "
+                  f"{self.load_complex}\n")
+                  
+        #
+        if (load_title := self.title) == "NULL":
+            load_title = ""        
+        step = self.load_type
+        output += (f"{step:12s} {10 * ' '} "
+                   f"{self.rx: 1.3e} {self.ry: 1.3e} {self.rz: 1.3e} "
+                   f"{str(load_title)}\n")
         return output
+    #
+    #def Cpmt(self):
+    #    """ Penalty Method technique"""
+    #    factor = self.Cfactor()
+    #    
+    #    disp = [self.x, self.y, self.z,
+    #            self.rx, self.ry, self.rz]
+    #    disp = [item *  factor[x]
+    #            for x, item in enumerate(disp)]
+    #    return disp
+    #
+    #def Cfactor(self):
+    #    """ """
+    #    Ktranslation = 10**10
+    #    Krotation = 10**12
+    #    # x, y, z
+    #    translation = [Ktranslation] * 3
+    #    # rx, ry, rz
+    #    rotation = [Krotation] * 3
+    #    factor = translation + rotation
+    #    return factor 
+    #
+    #def Kp(self, Kg):
+    #    """ """
+    #    kp =  np.zeros((12, 12))
+    #    stiffness = Kg.max()
+    #    factor = self.Cfactor(stiffness)
+    #    
     #
     @property
     def coordinate_system(self):

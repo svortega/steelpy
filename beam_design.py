@@ -2,7 +2,7 @@ from steelpy import Beam #, SimpleBeam
 from steelpy import Units
 #
 from steelpy import UFOmodel
-from steelpy import Trave3D
+from steelpy import Trave3D, Trave2D
 #
 import matplotlib.pyplot as plt
 
@@ -13,8 +13,8 @@ units = Units()
 #
 # beam class
 beam = Beam(name='beam_test', steps=10)
-beam.L = 15*units.ft
-#beam.L = 5*units.m
+#beam.L = 15*units.ft
+beam.L = 5*units.m
 #
 # set section
 #beam.section = ['Rectangle', 200 * units.mm, 100 * units.mm]
@@ -205,6 +205,10 @@ basic = load.basic()
 #             0 * units.N / units.m,   # qt
 #             'udly_3']])
 #
+basic.beam({'load' : 'snow load',
+            'beam': 1,
+            'type': 'line',
+            'qy': -15 * units.kN / units.m,})
 #
 #basic.beam(
            #{'load':'snow load',
@@ -235,11 +239,12 @@ basic = load.basic()
 #             'nodey_2']])
 #            ['wind load', 3, 'load', -200 * Punit, 'nodex_4']])
 #
-basic.node({'load': 'dispExample',
-            'node': 2,
-            'type': 'displacement',
-            'y': -0.103 * units.m,
-            'rz': 0.03 * units.rad,})
+#basic.node({'load': 'dispExample',
+#            'node': 2,
+#            'type': 'displacement',
+#            'y': -0.0511813 * units.m,
+#            'rz': 0.0136483 * units.rad,})
+#
 #
 mesh.build()
 #

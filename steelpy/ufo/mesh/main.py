@@ -379,34 +379,40 @@ class Mesh(ufoBasicModel):
     #
     def jbc(self):
         """ """
-        return self._nodes.jbc(supports=self._boundaries._nodes)
+        #supports=self._boundaries._nodes
+        return self._nodes.jbc()
     #
-    def neq(self):
-        """number of equations"""
-        return self._nodes.neq(supports=self._boundaries._nodes)
+    #def neq(self):
+    #    """number of equations"""
+    #    return self._nodes.neq(supports=self._boundaries._nodes)
     #
-    def K(self, solver: str|None = None): # drop: bool = True, 
+    def Ks(self, sparse: bool = False,
+           condensed: bool = True):
         """Returns the model's global stiffness matrix.
         
         Solver: numpy/banded/sparse
         """
         # get data
-        #jbc = self._nodes.jbc(supports=self._boundaries._nodes)
-        jbc = self.jbc()
-        neq = self.neq()
+        #jbc = self._nodes.jbc()
+        #neq = self._nodes.neq()
         #
         #if self._plane.m2D:
         #    jbc = jbc[self._plane.dof]
         #
-        Ka = Kmatrix(elements=self._elements, jbc=jbc, neq=neq,
-                     ndof=self._plane.ndof, solver=solver)
+        Ka = Kmatrix(elements=self._elements,
+                     nodes=self._nodes, 
+                     ndof=self._plane.ndof,
+                     condensed=condensed,
+                     sparse=sparse)
         #
         #if drop:
         #    with open("stfmx.f2u", "wb") as f:
         #        pickle.dump(jbc, f)
         #        pickle.dump(aa, f)
+        #
+        #
         #else:
-        return Ka     
+        return Ka
         #print('---')
         #return None, None
     #
@@ -418,8 +424,8 @@ class Mesh(ufoBasicModel):
                      plane=self._plane.ndof, solver=solver)
         return Kg
     #
-    def M(self, solver: str|None = None):
-        """ Element global geometric stiffness matrix"""
+    def Km(self, solver: str|None = None):
+        """ Element global mass matrix"""
         jbc = self.jbc()
         neq = self.neq()
         Ma = Mmatrix(elements=self._elements, jbc=jbc, neq=neq,

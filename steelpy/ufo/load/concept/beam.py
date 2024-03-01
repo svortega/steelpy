@@ -470,10 +470,11 @@ class BeamDistributedIM(BeamLineBasic):
         
         udl_list: list = []
         for index in index_list:
-            udl_list.append(LineBeam(self._labels[index], self._title[index],  # name, title
-                                     self._load_id[index],                     # load_name
-                                     self._component,                          # component
-                                     self._system[index], 0,                   # system, load_complex
+            udl_list.append(LineBeam(self._labels[index], # name
+                                     self._title[index],  # title
+                                     self._load_id[index],      # load_name
+                                     self._component,           # component
+                                     self._system[index],       # system
                                      #
                                      self._qx0[index], self._qy0[index],  # qx0,qy0
                                      self._qz0[index], self._qt0[index],  # qz0,qt0

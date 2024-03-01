@@ -2,15 +2,18 @@
 
 # Python stdlib imports
 from __future__ import annotations
-#from array import array
+from array import array
 #from collections.abc import Mapping
+from itertools import chain, count
 from math import isclose, dist
 from typing import NamedTuple
 import re
 
 # package imports
+from steelpy.utils.math.operations import zeros, to_matrix
 from steelpy.ufo.mesh.elements.nodes import NodePoint, NodeBasic
 from steelpy.utils.sqlite.utils import create_connection, create_table
+from steelpy.ufo.mesh.elements.boundary import BoundaryItem
 from steelpy.utils.dataframe.main import DBframework
 
 
@@ -234,12 +237,6 @@ class NodeSQL(NodeBasic):
         """
         tol: absolte tolerance in metres (0.010 m default)
         """
-        # check if point already exist
-        #try:
-        #    #system = self.system # get_coordinate_system(self.system)
-        #    #if isinstance(coordinates, system):
-        #    return coordinates.name
-        #except AttributeError:
         # get index of x coord location in existing database
         coord = self._get_coordinates(coordinates)
         #
@@ -252,9 +249,6 @@ class NodeSQL(NodeBasic):
                     if isclose(coord[2], item[5], abs_tol=tol, rel_tol=rel_tol):
                         return item[1]
         raise IOError('   error coordinate not found')
-    #
-    #
-    #
     #
     #
     def renumbering(self, new_numbers:list[int]):
@@ -316,17 +310,127 @@ class NodeSQL(NodeBasic):
         return [max_x, max_y, max_z], [min_x, min_y, min_z]
     #
     #
-    #def get_number(self, start:int=1):
-    #    """
-    #    """
-    #    try:
-    #        n = max(self._labels) + 1
-    #    except ValueError:
-    #        n = start
-    #    #
-    #    while True:
-    #        yield n
-    #        n += 1    
+    #
+    #
+    # ---------------------------------
+    #
+    #@property
+    def jbc(self):
+        """ joints with boundary"""
+        nnp = len(self._labels)
+        jbc = zeros(nnp, 6, code='I')
+        #
+        #for item in self._labels:
+        #    node = self.__getitem__(item)
+        #    if node.boundary:
+        #        ind = node.index
+        #        jbc[ind] = node.boundary[:6]                
+        #
+        conn = create_connection(self.db_file)
+        with conn:        
+            fixity = pull_boundary(conn,
+                                   component=self._component)
+        # update jbc 
+        for item in fixity:
+            jbc[item[0]] = item[4:10]
+        #
+        #
+        #dofu = self.jwbc()
+        #
+        #jbc = to_matrix(jbc, 6)
+        df_jbc = self._db.DataFrame(data=jbc,
+                                    columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])
+        jbc = df_jbc[self._plane.dof].values.tolist()
+        jbc = list(chain.from_iterable(jbc))
+        #
+        counter = count(start=1)
+        jbc = [next(counter) if item == 0 else 0
+               for item in jbc]
+        # update jbc
+        #self._jbc = array('I', jbc)
+        #
+        #jbc = to_matrix(self._jbc, self._plane.ndof)
+        jbc = to_matrix(jbc, self._plane.ndof)
+        df_jbc = self._db.DataFrame(data=jbc, columns=self._plane.dof)
+        node_name = list(self._labels)
+        df_jbc['node_name'] = node_name
+        df_jbc = df_jbc.set_index('node_name', drop=True)    
+        # remove rows with zeros
+        #df_jbc = df_jbc[df_jbc.any(axis=1)]
+        #df_jbc.replace(0, self._db.nan, inplace=True)
+        #df_jbc = df_jbc.notnull()        
+        return df_jbc
+    #
+    def jwbc(self):
+        """ joints with boundary condition"""
+        project = (self._component, )
+        table = 'SELECT Node.mesh_idx, \
+                 IIF(Node.number = NodeBoundary.node_id,\
+                     (NodeBoundary.x, NodeBoundary.y, NodeBoundary.z, \
+                     NodeBoundary.rx, NodeBoundary.ry, NodeBoundary.rz) ,\
+                     (0,0,0,0,0,0)) AS JBC \
+                FROM Node, NodeBoundary \
+                WHERE Node.component_id = ?'
+        #table = 'SELECT Node, NodeBoundary \
+        #            CASE \
+        #                WHEN Node.number = NodeBoundary.node_id \
+        #                    THEN Node.mesh_idx,  NodeBoundary.*\
+        #                ELSE: Node.mesh_idx \
+        #            END \
+        #        FROM Node, NodeBoundary \
+        #        WHERE Node.component_id = ?'
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table, project)
+            data = cur.fetchall()
+        data
+        return data        
+    #
+    def neq(self):
+        """ Number the equations  in jbc from 1 up to the order.
+           Start assigning equation numbers for zero dof's
+           from 1 up;  only zero given a number. """
+        #
+        if not self._jbc:
+            self.jbc()
+        neq = max(self._jbc)
+        #jbc = to_matrix(self._jbc, 6)
+        return neq
+    #
+    #
+    def newXXX(self):
+        """ """
+        jbcc = self.jbc().stack().values
+        index = list(reversed([i for i, item in enumerate(jbcc)
+                               if item == 0]))
+        return index    
+    #
+    def DOF_unreleased(self):
+        """ list of the indices for the unreleased DOFs """
+        project = (self._component, )
+        table = 'SELECT Node.mesh_idx, Node.name, \
+                        NodeBoundary.* \
+                 FROM Node, NodeBoundary \
+                 WHERE Node.number = NodeBoundary.node_id \
+                 AND Node.component_id = ? \
+                 ORDER BY Node.mesh_idx ASC'
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table, project)
+            data = cur.fetchall()
+        #
+        dof = 6
+        new = []
+        for row in data:
+            idx = row[0]
+            ndof = idx * dof
+            new.extend([ndof + x
+                        for x, item in enumerate(row[4:-1])
+                        if x != 0])
+        data
+        return new
     #
     # ---------------------------------
     # dataframe
@@ -426,39 +530,89 @@ def pull_Node(conn, node_name:int, component: int, item:str='*'):
     #              name=node_name, number=data[0], 
     #              index=data[10])
     #
-    boundary = pull_node_boundary(conn, node_id=data[2])
+    boundary = pull_node_boundary(conn,
+                                  node_name=node_name,
+                                  component=component)
     #
-    node = NodePoint(*data, boundary=boundary)
+    node = NodePoint(*data,
+                     boundary=boundary)
     return node.system()
 #
 def pull_node_item(conn, node_name, component, item):
     """ """
     project = (node_name, component)
-    sql = f'SELECT NodeCoordinate.{item}, \
+    table = f'SELECT NodeCoordinate.{item}, \
                    Node.title, Node.mesh_idx \
             FROM Node, NodeCoordinate \
             WHERE Node.number =  NodeCoordinate.node_id\
             AND Node.name = ? \
             AND Node.component_id = ?'
     cur = conn.cursor()
-    cur.execute(sql, project)
+    cur.execute(table, project)
     record = cur.fetchone()
     return [*project, *record[1:]]
 #
-def pull_node_boundary(conn, node_id, item:str="*"):
+def pull_node_boundary(conn, node_name: int|str,
+                       component: int, item:str="*"):
     """
     """
     #
-    project = (node_id,)
-    sql = 'SELECT {:} FROM NodeBoundary WHERE node_id = ?'.format(item)
-    cur = conn.cursor()
-    cur.execute(sql, project)
-    record = cur.fetchone()
+    #project = (node_name, component, )
+    #table = 'SELECT NodeBoundary.{:} \
+    #         FROM Node, NodeBoundary \
+    #         WHERE Node.number = NodeBoundary.node_id \
+    #         AND Node.name = ? \
+    #         AND Node.component_id = ?'.format(item)
+    #cur = conn.cursor()
+    #cur.execute(table, project)
+    #data = cur.fetchone()
+    #
+    data = pull_boundary(conn, component,
+                         node_name, item)
     try:
-        boundary = record[2:8]
-    except TypeError:
-        boundary = [1, 1, 1, 1, 1, 1]
+        data = data[0]
+        boundary = BoundaryItem(*data[4:10],
+                                number=data[2],
+                                name=data[3],
+                                node=node_name)
+    except IndexError:
+        boundary = None
+    #
     return boundary
+#
+def pull_boundary(conn, component: int,
+                  node_name: int|str|None = None,
+                  item:str="*"):
+    """pull all boundary data"""
+    #
+    project = [component]
+    #
+    table = 'SELECT Node.mesh_idx, Node.name, \
+             NodeBoundary.{:} \
+             FROM Node, NodeBoundary \
+             WHERE Node.number = NodeBoundary.node_id \
+             AND Node.component_id = ?'.format(item)
+    #
+    if node_name:
+        table += 'AND Node.name = ?'
+        project.extend([node_name])
+    # 
+    cur = conn.cursor()
+    cur.execute(table, tuple(project))
+    data = cur.fetchall()
+    return data
+#
+def pull_node_number(conn, node_name:int,
+                     component: int,):
+    """ """
+    project = (node_name, component)
+    table = f'SELECT number FROM Node \
+              WHERE Node.name = ? \
+              AND Node.component_id = ?'
+    cur = conn.cursor()
+    cur.execute(table, project)
+    record = cur.fetchone()
+    return record[0]
 #
 # ---------------------------------
 #
@@ -470,5 +624,7 @@ def update_colum(conn, colname: str, newcol: list):
             AND component_id = ?;'
     cur = conn.cursor()
     cur.executemany(table, newcol)
-#    
+#
+# ---------------------------------
+#
 #

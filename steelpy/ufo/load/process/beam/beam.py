@@ -92,7 +92,15 @@ class BeamLoadClass:
                          J=section.J, E=material.E,
                          G=material.G, Cw=section.Cw)
         #
-        bops.supports(end1=nodes[0].fixity, end2=nodes[1].fixity)
+        end1 = 'fixed'
+        if nodes[0].boundary:
+            end1 = nodes[0].fixity
+        #
+        end2 = 'fixed'
+        if nodes[1].boundary:
+            end2=nodes[1].fixity
+            
+        bops.supports(end1, end2)
         #bops.supports(end1='fixed', end2='fixed')
         #
         Fbar = self.Fx(x=L, L=L,

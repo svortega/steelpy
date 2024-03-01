@@ -47,7 +47,7 @@ class NodeBasic(Mapping):
         set with node/element
     """
     __slots__ = ['_labels', '_system', #'_number', 
-                 '_jbc', '_db','_plane']
+                 '_db','_plane'] # '_jbc', 
 
     def __init__(self, system:str) -> None:
         """
@@ -57,7 +57,7 @@ class NodeBasic(Mapping):
         #self._number : array = array('I', [])
         self._system = system # get_coordinate_system(system)
         #
-        self._jbc: array = array('I', [])
+        #self._jbc: array = array('I', [])
         self._db = DBframework()
     #
     def __len__(self) -> int:
@@ -129,26 +129,6 @@ class NodeBasic(Mapping):
         return coordinates
     #
     #
-    #def get_point_name(self, coordinates, tol:float=0.01):
-    #    """ 
-    #    tol: absolte tolerance in metres (0.010 m default)
-    #    """
-    #    # check if point already exist
-    #    try:
-    #        return coordinates.name
-    #    except AttributeError:
-    #        # get index of x coord location in existing database
-    #        coord = self._get_coordinates(coordinates)
-    #        indeces = [index for index, item in enumerate(self._x)
-    #                   if isclose(coord[0], item, abs_tol=tol)]
-    #        # check if y and z coord match 
-    #        if indeces:
-    #            for index in indeces:
-    #                if isclose(coord[1], self._y[index], abs_tol=tol):
-    #                    if isclose(coord[2], self._z[index], abs_tol=tol):
-    #                        return self._labels[index]
-    #    raise IOError('   error coordinate not found')
-    #
     def get_new_point(self, coordinates):
         """ """
         #create a new point
@@ -177,55 +157,65 @@ class NodeBasic(Mapping):
     # ----------------------------------
     #
     #@property
-    def jbc(self, supports):
-        """ joints with boundary"""
-        nnp = len(self._labels)
-        jbc = zeros(nnp, 6, code='I')
-        #
-        for node_name, bd in supports.items():
-            node = self.__getitem__(bd.node)
-            #ind = self._nodes[bd.node].index
-            ind = node.index
-            jbc[ind] = bd[:6]
-        #
-        #jbc = self.jbc.transposed()
-        #jbc = boundaries.transposed()
-        #jbc = list(it.chain.from_iterable(jbc))
-        #
-        #jbc = to_matrix(jbc, 6)
-        df_jbc = self._db.DataFrame(data=jbc,
-                                    columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])
-        jbc = df_jbc[self._plane.dof].values.tolist()
-        jbc = list(chain.from_iterable(jbc))
-        #
-        counter = count(start=1)
-        jbc = [next(counter) if item == 0 else 0
-               for item in jbc]
-        # update jbc
-        self._jbc = array('I', jbc)
-        #
-        jbc = to_matrix(self._jbc, self._plane.ndof)
-        df_jbc = self._db.DataFrame(data=jbc, columns=self._plane.dof)
-        node_name = list(self._labels)
-        df_jbc['node_name'] = node_name
-        df_jbc = df_jbc.set_index('node_name', drop=True)    
-        # remove rows with zeros
-        #df_jbc = df_jbc[df_jbc.any(axis=1)]
-        #df_jbc.replace(0, self._db.nan, inplace=True)
-        #df_jbc = df_jbc.notnull()        
-        return df_jbc
+    #def jbc(self):
+    #    """ joints with boundary"""
+    #    nnp = len(self._labels)
+    #    jbc = zeros(nnp, 6, code='I')
+    #    #
+    #    for item in self._labels:
+    #        node = self.__getitem__(item)
+    #        if node.boundary:
+    #            ind = node.index
+    #            jbc[ind] = node.boundary[:6]                
+    #    #
+    #    #
+    #    #jbc = self.jbc.transposed()
+    #    #jbc = boundaries.transposed()
+    #    #jbc = list(it.chain.from_iterable(jbc))
+    #    #
+    #    #jbc = to_matrix(jbc, 6)
+    #    df_jbc = self._db.DataFrame(data=jbc,
+    #                                columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])
+    #    jbc = df_jbc[self._plane.dof].values.tolist()
+    #    jbc = list(chain.from_iterable(jbc))
+    #    #
+    #    counter = count(start=1)
+    #    jbc = [next(counter) if item == 0 else 0
+    #           for item in jbc]
+    #    # update jbc
+    #    self._jbc = array('I', jbc)
+    #    #
+    #    jbc = to_matrix(self._jbc, self._plane.ndof)
+    #    df_jbc = self._db.DataFrame(data=jbc, columns=self._plane.dof)
+    #    node_name = list(self._labels)
+    #    df_jbc['node_name'] = node_name
+    #    df_jbc = df_jbc.set_index('node_name', drop=True)    
+    #    # remove rows with zeros
+    #    #df_jbc = df_jbc[df_jbc.any(axis=1)]
+    #    #df_jbc.replace(0, self._db.nan, inplace=True)
+    #    #df_jbc = df_jbc.notnull()        
+    #    return df_jbc
     #
-    def neq(self, supports):
-        """ Number the equations  in jbc from 1 up to the order.
-           Start assigning equation numbers for zero dof's
-           from 1 up;  only zero given a number. """
-        #
-        if not self._jbc:
-            self.jbc(supports)
-        neq = max(self._jbc)
-        #jbc = to_matrix(self._jbc, 6)
-        return neq
-    #    
+    #def neq(self):
+    #    """ Number the equations  in jbc from 1 up to the order.
+    #       Start assigning equation numbers for zero dof's
+    #       from 1 up;  only zero given a number. """
+    #    #
+    #    if not self._jbc:
+    #        self.jbc()
+    #    neq = max(self._jbc)
+    #    #jbc = to_matrix(self._jbc, 6)
+    #    return neq
+    #
+    #
+    #def new(self):
+    #    """ """
+    #    jbcc = self.jbc().stack().values
+    #    index = list(reversed([i for i, item in enumerate(jbcc)
+    #                           if item == 0]))
+    #    return index
+    #
+    #
 #
 #
 #
@@ -430,7 +420,7 @@ class CoordCartesian(NamedTuple):
     name: int | str
     number: int
     index:int
-    boundary: list | tuple #= (0, 0, 0, 0, 0, 0)
+    boundary: tuple |None
     system: str = "cartesian"
     #sets: List[Tuple]
     #
@@ -451,7 +441,9 @@ class CoordCartesian(NamedTuple):
     #    """
     #    """
     #    self.boundaries[self.number] = value
-
+    #
+    # ----------------------------------
+    #
     def __str__(self) -> str:
         return "{:12d} {: 12.5f} {: 12.5f} {: 12.5f}\n"\
             .format(self.name, self.x, self.y, self.z)
@@ -465,16 +457,20 @@ class CoordCartesian(NamedTuple):
             return True
         return False
     #
+    # ----------------------------------
+    #
     def distance(self, other):
         """ distance between two nodes"""
         #print("here")
         node1 = [self.x, self.y, self.z]
         return dist(node1[:3], other[:3])
     #
+    # ----------------------------------
+    #
     @property
     def fixity(self) -> str:
         """ """
-        boundary = tuple(self.boundary)
+        boundary = tuple(self.boundary[:6])
         match boundary:
             case (1, 1, 1, 1, 1, 1):
                 return 'fixed'
@@ -482,10 +478,18 @@ class CoordCartesian(NamedTuple):
                 return 'free'
             case (1, 1, 1, 1, 0, 0):
                 return 'pinned'
-            case (0, 1, 1, 1, 0, 0):
+            case (1, 0, 1, 1, 0, 0):
                 return 'guide'
+            case (1, 1, 0, 1, 0, 0):
+                return 'guide'            
+            case (0, 1, 1, 1, 0, 0):
+                return 'rolled'            
             case _:
                 return 'user_defined'
+    #
+    #def dof(self):
+    #    """ """
+    #    return self.index
 
 class CoordCylindrical(NamedTuple):
     """
@@ -537,7 +541,7 @@ class NodePoint:
     phi: float | None
     title: str | None
     index: float | None
-    boundary : list | tuple
+    boundary : tuple | None
     #
     def system(self):
         """ """

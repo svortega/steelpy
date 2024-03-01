@@ -86,8 +86,8 @@ class BoundaryNode(Mapping):
             elif re.match(r"\b(pinn(ed)?|roll(er)?)\b", fixity, re.IGNORECASE):
                 return [1,1,1,1,0,0]
             
-            #elif re.match(r"\b(guide(d)?|roll(ed)?)\b", fixity, re.IGNORECASE):
-            #    return [0,1,1,1,0,0]
+            elif re.match(r"\b(guide(d)?)\b", fixity, re.IGNORECASE):
+                return [0,1,1,1,0,0]
             
             elif re.match(r"\b(free)\b", fixity, re.IGNORECASE):
                 return [0,0,0,0,0,0]

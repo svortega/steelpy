@@ -102,14 +102,17 @@ class TraveItem:
             # Get K matrix
             # ------------------------------
             #mesh = self._mesh
-            Kg = self._mesh.K(solver=method) 
+            Ks = self._mesh.Ks(sparse = False,
+                               condensed = False) 
             jbc = self._mesh.jbc()
             #
             # ------------------------------
             # Get load vector
             # ------------------------------        
-            # 
-            #load =  mesh.load()
+            #
+            #self._mesh._load._basic._nodes.displacement
+            #
+            #load =  self._mesh.load()
             #basic_load = load.basic()
             #Fn_df = self._mesh.load().case().Fn()
             Fn = self._mesh._load._basic.Fn()
@@ -118,9 +121,10 @@ class TraveItem:
             # Static solution
             # ------------------------------
             #
-            # plane=mesh._plane, method=method
             #      
-            Udf = static.solve(Kg=Kg, Fn=Fn, jbc=jbc)
+            Udf = static.solve(Ks=Ks, Fn=Fn, jbc=jbc)
+            #
+            #static.PMT(K=Kg, basic=basic_load, jbc=jbc)
             #
             # -----------------------------------
             # Postprocess

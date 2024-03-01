@@ -882,8 +882,8 @@ class NodeGenRespEq:
                 1 *  bload.Mz, # Mz
                #1 * (lnforce0[1] - bload.Fy),  # Vy
               #-1 * (lnforce0[5] - bload.Mz), # Mz               
-               1 * lndisp0[5],                # thetaz
-               1 * lndisp0[1]]                # dy
+               -1 * lndisp0[5],                # thetaz
+               -1 * lndisp0[1]]                # dy
         #
         if self.plane.plane2D:
             #
@@ -894,8 +894,8 @@ class NodeGenRespEq:
                     1 *  bload.My,                  # My
                    #1 * (lnforce0[2] - bload.Fz),   # Vz
                    #-1 * (lnforce0[4] - bload.My),  # My                   
-                   1 * lndisp0[4],                  # thetay
-                   1 * lndisp0[2]]                  # dz
+                   -1 * lndisp0[4],                  # thetay
+                   -1 * lndisp0[2]]                  # dz
             #
             # Torsion
             #T0 = 1 * (lnforce0[3] + bload.Mx)

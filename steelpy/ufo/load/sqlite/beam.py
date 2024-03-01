@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from collections.abc import Mapping
 from typing import NamedTuple
 import re
+from math import isclose
 #
 # package imports
 #
@@ -160,109 +161,6 @@ class BeamLoadItemSQL(BeamSQLMaster):
     #    
     # -----------------------------------------------
     #
-    #def __setitem__(self, beam_name: int|str,
-    #                beam_load: list) -> None:
-    #    """
-    #    """
-    #    conn = create_connection(self.db_file)
-    #    with conn:
-    #        self._beam =  BeamItemSQL(beam_name,
-    #                                  plane=self._plane,
-    #                                  component=self._component, 
-    #                                  db_file=self.db_file)
-    #        #beam = check_element(conn, beam_name)        
-    #    try:
-    #        self._beam.name
-    #    except (TypeError, IndexError):
-    #        raise IOError(f"beam {beam_name} not found")
-    #    #
-    #    # TODO: check if _beam_id affects something else
-    #    #self._beam_id = beam_name
-    #    #self._labels.append(beam_name)
-    #    #
-    #    load_type = beam_load.pop(0)
-    #    #
-    #    if re.match(r"\b(point|node|mass)\b", str(load_type), re.IGNORECASE):
-    #        #self._load(beam).point =  beam_load[1:]
-    #        #self._point[beam_name] = beam_load[1:]
-    #        if isinstance(beam_load, dict):
-    #            load = self._get_point(beam_load)
-    #            load.insert(0, 'force')
-    #            #self._point[beam_name] = load
-    #            1 / 0
-    #        else:
-    #            if isinstance(beam_load[0], (list, tuple)):
-    #                for item in beam_load:
-    #                    load = self._get_point(item)
-    #                    #load.insert(0, 'force')
-    #                    #self._point[beam_name] = load
-    #                    with conn:
-    #                        push_point_load(conn,
-    #                                        load_name=self._name,
-    #                                        beam_name=beam_name,
-    #                                        component=self._component, 
-    #                                        point_type='force', 
-    #                                        point_load=load)                        
-    #            else:
-    #                load =  self._get_point(beam_load)
-    #                #load.insert(0, 'force')
-    #                #self._point[beam_name] = load
-    #                with conn:
-    #                    push_point_load(conn,
-    #                                    load_name=self._name,
-    #                                    beam_name=beam_name,
-    #                                    component=self._component, 
-    #                                    point_type='force', 
-    #                                    point_load=load)
-    #        
-    #    elif re.match(r"\b(line|udl)\b", str(load_type), re.IGNORECASE):
-    #        #self._load(beam).line = beam_load[1:]
-    #        if isinstance(beam_load, dict):
-    #            1 / 0
-    #            load = self._get_line(beam_load)
-    #            load.insert(0, 'load')
-    #            self._line[beam_name] = load
-    #        else:
-    #            if isinstance(beam_load[0], (list, tuple)):
-    #                #load = []
-    #                for item in beam_load:
-    #                    #load.append(self._get_line(item))
-    #                    #load[-1].insert(0, 'load')
-    #                    #self._line[beam_name] = load
-    #                    load = self._get_line(item)
-    #                    with conn:
-    #                        push_line_load(conn,
-    #                                       load_name=self._name,
-    #                                       beam_name=beam_name,
-    #                                       component=self._component, 
-    #                                       load_type='load', 
-    #                                       udl=load)
-    #            else:
-    #                load =  self._get_line(beam_load)
-    #                #load.insert(0, 'load')
-    #                #self._line[beam_name] = load
-    #                with conn:
-    #                    push_line_load(conn,
-    #                                   load_name=self._name,
-    #                                   beam_name=beam_name,
-    #                                   component=self._component, 
-    #                                   load_type='load', 
-    #                                   udl=load)                    
-    #        #
-    #        #self._line[beam_name] = beam_load[1:]
-    #        #with conn:
-    #        #    push_line_load(conn,
-    #        #                   load_name=self._name,
-    #        #                   beam_name=beam_name,
-    #        #                   component=self._component, 
-    #        #                   load_title=None,
-    #        #                   load_system=None,
-    #        #                   load_type='load', 
-    #        #                   udl=load)
-    #        
-    #    else:
-    #        raise IOError(f'Beam lod type {beam_load[0]} not implemented')
-    #
     #
     def __setitem__(self, beam_name: int|str,
                     beam_load: list) -> None:
@@ -360,11 +258,22 @@ class BeamLoadItemSQL(BeamSQLMaster):
             #gnload = [*res[7], *res[8]]
             #lnload = trnsload(gnload, beam.T3D())
             #
+            load7 = [0 if isclose(item, 0.0, abs_tol=1e-09)
+                     else item
+                     for item in lnload[7]]            
+            #
+            load8 = [0 if isclose(item, 0.0, abs_tol=1e-09)
+                     else item
+                     for item in lnload[8]]
+            #
             b2n.append([bload.load_name,
                         bload.title,
                         global_system, 
-                        beam.number, node1.number,
-                        lnload[7], node2.number, lnload[8]])
+                        beam.number,
+                        node1.number,
+                        load7,
+                        node2.number,
+                        load8])
         # point load
         for bload in point:
             beam = beams[bload.name]
@@ -375,11 +284,22 @@ class BeamLoadItemSQL(BeamSQLMaster):
             #gnload = [*res[7], *res[8]]
             #lnload = trnsload(gnload, beam.T3D())
             #
+            load7 = [0 if isclose(item, 0.0, abs_tol=1e-09)
+                     else item
+                     for item in lnload[7]]            
+            #
+            load8 = [0 if isclose(item, 0.0, abs_tol=1e-09)
+                     else item
+                     for item in lnload[8]]            
+            #
             b2n.append([bload.load_name,
                         bload.title,
                         global_system, 
-                        beam.number, node1.number,
-                        lnload[7], node2.number, lnload[8]])
+                        beam.number,
+                        node1.number,
+                        load7,
+                        node2.number,
+                        load8])
         #
         return b2n    
     #
@@ -474,69 +394,7 @@ class BeamLoadItemSQL(BeamSQLMaster):
     #
     #
     # -----------------------------------------------
-    #    
-    #
-    # TODO : chekc if works for dict
-    #def _get_line(self, line_load: list|dict):
-    #    """ get line load in beam local system"""
-    #    #
-    #    # update inputs
-    #    if isinstance(line_load, dict):
-    #        udl = check_beam_dic(line_load)
-    #        title = udl.pop()
-    #        
-    #    elif isinstance(line_load[-1], str):
-    #        title = line_load.pop()
-    #        if isinstance(line_load[0], Number):
-    #            udl = check_list_units(line_load)
-    #        else:
-    #            udl = get_beam_udl_load(line_load)
-    #    else:
-    #        title ='NULL'
-    #        udl = get_beam_udl_load(line_load)
-    #    #
-    #    # get system local = 1
-    #    try:
-    #        1 / self._system_flag
-    #        return [*udl, 1, title]
-    #    except ZeroDivisionError:
-    #        # local nodal loading
-    #        nload = [*udl[0:4], 0, 0,
-    #                 *udl[4:8], 0, 0]
-    #        nload = trnsload(nload, self._beam.T3D())
-    #        #nload = [*nload[:4], *nload[6:10]] 
-    #        return [*nload[:4],    # end 1 [qx, qy, qz, qt]
-    #                *nload[6:10],  # end 2 [qx, qy, qz, qt]
-    #                *udl[8:],      # [L0, L1]
-    #                1, title]      # Local system, title
-    ##
-    #def _get_point(self, point_load: list|dict):
-    #    """ get point load in beam local system"""
-    #    # update inputs
-    #    if isinstance(point_load, dict):
-    #        point = check_point_dic(point_load)
-    #        title = point.pop()
-    #    
-    #    elif isinstance(point_load[-1], str):
-    #        title = point_load.pop()
-    #        if isinstance(point_load[0], Number):
-    #            point = check_list_units(point_load)
-    #        else:
-    #            point = get_beam_node_load(point_load)
-    #    
-    #    else:
-    #        title = 'NULL'
-    #        point = get_beam_node_load(point_load)
-    #    #
-    #    # get system local = 1
-    #    try: # Local system
-    #        1 / self._system_flag
-    #        return [*point, 1, title]
-    #    except ZeroDivisionError: # global to local system
-    #        pload = [*point[:6], 0, 0, 0, 0, 0, 0]
-    #        pload = trnsload(pload, self._beam.T3D())
-    #        return [*pload[:6], point[6], 1, title]
-    #    
+    #      
     # -----------------------------------------------
     #
     @property
@@ -711,74 +569,6 @@ class BeamLoadTypeSQL(BeamTypeBasic):
     #    return self    
     #
     # ------------------
-    #
-    #@property
-    #def point(self):
-    #    """ Concentrated force """
-    #    return self._point
-    
-    #@point.setter
-    #def point(self, beam_load):
-    #    """ Concentrated force """
-    #    load =  self._get_point(beam_load)
-    #    #
-    #    conn = create_connection(self._db_file)
-    #    with conn:
-    #        push_point_load(conn,
-    #                        load_name=self._name,
-    #                        beam_name=self._beam.name,
-    #                        component=self._component, 
-    #                        point_type='force', 
-    #                        point_load=load)        
-    #    #1 / 0
-    #
-    # ------------------
-    #
-    #@property
-    #def line(self):
-    #    """
-    #    Linear Varying Load (lvl) - Non Uniformly Distributed Load
-    #    
-    #    value : [qx1, qy1, qz1, qt1,
-    #             qx2, qy2, qz2, qt2,
-    #             L1, L2]
-    #
-    #                    |
-    #         q0         | q1
-    #    o------|        |----------o
-    #    |                          |
-    #    +  L0  +        +    L1    +
-    #
-    #    """
-    #    return self._line
-    
-    #@line.setter
-    #def line(self, beam_load):
-    #    """
-    #    Linear Varying Load (lvl) - Non Uniformly Distributed Load
-    #    
-    #    value : [qx1, qy1, qz1, qt1,
-    #             qx2, qy2, qz2, qt2,
-    #             L1, L2]
-    # 
-    #                    |
-    #         q0         | q1
-    #    o------|        |----------o
-    #    |                          |
-    #    +  L0  +        +    L1    +
-    #
-    #    """
-    #    load =  self._get_line(beam_load)
-    #    #
-    #    conn = create_connection(self._db_file)
-    #    with conn:
-    #        push_line_load(conn,
-    #                       load_name=self._name,
-    #                       beam_name=self._beam.name,
-    #                       component=self._component,
-    #                       load_type='load', 
-    #                       udl=load)         
-    #    #1 / 0
 #
 #
 #

@@ -146,11 +146,18 @@ class BasicLoadMain(Mapping):
         load_name = list(self.keys())
         for lname in load_name:
             lcase = self.__getitem__(lname)
-            #lcase =  self._basic[lname]
+            #
+            # -------------------------------
+            # Node load (displacement)
+            # -------------------------------            
+            #
+            #lcase._node.pft(beams=beams)
+            #
             # -------------------------------
             # beam line load (line & point)
             # -------------------------------
             lcase._beam.fer(beams=beams)
+            #
             # -------------------------------
             # plates
             # -------------------------------
@@ -173,10 +180,10 @@ class BasicLoadMain(Mapping):
         dfnodal = self._nodes.df
         dfnodal = dfnodal.reindex(columns=['load_name', 'component_name', 
                                            'load_id', 'load_level',
-                                          'load_title', 'load_comment', 'load_system',
-                                          'element_name', 'node_name',
-                                          'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                                          'x', 'y', 'z', 'rx', 'ry', 'rz'])
+                                           'load_title', 'load_comment', 'load_system',
+                                           'element_name', 'node_name', 'node_index', 
+                                           'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                                           'x', 'y', 'z', 'rx', 'ry', 'rz'])
         # Select FER's force & displacement
         # [Fx, Fy, Fz, Mx, My, Mz] and [x, y, z, rx, ry, rz]
         columns = [*self._plane.hforce, *self._plane.hdisp]
@@ -184,7 +191,7 @@ class BasicLoadMain(Mapping):
         dfnodal = (dfnodal.groupby(['load_name', 'component_name',
                                     'load_id', 'load_level',
                                     'load_title','load_system',
-                                    'node_name'])
+                                    'node_name', 'node_index'])
                    [columns].sum())
         dfnodal.reset_index(inplace=True)
         return dfnodal
