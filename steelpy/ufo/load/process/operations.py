@@ -409,7 +409,7 @@ def get_BeamLoad_dic(data: dict)->list[float]:
             elif re.match(r"\b(mz|in(_)?plane)\b", key, re.IGNORECASE):
                 new_data[5] = item.convert("newton*metre").value
             #
-            elif re.match(r"\b((l|d(istance)?)(_)?(1|start)?)\b", key, re.IGNORECASE):
+            elif re.match(r"\b((l|d(istance)?)(_)?(0|1|start)?)\b", key, re.IGNORECASE):
                 new_data[6] = item.value
             
             elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
@@ -440,7 +440,7 @@ def get_BeamLoad_dic(data: dict)->list[float]:
             #elif re.match(r"\b(mz|in(_)?plane)\b", key, re.IGNORECASE):
             #    new_data[5] = item.convert("newton*metre").value
             #
-            elif re.match(r"\b((l|d(istance)?)(_)?(1|start)?)\b", key, re.IGNORECASE):
+            elif re.match(r"\b((l|d(istance)?)(_)?(0|1|start)?)\b", key, re.IGNORECASE):
                 new_data[6] = item.value
             
             elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
@@ -464,7 +464,7 @@ def get_BeamLine_dic(data: dict)->list:
                title]
     """
     #loat_type = data['type']
-    new_data = [0,0,0,0, None,None,None,None, 0,0, 'NULL']
+    new_data = [0,0,0,0, None,None,None,None, 0,0, None]
     for key, item in data.items():
         #
         # End 1

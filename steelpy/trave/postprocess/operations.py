@@ -105,11 +105,6 @@ class MainProcess:
     #
     # -----------------------------------------------------------
     #
-    #
-    #def input(self, load, ndisp):
-    #    """ """
-    #    self._load = load
-    #    self._ndisp = ndisp
     #    
     #
     # -----------------------------------------------------------
@@ -289,23 +284,23 @@ class MainProcess:
         """ """
         elements = self._mesh._elements
         #
-        #loadCase = self._mesh._load.case()
         basic_load = self._mesh._load._basic
-        #df_nload = basic_load.node_df()
-        df_nload = basic_load._nodes.df
-        bload_func = basic_load.process(elements=elements,
-                                        steps=steps) 
+        #
+        bload_func = basic_load.process(steps=steps) 
         #
         # Solve node and element foce and displacements
+        #df_nload = basic_load._nodes.df
+        benl_df = self._mesh._load._basic.ENL()
+        #df_nload = self._mesh._load._basic.Fn()       
         # 
         df_beamf, df_nforce = self.solve_forces(elements, bload_func,
-                                                Un, df_nload, steps)
+                                                Un, benl_df, steps)
         #
         return df_beamf, df_nforce
     #
     #
     def solve_forces(self, elements, bload_func,
-                     df_ndisp, df_nload, steps):
+                     df_ndisp, benl_df, steps):
         """
         Beam's internal forces along its lenght
         """
@@ -315,7 +310,7 @@ class MainProcess:
                                   'load_level',  'load_system'])
         #nfgrp = df_nforce.groupby(['load_name',  'load_type', 'load_id', 'load_title'])
         #
-        nlgrp = df_nload.groupby(['load_name', 'component_name',
+        benlgrp = benl_df.groupby(['load_name', 'component_name',
                                   #'load_id', 'load_title',
                                   'load_level', 'load_system'])
         #
@@ -332,12 +327,12 @@ class MainProcess:
         hdisp = ['node_name', *self._plane.hdisp]
         hforce = [*self._plane.hforce]
         #rforce = ['x', 'y', 'z', 'rx', 'ry', 'rz']
-        tforce = ['rx', 'psi', 'B', 'Tw'] # torsion part
+        tforce = ['Psi', 'B', 'Tw'] # torsion part
         #hload = ['node_name', *self._plane.hload]
         hload = ['axial', 'torsion', 'VM_inplane', 'VM_outplane']
         #
         dftemp: list = []
-        member_load: list = []
+        mif_data: list = []
         for key, noded in ndgrp:
             # TODO: select basic only
             if key[2] != 'basic':
@@ -346,18 +341,18 @@ class MainProcess:
             ndisp.set_index('node_name', inplace=True)        
             #
             # check if basic load
-            try:
-                mbload = blgrp.get_group(key[:3])
-                mbload = mbload.groupby(['element_name'])
-                #
-                nlval = nlgrp.get_group(key)
-                nlval = nlval.groupby(['element_name'])
-            except KeyError:
-                mbload = {}
+            #try:
+            #    mbload = blgrp.get_group(key[:3])
+            #    mbload = mbload.groupby(['element_name'])
+            #    #
+            #    benl = benlgrp.get_group(key)
+            #    benl = benl.groupby(['element_name'])
+            #except KeyError:
+            #    mbload = {}
             #
             for mname, element in elements.items():
                 nodes = element.connectivity
-                Tlg = element.T
+                Tb = element.T
                 #
                 material = element.material
                 section = element.section.properties()
@@ -369,20 +364,22 @@ class MainProcess:
                 #nodes = element.connectivity
                 # ---------------------------------------------
                 # displacement
-                gndisp = np.concatenate((ndisp.loc[nodes[0]],
-                                         ndisp.loc[nodes[1]]), axis=None)
+                nd_global = np.concatenate((ndisp.loc[nodes[0]],
+                                            ndisp.loc[nodes[1]]), axis=None)
                 #       
                 # ---------------------------------------------
                 # convert global end-node disp in beam's local system
                 # [x,y,z,rx,ry,rz]
-                lndisp = Tlg @ gndisp
+                nd_local = Tb @ nd_global
                 #
                 # --------------------------------------------
                 # set beam to general response expresions --> R0
                 # [V, M, theta, w]
                 #
+                FUan = element.ks_local @ nd_local
+                #
                 #TODO: confirm change reactions sign
-                eq = NodeGenRespEq(lndisp, self._plane)
+                eq = NodeGenRespEq(nd_local, self._plane)
                 #
                 # ---------------------------------------------
                 #
@@ -391,11 +388,15 @@ class MainProcess:
                     # [load_name, member_load_title, load_type, load_system, 
                     # beam_number, x, Fx, Fy, Fz]
                     #
+                    mbload = blgrp.get_group(key[:3])
+                    mbload = mbload.groupby(['element_name'])                    
                     mnload = mbload.get_group((mname, ))
                     mnload = mnload.groupby(['node_end'],
                                             as_index=False)[hload].sum()
                     #
-                    bnload = nlval.get_group((mname, ))
+                    benl = benlgrp.get_group(key)
+                    benl = benl.groupby(['element_name'])                    
+                    bnload = benl.get_group((mname, ))
                     #
                     # Displacement
                     #rload = bnload.groupby(['node_name'],
@@ -409,21 +410,22 @@ class MainProcess:
                     #
                     # get beam end loads
                     #
-                    nodeloads = bnload.groupby(['node_name'],
+                    nf_local = bnload.groupby(['node_name'],
                                                as_index=False)[hforce].sum()
-                    nodeloads.set_index('node_name', inplace=True)                 
+                    nf_local.set_index('node_name', inplace=True)                 
                     #
-                    #blitem = np.concatenate((nodeloads.loc[nodes[0]],
-                    #                         nodeloads.loc[nodes[1]]), axis=None)
+                    FUen = np.concatenate((nf_local.loc[nodes[0]],
+                                           nf_local.loc[nodes[1]]), axis=None)
                     #
-                    #blitem = Tlg @ blitem
-                    #  
+                    FUen = Tb @ FUen
+                    #
+                    Pu = FUen - FUan  
                     #
                     # get reactions with correct sign for postprocessing
                     #
-                    #bload0 = nodeloads.loc[nodes[0]]
+                    #bload0 = nf_local.loc[nodes[0]]
                     #tload0 = mtload.loc[nodes[0]]
-                    R0 = eq.R0(bload=nodeloads.loc[nodes[0]],
+                    R0 = eq.R0(bload= Pload(*Pu[:6]) , #nf_local.loc[nodes[0]],
                                tload=mtload.loc[nodes[0]])
                     #
                     lbforce = [['local', mname, bstep.node_end,
@@ -432,15 +434,18 @@ class MainProcess:
                                                Fx=[*bstep[2:]])]
                                for bstep in mnload.itertuples()]
                     #print('-->')
-                except (KeyError, AttributeError, TypeError): # No load on beam
+                except KeyError : # (KeyError, AttributeError, TypeError): # No load on beam
                     # --------------------------------------------
                     # convert beam end-node disp to force [F = Kd] in global system
                     # [Fx,Fy,Fz,Mx,My,Mz]
-                    lnforce = element.k @ lndisp
+                    #nf_local = element.ks_local @ nd_local
                     #bload = Pload(lnforce[:6])
-                    #tload = Tload(0, 0, 0, 0)
-                    R0 = eq.R0(bload=Pload(*lnforce[:6]),
-                               tload=Tload(0, 0, 0, 0))
+                    #tload = Tload(0, 0, 0)     # Psi, B, Tw
+                    #
+                    Pu = -1 * FUan
+                    #
+                    R0 = eq.R0(bload=Pload(*Pu[:6]),
+                               tload=Tload(0, 0, 0)) 
                     # [beam_number, load_title, x, Fx, Fy, Fz, Mx, My, Mz]
                     Lsteps = linspace(start=0, stop=element.L, num=steps+1, endpoint=True)
                     lbforce = [['local', mname,  xstep,
@@ -452,7 +457,7 @@ class MainProcess:
                 # ---------------------------------------------
                 # convert beam end-node disp to force [F = Kd] in global system
                 #
-                gnforce = element.K @ gndisp
+                gnforce = element.K @ nd_global
                 #
                 # ---------------------------------------------
                 #
@@ -467,13 +472,13 @@ class MainProcess:
                 # Torsion [T, Phi, Psi, B, Tw] - [T, theta, theta1, theta2, theta3]
                 # Bending [V, M, theta, w]
                 #
-                member_load.extend([[*key[:3], # load_name, component_name, load_level,
-                                     *lbf[:3], # load_system, element_name, node_end
-                                     *lbf[3],  # Axial
-                                     *lbf[4],  # Torsion
-                                     *lbf[5],  # Bending in plane
-                                     *lbf[6]]  # Bending out plane
-                                    for lbf in lbforce])
+                mif_data.extend([[*key[:3], # load_name, component_name, load_level,
+                                  *lbf[:3], # load_system, element_name, node_end
+                                  *lbf[3],  # Axial
+                                  *lbf[4],  # Torsion
+                                  *lbf[5],  # Bending in plane
+                                  *lbf[6]]  # Bending out plane
+                                 for lbf in lbforce])
                 #
                 # ---------------------------------------------
                 #
@@ -482,7 +487,8 @@ class MainProcess:
         # ---------------------------------------------
         #        
         df_nforce = self.dfmend(dftemp=dftemp)
-        df_membf = self.df_mint(member_load)
+        # Member internal forces
+        df_mif = self.df_mif(mif_data)
         #
         #conn = create_connection(self._db_file)
         #with conn:        
@@ -494,11 +500,11 @@ class MainProcess:
         #                 if_exists='append', index=False)
         #
         #print('ok')
-        return df_membf, df_nforce
+        return df_mif, df_nforce
     #    
     #
-    def df_mint(self, member_load):
-        """ """
+    def df_mif(self, member_load):
+        """ member internal forces"""
         # --------------------------------------------
         # Seting member df
         # --------------------------------------------
@@ -741,96 +747,7 @@ class MainProcess:
     #
     # -----------------------------------------------------------
     #
-    def push_QfXX(self, conn, data) -> None:
-        """ push element forces to sql"""
-        #head = 'load_name, load_level, system, element_name, node_end,'
-        #cur = conn.cursor()
-        #table = 'INSERT INTO Qf( ' + head + ','.join(self._plane.hforce) + ','
-        #table += ','.join(self._plane.hdisp) + ')'
-        #vals = ['?' for item in self._plane.hforce]
-        #vals.extend(['?' for item in self._plane.hdisp])
-        #table += ' VALUES(?,?,?,?,?,' + ','.join(vals) + ')'
-        table = 'INSERT INTO Qf( load_name, load_level, system, element_name, node_end,\
-                Fx, Fy, Fz, Mx, My, Mz, x, y, z, rx, ry, rz) \
-                VALUES(?,?,?,?,?, ?,?,?,?,?,?, ?,?,?,?,?,?)'
-        # push
-        cur = conn.cursor()
-        cur.executemany(table, data)
-        print('ok')
     #
-    #
-    def push_QmXX(self, conn, data):
-        """push element end forces to sql"""
-        head = 'load_name, load_level, system, element_name, node_name,'
-        table = 'INSERT INTO Qm( ' + head + ','.join(self._plane.hforce) + ')'
-        vals = ['?' for item in self._plane.hforce]
-        table += ' VALUES(?,?,?,?,?,' + ','.join(vals) + ')'
-        # push
-        cur = conn.cursor()
-        cur.executemany(table, data)
-    #
-    # -----------------------------------------------------------
-    #
-    #def end_force(self, df_ndisp, steps:int = 10):
-    #    """Node force global system"""
-    #    #
-    #    if self._node_force:
-    #        df_nforce = self._node_force
-    #    else:
-    #        df_membf, df_nforce = self.__call__(df_ndisp, steps)
-    #        
-    #    
-    #    #beamdf = self.node_end_force(elements=self._elements,
-    #    #                             df_ndisp=df_ndisp)
-    #    # TODO : include additional element types
-    #    #
-    #    return df_nforce
-    #
-    #
-    def beam_end_forceX(self, df_ndisp):
-        """Node force global system"""
-        elements = self._mesh._elements
-        beamdf = self.node_end_force(elements=elements,
-                                     df_ndisp=df_ndisp)
-        # TODO : include additional element types
-        #
-        return beamdf    
-    #
-    def node_end_forceX(self, elements, df_ndisp):
-        """
-        Beam's end nodes force global system
-        """
-        dummyf = np.array([0]*self._plane.ndof)
-        dispgrp = df_ndisp.groupby(['load_name', 'load_level',
-                                    'load_id', 'load_title',
-                                    'load_system'])
-        #
-        hdisp = ['node_name', *self._plane.hdisp]
-        ndof = self._plane.ndof
-        #
-        dftemp = []
-        for key, item in dispgrp:
-            df1 = item[hdisp]
-            df1.set_index('node_name', inplace=True)
-            # start element big loop
-            for mname, element in elements.items():
-                nodes = element.connectivity
-                # ---------------------------------------------
-                # get beam end-node displacement in global system
-                gndisp = np.concatenate((df1.loc[nodes[0]],
-                                         df1.loc[nodes[1]]), axis=None)
-                #
-                # ---------------------------------------------
-                # convert beam end-node disp to force [F = Kd] in global system
-                #gnforce = mtxmul(element.K, gndisp)
-                gnforce = element.K @ gndisp
-                # ---------------------------------------------
-                #
-                dftemp.append([*key, mname, nodes[0], *gnforce[:ndof]])
-                dftemp.append([*key, mname, nodes[1], *gnforce[ndof:]])
-        #
-        df_nforce = self.dfmend(dftemp=dftemp)
-        return df_nforce
     #
     #
 #
@@ -843,14 +760,13 @@ class MainProcess:
 @dataclass
 class NodeGenRespEq:
     """ Local system"""
-    def __init__(self, disp: list,
+    __slots__ = ['nd_local', 'plane']
+    
+    def __init__(self, nd_local: list,
                  plane: bool) -> None:
         """ """
-        #self.force = force
-        self.disp = disp
-        #self.ndof = ndof
+        self.nd_local = nd_local
         self.plane = plane
-        
     #
     def R0(self,
            bload: list|None = None,
@@ -860,30 +776,22 @@ class NodeGenRespEq:
         Bending [V, M, theta, w]
         Torsion [T, Phi, Psi, B, Tw] 
         """
-        #bload0 = [0] * self.ndof
-        #try:
-        #    if bload:
-        #        bload0 = bload[:self.ndof]
-        #except (TypeError, ValueError):
-        #    bload0 = bload[:self.ndof]
-        #
-        #lnforce0 = self.force[:self.ndof]
-        #lndisp0 = self.disp[:self.plane.ndof]
-        lndisp0 = self.disp[:6]
+        # select node disp end 0
+        ndlocal0 = self.nd_local[:6]
         #
         # Axial
         R0x = [bload.Fx,                  # Fx
                #lnforce0[0] + bload.Fx,   # Fx
                0, 0,                      # blank, blank
-               1 * lndisp0[0]]            # dx   
+               1 * ndlocal0[0]]            # dx   
         #
         # In plane
         R0y = [-1 *  bload.Fy,  # Vy
-                1 *  bload.Mz, # Mz
+               1 *  bload.Mz, # Mz
                #1 * (lnforce0[1] - bload.Fy),  # Vy
               #-1 * (lnforce0[5] - bload.Mz), # Mz               
-               -1 * lndisp0[5],                # thetaz
-               -1 * lndisp0[1]]                # dy
+               1 * ndlocal0[5],                # thetaz
+               -1 * ndlocal0[1]]                # dy
         #
         if self.plane.plane2D:
             #
@@ -894,17 +802,17 @@ class NodeGenRespEq:
                     1 *  bload.My,                  # My
                    #1 * (lnforce0[2] - bload.Fz),   # Vz
                    #-1 * (lnforce0[4] - bload.My),  # My                   
-                   -1 * lndisp0[4],                  # thetay
-                   -1 * lndisp0[2]]                  # dz
+                   1 * ndlocal0[4],                  # thetay
+                   -1 * ndlocal0[2]]                  # dz
             #
             # Torsion
             #T0 = 1 * (lnforce0[3] + bload.Mx)
             T0 = 1 * bload.Mx
-            rx = 1 * lndisp0[3] 
+            rx = 1 * ndlocal0[3] 
             #
             #try: # Thin walled sections (Ibeam, Channel & Z)
             #    1 / self.section.Cw
-            thetas = [1 * tload.psi,
+            thetas = [1 * tload.Psi,
                       1 * tload.B,
                       1 * tload.Tw]
             #except ZeroDivisionError: # the rest (Pilky)
@@ -912,20 +820,18 @@ class NodeGenRespEq:
             R0t = [T0,  rx,  *thetas]  # [T, Phi, Psi, B, Tw]
         #
         return Req(R0x, R0t, R0y, R0z)
-    #
-    #    
 #
 #
-class Req(NamedTuple):
-    """ """
-    x: list
-    t: list
-    y: list
-    z: list
+#class Req(NamedTuple):
+#    """ """
+#    x: list
+#    t: list
+#    y: list
+#    z: list
 #
-#
+Req = namedtuple('Reactions', ['x', 't', 'y', 'z'])
 Pload = namedtuple('PointLoad', ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
-Tload = namedtuple('TorsionLoad', ['rx', 'psi', 'B', 'Tw'])
+Tload = namedtuple('TorsionLoad', ['Psi', 'B', 'Tw'])
 #
 # -----------------------------------------------------------
 # Combination process
@@ -968,43 +874,6 @@ def update_memberdf(dfmemb, dfcomb,
     return dfmemb
 #
 #
-#
-#def update_ndf(dfnode, dfcomb, 
-#               values:list[str]): #['x', 'y', 'z', 'rx', 'ry', 'rz']
-#    """
-#    Update node displacements to include lcomb
-#    """
-#    db = DBframework()
-#    # group basic load by name
-#    ndgrp = dfnode.groupby('load_name')
-#    # get combinations with basic loads 
-#    #
-#    combgrp = dfcomb.groupby('load_name')
-#    for key, combfactors in combgrp:
-#        for row in combfactors.itertuples():
-#            comb = ndgrp.get_group(row.basic_load).copy()
-#            comb.loc[:, values] *= row.factor
-#            comb['load_level'] = 'combination'
-#            comb['load_name'] = row.load_name
-#            comb['load_id'] = row.load_id
-#            comb['load_title'] = row.load_title
-#            #
-#            try:
-#                dftemp = db.concat([dftemp, comb], ignore_index=True)
-#            except UnboundLocalError:
-#                dftemp = comb
-#    #
-#    try:
-#        #check = dftemp.groupby(['node_name', 'c']).sum().reset_index()
-#        dftemp = dftemp.groupby(['load_name', 'load_id','load_level',
-#                                 'load_title', 'load_system','node_name'],
-#                                  as_index=False)[values].sum()
-#        #test
-#        dfnode = db.concat([dfnode, dftemp], ignore_index=True)
-#    except UnboundLocalError:
-#        pass
-#    #
-#    return dfnode #, memb_comb
 #
 #
 

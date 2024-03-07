@@ -189,7 +189,7 @@ class TBarConcentrated(ArbitraryLoading):
 @dataclass
 class TBarDistributed(ArbitraryLoading):
     __slots__ = ['T1', 'T2', 'L', 'L1', 'L2',
-                 '_L3', '_slope']
+                 'L3', '_slope']
     
     def __init__(self, T: float, T2: float,
                  L: float, L1: float, L2: float) -> None:

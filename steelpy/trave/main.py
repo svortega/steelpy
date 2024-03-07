@@ -46,39 +46,12 @@ class TraveItem:
         self._mesh = mesh
         self._mesh.plane(self._plane2D)
         #
-        #try:
-        #    self._name = f'{self._mesh._name}_res'
-        #except AttributeError:
-        #    self._name = None
-        
-        #super().__init__(name=name, sql_file=sql_file)
-        #
-        #self._postprocess = PostProcess(mesh=self._mesh,
-        #                                sql_file=self.db_file)
-        #
         self._solver = UnSolver(mesh=self._mesh)
-        #
-        #if not name:
-        #    name = self._mesh._name
         #
         self._postprocess = PostProcess(mesh=self._mesh,
                                         name=name)
                                         #sql_file=sql_file)
         
-    #
-    #@property
-    #def mesh(self):
-    #    """
-    #    """
-    #    return self._mesh
-    
-    #@mesh.setter
-    #def mesh(self, mesh):
-    #    """
-    #    """
-    #    self._mesh = mesh
-    #    self._mesh.plane(self._plane2D)
-    #
     #
     #
     def static(self, #mesh= None, 
@@ -122,7 +95,9 @@ class TraveItem:
             # ------------------------------
             #
             #      
-            Udf = static.solve(Ks=Ks, Fn=Fn, jbc=jbc)
+            Udf = static.solve(Ks=Ks,
+                               Fn=Fn,
+                               jbc=jbc)
             #
             #static.PMT(K=Kg, basic=basic_load, jbc=jbc)
             #

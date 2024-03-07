@@ -101,34 +101,9 @@ class StaticSolver:
         plane : Plane system (3D/2D)
         """
         self._plane = plane
-        #self._method = method
-        #self._plane = MeshPlane(plane2D)
-    #
-    # lcase._node.pft(beams=beams)
-    #
-    #def Kglobal(self, jbc, Ka, Kg: list|bool = None) -> None:
-    #    """Input global stiffness matrix"""
-    #    with open("stfmx.f2u", "wb") as f:
-    #        pickle.dump(jbc, f)
-    #        pickle.dump(Ka, f)
     #
     #
-    def PMTXX(self, K, basic, jbc):
-        """PEnalty Method Techinique
-        
-        Input: 
-        K   : Global stiffness matrix
-        Load  : BAsic load
-        jbc : Node boundary condition dataframe
-        """
-        for key, item in basic.items():
-            nodeload = item.node()
-            # nodal load
-            Fn = nodeload.Fn()
-            # displacement
-            Dnode = nodeload.ptf()
-        #
-        1 / 0
+    #
     #
     #
     def solve(self, Ks, Fn, jbc,
@@ -270,21 +245,15 @@ class StaticSolver:
         maxstiff = Ks.max()
         Ktrans = maxstiff * 10
         Krot = maxstiff * 100
-        #kp = np.array([Ktrans, Ktrans, Ktrans,
-        #               Krot, Krot, Krot],
-        #              dtype=np.float64) 
+        #
         kb = np.zeros((ndof, ndof), dtype=np.float64)
         #
         ditem = {'x':Ktrans, 'y':Ktrans, 'z':Ktrans,
                  'rx': Krot, 'ry': Krot, 'rz': Krot,}
-        #hstiff = {ditem[x]: item
-        #          for x, item in enumerate(kp)}
+        #
         hstiff = {key : ditem[key] for key in hdisp}
         kp = np.array([ditem[key] for key in hdisp])
         #
-        #ksup.flat[0::7] = np.array([Ktrans, Ktrans, Ktrans,
-        #                            Krot, Krot, Krot],
-        #                            dtype=np.float64)
         #
         # Select nodes' free DOF
         Fbool, Fzeros = self._mask_DOF(jbc)
@@ -381,19 +350,7 @@ class StaticSolver:
         #
         Us = self.df(Utemp)
         return Us
-    #
-    #def Cfactor(self, stiffness: float):
-    #    """ """
-    #    #Ktranslation = 10**10
-    #    #Krotation = 10**12
-    #    Ktranslation = stiffness * 10
-    #    Krotation = stiffness * 100
-    #    # x, y, z
-    #    translation = [Ktranslation] * 3
-    #    # rx, ry, rz
-    #    rotation = [Krotation] * 3
-    #    factor = translation + rotation
-    #    return factor     
+    #   
     #
     #@property
     def df(self, dftemp):

@@ -171,12 +171,21 @@ mesh.section([[15, 'ub', 253.5*units.mm, 8.60*units.mm,
 
 mesh.node([(1, 0*units.ft,   0*units.ft),
            #(2, 15*units.ft,  0*units.ft),
-           (2, 5*units.m,  0*units.m)])
+           (2, 1*units.m,  0*units.m), 
+           (3, 2*units.m,  0*units.m),
+           (4, 3*units.m,  0*units.m),
+           (5, 4*units.m,  0*units.m), 
+           (6, 5*units.m,  0*units.m)])
 
 mesh.boundary([[1, 'support', 'fixed'],
-               [2, 'support', 'free']])
+               [6, 'support', 'free']])
 
-mesh.element([(1,  'beam',  1, 2, 10, 15, 0)])
+mesh.element([(1,  'beam',  1, 2, 10, 15, 0),
+              (2,  'beam',  2, 3, 10, 15, 0),
+              (3,  'beam',  3, 4, 10, 15, 0),
+              (4,  'beam',  4, 5, 10, 15, 0),
+              (5,  'beam',  5, 6, 10, 15, 0)])
+              #(5,  'beam',  1, 6, 10, 15, 0)])
 
 load = mesh.load()
 basic = load.basic()
@@ -205,10 +214,37 @@ basic = load.basic()
 #             0 * units.N / units.m,   # qt
 #             'udly_3']])
 #
-basic.beam({'load' : 'snow load',
-            'beam': 1,
+# TODO : input may beams 
+basic.beam({'load': 'snow load',
+            'beam': 1, #(1, 2, 3, 4, 5),
             'type': 'line',
-            'qy': -15 * units.kN / units.m,})
+            'qy': -15 * units.kN / units.m})
+#
+basic.beam({'load': 'snow load',
+            'beam': 2, 
+            'type': 'line',
+            'qy': -15 * units.kN / units.m})
+#
+basic.beam({'load': 'snow load',
+            'beam': 3, 
+            'type': 'line',
+            'qy': -15 * units.kN / units.m})
+#
+basic.beam({'load': 'snow load',
+            'beam': 4, 
+            'type': 'line',
+            'qy': -15 * units.kN / units.m})
+#
+basic.beam({'load': 'snow load',
+            'beam': 5, 
+            'type': 'line',
+            'qy': -15 * units.kN / units.m})
+#
+#basic.beam({'load': 'snow load',
+#            'beam': 5, 
+#            'type': 'point',
+#            'Fy': -75 * units.kN,
+#            'L0': 0.50 * units.m,})
 #
 #basic.beam(
            #{'load':'snow load',
@@ -240,17 +276,18 @@ basic.beam({'load' : 'snow load',
 #            ['wind load', 3, 'load', -200 * Punit, 'nodex_4']])
 #
 #basic.node({'load': 'dispExample',
-#            'node': 2,
-#            'type': 'displacement',
-#            'y': -0.0511813 * units.m,
-#            'rz': 0.0136483 * units.rad,})
+#            'node': 6,
+#            'type': 'force',
+#            'Fy': -75 * units.kN ,})
+#            'y': -0.0511813 * units.m,})
+#            #'rz': 0.0136483 * units.rad,})
 #
 #
 mesh.build()
 #
 frame = Trave3D(mesh=mesh)
 frame.static()
-results = frame.results()
+results = frame.results(beam_steps=4)
 #
 beamres = results.beam()
 #print(beamres)

@@ -52,7 +52,6 @@ def Kmatrix(elements,
                                if item == 0]))
         for i in index:
             Ka = remove_column_row(Ka, i, i)
-            
     #
     return Ka
 #

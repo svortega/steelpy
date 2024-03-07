@@ -366,16 +366,16 @@ def Rmatrix_new2(node1, node2, beta: float = 0):
     #        local_z.direction()]
 #
 #
-#
 # ---------------------------------------------
 #
-def beam3D_Klocal(length: float, 
-            area:float, J:float, Iy:float, Iz:float,
-            Emod:float, Gmod:float, 
-            areasy:float, areasz:float):
+def beam3D_Ksb(length: float, 
+                  area:float, J:float,
+                  Iy:float, Iz:float,
+                  Emod:float, Gmod:float, 
+                  areasy:float, areasz:float):
     """
-    Calculate the beam element stiffness matrix
-    length, J, Iy, Iz, area, Emod, Gmod
+    The 3D elastic stiffness matrix for frame elements
+    including shear and bending effects (H.P. Gavin)
     """
     # initialize all ek elements to zero  
     ek = np.zeros(( 12, 12 ))
@@ -386,7 +386,7 @@ def beam3D_Klocal(length: float,
     #
     #areasy = areasz = area
     Phiy = 12*Emod*Iz / (Gmod * areasy * length**2)
-    Phiz = 12*Emod*Iy / (Gmod * areasz * length**2)    
+    Phiz = 12*Emod*Iy / (Gmod * areasz * length**2)
     # 
     ek[ 0 ][ 0 ] = area * emlen
     ek[ 1 ][ 1 ] = 12.0 * emlen3 * Iz / (1+Phiy)
@@ -423,6 +423,100 @@ def beam3D_Klocal(length: float,
     ek += np.triu(ek, k=1).T
     return ek    
 #
+# ---------------------------------------------
+#
+def beam3D_B3D2(length: float, 
+                area:float, J:float,
+                Iy:float, Iz:float,
+                Emod:float, Gmod:float, 
+                areasy:float, areasz:float):
+    """
+    Beam's stiffness matrix based on:
+    An Efficient 3D Timoshenko Beam Element
+    with Consistent Shape Functions (Yunhua Luo)
+    """
+    # Shear correction factor (k)
+    # k usually lies in the range between 2/3 and 1.0,
+    # and predictions of first-order shear deformation theory
+    # appear to be relative insensitive to the value
+    # chosen within this range.
+    # 
+    k = 5 / 6
+    # initialize all ek elements to zero
+    ek = np.zeros((12, 12))
+    # stiffness matrix in local coordinates
+    emlen = Emod / length
+    #emlen2 = emlen / length
+    #emlen3 = emlen2 / length
+    #
+    Phiy = ((12 * Emod * Iy + k * Gmod * areasy * length**2)
+            / (12 * Emod * Iy - k * Gmod * areasy * length**2)**2)
+    #
+    Phiz = ((12 * Emod * Iz + k * Gmod * areasz * length**2)
+            / (12 * Emod * Iz - k * Gmod * areasz * length**2)**2)
+    #
+    ek[0][0] = area * emlen
+    #
+    ek[1][1] = 12.0 * k * Gmod * area * Emod * Iy * Phiy / length
+    ek[1][5] = 6.00 * k * Gmod * area * Emod * Iy * Phiy
+    #
+    ek[2][2] = 12.0 * k * Gmod * area * Emod * Iz * Phiz / length
+    ek[2][4] = -6.0 * k * Gmod * area * Emod * Iz * Phiz
+    #
+    ek[3][3] = Gmod * J / length
+    #
+    ek[4][4] = (4 * Emod * Iz
+                * ((k * Gmod * area)**2 * length**4
+                   + (3 * k * Gmod * area * length**2 * Emod * Iz)
+                   + 36 * (Emod * Iz)**2)
+                / (length * (12 * Emod * Iz - k * Gmod * areasz * length**2)**2))
+    
+    #ek[4][8] = -ek[2][4]
+    
+    ek[4][10] = (-2 * Emod * Iz
+                 * (72 * (Emod * Iz)**2 
+                    - (k * Gmod * area)**2 * length**4
+                    - 30 * k * Gmod * area * length**2 * Emod * Iz)
+                 / (length * (12 * Emod * Iz - k * Gmod * areasz * length**2)**2))
+    #
+    ek[5][5] = (4 * Emod * Iy
+                * ((k * Gmod * area)**2 * length**4
+                   + 3 * k * Gmod * area * length**2 * Emod * Iy
+                   + 36 *(Emod * Iy)**2 )
+                / (length * (12 * Emod * Iy - k * Gmod * areasy * length**2)**2))
+    
+    #ek[5][7] = -ek[1][5]
+    ek[5][11] = (-2 *Emod * Iy
+                 * (-(k * Gmod * area)**2 * length**4
+                    - 30 * k * Gmod * area * length**2 * Emod * Iy
+                    + 72 *(Emod * Iy)**2)
+                 / (length * (12 * Emod * Iy - k * Gmod * areasy * length**2)**2))
+    #
+    #
+    ek[6][6] = ek[0][0]
+    ek[7][7] = ek[1][1]
+    ek[8][8] = ek[2][2]
+    ek[9][9] = ek[3][3]
+    ek[10][10] = ek[4][4]
+    ek[11][11] = ek[5][5]
+    #
+    ek[0][6] = -ek[0][0]
+    ek[1][7] = -ek[1][1]
+    ek[1][11] = ek[1][5]
+    ek[2][8] = -ek[2][2]
+    ek[2][10] = ek[2][4]
+    ek[3][9] = -ek[3][3]
+    ek[4][8] = -ek[2][4]
+    ek[5][7] = -ek[1][5]
+    #
+    ek[7][11] = -ek[1][5]
+    ek[8][10] = -ek[2][4]
+    #
+    # impose the geometry
+    ek += np.triu(ek, k=1).T
+    return ek
+#
+# ---------------------------------------------
 #
 def get_element_K(element:tuple, section:tuple, material:tuple):
     """ """

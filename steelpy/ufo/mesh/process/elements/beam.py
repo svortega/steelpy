@@ -9,7 +9,8 @@ from collections.abc import Mapping
 #from typing import NamedTuple
 
 # package imports
-from steelpy.ufo.mesh.process.elements.bstiffness import Rmatrix2, beam3D_K, beam3D_Klocal #, Rmatrix, 
+from steelpy.ufo.mesh.process.elements.bstiffness import (Rmatrix2, beam3D_K,
+                                                          beam3D_Ksb, beam3D_B3D2)
 from steelpy.ufo.mesh.process.elements.bgeometry import kg_beam
 from steelpy.ufo.mesh.process.elements.bmass import beam_mass
 from steelpy.utils.geometry.L3D import DistancePointLine3D #, LineLineIntersect3D
@@ -113,7 +114,7 @@ class BeamItemBasic:
         Return Beam stiffness matrix in global coordinates
         """
         Tlg =  self.T
-        Kl = self.k
+        Kl = self.ks_local
         #Kl = self.k3D()
         #if self._plane.m2D:
         #    # removing z, Mx, My
@@ -123,7 +124,7 @@ class BeamItemBasic:
         return Tlg.T @ Kl @ Tlg
     #
     @property
-    def k(self):
+    def ks_local(self):
         """Return the 2D/3D stiffness matrix in local coordinates """
         kl = self.k3D()
         if self._plane.plane2D:
@@ -145,16 +146,22 @@ class BeamItemBasic:
         #
         #
         # solve K matrix
-        #kb = beam3D_Klocal(self.L,
-        #                   section.area, section.J,
-        #                   section.Iy, section.Iz,
-        #                   material.E, material.G,
-        #                   section.area, section.area)
+        #kb = beam3D_Ksb(self.L,
+        #                section.area, section.J,
+        #                section.Iy, section.Iz,
+        #                material.E, material.G,
+        #                section.area, section.area)
         #        
-        kb = beam3D_K(self.L,
-                      section.area, section.J,
-                      section.Iy, section.Iz,
-                      material.E, material.G)
+        #kb = beam3D_K(self.L,
+        #              section.area, section.J,
+        #              section.Iy, section.Iz,
+        #              material.E, material.G)
+        #
+        kb = beam3D_B3D2(self.L,
+                         section.area, section.J,
+                         section.Iy, section.Iz,
+                         material.E, material.G,
+                         section.area, section.area)
         #
         k_cond = self._k_unc(kb)
         return k_cond
@@ -167,11 +174,11 @@ class BeamItemBasic:
         Return Beam geometrical stiffness matrix in global coordinates
         """
         Tlg =  self.T
-        Kl = self.kg(axial=axial)
+        Kl = self.kg_local(axial=axial)
         #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
         return Tlg.T @ Kl @ Tlg
     #
-    def kg(self, axial):
+    def kg_local(self, axial):
         """
         Return Beam geometrical stiffness matrix in local coordinates
         """
@@ -203,16 +210,16 @@ class BeamItemBasic:
     # Mass
     #
     #@property
-    def M(self):
+    def Km(self):
         """
         Return Beam mass matrix in global coordinates
         """
         Tlg =  self.T
-        Km = self.m()
+        Km = self.mlocal()
         #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
         return Tlg.T @ Km @ Tlg
     #
-    def m(self):
+    def km_local(self):
         """
         Return Beam mass matrix in local coordinates
         """

@@ -205,37 +205,42 @@ def beam_geom(length, s):
     #
     return eg
 #
-def beam_KG(ek, beam_length, E, A, G):
+def beam_KG(length: float, 
+            area:float, J:float,
+            Iy:float, Iz:float,
+            Emod:float, Gmod:float, 
+            areasy:float, areasz:float):
     """
+    The 3D gemetric stiffness matrix for frame elements
+    including shear and bending effects (H.P. Gavin)
     """
-    Ax = A
-    Asy = A
-    Asz = A
-    EA = E*A
-    L = beam_length
-    T = EA(lx)/L
-    Phiy = 12*EIz / (G * Asy * L**2)
-    Phiz = 12*EIy / (G * Asz * L**2)
     #
-    gk = np.zeros( 12, 12 )
+    ax = min(areasy, areasz)
+    Phiy = 12*Emod*Iz / (Gmod * areasy * length**2)
+    Phiz = 12*Emod*Iy / (Gmod * areasz * length**2)    
+    #
+    gk = np.zeros(( 12, 12 ))
     #
     gk[ 0 ][ 0 ] = 0
     gk[ 1 ][ 1 ] = 6/5 + 2*Phiy + Phiy**2 / (1 + Phiy)
     gk[ 2 ][ 2 ] = 6/5 + 2*Phiz + Phiz**2 / (1 + Phiz)
-    gk[ 3 ][ 3 ] = Jx/Ax
-    gk[ 4 ][ 4 ] = (2*L**2/15 + L**2*Phiz/6 + L**2*Phiz**2/12) / (1+Phiz)**2
-    gk[ 5 ][ 5 ] = (2*L**2/15 + L**2*Phiy/6 + L**2*Phiy**2/12) / (1+Phiy)**2
+    gk[ 3 ][ 3 ] = J/ax
+    gk[ 4 ][ 4 ] = (2*length**2/15 + length**2*Phiz/6 + length**2*Phiz**2/12) / (1+Phiz)**2
+    gk[ 5 ][ 5 ] = (2*length**2/15 + length**2*Phiy/6 + length**2*Phiy**2/12) / (1+Phiy)**2
     #
-    gk[ 1 ][ 5 ] =  L/10 / (1+Phiy)**2
-    gk[ 2 ][ 4 ] = -L/10 / (1+Phiz)**2
+    gk[ 1 ][ 5 ] =  length/10 / (1+Phiy)**2
+    gk[ 2 ][ 4 ] = -length/10 / (1+Phiz)**2
     #
     gk[ 6 ][ 6 ]  = -gk[ 0 ][ 0 ]
     gk[ 7 ][ 7 ]  = - 6/5 - 2*Phiy - Phiy**2 / (1 + Phiy)
     gk[ 8 ][ 8 ]  = gk[ 2 ][ 2 ]
     gk[ 9 ][ 9 ]  = gk[ 3 ][ 3 ]
     gk[ 10 ][ 10 ] = gk[ 4 ][ 4 ]
-    gk[ 11 ][ 11 ] = gk[ 5 ][ 5 ]    
-    
+    gk[ 11 ][ 11 ] = gk[ 5 ][ 5 ]
+    #
+    # impose the geometry
+    gk += np.triu(gk, k=1).T
+    return gk      
 #
 #
 def kg_beam(self, P: float, length: float, 
