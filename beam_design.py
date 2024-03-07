@@ -82,7 +82,7 @@ beam.support = ["fixed", "free"]
 #          'L1':1*units.m, 'L2':1*units.m, 'name': 'udl_2'}
 #
 #
-beam.q = {'qy1':15*units.kN/units.m, 'qy2':15*units.kN/units.m,
+beam.q = {'qy':15*units.kN/units.m, #'qy2':15*units.kN/units.m,
           'name': 'selfweight_y'}
 #
 #beam.q = {'qz1':15*units.kN/units.m, 'qz2':15*units.kN/units.m,

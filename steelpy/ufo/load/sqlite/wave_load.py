@@ -591,7 +591,7 @@ class MetoceanLoadSQL(MetoceanLoad):
     #
     def process(self):
         """ """
-        print('-->')
+        #print('-->')
         conn = create_connection(self.db_file)
         #with conn:
         #    labels = self.get_elements(conn)

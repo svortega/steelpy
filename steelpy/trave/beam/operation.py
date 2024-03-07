@@ -158,12 +158,12 @@ class BeamBasic:
         # Bending in plane [V, M, theta, w]
         R1y = self._bminplane.response(x=self.L, R0= R0[2],
                                        Fx=[-1 * item for item in Fbar[10]])
-        R1y = [-1*item for item in R1y]
+        #R1y = [-1*item for item in R1y]
         #R1y[0] *= -1
         # Bending out plane [V, M, theta, w]
         R1z = self._bmoutplane.response(x=self.L, R0=R0[3],
                                         Fx=[-1 * item for item in Fbar[11]])
-        R1z = [-1*item for item in R1z]
+        #R1z = [-1*item for item in R1z]
         #R1z[0] *= -1
         #
         R1 = R0eq(Fa, T1x, R1y, R1z)

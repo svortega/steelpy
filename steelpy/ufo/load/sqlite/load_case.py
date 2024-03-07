@@ -135,52 +135,6 @@ class BasicLoadSQL(LoadCaseBasic):
         #dftemp = beamload.beam_function(beams=beams, steps=steps)
         #
         dftemp = self._beams.load_function(steps=steps) 
-        ##load_func = {}
-        #for name in self._labels:
-        #    lcase = self.__getitem__(name)
-        #    #lcase =  self._basic[name]
-        #    #
-        #    #bfunc = {}
-        #    #bfunc = []
-        #    # -------------------------------
-        #    # beam line load (line & point)
-        #    # -------------------------------
-        #    #
-        #    beamload = lcase.beam()
-        #    #
-        #    fucnitem = beamload.load_function(steps=steps)
-        #    if fucnitem:
-        #        dftemp.extend(fucnitem)
-            #
-            #for key, items in beamload.items():
-            #    print(key)
-            #    try:
-            #        1/(len(items.line) + len(items.point))
-            #        dftemp.extend(items.beam_function(beams=beams, steps=steps))
-            #        #bfunc.update(items.beam_function(beams=beams,
-            #        #                                 steps=steps))
-            #    except ZeroDivisionError:
-            #        continue
-        #    #
-        #    # -------------------------------
-        #    # wave line load
-        #    # -------------------------------
-        #    #
-        #    waveload = lcase.wave()
-        #    #bfunc.update(waveload.beam_load(steps=steps))
-        #    dftemp.extend(waveload.beam_load(steps=steps))
-        #    #wload = waveload.beam_load(steps=steps)
-        #    #if wload:
-        #    #    bfunc.update(wload)
-        #    #
-        #    # -------------------------------
-        #    #
-        #    #load_func[name] = bfunc
-        #    #
-        #    # -------------------------------
-        #    # plate load
-        #    # -------------------------------
-        #    #
         #
         #
         #print('---')

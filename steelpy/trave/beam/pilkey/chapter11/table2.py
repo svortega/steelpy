@@ -81,16 +81,18 @@ class BendingGE:
         return self.M0 + self.V0 * x + self.FM
 
     #
-    def theta(self, x: float,  I: float) -> float:
+    def theta(self, x: float) -> float:
         """ Slope"""
+        I=self.I
         return (self.theta0
                 + self.V0 * x**2 / (2 * self.E * I)
                 + self.M0 * x / (self.E * I)
                 + self.Ftheta)
 
     #
-    def w(self, x: float, I: float) -> float:
+    def w(self, x: float) -> float:
         """ Deflection"""
+        I=self.I
         return (self.w0
                 - self.theta0 * x
                 - self.V0 * x**3 / (factorial(3) * self.E * I)
@@ -103,9 +105,11 @@ class BendingGE:
 
         results:
         [V, M, theta, w]
-        """ 
-        return [self.V(x), self.M(x),
-                self.theta(x, I=self.I),
-                self.w(x, I=self.I)]
+        """
+        # shear & deflection signed change 
+        return [-1 * self.V(x), # Shear force
+                self.M(x),      # Bending moment
+                self.theta(x),  # Slope
+                -1 * self.w(x)] # Deflection
 #
 #

@@ -221,7 +221,10 @@ class ArbitrarySupport:
         """
         self.I = I
         self.Fbar(*F_bar)
-        return [self.V0, self.M0, self.theta0, self.w0]
+        return [self.V0,     # Shear force
+                self.M0,     # Bending moment
+                self.theta0, # Slope
+                self.w0]     # Deflection
 #
 #
 # ---------------------------------------------------------------
