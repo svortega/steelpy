@@ -60,11 +60,15 @@ beam.support = ["fixed", "free"]
 #          0*units.kN*units.m, 200*units.kN*units.m, 300*units.kN*units.m,
 #          'point_2']
 #
-#beam.P = {#'L1':2.5*units.m,
-#          'L1':90*units.inch,
-#          'Fy':15*units.kips,
+#beam.P = {'L1':4.5*units.m,
+#          'Fy':-75 * units.kN,
+#          #'Mz': 33.75  * units.kN * units.m,
+#          #'Fx': -0.1 * units.N,
+#          #'L1':90*units.inch,
+#          #'Fy':15*units.kips,
 #          'Mx':90*units.kip*units.inch,
 #          'name': 'point_3'}
+#
 #beam.P = {'L1':90*units.inch, 'Mx':90*units.kip*units.inch, 'name': 'point_3'}
 #beam.load.point = [2.5*units.m, 1000*units.N, 2000*units.N]
 #
@@ -82,7 +86,8 @@ beam.support = ["fixed", "free"]
 #          'L1':1*units.m, 'L2':1*units.m, 'name': 'udl_2'}
 #
 #
-beam.q = {'qy':15*units.kN/units.m, #'qy2':15*units.kN/units.m,
+beam.q = {'qy':-15*units.kN/units.m,
+          #'qx': -0.001*units.N/units.m,
           'name': 'selfweight_y'}
 #
 #beam.q = {'qz1':15*units.kN/units.m, 'qz2':15*units.kN/units.m,
@@ -157,6 +162,7 @@ print(forces)
 #design.print_results()
 #print(design)
 #
+#1 / 0
 #
 f2umodel = UFOmodel("BeamDesign_0")
 mesh = f2umodel.mesh()

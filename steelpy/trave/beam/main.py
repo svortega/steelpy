@@ -163,18 +163,18 @@ class Beam:
     def P(self):
         """
         """
-        return self._basic._load._point # (beam_name=self._name)
+        return self._basic[self.name].point
 
     @P.setter
     def P(self, value:list|dict):
         """
         """
-        self._basic._load._point[self.name] = value
+        self._basic[self.name].point = value
     #
     @property
     def q(self):
         """line load"""
-        return self._basic._load._line
+        return self._basic[self.name].line
 
     @q.setter
     def q(self, value:list|tuple|dict):

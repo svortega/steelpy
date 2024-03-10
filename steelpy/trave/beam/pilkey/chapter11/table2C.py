@@ -55,7 +55,7 @@ class BeamBendingSupports:
         k1 : spring 1 [N/m]
         k2 : spring 2 [N/m]
         """
-        if re.match(r"\b(pinn(ed)?)\b", supp1, re.IGNORECASE):
+        if re.match(r"\b(pinn(ed)?|hinged|roller(s)?)\b", supp1, re.IGNORECASE):
             if re.match(r"\b(pinn(ed)?)\b", supp2, re.IGNORECASE):
                 return PinnedPinned(self.L, self.E)
             elif re.match(r"\b(fix(ed)?|encastre(r)?)\b", supp2, re.IGNORECASE):
@@ -70,7 +70,7 @@ class BeamBendingSupports:
                 raise IOError("unstable")
         
         elif re.match(r"\b(fix(ed)?|encastre(r)?)\b", supp1, re.IGNORECASE):
-            if re.match(r"\b(pinn(ed)?)\b", supp2, re.IGNORECASE):
+            if re.match(r"\b(pinn(ed)?|hinged|roller(s)?)\b", supp2, re.IGNORECASE):
                 return FixedPinned(self.L, self.E)
             elif re.match(r"\b(fix(ed)?|encastre(r)?)\b", supp2, re.IGNORECASE):
                 return FixedFixed(self.L, self.E)
@@ -84,7 +84,7 @@ class BeamBendingSupports:
                 return FixedSpring(self.L, self.E, k1, k2)
             else:
                 raise IOError(f"boundary {supp2} not supported")
-
+    
         elif re.match(r"\b(free)\b", supp1, re.IGNORECASE):
             if re.match(r"\b(fix(ed)?|encastre(r)?)\b", supp2, re.IGNORECASE):
                 return FreeFixed(self.L, self.E)
@@ -94,9 +94,9 @@ class BeamBendingSupports:
                 return FreeSpring(self.L, self.E, k1, k2)
             else:
                 raise IOError("unstable")
-
+    
         elif re.match(r"\b(guide(d)?)\b", supp1, re.IGNORECASE):
-            if re.match(r"\b(pinn(ed)?)\b", supp2, re.IGNORECASE):
+            if re.match(r"\b(pinn(ed)?|hinged|roller(s)?)\b", supp2, re.IGNORECASE):
                 return GuidedPinned(self.L, self.E)
             elif re.match(r"\b(fix(ed)?|encastre(r)?)\b", supp2, re.IGNORECASE):
                 return GuidedFixed(self.L, self.E)
@@ -106,12 +106,12 @@ class BeamBendingSupports:
                 return GuidedSpring(self.L, self.E, k1, k2)
             else:
                 raise IOError("unstable")
-
+    
         elif re.match(r"\b(spring)\b", supp1, re.IGNORECASE):
             if not k1:
                 raise IOError("Spring k1 value missing")
             #
-            if re.match(r"\b(pinn(ed)?)\b", supp2, re.IGNORECASE):
+            if re.match(r"\b(pinn(ed)?|hinged|roller(s)?)\b", supp2, re.IGNORECASE):
                 return SpringPinned(self.L, self.E, k1, k2)
             elif re.match(r"\b(fix(ed)?|encastre(r)?)\b", supp2, re.IGNORECASE):
                 return SpringFixed(self.L, self.E, k1, k2)

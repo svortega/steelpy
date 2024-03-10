@@ -14,10 +14,15 @@ from typing import NamedTuple
 # package imports
 # Bending 
 #
-from steelpy.trave.beam.pilkey.chapter11.table2C import BeamBendingSupports
-from steelpy.trave.beam.pilkey.chapter11.table2 import BendingGE
+#from steelpy.trave.beam.pilkey.chapter11.table2C import BeamBendingSupports
+from steelpy.trave.beam.pilkey.chapter11.table3C import BeamBendingSupports
 #
-from steelpy.trave.beam.pilkey.chapter11.table2B import (Trapezoidal,
+#from steelpy.trave.beam.pilkey.chapter11.table2 import BendingGE
+from steelpy.trave.beam.pilkey.chapter11.table3 import BendingGE
+#
+#from steelpy.trave.beam.pilkey.chapter11.table2B import (Trapezoidal,
+#                                                         Point, Moment)
+from steelpy.trave.beam.pilkey.chapter11.table3B import (Trapezoidal,
                                                          Point, Moment)
 # Torsion
 from steelpy.trave.beam.pilkey.chapter14.table_C import BTOpenSupports
@@ -74,9 +79,14 @@ class BeamBasic:
         #
         self._torsion = BeamTorsion(L=L, E=E, G=G,
                                     J=self.J, Cw=self.Cw)
+        
         self._axial = BeamAxial(L=L, E=E, A=area)
-        self._bminplane = BeamBending(L=L, E=E, I=self.Iy)
-        self._bmoutplane = BeamBending(L=L, E=E, I=self.Iz)
+        
+        self._bminplane = BeamBending(L=L, E=E, G=G,
+                                      A=area, I=self.Iy)
+        
+        self._bmoutplane = BeamBending(L=L, E=E, G=G,
+                                       A=area, I=self.Iz)
     #
     # ----------------------------------------------
     #
@@ -155,13 +165,20 @@ class BeamBasic:
         T1x = self._torsion.response(x=self.L, R0=R0[1],
                                      Fx=[-1 * item for item in Fbar[9]])
         T1x = [-1*item for item in T1x]
-        # Bending in plane [V, M, theta, w]
-        R1y = self._bminplane.response(x=self.L, R0= R0[2],
+        # Bending in plane [V, M, theta, w, P]
+        #Fx = [-1 * item for item in Fbar[10]]
+        #Fx.append(Fa[0])
+        #Rf = [*R0[2], R0.x[0]]
+        R1y = self._bminplane.response(x=self.L,
+                                       R0=[*R0[2], R0.x[0]],
                                        Fx=[-1 * item for item in Fbar[10]])
         #R1y = [-1*item for item in R1y]
         #R1y[0] *= -1
-        # Bending out plane [V, M, theta, w]
-        R1z = self._bmoutplane.response(x=self.L, R0=R0[3],
+        # Bending out plane [V, M, theta, w, P]
+        #Fx = [-1 * item for item in Fbar[11]]
+        #Fx.append(Fa[0])
+        R1z = self._bmoutplane.response(x=self.L,
+                                        R0=[*R0[3],R0.x[0]],
                                         Fx=[-1 * item for item in Fbar[11]])
         #R1z = [-1*item for item in R1z]
         #R1z[0] *= -1
@@ -186,7 +203,7 @@ class BeamBasic:
         Return: 
         R0 [Fa, T, Ry, Rz]
         """
-        #   
+        #1/0
         #
         #Fx = [load_name, load_title, load_type, load_system,
         #      beam_name, L_step,
@@ -228,11 +245,15 @@ class BeamBasic:
         suppt = self._torsion.R0(Fbar=Fbar[9])
         suppt = [-1*item for item in suppt]
         #
-        # Bending in plane [V, M, theta, w]
-        suppy = self._bminplane.R0(Fbar=[-1 * item for item in Fbar[10]])
+        # Bending in plane [V, M, theta, w, P]
+        bload = [-1 * item for item in Fbar[10]]
+        bload.append(suppx[0])
+        suppy = self._bminplane.R0(Fbar=bload)
         #suppy[1] *= -1
-        # Bending out plane [V, M, theta, w]
-        suppz =  self._bmoutplane.R0(Fbar=[-1 * item for item in Fbar[11]])
+        # Bending out plane [V, M, theta, w, P]
+        bload = [-1 * item for item in Fbar[11]]
+        bload.append(suppx[0])
+        suppz =  self._bmoutplane.R0(Fbar=bload)
         #suppz[1] *= -1
         #
         return R0eq(suppx, suppt, suppy, suppz)
@@ -278,11 +299,17 @@ class BeamBasic:
         tload = [-1 * item for item in Ftx]
         
         R1t = self._torsion.response(x=x, R0=R0t, Fx=tload)
-        # Bending in plane [V, M, theta, w]
-        R1y = self._bminplane.response(x=x, R0=R0y,
+        # Bending in plane [V, M, theta, w, P]
+        #Fx = [-1 * item for item in Fyx]
+        #Fx.append(Fax[0])
+        R1y = self._bminplane.response(x=x,
+                                       R0=[*R0y, Fax[0]],
                                        Fx=[-1 * item for item in Fyx])
-        # Bending out plane [V, M, theta, w]
-        R1z = self._bmoutplane.response(x=x, R0=R0z,
+        # Bending out plane [V, M, theta, w, P]
+        #Fx = [-1 * item for item in Fzx]
+        #Fx.append(Fax[0])
+        R1z = self._bmoutplane.response(x=x,
+                                        R0=[*R0z, Fax[0]],
                                         Fx=[-1 * item for item in Fzx])
         #
         return R1x, R1t, R1y, R1z
@@ -494,15 +521,22 @@ class R0eq(NamedTuple):
 #
 @dataclass
 class BeamBending:
-    __slots__ = [ 'E', 'L', 'I', 
+    __slots__ = [ 'E', 'L', 'I', 'G', 'A', 
                   '_support', '_gen']
     
-    def __init__(self, L: float, E:float, I: float) -> None:    
+    def __init__(self, L: float, E:float, G: float, 
+                 A: float, I: float) -> None:    
         """
-        E : Elastic modulus
+        L : Length of beam (L)
+        E : Elastic modulus (F/L^2)
+        G : Shear modulus of elasticity (F/L^2)
+        A : area (L^2)
+        I : Moment of inertia about neutral axis (L^4)
         """
-        self.E = E
         self.L = L
+        self.E = E
+        self.G = G
+        self.A = A
         self.I = I
     #
     def supports(self, end1: str|list, end2: str|list,
@@ -515,27 +549,45 @@ class BeamBending:
     #
     def R0(self, Fbar:list):
         """Reaction end 1"""
-        Mb = BeamBendingSupports(L=self.L, I=self.I, E=self.E)
+        Mb = BeamBendingSupports(L=self.L, E=self.E, G=self.G,
+                                 A=self.A, I=self.I)
         Mb.supports(*self._support)
         return Mb(F_bar=Fbar)
     #
     #
     def line(self, x: float|list,
              q1: float, q2: float,
+             axial: float, 
              L1: float, L2: float):
-        """line loading"""
-        udl = Trapezoidal(q1=q1, q2=q2,
+        """line loading
+        q1 : line load end 1
+        q2 : line load end 2
+        L1 : Distant to q1 from end 1
+        L2 : Distant to q2 from end 2
+        axial : Axial force (compression[-])
+        """
+        udl = Trapezoidal(q1=q1, q2=q2, P=axial, 
                           L=self.L, L1=L1, L2=L2)
-        return udl(x=x, E=self.E, I=self.I)
+        return udl(x=x, E=self.E, G=self.G, A=self.A, I=self.I)
     #
     def point(self, x: float|list,
-              P: float, M: float, L1: float,):
-        """ point loading"""
+              P: float, M:float,
+              axial: float, 
+              L1: float):
+        """
+        point loading
+        P : Point load
+        M : Moment
+        axial : Axial force
+        L1 : Distant to P,M from end 1
+        """
         #
-        Fp = Point(P=P, L=self.L, L1=L1)
-        Fm = Moment(M=M, L=self.L, L1=L1)
-        return list(map(sum, zip(Fp(x, self.E, self.I),
-                                 Fm(x, self.E, self.I))))
+        Fp = Point(W=P, P=axial, L=self.L, L1=L1)
+        Fm = Moment(M=M, P=axial, L=self.L, L1=L1)
+        #point =  Fp(x=x, E=self.E, G=self.G, A=self.A, I=self.I)
+        #moment = Fm(x=x, E=self.E, G=self.G, A=self.A, I=self.I)
+        return list(map(sum, zip(Fp(x=x, E=self.E, G=self.G, A=self.A, I=self.I),
+                                 Fm(x=x, E=self.E, G=self.G, A=self.A, I=self.I))))
 
     #
     #def loading_function(self, x: float):
@@ -544,7 +596,7 @@ class BeamBending:
     #
     def response(self, x: float, R0: list, Fx:list):
         """ General reponse """
-        res= BendingGE(E = self.E, I=self.I)
+        res= BendingGE(E = self.E, G=self.G, A=self.A, I=self.I)
         res.R0(*R0)
         res.load(*Fx)
         return res.response(x=x)

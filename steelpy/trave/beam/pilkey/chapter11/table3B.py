@@ -1,17 +1,18 @@
 # 
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
 from __future__ import annotations
-from bisect import bisect_right
+#from bisect import bisect_right
 from dataclasses import dataclass
-from math import factorial, cosh, sinh
-import re
+#from math import factorial, cosh, sinh
+#import re
 
 # package imports
-from steelpy.process.math.vector import Vector
-from .table3 import TableBasic
+#from steelpy.process.math.vector import Vector
+from steelpy.trave.beam.pilkey.utils.operations import SingularFunction
+from steelpy.trave.beam.pilkey.chapter11.table3 import TableBasic
 
 #
 #
@@ -24,18 +25,24 @@ from .table3 import TableBasic
 #
 #
 @dataclass
-class ArbitraryLoading(TableBasic):
-    __slots__ = ['L', 'L1']
+class ArbitraryLoading(SingularFunction, TableBasic):
+    __slots__ = ['L', 'L1', 'E', 'G', 'A', 'I']
 
     def __init__(self, L: float, L1: float) -> None:
         """
         L  : length of beam
         L1 : Distance to load from the left end
         """
+        if L1 > L:
+            raise IOError(f'L1 ({L1}) > beam length ({L})')
+        #
         self.L: float = L
         self.L1: float = L1
 
     #
+    def q(self, x: float) -> float:
+        """ Loading Function"""
+        return 0    
     #
     def V(self, x: float) -> float:
         """ Shear Force"""
@@ -62,16 +69,16 @@ class ArbitraryLoading(TableBasic):
         return 0
 
     #
-    def function_n(self, step: float, n: int) -> float:
-        """ <x-L>^n """
-        if n < 0:
-            return 0
-        elif step < 0:
-            return 0
-        elif n == 0:
-            return 1
-        else:
-            return step ** n
+    #def function_n(self, step: float, n: int) -> float:
+    #    """ <x-L>^n """
+    #    if n < 0:
+    #        return 0
+    #    elif step < 0:
+    #        return 0
+    #    elif n == 0:
+    #        return 1
+    #    else:
+    #        return step ** n
 
     #
     def max_steps(self):
@@ -80,16 +87,25 @@ class ArbitraryLoading(TableBasic):
     
 
     #
-    def __call__(self, x: float, E: float, G: float, I: float):
+    def __call__(self, x: float, E: float, G: float, A: float, I: float):
         """ 
         Formulas positive (+) is downwards and therefore sign is changed to maintain compatibility
         return: [V, M, theta, w]
         """
+        #print('here')
+        self.E = E
+        self.I = I
+        self.G = G
+        self.A = I
         #
-        return [self.V(x),
-                self.M(x),
-                self.theta(x, E, G, I),
-                self.w(x, E, G, I)]
+        step1 = x - self.L1
+        xfun = self.function_n(step1, 1)
+        ef = self.ei(x=xfun, k=0)
+        #ef = self.ei(x=x)
+        return [self.V(x, ef),     # Shear force
+                self.M(x, ef),     # Bending moment
+                self.theta(x, ef), # Slope
+                self.w(x, ef)]     # Deflection
 #
 #
 #
@@ -99,87 +115,137 @@ class Trapezoidal(ArbitraryLoading):
                  'L3', 'slope', 'P']
 
     def __init__(self, q1: float, q2: float,
-                 L: float, a1: float, a2: float,
-                 P: float = 0) -> None:
+                 L: float, L1: float, L2: float, 
+                 P: float) -> None:
         """
         q1 : line load end 1
         q2 : line load end 2
-        a1  : Distant to q1 from the left end
-        a2  : Distant to q1 from the rigth end
+        L1  : Distant to q1 from the left end
+        L2  : Distant to q2 from the rigth end
         L  : Length of beam
-        P  : axial force (zero by befault)
+        P  : axial force
         """
-        super().__init__(L=L, L1=a1)
-        self.q1 = q1
-        self.q2 = q2
-        self.L2 = a2
-        self.P = P
-        #
+        super().__init__(L=L, L1=L1)
+        self.q1: float = q1
+        self.q2: float = q2
+        self.L2: float = L2
+        # Distant to q1 from the rigth end
         self.L3 = self.L - self.L2
-        self.slope = (self.q2 - self.q1) / (self.L3 - self.L1)
-
+        self._slope = (self.q2 - self.q1) / (self.L3 - self.L1)
+        # axial force
+        self.P = P
     #
     #
-    def V(self, x: float, I: float) -> float:
+    def V(self, x: float, ef: tuple) -> float:
         """ Shear Force"""
-        step1 = x - self.L1
-        step2 = x - self._L3
-        ef = self.ei(x=x, I=I, k=0)
+        #step1 = x - self.L1
+        step2 = x - self.L3
+        #ef = self.ei(x=x, k=0)
+        xfun = self.function_n(step2, 1)
+        ef2 = self.ei(x=xfun, k=0)        
         #
-        func1 = (-1 * self.slope
-                 * (ef.e3 * self.function_n(step1, 1) + ef.Zeta * ef.e5 * self.function_n(step1, 1)
-                    - ef.e3 * self.function_n(step2, 1) - ef.Zeta * ef.e5 * self.function_n(step2, 1)))
+        #func1 = (-1 * self._slope
+        #         * (ef.e3 * self.function_n(step1, 1)
+        #            + ef.Zeta * ef.e5 * self.function_n(step1, 1)
+        #            - ef.e3 * self.function_n(step2, 1)
+        #            - ef.Zeta * ef.e5 * self.function_n(step2, 1)))
+        func1 = (-1 * self._slope
+                 * (ef.e3 + ef.Zeta * ef.e5 - ef2.e3 - ef2.Zeta * ef2.e5))
         
-        func2 = (self.q2 * (ef.e2 * self.function_n(step2, 1) + ef.Zeta * ef.e4 * self.function_n(step2, 1))
-                 - self.q1 * (ef.e2 * self.function_n(step1, 1) - ef.Zeta * ef.e4 * self.function_n(step1, 1)
-                              + 2 * ef.Zeta * ef.e4 * self.function_n(step2, 1)))
+        #func2 = (self.q2 * (ef.e2 * self.function_n(step2, 1)
+        #                    + ef.Zeta * ef.e4 * self.function_n(step2, 1))
+        #         - self.q1 * (ef.e2 * self.function_n(step1, 1)
+        #                      - ef.Zeta * ef.e4 * self.function_n(step1, 1)
+        #                      + 2 * ef.Zeta * ef.e4 * self.function_n(step2, 1)))
+        func2 = (self.q2 * (ef2.e2 + ef2.Zeta * ef2.e4 )
+                 - self.q1 * (ef.e2 - ef.Zeta * ef.e4 
+                              + 2 * ef2.Zeta * ef2.e4))        
         
         return func1 + func2
 
     #
-    def M(self, x: float, I: float) -> float:
+    def M(self, x: float, ef: tuple) -> float:
         """ Bending Moment"""
-        step1 = x - self.L1
-        step2 = x - self._L3
-        ef = self.ei(x=x, I=I, k=0)
+        #step1 = x - self.L1
+        step2 = x - self.L3
+        #ef = self.ei(x=x, k=0)
+        xfun = self.function_n(step2, 1)
+        ef2 = self.ei(x=xfun, k=0)        
         #
-        func1 = (-1 * self.slope *
-                 (ef.e4 * self.function_n(step1, 1) - ef.e4 * self.function_n(step2, 1)))
-        func2 = (self.q2 * ef.e3 * self.function_n(step2, 1) -
-                 self.q1 * ef.e3 * self.function_n(step1, 1))
+        #func1 = (-1 * self._slope
+        #         * (ef.e4 * self.function_n(step1, 1)
+        #            - ef.e4 * self.function_n(step2, 1)))
+        func1 = -1 * self._slope * (ef.e4 - ef2.e4 )      
+        
+        #func2 = (self.q2 * ef.e3 * self.function_n(step2, 1)
+        #         - self.q1 * ef.e3 * self.function_n(step1, 1))
+        #
+        func2 = self.q2 * ef2.e3 - self.q1 * ef.e3
+        
         return func1 + func2
 
     #
-    def theta(self, x: float, E: float, G: float, I: float) -> float:
+    def theta(self, x: float, ef: tuple) -> float:
         """ Slope = EIy' """
-        EI = E * I
-        step1 = x - self.L1
+        EI = self.E * self.I
+        #step1 = x - self.L1
         step2 = x - self.L3
-        ef = self.ei(x=x, I=I, k=0)
+        #ef = self.ei(x=x, k=0)
+        xfun = self.function_n(step2, 1)
+        ef2 = self.ei(x=xfun, k=0)        
         #
-        func1 = (-1 * self.slope
-                 * (ef.e5 * self.function_n(step1, 1) - ef.e5 * self.function_n(step2, 1)) / EI)
-        func2 = (self.q2 * ef.e4 * self.function_n(step2, 1) - self.q1 * ef.e4 * self.function_n(step1, 1))
-        return func1 + func2
+        #func1 = (-1 * self._slope
+        #         * (ef.e5 * self.function_n(step1, 1)
+        #            - ef.e5 * self.function_n(step2, 1)))
+        func1 = -1 * self._slope * (ef.e5 - ef2.e5 )
+        
+        #func2 = (self.q2 * ef.e4 * self.function_n(step2, 1)
+        #         - self.q1 * ef.e4 * self.function_n(step1, 1))
+        func2 = self.q2 * ef2.e4 - self.q1 * ef.e4
+        
+        return (func1 + func2) / EI
 
     #
-    def w(self, x: float, E: float, G: float, I: float) -> float:
+    def w(self, x: float, ef: tuple) -> float:
         """ Deflection = EIy"""
-        EI = E * I
-        step1 = x - self.L1
+        EI = self.E * self.I
+        #step1 = x - self.L1
         step2 = x - self.L3
-        ef = self.ei(x=x, I=I, k=0)
+        #ef = self.ei(x=x, k=0)
+        xfun = self.function_n(step2, 1)
+        ef2 = self.ei(x=xfun, k=0)
         #
-        func1 = (self.slope
-                 * (ef.e6 * self.function_n(step1, 1) - ef.e6 * self.function_n(step2, 1)) / EI
-                 - (ef.e4 * self.function_n(step1, 1)
-                    + ef.Zeta * ef.e6 * self.function_n(step1, 1)
-                    - ef.e4 * self.function_n(step2, 1)
-                    - ef.Zeta * ef.e6 * self.function_n(step2, 1)) / (G * As))
+        try:
+            GAs = self.G * self.A / ef.Zeta
+            #func1a = (ef.e4 * self.function_n(step1, 1)
+            #           + ef.Zeta * ef.e6 * self.function_n(step1, 1)
+            #           - ef.e4 * self.function_n(step2, 1)
+            #           - ef.Zeta * ef.e6 * self.function_n(step2, 1)) / GAs
+            #
+            func1a = (ef.e4 + ef.Zeta * ef.e6
+                      - ef2.e4 - ef2.Zeta * ef2.e6) / GAs
+            #
+            #func2a = (self.q1 * (ef.e3 * self.function_n(step1, 1)
+            #                   + ef.Zeta * ef.e5 * self.function_n(step1, 1))
+            #        - self.q2 * (ef.e3 * self.function_n(step2, 1)
+            #                     + ef.Zeta * ef.e5 * self.function_n(step2, 1))) / GAs
+            func2a = (self.q1 * (ef.e3 + ef.Zeta * ef.e5 )
+                      - self.q2 * (ef2.e3 + ef2.Zeta * ef2.e5)) / GAs
+        except ZeroDivisionError:
+            #GAs = 0
+            func1a = 0
+            func2a = 0
         #
-        func2 = ((self.q1 * ef.e5 * self.function_n(step1, 1) + self.q2 * ef.e5 * self.function_n(step2, 1)) / EI
-                 - (self.q1 * (ef.e3 * self.function_n(step1, 1) + ef.Zeta * ef.e5 * self.function_n(step1, 1))
-                    -self.q2 * (ef.e3 * self.function_n(step2, 1) + ef.Zeta * ef.e5 * self.function_n(step2, 1))) / (G * As))
+        #func1 = (self._slope
+        #         * ((ef.e6 * self.function_n(step1, 1)
+        #             - ef.e6 * self.function_n(step2, 1)) / EI
+        #            - func1a))
+        func1 = self._slope * ((ef.e6 - ef2.e6 ) / EI - func1a)
+        #
+        #func2 = ((self.q1 * ef.e5 * self.function_n(step1, 1)
+        #          - self.q2 * ef.e5 * self.function_n(step2, 1)) / EI
+        #         - func2a)
+        func2 = (self.q1 * ef.e5 - self.q2 * ef2.e5 ) / EI - func2a
         
         return func1 + func2
 
@@ -219,19 +285,20 @@ class Trapezoidal(ArbitraryLoading):
 
 
 #
+#
 @dataclass
 class Point(ArbitraryLoading):
     __slots__ = ['W', 'L', 'L1', 'P']
 
-    def __init__(self, W: float, L: float, a: float,
-                 P: float = 0):
+    def __init__(self, W: float, L: float, L1: float,
+                 P: float):
         """
         W : Point load
-        a : Distant to W from the left end
+        L1 : Distant to W from the left end
         L : Length of beam
         P : axial force (zero by befault)
         """
-        super().__init__(L=L, L1=a)
+        super().__init__(L=L, L1=L1)
         self.W = W
         self.P = P
 
@@ -242,40 +309,53 @@ class Point(ArbitraryLoading):
     #    return self.function_n(step, -1) * -self.P
 
     #
-    def V(self, x: float, I: float) -> float:
+    def V(self, x: float, ef: tuple) -> float:
         """ Shear Force"""
-        step = x - self.L1
-        ef = self.ei(x=x, I=I, k=0)
-        return (-1 * self.W
-                * (ef.e1 * self.function_n(step, 1)
-                   + ef.Zeta * ef.e3 * self.function_n(step, 1)))
+        #step = x - self.L1
+        #xfun = self.function_n(step, 1)
+        #ef = self.ei(x=xfun, k=0)
+        #return (-1 * self.W
+        #        * (ef.e1 * self.function_n(step, 1)
+        #           + ef.Zeta * ef.e3 * self.function_n(step, 1)))
         #
+        return -1 * self.W * (ef.e1 + ef.Zeta * ef.e3 )
 
-    def M(self, x: float, I: float) -> float:
+    def M(self, x: float, ef: tuple) -> float:
         """ Bending Moment"""
-        step = x - self.L1
-        ef = self.ei(x=x, I=I, k=0)
-        return -1 * self.W * ef.e2 * self.function_n(step, 1)
+        #step = x - self.L1
+        #xfun = self.function_n(step, 1)
+        #ef = self.ei(x=xfun, k=0)
+        return -1 * self.W * ef.e2 #* self.function_n(step, 1)
 
     #
-    def theta(self, x: float, E: float, G: float, I: float) -> float:
+    def theta(self, x: float, ef: tuple) -> float:
         """ Slope = EIy' """
-        step = x - self.L1
-        EI = E * I
-        ef = self.ei(x=x, I=I, k=0)
-        return -self.W * ef.e3 * self.function_n(step, 1) / EI
+        #step = x - self.L1
+        EI = self.E * self.I
+        #xfun = self.function_n(step, 1)
+        #ef = self.ei(x=xfun, k=0)
+        # -self.W * ef.e3 * self.function_n(step, 1) / EI
+        return -self.W * ef.e3 / EI
 
     #
-    def w(self, x: float, E: float, G: float,
-          I: float, As: float) -> float:
+    def w(self, x: float, ef: tuple) -> float:
         """ Deflection = EIy"""
-        step = x - self.L1
-        EI = E * I
-        ef = self.ei(x=x, I=I, k=0)
-        return (self.W
-                * (ef.e4 * self.function_n(step, 1) / EI
-                   - (ef.e2 * self.function_n(step, 1)
-                      - ef.Zeta * ef.e4 * self.function_n(step, 1)) / (G * As)))
+        #step = x - self.L1
+        EI = self.E * self.I
+        #xfun = self.function_n(step, 1)
+        #ef = self.ei(x=xfun, k=0)
+        #
+        try:
+            GAs = self.G * self.A / ef.Zeta
+            func1 = (ef.e2 - ef.Zeta * ef.e4 ) / GAs
+        except ZeroDivisionError:
+            func1 = 0
+        #
+        #return (self.W * (ef.e4 * self.function_n(step, 1) / EI
+        #                  - (ef.e2 * self.function_n(step, 1)
+        #                     - ef.Zeta * ef.e4 * self.function_n(step, 1)) / (G * As)))
+        #
+        return self.W * (ef.e4 / EI - func1)
 
 #
 #
@@ -283,52 +363,53 @@ class Point(ArbitraryLoading):
 class Moment(ArbitraryLoading):
     __slots__ = ['C', 'L', 'L1', 'P']
 
-    def __init__(self, M: float, L: float, a: float,
-                 P: float = 0) -> None:
+    def __init__(self, M: float, L: float, L1: float,
+                 P: float) -> None:
         """
         M : Moment load
-        a : Distant to M from the left end
+        L1 : Distant to M from the left end
         L : Length of beam
-        P : axial force (zero by befault)
+        P : axial force
         """
-        super().__init__(L=L, L1=a)
+        super().__init__(L=L, L1=L1)
         self.C = M
         self.P = P
     #
-    def V(self, x: float, I: float) -> float:
+    def V(self, x: float, ef: tuple) -> float:
         """ Shear Force"""
-        step = x - self.L1
-        ef = self.ei(x=x, I=I, k=0)
-        return self.C * ef.Lambda * ef.e4 * self.function_n(step, 1)
+        #step = x - self.L1
+        #ef = self.ei(x=x, k=0)
+        return self.C * ef.Lambda * ef.e4 #* self.function_n(step, 1)
     #
-    def M(self, x: float, I: float) -> float:
+    def M(self, x: float, ef: tuple) -> float:
         """ Bending Moment"""
-        step = x - self.L1
-        ef = self.ei(x=x, I=I, k=0)
-        return (-1 * self.C
-                * (ef.e1 * self.function_n(step, 1)
-                   - ef.Eta * ef.e3 * self.function_n(step, 1)))
+        #step = x - self.L1
+        #ef = self.ei(x=x, k=0)
+        # (-1 * self.C
+        #        * (ef.e1 * self.function_n(step, 1)
+        #           - ef.Eta * ef.e3 * self.function_n(step, 1)))
+        return -1 * self.C * (ef.e1 - ef.Eta * ef.e3 ) 
 
     #
-    def theta(self, x: float, E: float, G: float, I: float) -> float:
+    def theta(self, x: float, ef: tuple) -> float:
         """ Slope = EIy' """
-        step = x - self.L1
-        EI = E * I
-        ef = self.ei(x=x, I=I, k=0)
-        return (-1 * self.C
-                * (ef.e3 * self.function_n(step, 1)
-                   - ef.Eta * ef.e4 * self.function_n(step, 1))
-                / EI)
+        #step = x - self.L1
+        EI = self.E * self.I
+        #ef = self.ei(x=x, k=0)
+        #(-1 * self.C
+        # * (ef.e3 * self.function_n(step, 1)
+        #    - ef.Eta * ef.e4 * self.function_n(step, 1)) / EI)        
+        return -1 * self.C * (ef.e3 - ef.Eta * ef.e4 ) / EI
 
     #
-    def w(self, x: float, E: float, G: float, I: float) -> float:
+    def w(self, x: float, ef: tuple) -> float:
         """ Deflection = EIy"""
-        step = x - self.L1
-        EI = E * I
-        ef = self.ei(x=x, I=I, k=0)
-        return self.C * ef.e3 * self.function_n(step, 1) / EI
-
-
+        #step = x - self.L1
+        EI = self.E * self.I
+        #ef = self.ei(x=x, k=0)
+        # self.C * ef.e3 * self.function_n(step, 1) / EI
+        return self.C * ef.e3 / EI
 #
 #
+
 

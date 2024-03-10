@@ -11,7 +11,7 @@ from math import cosh, sinh, sqrt
 # import re
 
 # package imports
-
+from steelpy.trave.beam.pilkey.utils.operations import SingularFunction
 
 #
 #
@@ -24,7 +24,7 @@ from math import cosh, sinh, sqrt
 #
 #
 @dataclass
-class ArbitraryLoading:
+class ArbitraryLoading(SingularFunction):
     __slots__ = ["L", "L1"]
 
     def __init__(self, L: float, L1: float) -> None:
@@ -60,25 +60,25 @@ class ArbitraryLoading:
         return sqrt(G * J / (E * Cw))
         # except ZeroDivisionError:
         #    return 0
-
-    def function_n(self, step: float, n: int) -> float:
-        """<x-L>^n"""
-        if n < 0:
-            return 0
-        elif step < 0:
-            return 0
-        elif n == 0:
-            return 1
-        else:
-            return step**n
     #
-    def fun_sincos(self, fun, step: float, C: float) -> float:
-        """<x-L>^n"""
-        if step < 0:
-            return 0
-        else:
-            return fun(C * step)
-    
+    #def function_n(self, step: float, n: int) -> float:
+    #    """<x-L>^n"""
+    #    if n < 0:
+    #        return 0
+    #    elif step < 0:
+    #        return 0
+    #    elif n == 0:
+    #        return 1
+    #    else:
+    #        return step**n
+    #
+    #def fun_sincos(self, fun, step: float, C: float) -> float:
+    #    """<x-L>^n"""
+    #    if step < 0:
+    #        return 0
+    #    else:
+    #        return fun(C * step)
+    #
     #
     def __call__(self, x: float, E: float, G: float, J: float, Cw: float):
         """
