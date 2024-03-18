@@ -90,7 +90,8 @@ class BeamLoadClass:
                          area=section.area,
                          Iy=section.Iy, Iz=section.Iz,
                          J=section.J, E=material.E,
-                         G=material.G, Cw=section.Cw)
+                         G=material.G, Cw=section.Cw,
+                         alpha_s=section.alpha_s)
         #
         boundary1 = 'fixed'
         #if nodes[0].boundary:
@@ -107,7 +108,8 @@ class BeamLoadClass:
                        E=material.E, G=material.G, 
                        Iy=section.Iy, Iz=section.Iz,
                        J=section.J, Cw=section.Cw,
-                       Area=section.area)
+                       Area=section.area,
+                       alpha_s=section.alpha_s)
         #
         # Axial   [P, blank, blank, u]
         # Torsion [T, Phi, Psi, B, Tw]
@@ -200,7 +202,8 @@ class LineBeam(BeamLoadClass):
     def Fx(self, x:float|list, L:float,
            E:float, G: float,
            Iy:float, Iz:float,
-           J: float, Cw: float, Area: float):
+           J: float, Cw: float, Area: float,
+           alpha_s: float):
         """
         Beam load local system
 
@@ -229,9 +232,11 @@ class LineBeam(BeamLoadClass):
         #Mx.torque(T=self.mx, L1=self.L0)        
         #
         # In plane [V, M, theta, w]
-        in_plane =  BeamBending(L=L, E=E, G=G, A=Area, I=Iy)
+        in_plane =  BeamBending(L=L, E=E, G=G, A=Area, I=Iy,
+                                alpha_s=alpha_s)
         # Out plane [V, M, theta, w]
-        out_plane = BeamBending(L=L, E=E, G=G, A=Area, I=Iz)
+        out_plane = BeamBending(L=L, E=E, G=G, A=Area, I=Iz,
+                                alpha_s=alpha_s)
         #
         # [Fx, Fy, Fz, Mx, My, Mz]
         if isinstance(x, (list, tuple)):
@@ -361,7 +366,9 @@ class PointBeam(BeamLoadClass):
     def Fx(self, x:float|list, L: float,
            E:float, G: float, 
            Iy:float, Iz:float,
-           J: float, Cw: float, Area: float) -> list:
+           J: float, Cw: float,
+           Area: float,
+           alpha_s: float) -> list:
         """
         Beam load local system
 
@@ -391,9 +398,11 @@ class PointBeam(BeamLoadClass):
         # Torsion [T, B, psi, phi, Tw]
         Mx = BeamTorsion(E=E, L=L, G=G, J=J, Cw=Cw)
         # In plane [V, M, theta, w]
-        Finplane =  BeamBending(L=L, E=E, G=G, A=Area, I=Iy)
+        Finplane =  BeamBending(L=L, E=E, G=G, A=Area, I=Iy,
+                                alpha_s=alpha_s)
         # Out plane [V, M, theta, w]
-        F_outplane = BeamBending(L=L, E=E, G=G, A=Area, I=Iz)
+        F_outplane = BeamBending(L=L, E=E, G=G, A=Area, I=Iz,
+                                 alpha_s=alpha_s)
         #
         # [Fx, Fy, Fz, Mx, My, Mz]
         if isinstance(x, (list,tuple)):

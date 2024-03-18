@@ -180,10 +180,10 @@ class SingularFunction:
         else:
             return fun(C * step)
     #
-    def fun_evar(self, step: float, n: int):
-        """
-        """
-        return self.function_n(step, n)
+    #def fun_evar(self, step: float, n: int):
+    #    """
+    #    """
+    #    return self.function_n(step, n)
 
 #
 #

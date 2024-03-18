@@ -359,7 +359,8 @@ class MainProcess:
                 beam = BeamBasic(L=element.L, area=section.area, 
                                  Iy=section.Iy, Iz=section.Iz,
                                  J=section.J, Cw=section.Cw, 
-                                 E=material.E, G=material.G)         
+                                 E=material.E, G=material.G,
+                                 alpha_s=section.alpha_s)
                 #
                 #nodes = element.connectivity
                 # ---------------------------------------------
@@ -426,7 +427,7 @@ class MainProcess:
                     #bload0 = nf_local.loc[nodes[0]]
                     #tload0 = mtload.loc[nodes[0]]
                     R0 = eq.R0(bload= Pload(*Pu[:6]) , #nf_local.loc[nodes[0]],
-                               tload=mtload.loc[nodes[0]])
+                               tload= mtload.loc[nodes[0]])
                     #
                     lbforce = [['local', mname, bstep.node_end,
                                 *beam.response(x=bstep.node_end,
@@ -520,7 +521,8 @@ class MainProcess:
                   'Fz', 'My', 'ry', 'z']          # bending out plane
         #
         db = DBframework()
-        df_membf = db.DataFrame(data=member_load, columns=header, index=None)
+        df_membf = db.DataFrame(data=member_load,
+                                columns=header, index=None)
         # reorder columns
         df_membf.drop(columns=['blank1', 'blank2'])
         df_membf = df_membf[['load_name', 'component_name',
@@ -777,59 +779,43 @@ class NodeGenRespEq:
         Torsion [T, Phi, Psi, B, Tw] 
         """
         # select node disp end 0
-        ndlocal0 = self.nd_local[:6]
+        n0dlocal = self.nd_local[:6]
         #
         # Axial
         R0x = [bload.Fx,                  # Fx
-               #lnforce0[0] + bload.Fx,   # Fx
                0, 0,                      # blank, blank
-               1 * ndlocal0[0]]            # dx   
+               1 * n0dlocal[0]]           # dx   
         #
         # In plane
-        R0y = [-1 *  bload.Fy,  # Vy
-               1 *  bload.Mz, # Mz
-               #1 * (lnforce0[1] - bload.Fy),  # Vy
-              #-1 * (lnforce0[5] - bload.Mz), # Mz               
-               1 * ndlocal0[5],                # thetaz
-               -1 * ndlocal0[1]]               # dy
-               #bload.Fx]                       # axial
+        R0y = [-1 *  bload.Fy,            # Vy
+               1 *  bload.Mz,             # Mz            
+               1 * n0dlocal[5],           # thetaz
+               -1 * n0dlocal[1]]          # dy
         #
         if self.plane.plane2D:
             #
             R0z = [0, 0, 0, 0]    # [Vz, My, thetay, dz]
             R0t = [0, 0, 0, 0, 0] # [T, Phi, Psi, B, Tw] 
         else:
-            R0z = [-1 *  bload.Fz,                  # Vz
-                    1 *  bload.My,                  # My
-                   #1 * (lnforce0[2] - bload.Fz),   # Vz
-                   #-1 * (lnforce0[4] - bload.My),  # My                   
-                   1 * ndlocal0[4],                  # thetay
-                   -1 * ndlocal0[2]]                 # dz
-                   #bload.Fx]                         # axial
+            R0z = [-1 *  bload.Fz,        # Vz
+                    1 *  bload.My,        # My                
+                   1 * n0dlocal[4],       # thetay
+                   -1 * n0dlocal[2]]      # dz
             #
             # Torsion
-            #T0 = 1 * (lnforce0[3] + bload.Mx)
             T0 = 1 * bload.Mx
-            rx = 1 * ndlocal0[3] 
+            rx = 1 * n0dlocal[3] 
             #
-            #try: # Thin walled sections (Ibeam, Channel & Z)
-            #    1 / self.section.Cw
+            # Thin walled sections (Ibeam, Channel & Z)
             thetas = [1 * tload.Psi,
                       1 * tload.B,
                       1 * tload.Tw]
-            #except ZeroDivisionError: # the rest (Pilky)
-            #    thetas = [0, 0, 0]
+            #
             R0t = [T0,  rx,  *thetas]  # [T, Phi, Psi, B, Tw]
         #
         return Req(R0x, R0t, R0y, R0z)
 #
 #
-#class Req(NamedTuple):
-#    """ """
-#    x: list
-#    t: list
-#    y: list
-#    z: list
 #
 Req = namedtuple('Reactions', ['x', 't', 'y', 'z'])
 Pload = namedtuple('PointLoad', ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])

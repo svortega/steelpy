@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from steelpy.sections.utils.shape.main import SectionMain
 from steelpy.utils.sqlite.utils import create_connection #, create_table
 from steelpy.sections.utils.shape.utils import ShapeProperty, get_sect_prop_df
-from steelpy.sections.utils.shape.main import ShapeGeometry #, get_shape
+#from steelpy.sections.utils.shape.main import ShapeGeometry #, get_shape
 from steelpy.sections.utils.shape.stress import ShapeStressBasic
 from steelpy.utils.dataframe.main import DBframework
 #
@@ -158,8 +158,8 @@ class SectionMainSQL(SectionMain):
                                                area, Zc, Yc,\
                                                Iy, Zey, Zpy, ry,\
                                                Iz, Zez, Zpz, rz,\
-                                               J, Cw)\
-                                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                                               J, Cw, alpha_s)\
+                                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
         #
         #conn = create_connection(self.db_file)
         #with conn:
@@ -422,7 +422,8 @@ def _get_section(conn, section_id:int,
 class ShapeGeometrySQL(ShapeStressBasic):
     name: str | int
     number: int
-    geometry: iter
+    geometry: tuple
+    material: tuple
     db_file: str
     #
     def _properties(self):
@@ -437,20 +438,22 @@ class ShapeGeometrySQL(ShapeStressBasic):
             cur.execute(table, query)
             row = cur.fetchone()
         #
+        #self.geometry
+        #
         return ShapeProperty(*row[2:])
     #
-    @property
-    def section(self):
-        """ get section """
-        #print('--')
-        return ShapeGeometry(shape_type=self.geometry[2],
-                             geometry=self.geometry)
+    #@property
+    #def section(self):
+    #    """ get section """
+    #    #print('--')
+    #    return ShapeGeometry(shape_type=self.geometry[2],
+    #                         geometry=self.geometry)
     #
     @property
     def _stress(self):
         """ """
         #stress =  self.section._stress
-        return self.section._stress
+        return self.geometry._stress
 #
 #
 def get_section(conn, section_name: int|str,

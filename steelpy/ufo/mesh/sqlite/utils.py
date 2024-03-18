@@ -32,6 +32,9 @@ def check_nodes(conn, node_name: int|str, component: int):
     #
     cur.execute(table, query)
     node = cur.fetchone()
+    
+    if not node:
+        raise IOError(f'Node {node_name} not found')    
     return node    
 #
 #
@@ -88,8 +91,15 @@ def check_element(conn, element_name: int|str, component: int):
     #else:
     #    cur.execute (f"SELECT * FROM Element\
     #                   WHERE name = {element_name};")
+    #
     cur.execute(table, query)
     row = cur.fetchone()
+    if not row:
+        raise IOError(f'Element {element_name} not found')
+    #try:
+    #    beam_number = beam[0]
+    #except TypeError:
+    #    raise IOError(f"Beam {beam_name} not found")    
     return row
 #
 #

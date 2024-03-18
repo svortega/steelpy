@@ -41,11 +41,12 @@ class BoundaryNodeSQL(BoundaryNode):
         conn = create_connection(self._db_file)
         with conn:  
             node = check_nodes(conn, node_name,
-                               component=self._component)       
-        try:
+                               component=self._component)
             node_id = node[0]
-        except TypeError:
-            raise IOError(f"Node: {node_name} not valid")
+        #try:
+        #    node_id = node[0]
+        #except TypeError:
+        #    raise IOError(f"Node: {node_name} not valid")
         
         try:
             # TODO : update data option if needed?
@@ -65,11 +66,12 @@ class BoundaryNodeSQL(BoundaryNode):
         conn = create_connection(self._db_file)
         with conn:  
             node = check_nodes(conn, node_name,
-                               component=self._component)       
-        try:
+                               component=self._component)
             node_id = node[0]
-        except TypeError:
-            raise IOError(f"Node {node_name} not found")
+        #try:
+        #    node_id = node[0]
+        #except TypeError:
+        #    raise IOError(f"Node {node_name} not found")
         
         try:
             self._labels.index(node_name)

@@ -12,23 +12,27 @@ units = Units()
 #
 #
 # beam class
-beam = Beam(name='beam_test', steps=10)
+beam = Beam(name='beam_test', steps=4)
 #beam.L = 15*units.ft
-beam.L = 5*units.m
+beam.L = 28*units.ft
+#beam.L = 5*units.m
 #
 # set section
 #beam.section = ['Rectangle', 200 * units.mm, 100 * units.mm]
 #beam.section = ['trapeziod', 200 * units.mm, 100 * units.mm, 150 * units.mm]
 #beam.section = ['Circular', 500 * units.mm]
 #beam.section = ['Tubular', 500 * units.mm, 25 * units.mm]
-beam.section = ['ub', 253.5*units.mm, 8.60*units.mm,
-                254.0*units.mm, 14.22*units.mm,           # top flange
-                1. * 254.0*units.mm, 1. * 14.22*units.mm, # bottom flange
-                0*units.mm]                              # radious
+#beam.section = ['ub', 253.5*units.mm, 8.60*units.mm,
+#                254.0*units.mm, 14.22*units.mm,           # top flange
+#                1. * 254.0*units.mm, 1. * 14.22*units.mm, # bottom flange
+#                0*units.mm]                              # radious
 #beam.section = ['box', 500 * units.mm, 6 * units.mm, 250 * units.mm, 12 * units.mm]
 #beam.section = ['tee', 200 * units.mm, 6 * units.mm, 150 * units.mm, 8 * units.mm]
 #beam.section = ['channel', 250 * units.mm, 6 * units.mm, 150 * units.mm, 12 * units.mm]
 #beam.section = ['Angle', 150 * units.mm, 6 * units.mm, 150 * units.mm, 6 * units.mm]
+#
+beam.section = ['ub', 351*units.mm, 8.64*units.mm,
+                204.0*units.mm, 15.10*units.mm]
 #
 #print(beam.section)
 #
@@ -67,7 +71,12 @@ beam.support = ["fixed", "free"]
 #          #'L1':90*units.inch,
 #          #'Fy':15*units.kips,
 #          'Mx':90*units.kip*units.inch,
-#          'name': 'point_3'}
+#          'name': 'selfweight_y'}
+#
+beam.P = {'L1':28*units.ft,
+          'Fx': -890 * units.kN,
+          'Fy': -4.45 * units.kN,
+          'name': 'AISC_C-C2.3'}
 #
 #beam.P = {'L1':90*units.inch, 'Mx':90*units.kip*units.inch, 'name': 'point_3'}
 #beam.load.point = [2.5*units.m, 1000*units.N, 2000*units.N]
@@ -86,9 +95,9 @@ beam.support = ["fixed", "free"]
 #          'L1':1*units.m, 'L2':1*units.m, 'name': 'udl_2'}
 #
 #
-beam.q = {'qy':-15*units.kN/units.m,
-          #'qx': -0.001*units.N/units.m,
-          'name': 'selfweight_y'}
+#beam.q = {'qy':-15*units.kN/units.m,
+#          #'qx': -0.001*units.N/units.m,
+#          'name': 'selfweight_y'}
 #
 #beam.q = {'qz1':15*units.kN/units.m, 'qz2':15*units.kN/units.m,
 #          'name': 'selfweight_z'}
@@ -177,21 +186,21 @@ mesh.section([[15, 'ub', 253.5*units.mm, 8.60*units.mm,
 
 mesh.node([(1, 0*units.ft,   0*units.ft),
            #(2, 15*units.ft,  0*units.ft),
-           (2, 1*units.m,  0*units.m), 
-           (3, 2*units.m,  0*units.m),
-           (4, 3*units.m,  0*units.m),
-           (5, 4*units.m,  0*units.m), 
+           #(2, 1*units.m,  0*units.m), 
+           #(3, 2*units.m,  0*units.m),
+           #(4, 3*units.m,  0*units.m),
+           #(5, 4*units.m,  0*units.m), 
            (6, 5*units.m,  0*units.m)])
 
 mesh.boundary([[1, 'support', 'fixed'],
                [6, 'support', 'free']])
 
-mesh.element([(1,  'beam',  1, 2, 10, 15, 0),
-              (2,  'beam',  2, 3, 10, 15, 0),
-              (3,  'beam',  3, 4, 10, 15, 0),
-              (4,  'beam',  4, 5, 10, 15, 0),
-              (5,  'beam',  5, 6, 10, 15, 0)])
-              #(5,  'beam',  1, 6, 10, 15, 0)])
+mesh.element([#(1,  'beam',  1, 2, 10, 15, 0),
+              #(2,  'beam',  2, 3, 10, 15, 0),
+              #(3,  'beam',  3, 4, 10, 15, 0),
+              #(4,  'beam',  4, 5, 10, 15, 0),
+              #(5,  'beam',  5, 6, 10, 15, 0)])
+              (5,  'beam',  1, 6, 10, 15, 0)])
 
 load = mesh.load()
 basic = load.basic()
@@ -220,31 +229,32 @@ basic = load.basic()
 #             0 * units.N / units.m,   # qt
 #             'udly_3']])
 #
-# TODO : input may beams 
-basic.beam({'load': 'snow load',
-            'beam': 1, #(1, 2, 3, 4, 5),
-            'type': 'line',
-            'qy': -15 * units.kN / units.m})
 #
-basic.beam({'load': 'snow load',
-            'beam': 2, 
-            'type': 'line',
-            'qy': -15 * units.kN / units.m})
+#basic.beam({'load': 'snow load',
+#            'beam': 5, #(1, 2, 3, 4, 5),
+#            'type': 'line',
+#            'qy': -7.5 * units.kN / units.m})
 #
-basic.beam({'load': 'snow load',
-            'beam': 3, 
-            'type': 'line',
-            'qy': -15 * units.kN / units.m})
-#
-basic.beam({'load': 'snow load',
-            'beam': 4, 
-            'type': 'line',
-            'qy': -15 * units.kN / units.m})
+#basic.beam({'load': 'snow load',
+#            'beam': 5, 
+#            'type': 'line',
+#            'qy': -7.5 * units.kN / units.m})
 #
 basic.beam({'load': 'snow load',
             'beam': 5, 
-            'type': 'line',
-            'qy': -15 * units.kN / units.m})
+            'type': 'point',
+            'Fy': -75 * units.kN,
+            'L0': 4.50 * units.m})
+#
+#basic.beam({'load': 'snow load',
+#            'beam': 4, 
+#            'type': 'line',
+#            'qy': -15 * units.kN / units.m})
+#
+#basic.beam({'load': 'snow load',
+#            'beam': 5, 
+#            'type': 'line',
+#            'qy': -15 * units.kN / units.m})
 #
 #basic.beam({'load': 'snow load',
 #            'beam': 5, 

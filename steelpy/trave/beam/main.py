@@ -240,7 +240,8 @@ class Beam:
         return BeamBasic(L=self._length, area=section.area, 
                          Iy=section.Iy, Iz=section.Iz,
                          J=section.J, Cw=section.Cw, 
-                         E=material.E, G=material.G)
+                         E=material.E, G=material.G,
+                         alpha_s=section.alpha_s)
     #
     def _getloads(self):
         """get beam loading"""

@@ -53,8 +53,11 @@ class ShapeProperty(NamedTuple):
     Sz:float
     Zz:float
     rz:float
+    # Torsion
     J:float
     Cw:float
+    #
+    alpha_s: float = 0
     #
     def __str__(self) -> str:
         """ """

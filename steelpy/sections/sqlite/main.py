@@ -152,7 +152,8 @@ class SectionSQL(SectionMainSQL):
                     Zpz DECIMAL,\
                     rz DECIMAL,\
                     J DECIMAL,\
-                    Cw DECIMAL);"
+                    Cw DECIMAL,\
+                    alpha_s DECIMAL);"
         
         create_table(conn, table)
     #

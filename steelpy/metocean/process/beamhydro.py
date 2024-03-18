@@ -55,7 +55,7 @@ class BeamMorisonWave:
     def Dh(self, mg):
         """Diamtre hydrodynamic"""
         # TODO: section naming
-        section = self._beam.section.section
+        section = self._beam.section.geometry
         D = section.diameter
         #mg = self.MG(Z)
         Dh = D + 2 * mg * 0

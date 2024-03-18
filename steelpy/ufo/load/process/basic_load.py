@@ -170,9 +170,14 @@ class LoadCaseBasic(BasicLoadMain):
             except Warning:
                 pass
             #
-            nodeid = values['node']
             bload = self.__getitem__(load_name)
-            bload._node[nodeid] = values
+            #
+            nodeid = values['node']
+            if isinstance(nodeid, (list, tuple)):
+                for item in nodeid:
+                    bload._node[nodeid] = values
+            else:
+                bload._node[nodeid] = values
         #
         #
         # dataframe input
@@ -261,14 +266,19 @@ class LoadCaseBasic(BasicLoadMain):
         
         elif isinstance(values, dict):
             load_name = values['load']
-            beamid = values['beam']
             try:
                 self.__setitem__(load_name, load_name)
             except Warning:
                 pass
             #
             bload = self.__getitem__(load_name)
-            bload._beam[beamid] = values    
+            #
+            beamid = values['beam']
+            if isinstance(beamid, (list, tuple)):
+                for item in beamid:
+                    bload._beam[item] = values
+            else:
+                bload._beam[beamid] = values    
         #
         # dataframe input
         try:

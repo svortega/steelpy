@@ -6,14 +6,17 @@
 from __future__ import annotations
 #from bisect import bisect_right
 from dataclasses import dataclass
-#from math import factorial, cosh, sinh
+#from math import cosh, sinh, sqrt, sin, cos
+#from typing import NamedTuple
 #import re
 
 # package imports
 #from steelpy.process.math.vector import Vector
 from steelpy.trave.beam.pilkey.utils.operations import SingularFunction
-from steelpy.trave.beam.pilkey.chapter11.table3 import TableBasic
+from steelpy.trave.beam.pilkey.chapter11.table3 import TableBasic, e_values
 
+#
+#
 #
 #
 # ---------------------------------------------------------------
@@ -26,7 +29,7 @@ from steelpy.trave.beam.pilkey.chapter11.table3 import TableBasic
 #
 @dataclass
 class ArbitraryLoading(SingularFunction, TableBasic):
-    __slots__ = ['L', 'L1', 'E', 'G', 'A', 'I']
+    __slots__ = ['L', 'L1', 'E', 'G', 'As', 'I']
 
     def __init__(self, L: float, L1: float) -> None:
         """
@@ -67,19 +70,7 @@ class ArbitraryLoading(SingularFunction, TableBasic):
     def w(self, x: float, E: float, G: float, I: float) -> float:
         """ Deflection = EIy"""
         return 0
-
     #
-    #def function_n(self, step: float, n: int) -> float:
-    #    """ <x-L>^n """
-    #    if n < 0:
-    #        return 0
-    #    elif step < 0:
-    #        return 0
-    #    elif n == 0:
-    #        return 1
-    #    else:
-    #        return step ** n
-
     #
     def max_steps(self):
         """ """
@@ -87,7 +78,7 @@ class ArbitraryLoading(SingularFunction, TableBasic):
     
 
     #
-    def __call__(self, x: float, E: float, G: float, A: float, I: float):
+    def __call__(self, x: float, E: float, G: float, As: float, I: float):
         """ 
         Formulas positive (+) is downwards and therefore sign is changed to maintain compatibility
         return: [V, M, theta, w]
@@ -96,11 +87,11 @@ class ArbitraryLoading(SingularFunction, TableBasic):
         self.E = E
         self.I = I
         self.G = G
-        self.A = I
+        self.As = As
         #
         step1 = x - self.L1
         xfun = self.function_n(step1, 1)
-        ef = self.ei(x=xfun, k=0)
+        ef = self.ei(x=xfun, k=0, load=True)
         #ef = self.ei(x=x)
         return [self.V(x, ef),     # Shear force
                 self.M(x, ef),     # Bending moment
@@ -215,26 +206,38 @@ class Trapezoidal(ArbitraryLoading):
         xfun = self.function_n(step2, 1)
         ef2 = self.ei(x=xfun, k=0)
         #
-        try:
-            GAs = self.G * self.A / ef.Zeta
-            #func1a = (ef.e4 * self.function_n(step1, 1)
-            #           + ef.Zeta * ef.e6 * self.function_n(step1, 1)
-            #           - ef.e4 * self.function_n(step2, 1)
-            #           - ef.Zeta * ef.e6 * self.function_n(step2, 1)) / GAs
+        if self.As == 0:
+            func1a = 0
+            func2a = 0
+        else:
+            GAs = self.G * self.As
             #
             func1a = (ef.e4 + ef.Zeta * ef.e6
                       - ef2.e4 - ef2.Zeta * ef2.e6) / GAs
             #
-            #func2a = (self.q1 * (ef.e3 * self.function_n(step1, 1)
-            #                   + ef.Zeta * ef.e5 * self.function_n(step1, 1))
-            #        - self.q2 * (ef.e3 * self.function_n(step2, 1)
-            #                     + ef.Zeta * ef.e5 * self.function_n(step2, 1))) / GAs
             func2a = (self.q1 * (ef.e3 + ef.Zeta * ef.e5 )
-                      - self.q2 * (ef2.e3 + ef2.Zeta * ef2.e5)) / GAs
-        except ZeroDivisionError:
-            #GAs = 0
-            func1a = 0
-            func2a = 0
+                      - self.q2 * (ef2.e3 + ef2.Zeta * ef2.e5)) / GAs            
+        #
+        #try:
+        #    GAs = self.G * self.As
+        #    #func1a = (ef.e4 * self.function_n(step1, 1)
+        #    #           + ef.Zeta * ef.e6 * self.function_n(step1, 1)
+        #    #           - ef.e4 * self.function_n(step2, 1)
+        #    #           - ef.Zeta * ef.e6 * self.function_n(step2, 1)) / GAs
+        #    #
+        #    func1a = (ef.e4 + ef.Zeta * ef.e6
+        #              - ef2.e4 - ef2.Zeta * ef2.e6) / GAs
+        #    #
+        #    #func2a = (self.q1 * (ef.e3 * self.function_n(step1, 1)
+        #    #                   + ef.Zeta * ef.e5 * self.function_n(step1, 1))
+        #    #        - self.q2 * (ef.e3 * self.function_n(step2, 1)
+        #    #                     + ef.Zeta * ef.e5 * self.function_n(step2, 1))) / GAs
+        #    func2a = (self.q1 * (ef.e3 + ef.Zeta * ef.e5 )
+        #              - self.q2 * (ef2.e3 + ef2.Zeta * ef2.e5)) / GAs
+        #except ZeroDivisionError:
+        #    #GAs = 0
+        #    func1a = 0
+        #    func2a = 0
         #
         #func1 = (self._slope
         #         * ((ef.e6 * self.function_n(step1, 1)
@@ -319,7 +322,7 @@ class Point(ArbitraryLoading):
         #           + ef.Zeta * ef.e3 * self.function_n(step, 1)))
         #
         return -1 * self.W * (ef.e1 + ef.Zeta * ef.e3 )
-
+    #
     def M(self, x: float, ef: tuple) -> float:
         """ Bending Moment"""
         #step = x - self.L1
@@ -345,11 +348,17 @@ class Point(ArbitraryLoading):
         #xfun = self.function_n(step, 1)
         #ef = self.ei(x=xfun, k=0)
         #
-        try:
-            GAs = self.G * self.A / ef.Zeta
-            func1 = (ef.e2 - ef.Zeta * ef.e4 ) / GAs
-        except ZeroDivisionError:
+        if self.As == 0:
             func1 = 0
+        else:
+            GAs = self.G * self.As
+            func1 = (ef.e2 - ef.Zeta * ef.e4 ) / GAs            
+        #
+        #try:
+        #    GAs = self.G * self.As
+        #    func1 = (ef.e2 - ef.Zeta * ef.e4 ) / GAs
+        #except ZeroDivisionError:
+        #    func1 = 0
         #
         #return (self.W * (ef.e4 * self.function_n(step, 1) / EI
         #                  - (ef.e2 * self.function_n(step, 1)

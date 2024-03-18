@@ -11,9 +11,6 @@ from typing import NamedTuple
 #import re
 #
 # package imports
-#from .table2B import BeamLoad
-#from .table2C import BeamBendingSupports
-#
 #
 #
 # ---------------------------------------------------------------
@@ -40,11 +37,12 @@ class TableBasic:
     PART A: BEAMS WITH AXIAL FORCES AND ELASTIC FOUNDATIONS:
             GENERAL RESPONSE EXPRESSIONS
     """
-    def ei(self, x: float, k: float):
+    def ei(self, x: float, k: float, load: bool=False):
         """Values of ei
         
         x : is measured from the left end
-        k : Elastic foundation modulus 
+        k : Elastic foundation modulus
+        load : load flag
         """
         try:
             # Ordinary Beam with or without
@@ -57,45 +55,79 @@ class TableBasic:
                 raise NotImplementedError('soil k to be included')
             
             except ZeroDivisionError:
-                alpha2 = abs(self.P / (self.E * self.I))
-                alpha = sqrt(alpha2)
+                #alpha2 = abs(self.P / (self.E * self.I))
+                #alpha = sqrt(alpha2)
                 # Axial force 
                 if self.P > 0: # Tension
                     # Beam with Tensile Axial Force P
-                    print('tension')
-                    return e_values(e0= alpha*sinh(alpha*x),
-                                    e1= cosh(alpha*x),
-                                    e2= sinh(alpha*x)/alpha,
-                                    e3= (cosh(alpha*x) - 1.0) / alpha**2,
-                                    e4= (sinh(alpha*x) - alpha*x) / alpha**3,
-                                    e5= (-1*alpha**2 * x**2 / 2.0 + cosh(alpha*x) - 1.0) / alpha**4,
-                                    e6= (-1*alpha**3 * x**3 / 6.0 + sinh(alpha*x) - alpha*x) / alpha**5,
-                                    Zeta=alpha2, Lambda=0, Eta=0) 
+                    #print('tension')
+                    return self._beam_tension(x, load=load)
                 
                 else: # compression
                     # Beam with Compressive Axial Force P
-                    print('compression')
-                    return e_values(e0= -1*alpha*sin(alpha*x),
-                                    e1= cos(alpha*x),
-                                    e2= sin(alpha*x)/alpha,
-                                    e3= (1.0 - cos(alpha*x)) / alpha**2,
-                                    e4= (alpha*x - sin(alpha*x)) / alpha**3,
-                                    e5= (alpha**2 * x**2 / 2.0 + cos(alpha*x) - 1.0) / alpha**4,
-                                    e6= (alpha**3 * x**3 / 6.0 + sin(alpha*x) - alpha*x) / alpha**5,
-                                    Zeta= alpha2, Lambda=0, Eta=0)
+                    #print('compression')
+                    return self._beam_compression(x, load=load)
                  
         except ZeroDivisionError:
-            # set values
-            return e_values(e0=0,
-                            e1=1,
-                            e2=x,
-                            e3=x**2 / 2.0,
-                            e4=x**3 / 6.0,
-                            e5=x**4 / 24.0,
-                            e6=x**5 / 120.0,
-                            Zeta=0,
-                            Lambda=0,
-                            Eta=0)
+            #print('no axial')
+            return self._simple_beam(x, load=load)
+    #
+    def _simple_beam(self, x: float, load: bool):
+        """ Ordinary Beam with or without Shear Deformation"""
+        e1 = 1
+        if load and x == 0:
+            e1 = 0
+        
+        return e_values(e0=0,
+                        e1= e1, # 1,
+                        e2=x,
+                        e3=x**2 / 2.0,
+                        e4=x**3 / 6.0,
+                        e5=x**4 / 24.0,
+                        e6=x**5 / 120.0,
+                        Zeta=0,
+                        Lambda=0,
+                        Eta=0)        
+    #
+    def _beam_compression(self, x: float, load: bool):
+        """ Beam with Compressive Axial Force P"""
+        alpha2 = abs(self.P / (self.E * self.I))
+        alpha = sqrt(alpha2)
+        
+        e1 = cos(alpha*x)
+        if load and x == 0:
+            e1 = 0
+        
+        return e_values(e0= -1*alpha*sin(alpha*x),
+                        e1= e1, # cos(alpha*x),
+                        e2= sin(alpha*x)/alpha,
+                        e3= (1.0 - cos(alpha*x)) / alpha**2,
+                        e4= (alpha*x - sin(alpha*x)) / alpha**3,
+                        e5= (alpha**2 * x**2 / 2.0 + cos(alpha*x) - 1.0) / alpha**4,
+                        e6= (alpha**3 * x**3 / 6.0 + sin(alpha*x) - alpha*x) / alpha**5,
+                        Zeta= alpha2,
+                        Lambda=0,
+                        Eta=0)
+    #
+    def _beam_tension(self, x: float, load: bool):
+        """ Beam with Tensile Axial Force P"""
+        alpha2 = abs(self.P / (self.E * self.I))
+        alpha = sqrt(alpha2)
+        
+        e1 = cosh(alpha*x)
+        if load and x == 0:
+            e1 = 0
+        
+        return e_values(e0= alpha*sinh(alpha*x),
+                        e1= e1 , # cosh(alpha*x),
+                        e2= sinh(alpha*x)/alpha,
+                        e3= (cosh(alpha*x) - 1.0) / alpha**2,
+                        e4= (sinh(alpha*x) - alpha*x) / alpha**3,
+                        e5= (-1*alpha**2 * x**2 / 2.0 + cosh(alpha*x) - 1.0) / alpha**4,
+                        e6= (-1*alpha**3 * x**3 / 6.0 + sinh(alpha*x) - alpha*x) / alpha**5,
+                        Zeta= -1*alpha2,
+                        Lambda= 0,
+                        Eta= 0)
     #
     def Pcr(self):
         """P critical"""
@@ -121,17 +153,20 @@ class BendingGE(TableBasic):
             GENERAL RESPONSE EXPRESSIONS
     """
 
-    __slots__ = ['E', 'G', 'I', 'P', 
+    __slots__ = ['E', 'G', 'A', 'I', 'alpha_s', 'k', 
                  'FV', 'FM', 'Ftheta', 'Fw',
                  'V0', 'M0', 'theta0', 'w0']
 
     def __init__(self, E: float, G: float,
                  A: float, I: float,
+                 alpha_s: float, 
                  k: float = 0) -> None:
         """
         E : modulus of elasticity
-        I : moment of inertia
         G : Shear modulus
+        A : Area
+        I : moment of inertia
+        alpha_s : Shear correction factor
         k : elastic foundation modulus
         """
         self.E = E
@@ -139,6 +174,7 @@ class BendingGE(TableBasic):
         self.A = A
         self.I = I
         self.k = k
+        self.alpha_s = alpha_s
     #
     def load(self, FV: float, FM: float,
              Ftheta: float, Fw: float)-> None:
@@ -172,6 +208,7 @@ class BendingGE(TableBasic):
         return (self.w0 * ef.Lambda * EI * (ef.e2 + ef.Zeta * ef.e4)
                 - self.theta0 * ef.Lambda * EI * ef.e3
                 + self.V0 * (ef.e1 + ef.Zeta * ef.e3)
+                - self.M0 * (ef.Lambda * ef.e4)
                 + self.FV)
 
     #
@@ -202,7 +239,7 @@ class BendingGE(TableBasic):
         EI = self.E * self.I
         #func = self.ei(x=x, k=0)
         try:
-            GAs = self.G * self.A / ef.Zeta
+            GAs = self.G * self.A / self.alpha_s
             func1 = (ef.e2 + ef.Zeta * ef.e4) / GAs
         except ZeroDivisionError:
             func1 = 0

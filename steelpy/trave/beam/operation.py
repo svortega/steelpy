@@ -53,13 +53,14 @@ from steelpy.utils.dataframe.main import DBframework
 #
 @dataclass
 class BeamBasic:
-    __slots__ = ['L','area', 'Iy', 'Iz', 'J', 'E', 'G', 'Cw', 
+    __slots__ = ['L','area', 'Iy', 'Iz', 'J', 'E', 'G', 'Cw', 'alpha_s', 
                  '_response', '_support0', '_support1',
                  '_torsion', '_axial', '_bminplane', '_bmoutplane']
 
     def __init__(self, L: float, area: float,
                  Iy:float, Iz:float, J:float,
-                 E:float, G:float, Cw:float) -> None:
+                 E:float, G:float, Cw:float,
+                 alpha_s: float) -> None:
         """
         L : beam length
         E : Elastic modulus
@@ -76,6 +77,7 @@ class BeamBasic:
         self.E = E
         self.G = G
         self.Cw = Cw
+        self.alpha_s = alpha_s
         #
         self._torsion = BeamTorsion(L=L, E=E, G=G,
                                     J=self.J, Cw=self.Cw)
@@ -83,10 +85,12 @@ class BeamBasic:
         self._axial = BeamAxial(L=L, E=E, A=area)
         
         self._bminplane = BeamBending(L=L, E=E, G=G,
-                                      A=area, I=self.Iy)
+                                      A=area, I=self.Iy,
+                                      alpha_s=alpha_s)
         
         self._bmoutplane = BeamBending(L=L, E=E, G=G,
-                                       A=area, I=self.Iz)
+                                       A=area, I=self.Iz,
+                                       alpha_s=alpha_s)
     #
     # ----------------------------------------------
     #
@@ -146,25 +150,17 @@ class BeamBasic:
         #        load_title, load_type,
         #        load_level, load_system,
         #        beam_name, x, Fx, Mx, Fy, Fz]
-        #Fbar = load.Fx(x=self.L, L=self.L,
-        #               E=self.E, G=self.G, 
-        #               Iy=self.Iy, Iz=self.Iz,
-        #               J=self.J, Cw=self.Cw,
-        #               Area=self.area)
         #
         #
         # Axial [P, blank, blank, u]
         Fa = self._axial.response(x=self.L, R0=R0[0], Fx=Fbar[8])
         Fa = [-1*item for item in Fa]
-        # Torsion [T, Phi, Psi, B,Tw]
-        #try:
-        #    1 / self.Cw
-        #    tload =  Fbar[9]
-        #except ZeroDivisionError:
         #
+        # Torsion [T, Phi, Psi, B,Tw]
         T1x = self._torsion.response(x=self.L, R0=R0[1],
                                      Fx=[-1 * item for item in Fbar[9]])
         T1x = [-1*item for item in T1x]
+        #
         # Bending in plane [V, M, theta, w, P]
         #Fx = [-1 * item for item in Fbar[10]]
         #Fx.append(Fa[0])
@@ -174,6 +170,7 @@ class BeamBasic:
                                        Fx=[-1 * item for item in Fbar[10]])
         #R1y = [-1*item for item in R1y]
         #R1y[0] *= -1
+        #
         # Bending out plane [V, M, theta, w, P]
         #Fx = [-1 * item for item in Fbar[11]]
         #Fx.append(Fa[0])
@@ -193,7 +190,6 @@ class BeamBasic:
         #thetas = rtorsion.fixed_ends(coord=[0, 0.25 * self.L, 0.50 * self.L, 0.75 * self.L, self.L])
         #thetas = rtorsion.cantilever(coord=[0, 0.25 * self.L, 0.50 * self.L, 0.75 * self.L, self.L])
         #
-        #
         return R0, R1
 
     #
@@ -203,39 +199,6 @@ class BeamBasic:
         Return: 
         R0 [Fa, T, Ry, Rz]
         """
-        #1/0
-        #
-        #Fx = [load_name, load_title, load_type, load_system,
-        #      beam_name, L_step,
-        #      Axial, Torsion, BM_inplane, BM_outplane]
-        #
-        #Axial, BM_inplane, BM_outplane = [V, M, w, theta]
-        #Torsion = [T, B, psi, phi, Tw]        
-        #
-        #(lname, ltitle, ltype, lsystem, bnumber, x,
-        # Fx_bar, Mx_bar, Fy_bar, Fz_bar)
-        #
-        # Fbar =[load_name, component, 
-        #        load_title, load_type,
-        #        load_level, load_system,
-        #        beam_name, x, Fx, Mx, Fy, Fz]
-        #Fbar = load.Fx(x=self.L, L=self.L,
-        #               E=self.E, G=self.G, 
-        #               Iy=self.Iy, Iz=self.Iz,
-        #               J=self.J, Cw=self.Cw,
-        #               Area=self.area)
-        #
-        # TODO : hack to include thin wall torsion from Roarks
-        #try:
-        #    1 / self.Cw
-        #    tload = [load.mx, load.L0, 0, 0, 0]
-        #    #tload =  Fbar[9]
-        #    #suppt = self._torsion.R0(Fbar=tload)
-        #except ZeroDivisionError:
-        #    # Torsion [T, Phi, Psi, B, Tw]
-        #    #suppt = self._torsion.R0(Fbar=[-1 * item for item in Fbar[9]])
-        #tload = [1 * item for item in Fbar[9]]
-        #
         #1 / 0
         #
         # Axial [P, blank, blank, u]
@@ -301,15 +264,15 @@ class BeamBasic:
         R1t = self._torsion.response(x=x, R0=R0t, Fx=tload)
         # Bending in plane [V, M, theta, w, P]
         #Fx = [-1 * item for item in Fyx]
-        #Fx.append(Fax[0])
+        #Fx.append(R0x[0])
         R1y = self._bminplane.response(x=x,
-                                       R0=[*R0y, Fax[0]],
+                                       R0=[*R0y, R0x[0]],
                                        Fx=[-1 * item for item in Fyx])
         # Bending out plane [V, M, theta, w, P]
         #Fx = [-1 * item for item in Fzx]
-        #Fx.append(Fax[0])
+        #Fx.append(R0x[0])
         R1z = self._bmoutplane.response(x=x,
-                                        R0=[*R0z, Fax[0]],
+                                        R0=[*R0z, R0x[0]],
                                         Fx=[-1 * item for item in Fzx])
         #
         return R1x, R1t, R1y, R1z
@@ -337,7 +300,8 @@ class BeamBasic:
                            E=self.E, G=self.G, 
                            Iy=self.Iy, Iz=self.Iz,
                            J=self.J, Cw=self.Cw,
-                           Area=self.area)
+                           Area=self.area,
+                           alpha_s=self.alpha_s)
             
             reac[item.load_name].append([item.load_name, item.component_name, 
                                          item.title, item.load_type, 'basic', 
@@ -494,9 +458,10 @@ class BeamBasic:
         beamfun = []
         for idx, item in enumerate(bloads):
             Fx = item.Fx(x=Lsteps, L=self.L,
-                           E=self.E, G=self.G, 
-                           Iy=self.Iy, Iz=self.Iz,
-                           J=self.J, Cw=self.Cw, Area=self.area)
+                         E=self.E, G=self.G, 
+                         Iy=self.Iy, Iz=self.Iz,
+                         J=self.J, Cw=self.Cw, Area=self.area,
+                         alpha_s=self.alpha_s)
             #beamfun[item.load_name].extend(lout)
             beamfun.extend(Fx)
         #
@@ -518,14 +483,16 @@ class R0eq(NamedTuple):
     y: list
     z: list
 #
+# ---------------------------------------------
 #
 @dataclass
 class BeamBending:
-    __slots__ = [ 'E', 'L', 'I', 'G', 'A', 
+    __slots__ = [ 'E', 'L', 'I', 'G', 'A', 'alpha_s', 'As', 
                   '_support', '_gen']
     
     def __init__(self, L: float, E:float, G: float, 
-                 A: float, I: float) -> None:    
+                 A: float, I: float,
+                 alpha_s: float) -> None:    
         """
         L : Length of beam (L)
         E : Elastic modulus (F/L^2)
@@ -538,6 +505,11 @@ class BeamBending:
         self.G = G
         self.A = A
         self.I = I
+        self.alpha_s = alpha_s
+        try:
+            self.As = self.A / self.alpha_s
+        except ZeroDivisionError:
+            self.As = 0
     #
     def supports(self, end1: str|list, end2: str|list,
                  k1: float|None = None, k2: float|None = None):
@@ -550,7 +522,7 @@ class BeamBending:
     def R0(self, Fbar:list):
         """Reaction end 1"""
         Mb = BeamBendingSupports(L=self.L, E=self.E, G=self.G,
-                                 A=self.A, I=self.I)
+                                 As=self.As, I=self.I)
         Mb.supports(*self._support)
         return Mb(F_bar=Fbar)
     #
@@ -568,7 +540,7 @@ class BeamBending:
         """
         udl = Trapezoidal(q1=q1, q2=q2, P=axial, 
                           L=self.L, L1=L1, L2=L2)
-        return udl(x=x, E=self.E, G=self.G, A=self.A, I=self.I)
+        return udl(x=x, E=self.E, G=self.G, As=self.As, I=self.I)
     #
     def point(self, x: float|list,
               P: float, M:float,
@@ -586,8 +558,8 @@ class BeamBending:
         Fm = Moment(M=M, P=axial, L=self.L, L1=L1)
         #point =  Fp(x=x, E=self.E, G=self.G, A=self.A, I=self.I)
         #moment = Fm(x=x, E=self.E, G=self.G, A=self.A, I=self.I)
-        return list(map(sum, zip(Fp(x=x, E=self.E, G=self.G, A=self.A, I=self.I),
-                                 Fm(x=x, E=self.E, G=self.G, A=self.A, I=self.I))))
+        return list(map(sum, zip(Fp(x=x, E=self.E, G=self.G, As=self.As, I=self.I),
+                                 Fm(x=x, E=self.E, G=self.G, As=self.As, I=self.I))))
 
     #
     #def loading_function(self, x: float):
@@ -596,7 +568,8 @@ class BeamBending:
     #
     def response(self, x: float, R0: list, Fx:list):
         """ General reponse """
-        res= BendingGE(E = self.E, G=self.G, A=self.A, I=self.I)
+        res= BendingGE(E = self.E, G=self.G, A=self.A, I=self.I,
+                       alpha_s=self.alpha_s)
         res.R0(*R0)
         res.load(*Fx)
         return res.response(x=x)
@@ -778,7 +751,7 @@ class BeamAxial:
         res.load(*Fx)
         return res.response(x=x)
 #
-#
+# ---------------------------------------------
 #
 def list2str(axial: int, vertical: int, moment: int):
     """

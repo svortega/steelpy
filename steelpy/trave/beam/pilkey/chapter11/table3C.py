@@ -23,9 +23,9 @@ from steelpy.trave.beam.pilkey.chapter11.table3 import TableBasic
 class BeamBendingSupports:
     """Beam Bending Initial Parameters """
 
-    __slots__ = ['L', 'E', 'I', 'G', 'A', '_support0']
+    __slots__ = ['L', 'E', 'I', 'G', 'As', '_support0']
 
-    def __init__(self, L:float, E:float, G: float, A: float, I: float): #
+    def __init__(self, L:float, E:float, G: float, As: float, I: float): #
         """
         L : beam lenght [m]
         E : Elastic modulus [Pa] (default steel)
@@ -33,7 +33,7 @@ class BeamBendingSupports:
         self.L:float = L
         self.E:float = E
         self.G:float = G
-        self.A:float = A
+        self.As:float = As
         self.I:float = I
     #
     def supports(self, supp1:str, supp2:str,
@@ -58,84 +58,84 @@ class BeamBendingSupports:
         """
         if re.match(r"\b(pinn(ed)?|hinged|roller(s)?)\b", supp1, re.IGNORECASE):
             if re.match(r"\b(pinn(ed)?)\b", supp2, re.IGNORECASE):
-                return PinnedPinned(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I)
+                return PinnedPinned(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I)
             elif re.match(r"\b(fix(ed)?|encastre(r)?|infinite)\b", supp2, re.IGNORECASE):
-                return PinnedFixed(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I)
+                return PinnedFixed(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I)
             elif re.match(r"\b(guide(d)?)\b", supp2, re.IGNORECASE):
-                return PinnedGuided(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I)
+                return PinnedGuided(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I)
             elif re.match(r"\b(spring)\b", supp2, re.IGNORECASE):
                 if not k2:
                     raise IOError("Spring k2 value missing")
-                return PinnedSpring(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I,
+                return PinnedSpring(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I,
                                     k1=k1, k2=k2)
             else:
                 raise IOError("unstable")
-        
+        #
         elif re.match(r"\b(fix(ed)?|encastre(r)?|infinite)\b", supp1, re.IGNORECASE):
             if re.match(r"\b(pinn(ed)?|hinged|roller(s)?)\b", supp2, re.IGNORECASE):
-                return FixedPinned(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I)
+                return FixedPinned(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I)
             elif re.match(r"\b(fix(ed)?|encastre(r)?|infinite)\b", supp2, re.IGNORECASE):
-                return FixedFixed(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I)
+                return FixedFixed(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I)
             elif re.match(r"\b(guide(d)?)\b", supp2, re.IGNORECASE):
-                return FixedGuided(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I)
+                return FixedGuided(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I)
             elif re.match(r"\b(free)\b", supp2, re.IGNORECASE):
-                return FixedFree(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I)
+                return FixedFree(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I)
             elif re.match(r"\b(spring)\b", supp2, re.IGNORECASE):
                 if not k2:
                     raise IOError("Spring k2 value missing")
-                return FixedSpring(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I,
+                return FixedSpring(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I,
                                    k1=k1, k2=k2)
             else:
                 raise IOError(f"boundary {supp2} not supported")
-
+        #
         elif re.match(r"\b(free)\b", supp1, re.IGNORECASE):
             if re.match(r"\b(fix(ed)?|encastre(r)?|infinite)\b", supp2, re.IGNORECASE):
-                return FreeFixed(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I)
+                return FreeFixed(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I)
             elif re.match(r"\b(spring)\b", supp2, re.IGNORECASE):
                 if not k2:
                     raise IOError("Spring k2 value missing")
-                return FreeSpring(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I,
+                return FreeSpring(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I,
                                    k1=k1, k2=k2)
             else:
                 raise IOError("unstable")
-
+        #
         elif re.match(r"\b(guide(d)?)\b", supp1, re.IGNORECASE):
             if re.match(r"\b(pinn(ed)?|hinged|roller(s)?)\b", supp2, re.IGNORECASE):
-                return GuidedPinned(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I)
+                return GuidedPinned(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I)
             elif re.match(r"\b(fix(ed)?|encastre(r)?|infinite)\b", supp2, re.IGNORECASE):
-                return GuidedFixed(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I)
+                return GuidedFixed(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I)
             elif re.match(r"\b(spring)\b", supp2, re.IGNORECASE):
                 if not k2:
                     raise IOError("Spring k2 value missing")
-                return GuidedSpring(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I,
+                return GuidedSpring(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I,
                                    k1=k1, k2=k2)
             else:
                 raise IOError("unstable")
-
+        #
         elif re.match(r"\b(spring)\b", supp1, re.IGNORECASE):
             if not k1:
                 raise IOError("Spring k1 value missing")
             #
             if re.match(r"\b(pinn(ed)?|hinged|roller(s)?)\b", supp2, re.IGNORECASE):
-                return SpringPinned(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I,
+                return SpringPinned(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I,
                                    k1=k1, k2=k2)
             elif re.match(r"\b(fix(ed)?|encastre(r)?|infinite)\b", supp2, re.IGNORECASE):
-                return SpringFixed(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I,
+                return SpringFixed(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I,
                                    k1=k1, k2=k2)
             elif re.match(r"\b(guide(d)?)\b", supp2, re.IGNORECASE):
-                return SpringGuided(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I,
+                return SpringGuided(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I,
                                     k1=k1, k2=k2)
             elif re.match(r"\b(free)\b", supp2, re.IGNORECASE):
-                return SpringFree(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I,
+                return SpringFree(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I,
                                   k1=k1, k2=k2)
             elif re.match(r"\b(spring)\b", supp2, re.IGNORECASE):
                 if not k2:
                     raise IOError("Spring k2 value missing")
-                return SpringSpring(L=self.L, E=self.E, G=self.G, A=self.A, I=self.I,
+                return SpringSpring(L=self.L, E=self.E, G=self.G, As=self.As, I=self.I,
                                     k1=k1, k2=k2)
             else:
                 raise IOError(f"boundary {supp2} not supported")
-        
+        #
         else:
             raise IOError(f"boundary {supp1} not supported")
     #
@@ -160,11 +160,11 @@ class BeamBendingSupports:
 #
 @dataclass
 class ArbitrarySupport(TableBasic):
-    __slots__ = ['L', 'E', 'G', 'I', 'ef', 'P', 
+    __slots__ = ['L', 'E', 'G', 'I', 'ef', 'P', 'As', 
                  'FV_bar', 'FM_bar', 'Ftheta_bar', 'Fw_bar']
 
     def __init__(self, L:float, E: float, G: float,
-                 A: float, I: float) -> None:
+                 As: float, I: float) -> None:
         """
         Pilkey 2nd ed
         TABLE 11-3
@@ -181,7 +181,7 @@ class ArbitrarySupport(TableBasic):
         self.L = L
         self.E = E
         self.G = G
-        self.A = A
+        self.As = As
         self.I = I
     #
     #
@@ -263,21 +263,28 @@ class PinnedPinned(ArbitrarySupport):
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
     #
     def operator(self):
         """ """
         eb = self.e_bar
         EI = self.E * self.I
-        try:
-            GAs = self.G * self.A / eb.Zeta
-            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
-        except ZeroDivisionError:
+        #
+        if self.As == 0:
             func1 = 0
+        else:
+            GAs = self.G * self.As
+            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs            
+        #
+        #try:
+        #    GAs = self.G * self.As
+        #    func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
+        #except ZeroDivisionError:
+        #    func1 = 0
         
         return eb.e0 * (eb.e4 / EI - func1) - eb.e2**2     
     #
@@ -297,11 +304,17 @@ class PinnedPinned(ArbitrarySupport):
         EI = self.E * self.I
         op = self.operator()
         #
-        try:
-            GAs = self.G * self.A / eb.Zeta
-            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
-        except ZeroDivisionError:
-            func1 = 0        
+        if self.As == 0:
+            func1 = 0
+        else:
+            GAs = self.G * self.As
+            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs            
+        #
+        #try:
+        #    GAs = self.G * self.As
+        #    func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
+        #except ZeroDivisionError:
+        #    func1 = 0
         #
         return ((-1 * eb.e2 * self.Fw_bar
                 - (eb.e4 / EI -  func1) * self.FM_bar) / op)
@@ -312,22 +325,28 @@ class PinnedFixed(ArbitrarySupport):
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
     #
     def operator(self):
         """ """
         eb = self.e_bar
         EI = self.E * self.I
         #
-        try:
-            GAs = self.G * self.A / eb.Zeta
-            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
-        except ZeroDivisionError:
-            func1 = 0        
+        if self.As == 0:
+            func1 = 0
+        else:
+            GAs = self.G * self.As
+            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs            
+        #
+        #try:
+        #    GAs = self.G * self.As
+        #    func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
+        #except ZeroDivisionError:
+        #    func1 = 0
         #
         return ((eb.e1 - eb.Eta * eb.e3)
                 * (eb.e4 / EI - func1) - eb.e2 * eb.e3 / EI)
@@ -347,11 +366,17 @@ class PinnedFixed(ArbitrarySupport):
         op = self.operator()
         EI = self.E * self.I
         #
-        try:
-            GAs = self.G * self.A / eb.Zeta
-            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
-        except ZeroDivisionError:
-            func1 = 0         
+        if self.As == 0:
+            func1 = 0
+        else:
+            GAs = self.G * self.As
+            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs            
+        #
+        #try:
+        #    GAs = self.G * self.As
+        #    func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
+        #except ZeroDivisionError:
+        #    func1 = 0
         #
         return ((-1 * self.Fw_bar * eb.e3 / EI
                  - self.Ftheta_bar * (eb.e4 / EI - func1)) / op)
@@ -362,11 +387,11 @@ class PinnedGuided(ArbitrarySupport):
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
     #
     def operator(self):
         """ """
@@ -402,11 +427,11 @@ class PinnedSpring(ArbitrarySupport):
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k2', 'k1']
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
         # spring stiffness
         self.k1 = k1
         self.k2 = k2
@@ -456,21 +481,28 @@ class FixedPinned(ArbitrarySupport):
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
     #
     def operator(self):
         """ """
         eb = self.e_bar
         EI = self.E * self.I
-        try:
-            GAs = self.G * self.A / eb.Zeta
-            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
-        except ZeroDivisionError:
+        #
+        if self.As == 0:
             func1 = 0
+        else:
+            GAs = self.G * self.As
+            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs            
+        #
+        #try:
+        #    GAs = self.G * self.As
+        #    func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
+        #except ZeroDivisionError:
+        #    func1 = 0
             
         return ((eb.e2 * eb.e3 / EI
                  - (eb.e4 / EI - func1) * (eb.e1 - eb.Eta * eb.e3)))
@@ -491,11 +523,17 @@ class FixedPinned(ArbitrarySupport):
         EI = self.E * self.I
         op = self.operator()
         #
-        try:
-            GAs = self.G * self.A / eb.Zeta
-            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
-        except ZeroDivisionError:
-            func1 = 0        
+        if self.As == 0:
+            func1 = 0
+        else:
+            GAs = self.G * self.As
+            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs            
+        #
+        #try:
+        #    GAs = self.G * self.As
+        #    func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
+        #except ZeroDivisionError:
+        #    func1 = 0        
         #
         return ((self.Fw_bar * eb.e2
                  + self.FM_bar * (eb.e4 / EI + func1)) / op)
@@ -506,21 +544,22 @@ class FixedFixed(ArbitrarySupport):
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
     #
     def operator(self):
         """ """
         eb = self.e_bar
         EI = self.E * self.I
-        try:
-            GAs = self.G * self.A / eb.Zeta
-            func1 = (eb.e2 + eb.Zeta * eb.e4) / GAs
-        except ZeroDivisionError:
+        #
+        if self.As == 0:
             func1 = 0
+        else:
+            GAs = self.G * self.As
+            func1 = (eb.e2 + eb.Zeta * eb.e4) / GAs
             
         return (eb.e3**2 / EI - (eb.e2 - eb.Eta * eb.e4) * (eb.e4 / EI - func1))
     #
@@ -540,11 +579,17 @@ class FixedFixed(ArbitrarySupport):
         eb = self.e_bar
         EI = self.E * self.I
         op = self.operator()
-        try:
-            GAs = self.G * self.A / eb.Zeta
-            func1 = (eb.e2 + eb.Zeta * eb.e4) / GAs
-        except ZeroDivisionError:
+        #
+        if self.As == 0:
             func1 = 0
+        else:
+            GAs = self.G * self.As
+            func1 = (eb.e2 + eb.Zeta * eb.e4) / GAs
+        #try:
+        #    GAs = self.G * self.As
+        #    func1 = (eb.e2 + eb.Zeta * eb.e4) / GAs
+        #except ZeroDivisionError:
+        #    func1 = 0
         
         return ((eb.e3 * self.Fw_bar
                  + (eb.e4 / EI - func1) * self.Ftheta_bar * EI) / op)
@@ -555,11 +600,11 @@ class FixedFree(ArbitrarySupport):
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
 
     def operator(self):
         """ """
@@ -593,11 +638,11 @@ class FixedGuided(ArbitrarySupport):
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
     #
     def operator(self):
         """ """
@@ -633,11 +678,11 @@ class FixedSpring(ArbitrarySupport):
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k2', 'k1']
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
         # spring stiffness
         self.k1 = k1
         self.k2 = k2
@@ -680,11 +725,11 @@ class FreeFixed(ArbitrarySupport):
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
     #
     def operator(self):
         """ """
@@ -721,11 +766,11 @@ class FreeSpring(ArbitrarySupport):
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k2', 'k1']
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
         # spring stiffness
         self.k1 = k1
         self.k2 = k2
@@ -771,11 +816,11 @@ class GuidedPinned(ArbitrarySupport):
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
     #
     def operator(self):
         """ """
@@ -812,11 +857,11 @@ class GuidedFixed(ArbitrarySupport):
     __slots__ = [ 'E', 'I', 'FV', 'FM', 'Ftheta', 'Fw' ]
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
     #
     def operator(self):
         """ """
@@ -852,11 +897,11 @@ class GuidedSpring(ArbitrarySupport):
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k2', 'k1']
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
         # spring stiffness
         self.k1 = k1
         self.k2 = k2
@@ -901,11 +946,11 @@ class SpringPinned(ArbitrarySupport):
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k1']
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
         # spring stiffness
         self.k1 = k1
         #self.k2 = k2
@@ -952,11 +997,11 @@ class SpringFixed(ArbitrarySupport):
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k1']
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
         # spring stiffness
         self.k1 = k1
         #self.k2 = k2
@@ -1003,11 +1048,11 @@ class SpringFree(ArbitrarySupport):
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k1']
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
         # spring stiffness
         self.k1 = k1
         #self.k2 = k2
@@ -1054,11 +1099,11 @@ class SpringGuided(ArbitrarySupport):
     __slots__ = ['E', 'I', 'FV', 'FM', 'Ftheta', 'Fw', 'k1']
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
         # spring stiffness
         self.k1 = k1
         #self.k2 = k2
@@ -1104,11 +1149,11 @@ class SpringSpring(ArbitrarySupport):
                  'k2', 'k1']
 
     def __init__(self, L:float, E: float,
-                 G: float, A: float, I: float, 
+                 G: float, As: float, I: float, 
                  k1:float|None=None, k2:float|None=None) -> None:
         """
         """
-        super().__init__(L=L, E=E, G=G, A=A, I=I)
+        super().__init__(L=L, E=E, G=G, As=As, I=I)
         # spring stiffness
         self.k1 = k1
         self.k2 = k2

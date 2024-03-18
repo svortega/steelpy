@@ -538,7 +538,10 @@ class IbeamBasic(ShapeStressBasic):
         #
         #1 / 0
         return axis(Qy, Qz)
-    #    
+    #
+    def alpha_s(self):
+        """Shear correction factor"""
+        1 / 0
     #
     # --------------------------------------------
     # Torsion

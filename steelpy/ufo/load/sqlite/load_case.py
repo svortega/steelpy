@@ -200,11 +200,11 @@ class BasicLoadSQL(LoadCaseBasic):
     #
     def ENL(self):
         """Equivalent Nodal Loads """
-        columns = [*self._plane.hforce, *self._plane.hdisp]
-        headgrp = ['load_name', 'component_name',
-                   'load_id', 'load_level',
-                   'load_title','load_system',
-                   'node_name', 'node_index']        
+        #columns = [*self._plane.hforce, *self._plane.hdisp]
+        #headgrp = ['load_name', 'component_name',
+        #           'load_id', 'load_level',
+        #           'load_title','load_system',
+        #           'node_name', 'node_index']        
         #
         # [Fx, Fy, Fz, Mx, My, Mz] and [x, y, z, rx, ry, rz]
         #columns = [*self._plane.hforce, *self._plane.hdisp]

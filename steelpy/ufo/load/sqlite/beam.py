@@ -193,12 +193,12 @@ class BeamLoadItemSQL(BeamSQLMaster):
                                 plane=self._plane,
                                 component=self._component, 
                                 db_file=self.db_file)
-        try:
-            memb_type = beam.type # beam[3]
-            if memb_type != 'beam':
-                raise ValueError(f"element {beam_name} type {memb_type} not valid")
-        except TypeError:
-            raise IOError(f"beam {beam_name} not found")
+        #try:
+        #memb_type = beam.type # beam[3]
+        if beam.type != 'beam':
+            raise ValueError(f"element {beam_name} type {beam.type} not valid")
+        #except TypeError:
+        #    raise IOError(f"beam {beam_name} not found")
         #
         #if not beam_name in self._labels:
         #if not beam_name in  self._labels:
@@ -633,10 +633,10 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
                                       component=self._component,
                                       db_file=self._db_file)
             #beam = check_element(conn, beam_name)        
-        try:
-            self._beam.name
-        except (TypeError, IndexError):
-            raise IOError(f"beam {beam_name} not found")
+        #try:
+        #    self._beam.name
+        #except (TypeError, IndexError):
+        #    raise IOError(f"beam {beam_name} not found")
         #
         # TODO: check if _beam_id affects something else
         #self._beam_id = beam_name
@@ -731,12 +731,12 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
                                 plane=self._plane,
                                 component=self._component,
                                 db_file=self._db_file)
-        try:
-            memb_type = beam.type # beam[3]
-            if memb_type != 'beam':
-                raise ValueError(f"element {beam_name} type {memb_type} not valid")
-        except TypeError:
-            raise IOError(f"beam {beam_name} not found")
+        #try:
+        #memb_type = beam.type # beam[3]
+        if beam.type != 'beam':
+            raise ValueError(f"element {beam_name} type {beam.type} not valid")
+        #except TypeError:
+        #    raise IOError(f"beam {beam_name} not found")
         #
         #return BeamLoadTypeSQL(load_name=self._name,
         #                       beam=beam, 
@@ -792,7 +792,9 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
                                 E=mat.E, G=mat.G, 
                                 Iy=sec.Iy, Iz=sec.Iz,
-                                J=sec.J, Cw=sec.Cw, Area=sec.area)
+                                J=sec.J, Cw=sec.Cw,
+                                Area=sec.area,
+                                alpha_s=sec.alpha_s)
                 #beamfun[key].extend(lout)
                 #beamfun[key].append(lout)
                 #
@@ -813,7 +815,9 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
                                 E=mat.E, G=mat.G, 
                                 Iy=sec.Iy, Iz=sec.Iz,
-                                J=sec.J, Cw=sec.Cw, Area=sec.area)
+                                J=sec.J, Cw=sec.Cw,
+                                Area=sec.area,
+                                alpha_s=sec.alpha_s)
                 #beamfun[key].append([bitem.name, lout])
                 #beamfun[key].extend(lout)
                 #beamfun[key].append(lout)
@@ -921,10 +925,10 @@ class BeamDistributedSQL(BeamLineBasic):
                                       component=self._component, 
                                       db_file=self._db_file)
                
-        try:
-            self._beam.name
-        except (TypeError, IndexError):
-            raise IOError(f"beam {beam_name} not found")        
+        #try:
+        #    self._beam.name
+        #except (TypeError, IndexError):
+        #    raise IOError(f"beam {beam_name} not found")        
         #
         load_source = 'force' #line_load.pop(0)
         # clean load input
@@ -1104,10 +1108,7 @@ def push_line_load(conn, load_name: str|int,
     # Beam check
     beam = check_element(conn, beam_name,
                          component=component)
-    try:
-        beam_number = beam[0]
-    except TypeError:
-        raise IOError(f"Beam {beam_name} not found")
+    beam_number = beam[0]
     #
     # Load check
     load_data = get_load_data(conn, load_name,
@@ -1255,10 +1256,10 @@ class BeamPointSQL(BeamPointBasic):
                                       component=self._component, 
                                       db_file=self._db_file)
                
-        try:
-            self._beam.name
-        except (TypeError, IndexError):
-            raise IOError(f"beam {beam_name} not found")        
+        #try:
+        #    self._beam.name
+        #except (TypeError, IndexError):
+        #    raise IOError(f"beam {beam_name} not found")        
         #
         point_type = 'force' #point_load.pop(0)
         point_load =  self._get_point(point_load)
@@ -1411,10 +1412,7 @@ def push_point_load(conn, load_name: str|int,
     # Beam check 
     beam = check_element(conn, beam_name,
                          component=component)
-    try:
-        beam_number = beam[0]
-    except TypeError:
-        raise IOError(f"Beam {beam_name} not found")    
+    beam_number = beam[0]
     #
     # Load check
     load_data = get_load_data(conn, load_name,

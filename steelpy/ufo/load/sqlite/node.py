@@ -679,10 +679,10 @@ class NodeItemSQL:
         load_id = load_data[0]
         #
         node = check_nodes(conn, node_name)
-        try:
-            node_id = node[0]
-        except TypeError:
-            raise IOError(f"Node {node_name} not found")
+        #try:
+        #    node_id = node[0]
+        #except TypeError:
+        #    raise IOError(f"Node {node_name} not found")
         # Node load
         cur = conn.cursor()
         cur.execute("SELECT * FROM LoadNode \

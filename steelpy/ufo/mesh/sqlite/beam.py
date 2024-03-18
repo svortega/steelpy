@@ -19,7 +19,8 @@ from math import dist
 #
 #
 # package imports
-from steelpy.sections.sqlite.utils import ShapeGeometrySQL, get_section 
+from steelpy.sections.sqlite.utils import ShapeGeometrySQL #, get_section
+from steelpy.sections.utils.shape.main import ShapeGeometry #, get_shape
 from steelpy.material.sqlite.isotropic import  get_materialSQL
 from steelpy.ufo.mesh.sqlite.nodes import pull_Node
 from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
@@ -28,7 +29,8 @@ from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            update_connectivity,
                                            get_node_coord,
                                            get_unitvector, 
-                                           update_element_item)
+                                           update_element_item,
+                                           check_element)
 from steelpy.ufo.mesh.process.elements.beam import BeamBasic, BeamItemBasic
 from steelpy.ufo.mesh.process.elements.bstiffness import Tmatrix, unitvec_0
 from steelpy.utils.sqlite.utils import create_connection
@@ -81,14 +83,14 @@ class BeamSQL(BeamBasic):
     #
     def __getitem__(self, beam_name: int|str):
         """ """
-        try:
-            self._labels.index(beam_name)
-            return BeamItemSQL(beam_name=beam_name,
-                               plane=self._plane,
-                               component=self._component,
-                               db_file=self.db_file)
-        except ValueError:
-            raise IndexError(f' ** element {beam_name} not valid')    
+        #try:
+        self._labels.index(beam_name)
+        return BeamItemSQL(beam_name=beam_name,
+                           plane=self._plane,
+                           component=self._component,
+                           db_file=self.db_file)
+        #except ValueError:
+        #    raise IndexError(f' ** element {beam_name} not valid')    
     #
     # ---------------------------------------
     #
@@ -289,15 +291,25 @@ class BeamItemSQL(BeamItemBasic):
     __slots__ = ['name', '_releases', 'type',
                  'db_file', '_plane', '_component']
     
-    def __init__(self, beam_name:int, plane: NamedTuple,
+    def __init__(self, beam_name:int,
+                 plane: NamedTuple,
                  component: int, 
                  db_file:str) -> None:
         """
         """
+        conn = create_connection(db_file)
+        with conn:        
+            beam = check_element(conn,
+                                 element_name=beam_name,
+                                 component=component)
+            #if not beam:
+            #    raise IOError(f'beam {beam_name} not found')
+        #
         super().__init__(beam_name)
         self._plane = plane
         self.db_file = db_file
         self._component = component
+        #print('--')
     #
     @property
     def number(self) -> int:
@@ -407,10 +419,13 @@ class BeamItemSQL(BeamItemBasic):
         #
         geometry = [*row[1:3], *row[11:]]
         #
+        shape = ShapeGeometry(shape_type=geometry[2],
+                              geometry=geometry)        
         #
         sect =  ShapeGeometrySQL(number=row[0], 
                                  name=row[1],
-                                 geometry=geometry, 
+                                 geometry=shape,
+                                 material=self.material, 
                                  db_file=self.db_file)
         return sect
 
