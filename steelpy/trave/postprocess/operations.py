@@ -355,12 +355,13 @@ class MainProcess:
                 Tb = element.T
                 #
                 material = element.material
-                section = element.section.properties()
+                section = element.section.properties(poisson=material.poisson)
                 beam = BeamBasic(L=element.L, area=section.area, 
                                  Iy=section.Iy, Iz=section.Iz,
                                  J=section.J, Cw=section.Cw, 
                                  E=material.E, G=material.G,
-                                 alpha_s=section.alpha_s)
+                                 Asy=section.Asy,
+                                 Asz=section.Asz)
                 #
                 #nodes = element.connectivity
                 # ---------------------------------------------
@@ -618,7 +619,9 @@ class MainProcess:
             section = member.section
             material = member.material
             stressdf = section.stress(df=item,
-                                      E=material.E, G=material.G)
+                                      E=material.E,
+                                      G=material.G,
+                                      poisson=material.poisson)
             conn = create_connection(self._db_file)
             with conn:            
                 stressdf.to_sql('ResultBeamStress', conn,

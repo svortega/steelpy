@@ -286,8 +286,10 @@ class StaticSolver:
             # Select invidual free nodes DOF
             #Fs = Fs[Fbool]
             #
-            # Displacement Section
+            # update Ks + Kg if axial load
+            #1 / 0
             #
+            # Displacement Section
             try:
                 1 / len(Dzeros)
                 Ds = Dzeros.copy()
@@ -304,6 +306,9 @@ class StaticSolver:
                     # check if node with displacement
                     try:
                         nload = Ds.loc[nodeid] #.to_numpy()
+                        if not nload.any():
+                            #print('-->')
+                            continue
                         Fs.loc[nodeid] = Fs.loc[nodeid].add(nload, axis='rows')
                     except KeyError:
                         continue
