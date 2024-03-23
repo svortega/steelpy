@@ -810,7 +810,7 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
         for key, items in self._point.items():
             beam = beams[key]
             mat = beam.material
-            sec = beam.section.properties()
+            sec = beam.section.properties(poisson=mat.poisson)
             Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
             for bitem in items:
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
