@@ -157,7 +157,7 @@ class TubularBasic(ShapeStressBasic):
     #
     # --------------------------------------------
     #
-    def _properties(self):
+    def _properties(self, poisson: float):
         """
         """
         # get geometry
@@ -218,10 +218,14 @@ class TubularBasic(ShapeStressBasic):
         #
         # -------------------------------------------------
         #
+        alpha_sy = self.alpha_s(poisson=poisson)
+        #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw)
+                             J=J, Cw=Cw,
+                             alpha_sy=alpha_sy,
+                             alpha_sz=alpha_sy)
 
     #
     #
@@ -398,6 +402,12 @@ class TubularBasic(ShapeStressBasic):
                  Yi=Yz, tw=self.tw)
         #
         return axis(Qy, Qz)
+    #
+    #
+    def alpha_s(self, poisson: float):
+        """Shear correction factor"""
+        alpha_sy = (4 + 3 * poisson) / (2 * (1 + poisson))
+        return alpha_sy
     #
     # --------------------------------------------
     #

@@ -96,7 +96,7 @@ class SectionMainSQL(SectionMain):
         #
         # Property
         item = self.__getitem__(name)
-        properties =  item.properties()
+        properties =  item.properties(poisson=0)
         with conn:
             self._push_property(conn, number, properties)
         #
@@ -158,8 +158,9 @@ class SectionMainSQL(SectionMain):
                                                area, Zc, Yc,\
                                                Iy, Zey, Zpy, ry,\
                                                Iz, Zez, Zpz, rz,\
-                                               J, Cw, alpha_s)\
-                                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                                               J, Cw, \
+                                               alpha_sy, alpha_sz)\
+                                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
         #
         #conn = create_connection(self.db_file)
         #with conn:
@@ -426,7 +427,7 @@ class ShapeGeometrySQL(ShapeStressBasic):
     material: tuple
     db_file: str
     #
-    def _properties(self):
+    def _properties(self, poisson: float):
         """ """
         query = (self.number, )
         table = f'SELECT * FROM SectionProperty \
@@ -438,9 +439,10 @@ class ShapeGeometrySQL(ShapeStressBasic):
             cur.execute(table, query)
             row = cur.fetchone()
         #
-        #self.geometry
         #
-        return ShapeProperty(*row[2:])
+        alpha_sy = self.geometry.alpha_s(poisson=poisson)
+        #
+        return ShapeProperty(*row[2:15], alpha_sy, alpha_sy)
     #
     #@property
     #def section(self):

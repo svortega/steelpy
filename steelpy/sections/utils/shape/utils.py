@@ -37,7 +37,8 @@ class ShapeProperty(NamedTuple):
     Zy,Zz : Plastic section modulus [length^3]
     rx,rz : Radious of gyration [length]
     J : Torsional Constant
-    Cw : Warping Constant 
+    Cw : Warping Constant
+    alpha_sy, alpha_sz : Shear correction coefficient 
     """
     area:float #[length^2]
     # Centroid [length]
@@ -56,8 +57,24 @@ class ShapeProperty(NamedTuple):
     # Torsion
     J:float
     Cw:float
+    # Shear correction coefficient 
+    alpha_sy: float = 0
+    alpha_sz: float = 0
     #
-    alpha_s: float = 0
+    #
+    @property
+    def Asy(self):
+        """ """
+        if self.alpha_sy == 0:
+            return 0
+        return self.area / self.alpha_sy
+    #
+    @property
+    def Asz(self):
+        """ """
+        if self.alpha_sz == 0:
+            return 0
+        return self.area / self.alpha_sz
     #
     def __str__(self) -> str:
         """ """

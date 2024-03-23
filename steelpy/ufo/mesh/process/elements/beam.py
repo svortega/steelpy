@@ -9,8 +9,7 @@ from collections.abc import Mapping
 #from typing import NamedTuple
 
 # package imports
-from steelpy.ufo.mesh.process.elements.bstiffness import (Rmatrix2, beam3D_K,
-                                                          beam3D_Ksb, beam3D_B3D2)
+from steelpy.ufo.mesh.process.elements.bstiffness import Rmatrix2, beam3D_B3D2, beam3D_Ksb
 from steelpy.ufo.mesh.process.elements.bgeometry import kg_beam
 from steelpy.ufo.mesh.process.elements.bmass import beam_mass
 from steelpy.utils.geometry.L3D import DistancePointLine3D #, LineLineIntersect3D
@@ -136,32 +135,33 @@ class BeamItemBasic:
     #
     def k3D(self):
         """Returns the condensed (and expanded) local stiffness matrix for 3D beam"""
+        # get material properties
+        material = self.material        
         # get section properties 
         section = self.section
         #section = self._cls._f2u_sections[section]
-        section = section.properties()
-        # get material properties
-        material = self.material
+        section = section.properties(poisson=material.poisson)
         #material = self._cls._f2u_materials[material]        
         #
-        #
         # solve K matrix
-        #kb = beam3D_Ksb(self.L,
-        #                section.area, section.J,
-        #                section.Iy, section.Iz,
-        #                material.E, material.G,
-        #                section.area, section.area)
-        #        
-        #kb = beam3D_K(self.L,
-        #              section.area, section.J,
-        #              section.Iy, section.Iz,
-        #              material.E, material.G)
         #
-        kb = beam3D_B3D2(self.L,
-                         section.area, section.J,
-                         section.Iy, section.Iz,
-                         material.E, material.G,
-                         section.area, section.area)
+        kb = beam3D_Ksb(Le=self.L,
+                        Ax=section.area,
+                        Asy=section.Asy,
+                        Asz=section.Asz,
+                        Jx=section.J,
+                        Iy=section.Iy, Iz=section.Iz,
+                        Emod=material.E, Gmod=material.G,
+                        shear=False)
+        #        
+        # TODO : check if this element is reliable
+        #kb = beam3D_B3D2(Le=self.L,
+        #                 Ax=section.area,
+        #                 Asy=section.Asy,
+        #                 Asz=section.Asz,                         
+        #                 Jx=section.J,
+        #                 Iy=section.Iy, Iz=section.Iz,
+        #                 Emod=material.E, Gmod=material.G)
         #
         k_cond = self._k_unc(kb)
         return k_cond

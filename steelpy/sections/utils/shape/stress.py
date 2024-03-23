@@ -33,7 +33,7 @@ class ShapeStressBasic:
     # -------------------------------------
     #
     #
-    def stress(self, E: float, G: float,
+    def stress(self, E: float, G: float, poisson: float, 
                actions=None, stress=None, df=None):
         """return cross section stress"""
         #print('-->')
@@ -50,7 +50,8 @@ class ShapeStressBasic:
                              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                              'Psi', 'B', 'Tw']]
                              #'theta1', 'theta2', 'theta3']]
-            stress = self._stress(actions=actions_df, G=G, E=E)
+            stress = self._stress(actions=actions_df,
+                                  G=G, E=E, poisson=poisson)
             # -------------------------------------
             header = ['load_name', 'component_name', 
                       'load_level', 'load_system',
@@ -130,7 +131,7 @@ class ShapeStressBasic:
         return tau_x
     #
     def _stress(self, actions: list, G: float, E: float, 
-                stress=None):
+                poisson: float, stress=None):
         """
         z
         ^
@@ -146,7 +147,7 @@ class ShapeStressBasic:
         #
         # get section's coordinates
         coord =  self.section_coordinates()
-        prop = self.properties()
+        prop = self.properties(poisson=poisson)
         #
         # ----------------------------------------------
         # get shear stress
@@ -250,7 +251,7 @@ class ShapeStressBasic:
     # -------------------------------------
     #
     #@property
-    def properties(self):
+    def properties(self, poisson: float):
         """
         --------------------------
         General Beam Element Data
@@ -279,7 +280,7 @@ class ShapeStressBasic:
 
         Cw  : Warping constant
         """
-        return self._properties()
+        return self._properties(poisson=poisson)
     #
     #
     #def push_property(self):

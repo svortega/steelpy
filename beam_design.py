@@ -74,7 +74,7 @@ beam.support = ["fixed", "free"]
 #          'name': 'selfweight_y'}
 #
 beam.P = {'L1':28*units.ft,
-          'Fx': -890 * units.kN,
+          #'Fx': -890 * units.kN,
           'Fy': -4.45 * units.kN,
           'name': 'AISC_C-C2.3'}
 #
@@ -178,19 +178,22 @@ mesh = f2umodel.mesh()
 
 mesh.material([[10, 'linear', 275.0 * units.MPa]])
 
-mesh.section([[15, 'ub', 253.5*units.mm, 8.60*units.mm,
+mesh.section([[155, 'ub', 253.5*units.mm, 8.60*units.mm,
                254.0*units.mm, 14.22*units.mm,  
                1. * 254.0*units.mm, 1. * 14.22*units.mm,
                0*units.mm],
-              [150, 'Tubular', 500 * units.mm, 25 * units.mm]])
+              [150, 'Tubular', 500 * units.mm, 25 * units.mm],
+              [15, 'ub', 351*units.mm, 8.64*units.mm,
+               204.0*units.mm, 15.10*units.mm]])
 
 mesh.node([(1, 0*units.ft,   0*units.ft),
            #(2, 15*units.ft,  0*units.ft),
            #(2, 1*units.m,  0*units.m), 
            #(3, 2*units.m,  0*units.m),
            #(4, 3*units.m,  0*units.m),
-           #(5, 4*units.m,  0*units.m), 
-           (6, 5*units.m,  0*units.m)])
+           #(5, 4*units.m,  0*units.m),
+           #(6, 5*units.m,  0*units.m)
+           (6, 28*units.ft,  0*units.m)])
 
 mesh.boundary([[1, 'support', 'fixed'],
                [6, 'support', 'free']])
@@ -240,11 +243,11 @@ basic = load.basic()
 #            'type': 'line',
 #            'qy': -7.5 * units.kN / units.m})
 #
-basic.beam({'load': 'snow load',
-            'beam': 5, 
-            'type': 'point',
-            'Fy': -75 * units.kN,
-            'L0': 4.50 * units.m})
+#basic.beam({'load': 'snow load',
+#            'beam': 5, 
+#            'type': 'point',
+#            'Fy': -75 * units.kN,
+#            'L0': 4.50 * units.m})
 #
 #basic.beam({'load': 'snow load',
 #            'beam': 4, 
@@ -298,6 +301,13 @@ basic.beam({'load': 'snow load',
 #            'y': -0.0511813 * units.m,})
 #            #'rz': 0.0136483 * units.rad,})
 #
+basic.node({'load': 'AISC_C-C2.3',
+            'node': 6,
+            'type': 'force',
+            #'Fx': -890 * units.kN,
+            'Fy': 4.45 * units.kN ,})
+#            'y': -0.0511813 * units.m,})
+#            #'rz': 0.0136483 * units.rad,})
 #
 mesh.build()
 #

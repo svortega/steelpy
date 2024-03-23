@@ -51,7 +51,7 @@ class TableBasic:
             try:
                 # Beam on Elastic Foundation, k, with Shear Deformation Effects
                 1 / k
-                print('elastic foundation')
+                #print('elastic foundation')
                 raise NotImplementedError('soil k to be included')
             
             except ZeroDivisionError:
@@ -153,28 +153,28 @@ class BendingGE(TableBasic):
             GENERAL RESPONSE EXPRESSIONS
     """
 
-    __slots__ = ['E', 'G', 'A', 'I', 'alpha_s', 'k', 
+    __slots__ = ['E', 'G', 'As', 'I', #'alpha_s', 'k', 
                  'FV', 'FM', 'Ftheta', 'Fw',
                  'V0', 'M0', 'theta0', 'w0']
 
     def __init__(self, E: float, G: float,
-                 A: float, I: float,
-                 alpha_s: float, 
+                 As: float, I: float,
+                 #alpha_s: float, 
                  k: float = 0) -> None:
         """
         E : modulus of elasticity
         G : Shear modulus
-        A : Area
+        As : Equivalent shear Area
         I : moment of inertia
         alpha_s : Shear correction factor
         k : elastic foundation modulus
         """
         self.E = E
         self.G = G
-        self.A = A
+        self.As = As
         self.I = I
         self.k = k
-        self.alpha_s = alpha_s
+        #self.alpha_s = alpha_s
     #
     def load(self, FV: float, FM: float,
              Ftheta: float, Fw: float)-> None:
@@ -238,11 +238,18 @@ class BendingGE(TableBasic):
         """ Deflection"""
         EI = self.E * self.I
         #func = self.ei(x=x, k=0)
-        try:
-            GAs = self.G * self.A / self.alpha_s
-            func1 = (ef.e2 + ef.Zeta * ef.e4) / GAs
-        except ZeroDivisionError:
+        #
+        if self.As == 0:
             func1 = 0
+        else:
+            GAs = self.G * self.As
+            func1 = (ef.e2 + ef.Zeta * ef.e4) / GAs
+        #
+        #try:
+        #    GAs = self.G * self.A / self.alpha_s
+        #    func1 = (ef.e2 + ef.Zeta * ef.e4) / GAs
+        #except ZeroDivisionError:
+        #    func1 = 0
         
         return (self.w0 * (ef.e1 + ef.Zeta * ef.e3)
                 - self.theta0 * ef.e2

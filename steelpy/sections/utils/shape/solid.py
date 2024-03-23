@@ -136,6 +136,11 @@ class TrapezoidBasic(ShapeStressBasic):
               / (3 * (self.a + self.width)))
         
         return axis(Yc, Zc)
+    #
+    def alpha_s(self, poisson: float):
+        """Shear correction factor"""
+        alpha_sy = (12 + 11 * poisson) / (10 * (1 + poisson))
+        return alpha_sy     
 #
 #
 @dataclass
@@ -201,7 +206,7 @@ d   |     |   Z
         return abs(self.a - self.width) / 2.0 
     #
     #
-    def _properties(self):
+    def _properties(self, poisson: float):
         """
         """
         #-------------------------------------------------
@@ -277,10 +282,14 @@ d   |     |   Z
         #
         #-------------------------------------------------
         #
+        alpha_sy = self.alpha_s(poisson=poisson)
+        #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw)
+                             J=J, Cw=Cw,
+                             alpha_sy=alpha_sy,
+                             alpha_sz=alpha_sy)                             
     #
     #
     def taux_max(self, Mt):
@@ -489,7 +498,7 @@ class TrapeziodSolid(TrapezoidBasic):
     type: str = 'trapezoid'
     #
     #
-    def _properties(self):
+    def _properties(self, poisson: float):
         """
         :return:
         area : Geometric Area (m^2)
@@ -622,10 +631,16 @@ class TrapeziodSolid(TrapezoidBasic):
         Yc = 0.50 * max(a, width) - Yc
         Zc = 0.50 * self.depth - Zc
         #
+        #
+        alpha_sy = self.alpha_s(poisson=poisson)
+        #
+        #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw)
+                             J=J, Cw=Cw,
+                             alpha_sy=alpha_sy,
+                             alpha_sz=alpha_sy)                             
     #
     #
     def taux_max(self, Mt):
@@ -838,7 +853,7 @@ class CircleSolid(ShapeStressBasic):
     #
     # --------------------------------------------
     #
-    def _properties(self):
+    def _properties(self, poisson: float):
         """
         """
         #
@@ -891,10 +906,15 @@ class CircleSolid(ShapeStressBasic):
         Jx = Iy + Iz
         rp = self.d / math.sqrt(8.0)
         #
+        #
+        alpha_sy = self.alpha_s(poisson=poisson)
+        #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw)
+                             J=J, Cw=Cw,
+                             alpha_sy=alpha_sy,
+                             alpha_sz=alpha_sy)
     #
     def taux_max(self, Mt):
         """
@@ -997,6 +1017,15 @@ class CircleSolid(ShapeStressBasic):
         # -----------------------------------------------------
         #
         return Qy, Qz
+    #
+    #
+    #
+    def alpha_s(self, poisson: float):
+        """Shear correction factor"""
+        alpha_sy = (7 + 6 * poisson) / (6 * (1 + poisson))
+        return alpha_sy    
+    #
+    # --------------------------------------------
     #
     def section_coordinates(self, theta: float = 90, steps: int = 2):
         """

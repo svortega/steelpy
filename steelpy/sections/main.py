@@ -105,7 +105,7 @@ class Section(Mapping):
         output += "\n"
         for name, section in self._sections.items():
             output += "{:<14s} ".format(str(name))
-            prop = section.properties()
+            prop = section.properties(poisson=0)
             output += prop.__str__()
         # print("-->")
         return output

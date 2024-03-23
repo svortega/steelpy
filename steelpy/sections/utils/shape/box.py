@@ -88,7 +88,7 @@ class BoxBasic(ShapeStressBasic):
     #      
     #
     #
-    def _properties(self):
+    def _properties(self, poisson: float):
         """ """
         # self.units_in = _units_output
 
@@ -163,10 +163,15 @@ class BoxBasic(ShapeStressBasic):
         Jx = Iy + Iz
         rp = math.sqrt(Jx / area)
         #
+        #
+        alpha_sy = self.alpha_s(poisson=poisson)
+        #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw)
+                             J=J, Cw=Cw,
+                             alpha_sy=alpha_sy,
+                             alpha_sz=alpha_sy)
     #
     def curved(self, R):
         """
@@ -235,6 +240,17 @@ class BoxBasic(ShapeStressBasic):
         #
         #tau_max = max(tau_short, tau_long)
         return tau_long    
+    #
+    #
+    def alpha_s(self, poisson: float):
+        """Shear correction factor"""
+        j = self.b * self.tb / (self.d * self.tw)
+        k = self.b / self.d
+        alpha_sy = (((12 + 72 * j + 150 * j**2 + 90 * j**3)
+                    + poisson * (11 + 66 * j + 135 * j**2 + 90 * j**3)
+                    + 10 * k**2 * ((3 + poisson) * j + 3 * j**2))
+                    / (10 * (1 + poisson) * (1 + 3 * j)**2))
+        return alpha_sy    
     #
     # --------------------------------------------
     #

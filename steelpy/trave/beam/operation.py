@@ -53,14 +53,15 @@ from steelpy.utils.dataframe.main import DBframework
 #
 @dataclass
 class BeamBasic:
-    __slots__ = ['L','area', 'Iy', 'Iz', 'J', 'E', 'G', 'Cw', 'alpha_s', 
+    __slots__ = ['L','area', 'Iy', 'Iz', 'J', 'E', 'G', 'Cw',
+                 'Asy', 'Asz', 
                  '_response', '_support0', '_support1',
                  '_torsion', '_axial', '_bminplane', '_bmoutplane']
 
     def __init__(self, L: float, area: float,
                  Iy:float, Iz:float, J:float,
                  E:float, G:float, Cw:float,
-                 alpha_s: float) -> None:
+                 Asy: float, Asz: float) -> None:
         """
         L : beam length
         E : Elastic modulus
@@ -68,6 +69,7 @@ class BeamBasic:
         J : Torsial constant [m^4]
         Iy,z : moment of inertia [m^4]
         Cw : Warping constant [m^6]
+        alpha_sy,z: Shear correction coefficient
         """
         self.L = L
         self.area = area
@@ -77,20 +79,21 @@ class BeamBasic:
         self.E = E
         self.G = G
         self.Cw = Cw
-        self.alpha_s = alpha_s
+        self.Asy = Asy
+        self.Asz = Asz
+        #
         #
         self._torsion = BeamTorsion(L=L, E=E, G=G,
                                     J=self.J, Cw=self.Cw)
         
         self._axial = BeamAxial(L=L, E=E, A=area)
-        
+        #
+            
         self._bminplane = BeamBending(L=L, E=E, G=G,
-                                      A=area, I=self.Iy,
-                                      alpha_s=alpha_s)
-        
+                                      As=self.Asy, I=self.Iy)
+        #
         self._bmoutplane = BeamBending(L=L, E=E, G=G,
-                                       A=area, I=self.Iz,
-                                       alpha_s=alpha_s)
+                                       As=self.Asz, I=self.Iz)
     #
     # ----------------------------------------------
     #
@@ -301,7 +304,7 @@ class BeamBasic:
                            Iy=self.Iy, Iz=self.Iz,
                            J=self.J, Cw=self.Cw,
                            Area=self.area,
-                           alpha_s=self.alpha_s)
+                           Asy=self.Asy, Asz=self.Asz)
             
             reac[item.load_name].append([item.load_name, item.component_name, 
                                          item.title, item.load_type, 'basic', 
@@ -460,8 +463,10 @@ class BeamBasic:
             Fx = item.Fx(x=Lsteps, L=self.L,
                          E=self.E, G=self.G, 
                          Iy=self.Iy, Iz=self.Iz,
-                         J=self.J, Cw=self.Cw, Area=self.area,
-                         alpha_s=self.alpha_s)
+                         J=self.J, Cw=self.Cw,
+                         Area=self.area,
+                         Asy=self.Asy, Asz=self.Asz)
+                         #alpha_s=self.alpha_s)
             #beamfun[item.load_name].extend(lout)
             beamfun.extend(Fx)
         #
@@ -487,12 +492,12 @@ class R0eq(NamedTuple):
 #
 @dataclass
 class BeamBending:
-    __slots__ = [ 'E', 'L', 'I', 'G', 'A', 'alpha_s', 'As', 
+    __slots__ = [ 'E', 'L', 'I', 'G', 'As', 
                   '_support', '_gen']
     
     def __init__(self, L: float, E:float, G: float, 
-                 A: float, I: float,
-                 alpha_s: float) -> None:    
+                 As: float, I: float) -> None:
+                 #alpha_s: float) -> None:    
         """
         L : Length of beam (L)
         E : Elastic modulus (F/L^2)
@@ -503,13 +508,13 @@ class BeamBending:
         self.L = L
         self.E = E
         self.G = G
-        self.A = A
+        self.As = As
         self.I = I
-        self.alpha_s = alpha_s
-        try:
-            self.As = self.A / self.alpha_s
-        except ZeroDivisionError:
-            self.As = 0
+        #self.alpha_s = alpha_s
+        #try:
+        #    self.As = self.A / self.alpha_s
+        #except ZeroDivisionError:
+        #    self.As = 0
     #
     def supports(self, end1: str|list, end2: str|list,
                  k1: float|None = None, k2: float|None = None):
@@ -568,8 +573,8 @@ class BeamBending:
     #
     def response(self, x: float, R0: list, Fx:list):
         """ General reponse """
-        res= BendingGE(E = self.E, G=self.G, A=self.A, I=self.I,
-                       alpha_s=self.alpha_s)
+        res= BendingGE(E = self.E, G=self.G, As=self.As, I=self.I)
+                       #alpha_s=self.alpha_s)
         res.R0(*R0)
         res.load(*Fx)
         return res.response(x=x)

@@ -150,7 +150,7 @@ class IbeamBasic(ShapeStressBasic):
     #
     # --------------------------------------------
     #
-    def _properties(self):
+    def _properties(self, poisson: float):
         """
         """
         #
@@ -317,10 +317,14 @@ class IbeamBasic(ShapeStressBasic):
         #
         Zc = self.d * 0.50 - Zc
         #
+        alpha_sy = self.alpha_s(poisson=poisson)
+        #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw )
+                             J=J, Cw=Cw,
+                             alpha_sy=alpha_sy,
+                             alpha_sz=alpha_sy)
     #
     def curved(self, R:float):
         """
@@ -539,9 +543,18 @@ class IbeamBasic(ShapeStressBasic):
         #1 / 0
         return axis(Qy, Qz)
     #
-    def alpha_s(self):
+    def alpha_s(self, poisson: float):
         """Shear correction factor"""
-        1 / 0
+        b = (self.bft + self.bfb) * 0.50
+        h = self.d - (self.tft + self.tfb)
+        j = (self.bft * self.tft + self.bfb * self.tfb) / (h * self.tw)
+        k = b / h
+        alpha_sy = (((12 + 72 * j + 150 * j**2 + 90 * j**3)
+                    + poisson * (11 + 66 * j + 135 * j**2 + 90 * j**3)
+                    + 30 * k**2 * (j + j**2)
+                    + 5 * poisson * k**2 * (8 * j + 9 * j**2))
+                    / (10 * (1 + poisson) * (1 + 3 * j)**2))
+        return alpha_sy
     #
     # --------------------------------------------
     # Torsion

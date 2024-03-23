@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 #
@@ -211,8 +211,8 @@ def beam_KG(length: float,
             Emod:float, Gmod:float, 
             areasy:float, areasz:float):
     """
-    The 3D gemetric stiffness matrix for frame elements
-    including shear and bending effects (H.P. Gavin)
+    3D geometric stiffness matrix for frame elements in local coordinates
+    including axial, bending, shear and torsional warping effects (H.P. Gavin).
     """
     #
     ax = min(areasy, areasz)
@@ -222,8 +222,8 @@ def beam_KG(length: float,
     gk = np.zeros(( 12, 12 ))
     #
     gk[ 0 ][ 0 ] = 0
-    gk[ 1 ][ 1 ] = 6/5 + 2*Phiy + Phiy**2 / (1 + Phiy)
-    gk[ 2 ][ 2 ] = 6/5 + 2*Phiz + Phiz**2 / (1 + Phiz)
+    gk[ 1 ][ 1 ] = (6/5 + 2*Phiy + Phiy**2) / (1 + Phiy)**2
+    gk[ 2 ][ 2 ] = (6/5 + 2*Phiz + Phiz**2) / (1 + Phiz)**2
     gk[ 3 ][ 3 ] = J/ax
     gk[ 4 ][ 4 ] = (2*length**2/15 + length**2*Phiz/6 + length**2*Phiz**2/12) / (1+Phiz)**2
     gk[ 5 ][ 5 ] = (2*length**2/15 + length**2*Phiy/6 + length**2*Phiy**2/12) / (1+Phiy)**2
@@ -232,7 +232,7 @@ def beam_KG(length: float,
     gk[ 2 ][ 4 ] = -length/10 / (1+Phiz)**2
     #
     gk[ 6 ][ 6 ]  = -gk[ 0 ][ 0 ]
-    gk[ 7 ][ 7 ]  = - 6/5 - 2*Phiy - Phiy**2 / (1 + Phiy)
+    gk[ 7 ][ 7 ]  = -gk[ 1 ][ 1 ]
     gk[ 8 ][ 8 ]  = gk[ 2 ][ 2 ]
     gk[ 9 ][ 9 ]  = gk[ 3 ][ 3 ]
     gk[ 10 ][ 10 ] = gk[ 4 ][ 4 ]

@@ -115,7 +115,7 @@ class TeeBasic(ShapeStressBasic):
         return stress_out         
     #  
     #
-    def _properties(self):
+    def _properties(self, poisson):
         """
         """
         #
@@ -180,10 +180,15 @@ class TeeBasic(ShapeStressBasic):
         Jx = Iy + Iz
         rp = (Jx / area)**0.50
         #
+        #
+        alpha_sy = self.alpha_s(poisson=poisson)
+        #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw)
+                             J=J, Cw=Cw,
+                             alpha_sy=alpha_sy,
+                             alpha_sz=alpha_sy)                             
     #
     #
     def curved(self, R):
@@ -335,6 +340,19 @@ class TeeBasic(ShapeStressBasic):
         #
         #1 / 0
         return axis(Qy, Qz)
+    #
+    #
+    def alpha_s(self, poisson: float):
+        """Shear correction factor"""
+        h = self.d - self.tb * 0.50
+        j = (self.b * self.tb) / (h * self.tw)
+        k = self.b / h
+        alpha_sy = (((12 + 96 * j + 276 * j**2 + 192 * j**3)
+                    + poisson * (11 + 88 * j + 248 * j**2 + 216 * j**3)
+                    + 30 * k**2 * (j + j**2)
+                    + 10 * poisson * k**2 * (4 * j + 5 * j**2 + j**3))
+                    / (10 * (1 + poisson) * (1 + 4 * j)**2))
+        return alpha_sy    
     #
     # ----------------------------------------
     #

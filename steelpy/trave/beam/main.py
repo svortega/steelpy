@@ -235,13 +235,14 @@ class Beam:
     def _beam(self):
         """get beam""" 
         material = self.material
-        section = self.section.properties()
+        section = self.section.properties(poisson=material.poisson)
         #
         return BeamBasic(L=self._length, area=section.area, 
                          Iy=section.Iy, Iz=section.Iz,
                          J=section.J, Cw=section.Cw, 
                          E=material.E, G=material.G,
-                         alpha_s=section.alpha_s)
+                         Asy=section.Asy,
+                         Asz=section.Asz)
     #
     def _getloads(self):
         """get beam loading"""
