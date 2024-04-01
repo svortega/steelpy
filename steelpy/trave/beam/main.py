@@ -30,7 +30,7 @@ from steelpy.utils.dataframe.main import DBframework
 #
 class Beam:
     __slots__ = ['_support', '_basic', '_sections', '_materials',
-                 'steps', '_length', '_response',
+                 'steps', '_length', '_response', '_Pdelta', 
                  '_combination', '_design', 'name', '_db']
 
     def __init__(self, name:int|str, steps: int = 10):
@@ -64,7 +64,7 @@ class Beam:
         self._basic._load.local_system()
         #self._combination = LoadCombConcept(basic_load)
         #self.load = BeamBasicLoad(beam=self)
-        
+        self._Pdelta = True
     #
     #
     #
@@ -232,7 +232,7 @@ class Beam:
     #
     #    
     #
-    def _beam(self):
+    def _beam(self, Pdelta: bool):
         """get beam""" 
         material = self.material
         section = self.section.properties(poisson=material.poisson)
@@ -242,7 +242,8 @@ class Beam:
                          J=section.J, Cw=section.Cw, 
                          E=material.E, G=material.G,
                          Asy=section.Asy,
-                         Asz=section.Asz)
+                         Asz=section.Asz,
+                         Pdelta=Pdelta)
     #
     def _getloads(self):
         """get beam loading"""
@@ -311,7 +312,7 @@ class Beam:
         """
         bloads = self._getloads()
         #
-        beam = self._beam()
+        beam = self._beam(Pdelta=self._Pdelta)
         beam.supports(*self.support)
         #
         # load_name : [load_title, load_type,
@@ -377,7 +378,7 @@ class Beam:
         #        
         # -----------------------------------------------------
         #        
-        beam = self._beam()
+        beam = self._beam(Pdelta=self._Pdelta)
         beam.supports(*self.support)
         #lbforce = beam.solve(bloads, steps)
         #

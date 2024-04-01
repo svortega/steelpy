@@ -280,13 +280,14 @@ class MainProcess:
     # -----------------------------------------------------------
     #
     #
-    def solve(self, Un, steps: int):
+    def solve(self, Un, steps: int,
+              Pdelta: bool):
         """ """
         elements = self._mesh._elements
         #
         basic_load = self._mesh._load._basic
         #
-        bload_func = basic_load.process(steps=steps) 
+        bload_func = basic_load.process(steps=steps, Pdelta=Pdelta) 
         #
         # Solve node and element foce and displacements
         #df_nload = basic_load._nodes.df
@@ -294,13 +295,15 @@ class MainProcess:
         #df_nload = self._mesh._load._basic.Fn()       
         # 
         df_beamf, df_nforce = self.solve_forces(elements, bload_func,
-                                                Un, benl_df, steps)
+                                                Un, benl_df,
+                                                steps=steps, Pdelta=Pdelta)
         #
         return df_beamf, df_nforce
     #
     #
     def solve_forces(self, elements, bload_func,
-                     df_ndisp, benl_df, steps):
+                     df_ndisp, benl_df,
+                     steps: int, Pdelta: bool):
         """
         Beam's internal forces along its lenght
         """
@@ -361,7 +364,8 @@ class MainProcess:
                                  J=section.J, Cw=section.Cw, 
                                  E=material.E, G=material.G,
                                  Asy=section.Asy,
-                                 Asz=section.Asz)
+                                 Asz=section.Asz,
+                                 Pdelta=Pdelta)
                 #
                 #nodes = element.connectivity
                 # ---------------------------------------------
@@ -378,7 +382,7 @@ class MainProcess:
                 # set beam to general response expresions --> R0
                 # [V, M, theta, w]
                 #
-                FUan = element.ks_local @ nd_local
+                FUan = element.Ke_local @ nd_local
                 #
                 #TODO: confirm change reactions sign
                 eq = NodeGenRespEq(nd_local, self._plane)
@@ -459,7 +463,7 @@ class MainProcess:
                 # ---------------------------------------------
                 # convert beam end-node disp to force [F = Kd] in global system
                 #
-                gnforce = element.K @ nd_global
+                gnforce = element.Ke_global @ nd_global
                 #
                 # ---------------------------------------------
                 #
@@ -633,14 +637,15 @@ class MainProcess:
     # -----------------------------------------------------------
     # 
     #
-    def results(self, Un, beam_steps:int = 10):
+    def results(self, Un, Pdelta: bool,
+                beam_steps:int = 10):
         """
         beam_steps : Integration points beam element (10 default)
         """
         print("** Postprocessing")
         start_time = time.time()
         #
-        df_beamf, df_Qn = self.solve(Un, beam_steps)
+        df_beamf, df_Qn = self.solve(Un, beam_steps, Pdelta=Pdelta)
         #
         #
         # combination

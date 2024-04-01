@@ -15,7 +15,9 @@ from steelpy.trave.process.solution import UnSolver
 from steelpy.trave.postprocess.main import PostProcess
 #
 from steelpy.trave.beam.main import Beam
+from steelpy.utils.dataframe.main import DBframework
 #
+import numpy as np
 #
 #
 #
@@ -25,7 +27,7 @@ class TraveItem:
     of 3-d framed structures
     """
     __slots__ = ['_plane2D', '_postprocess', '_solver', 
-                 'db_file', '_build', '_name']
+                 'db_file', '_build', '_name', '_Pdelta']
     #'_mesh', '_load', '_f2u','_results', 
     
     def __init__(self, mesh,
@@ -55,7 +57,7 @@ class TraveItem:
     #
     #
     def static(self, #mesh= None, 
-               method:str|None=None,
+               sparse:bool=True,
                second_order: bool = False):
         """
         Solves the static system by the Direct Stiffness Method (DSM)
@@ -66,6 +68,7 @@ class TraveItem:
         #
         #static = StaticSolver(plane2D=self._plane2D)
         static = self._solver.static()
+        self._Pdelta = False
         #
         if self._mesh:
             #self._mesh = mesh
@@ -75,9 +78,10 @@ class TraveItem:
             # Get K matrix
             # ------------------------------
             #mesh = self._mesh
-            Ks = self._mesh.Ks(sparse = False,
-                               condensed = False) 
+            Ks = self._mesh.Ke(sparse = sparse)
+                              # condensed = False) 
             jbc = self._mesh.jbc()
+            #Ddof = self._mesh._nodes.DOF_unreleased()
             #
             # ------------------------------
             # Get load vector
@@ -97,7 +101,8 @@ class TraveItem:
             #      
             Udf = static.solve(Ks=Ks,
                                Fn=Fn,
-                               jbc=jbc)
+                               jbc=jbc,
+                               sparse = sparse)
             #
             #static.PMT(K=Kg, basic=basic_load, jbc=jbc)
             #
@@ -113,6 +118,149 @@ class TraveItem:
             return static
         #
         #print('-->')
+    #
+    #
+    def Pdelta(self, sparse:bool=True,
+               max_iter: int = 30):
+        """ Performs second order (P-Delta) analysis """
+        #
+        pdelta = self._solver._Pdelta()
+        self._Pdelta = True
+        #
+        # ------------------------------
+        if self._mesh:
+            # ------------------------------
+            # Get K stiffness matrix
+            # ------------------------------
+            #
+            Ke = self._mesh.Ke(sparse = sparse)
+            jbc = self._mesh.jbc()
+            #
+            # ------------------------------
+            # Get load vector
+            # ------------------------------        
+            #
+            Fn = self._mesh._load._basic.Fn()
+            #
+            # ------------------------------
+            # Linear solution
+            # ------------------------------
+            #
+            colgrp = ['load_name', 'load_id', 
+                      'load_level', 'load_title',
+                      'load_system', 'component_name',
+                      'node_name', 'node_index']
+            #
+            hforce =  self._mesh._plane.hforce
+            hdisp = self._mesh._plane.hdisp
+            #
+            Fi = Fn[colgrp+hforce]
+            Di = Fn[colgrp+hdisp]
+            #
+            Un = pdelta.solveLinear(Ks=Ke,
+                                    Fn=Fi,
+                                    Dn=Di, 
+                                    jbc=jbc,
+                                    sparse = sparse)
+            #
+            # ------------------------------
+            # Pdelta solution
+            # ------------------------------            
+            #
+            colgrp = ['load_name', 'load_id', 'load_level',
+                      'load_system', 'component_name',]
+            #
+            Ugrp = Un.groupby(colgrp)
+            Dgrp = Di.groupby(colgrp)
+            #
+            hdisp = ['node_name', *self._mesh._plane.hdisp]
+            #
+            Utemp = []
+            for key, noded in Ugrp:
+                # TODO: select basic only
+                if key[2] != 'basic':
+                    continue
+                Uii = noded[hdisp].set_index('node_name')
+                #ndisp.set_index('node_name', inplace=True)
+                #
+                # ------------------------------
+                # Assambly matrix start            
+                Kg = self._mesh.Kg(D=Uii)
+                Kt = Ke + Kg
+                #
+                Ustep = Dgrp.get_group(key)
+                #Ui = Ustep.copy()
+                #
+                Ui = pdelta.solveLinear(Ks=Kt,
+                                        Fn=Fi,
+                                        Dn=Ustep,
+                                        jbc=jbc,
+                                        sparse = sparse)
+                #
+                #
+                Us = Ui[hdisp].set_index('node_name')
+                Utemp.extend([[*key,  noded['load_title'].iloc[0],
+                              nname, *Us.loc[nname]]
+                              for x, nname in enumerate(jbc.index)])
+                #
+                #
+                #for x in range(max_iter):
+                #    #
+                #    # ------------------------------
+                #    # solve displacements
+                #    #
+                #    Ui = pdelta.solveLinear(Ks=Kt,
+                #                            Fn=Fi,
+                #                            Dn=Ustep,
+                #                            jbc=jbc,
+                #                            sparse = sparse)
+                #    #
+                #    #
+                #    # ------------------------------
+                #    #
+                #    Ui = Ui[hdisp].set_index('node_name')
+                #    print(Ui)
+                #    #
+                #    #try:
+                #    #Ud = Uii + Ui
+                #    #print(Ud)
+                #    #
+                #    #Ui.loc[:,'x'] = Ui.loc[:,'x'].add(Ud.loc[:,'x'])
+                #    #Ui = ndisp + Ud
+                #    Uii.loc[:,'x'] =  Ui.loc[:,'x'] - Uii.loc[:,'x']
+                #    print('------------')
+                #    print(Uii)
+                #    #except UnboundLocalError:
+                #    #    pass
+                #    #
+                #    # ------------------------------
+                #    # Assambly matrix start i
+                #    #
+                #    #Uii = Ui[hdisp]
+                #    #Uii.set_index('node_name', inplace=True)
+                #    Kg = self._mesh.Kg(D=Uii)
+                #    # Tangent stiffness matrix Kt
+                #    Kt = Ke + Kg
+                #    #
+                #    # M = scipy.linalg.det(Kt)
+                #    # M = np.linalg.det(Kt)
+                #    #
+                #    Uii = Ui.copy()
+                #    #1 / 0
+        #
+        #1 / 0
+        Us = self.df(Utemp)
+        self._postprocess.Un.df = Us
+    #
+    #
+    def df(self, dftemp):
+        """displacement dataframe"""
+        db = DBframework()
+        header = ['load_name', 'load_id', 'load_level',
+                  'load_system', 'component_name', 'load_title', 
+                  'node_name', *self._mesh._plane.hdisp]
+        return db.DataFrame(data=dftemp, columns=header, index=None)
+    # 
     #
     def dynamic(self):
         """ """
@@ -143,7 +291,8 @@ class TraveItem:
         #                          sql_file=sql_file)
         #
         #self._postprocess = PostProcess(mesh=self._mesh)
-        results = self._postprocess.results(beam_steps)
+        results = self._postprocess.results(beam_steps,
+                                            Pdelta=self._Pdelta)
         return results
     #   
 #

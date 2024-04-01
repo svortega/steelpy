@@ -72,10 +72,12 @@ class PostProcess: # (ClassMainSQL)
     # --------------------
     #
     #
-    def results(self, beam_steps):
+    def results(self, beam_steps: int,
+                Pdelta: bool):
         """ """
         res = self._process.results(Un=self.Un.df,
-                                    beam_steps=beam_steps)
+                                    beam_steps=beam_steps,
+                                    Pdelta=Pdelta)
         #print('-->')
         return res
     #

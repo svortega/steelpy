@@ -126,7 +126,8 @@ class BasicLoadSQL(LoadCaseBasic):
     # Loading Operations
     # -----------------------------------------------
     #
-    def process(self, steps:int):
+    def process(self, steps:int,
+                Pdelta=bool):
         """process element load"""
         #
         #beams = elements.beam()
@@ -134,7 +135,8 @@ class BasicLoadSQL(LoadCaseBasic):
         #beamload = self.beam()
         #dftemp = beamload.beam_function(beams=beams, steps=steps)
         #
-        dftemp = self._beams.load_function(steps=steps) 
+        dftemp = self._beams.load_function(steps=steps,
+                                           Pdelta=Pdelta) 
         #
         #
         #print('---')

@@ -82,8 +82,8 @@ def beam3D_K(Le: float,
     ek += np.triu(ek, k=1).T
     return ek
 #
-
-
+#
+#
 def Rmatrix(l: float, m: float, n: float, beta: float = 0):
     """
     Rotation Matrix 
@@ -138,8 +138,6 @@ def Rmatrix(l: float, m: float, n: float, beta: float = 0):
 # Transformation matrix
 #
 #
-
-
 def unitvec_0(nodei: list, nodej: list,
               L: float | None = None,
               auxNode: list | None = None):
@@ -251,8 +249,6 @@ def unitvec_0(nodei: list, nodej: list,
     return dirCos
 #
 #
-
-
 def unitvec_1(nodei, nodej, L, auxNode=None):
     """
     Returns the transformation matrix for the member.

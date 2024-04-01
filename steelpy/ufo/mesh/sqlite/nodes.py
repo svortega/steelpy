@@ -421,15 +421,20 @@ class NodeSQL(NodeBasic):
             cur.execute(table, project)
             data = cur.fetchall()
         #
-        dof = 6
-        new = []
-        for row in data:
-            idx = row[0]
-            ndof = idx * dof
-            new.extend([ndof + x
-                        for x, item in enumerate(row[4:-1])
-                        if x != 0])
-        data
+        #dof = 6
+        #new = []
+        #for row in data:
+        #    idx = row[0]
+        #    ndof = idx * dof
+        #    new.extend([ndof + x + 1
+        #                for x, item in enumerate(row[4:-1])
+        #                if item != 0])
+        #
+        dof =  self._plane.ndof
+        new = [[row[0] * dof + x # + 1
+                for x, item in enumerate(row[4:-1]) if item == 0]
+                for row in data]
+        new = list(chain(*new))
         return new
     #
     # ---------------------------------

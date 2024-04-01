@@ -80,7 +80,8 @@ class BeamLoadClass:
     # Load Process Formulas
     # -------------------------
     #
-    def fer_beam(self, beam, system :int) -> list:
+    def fer_beam(self, beam,
+                 system :int, Pdelta: bool) -> list:
         """ """
         L =beam.L
         material = beam.material
@@ -92,7 +93,8 @@ class BeamLoadClass:
                          J=section.J, E=material.E,
                          G=material.G, Cw=section.Cw,
                          Asy=section.Asy,
-                         Asz=section.Asz)
+                         Asz=section.Asz,
+                         Pdelta=Pdelta)
         #
         boundary1 = 'fixed'
         #if nodes[0].boundary:
@@ -111,7 +113,8 @@ class BeamLoadClass:
                        Iy=section.Iy, Iz=section.Iz,
                        J=section.J, Cw=section.Cw,
                        Area=section.area,
-                       Asy=section.Asy, Asz=section.Asz)
+                       Asy=section.Asy, Asz=section.Asz,
+                       Pdelta=Pdelta)
         #
         # Axial   [P, blank, blank, u]
         # Torsion [T, Phi, Psi, B, Tw]
@@ -205,8 +208,8 @@ class LineBeam(BeamLoadClass):
            E:float, G: float,
            Iy:float, Iz:float,
            J: float, Cw: float,
-           Area: float, Asy: float, Asz: float):
-           #alpha_s: float):
+           Area: float, Asy: float, Asz: float, 
+           Pdelta: bool):
         """
         Beam load local system
 
@@ -227,6 +230,10 @@ class LineBeam(BeamLoadClass):
         # convert load to beam local
         self.local_system()
         #
+        Pflag = 0
+        if Pdelta:
+           Pflag = 1
+        #
         # Axial [P, blank, blank, u]
         Fx = BeamAxial(L=L, E=E, A=Area)
         # Torsion [T, B, psi, phi, Tw]
@@ -236,10 +243,8 @@ class LineBeam(BeamLoadClass):
         #
         # In plane [V, M, theta, w]
         in_plane =  BeamBending(L=L, E=E, G=G, As=Asy, I=Iy)
-                                #alpha_s=alpha_s)
         # Out plane [V, M, theta, w]
         out_plane = BeamBending(L=L, E=E, G=G, As=Asz, I=Iz)
-                                #alpha_s=alpha_s)
         #
         # [Fx, Fy, Fz, Mx, My, Mz]
         if isinstance(x, (list, tuple)):
@@ -258,11 +263,13 @@ class LineBeam(BeamLoadClass):
                                                   T=self.qt0, L1=self.L0,
                                                   T2=self.qt1, L2=self.L1)),
                                #
-                               np.array(in_plane.line(x=xstep, axial=self._Fa(L), 
+                               np.array(in_plane.line(x=xstep,
+                                                      axial=self._Fa(L) * Pflag, 
                                                       q1=self.qy0, q2=self.qy1,
                                                       L1=self.L0, L2=self.L1)),
                                
-                               np.array(out_plane.line(x=xstep, axial=self._Fa(L),
+                               np.array(out_plane.line(x=xstep,
+                                                       axial=self._Fa(L) * Pflag,
                                                        q1=self.qz0, q2=self.qz1,
                                                        L1=self.L0, L2=self.L1))])
         else:
@@ -279,10 +286,12 @@ class LineBeam(BeamLoadClass):
                                          T=self.qt0, L1=self.L0,
                                          T2=self.qt1, L2=self.L1)),
                       #
-                      np.array(in_plane.line(x=x, axial=self._Fa(L), 
+                      np.array(in_plane.line(x=x,
+                                             axial=self._Fa(L) * Pflag, 
                                              q1=self.qy0, q2=self.qy1,
                                              L1=self.L0, L2=self.L1)),
-                      np.array(out_plane.line(x=x, axial=self._Fa(L),
+                      np.array(out_plane.line(x=x,
+                                              axial=self._Fa(L) * Pflag,
                                               q1=self.qz0, q2=self.qz1,
                                               L1=self.L0, L2=self.L1))]
         #
@@ -370,7 +379,8 @@ class PointBeam(BeamLoadClass):
            E:float, G: float, 
            Iy:float, Iz:float,
            J: float, Cw: float,
-           Area: float, Asy: float, Asz: float) -> list:
+           Area: float, Asy: float, Asz: float,
+           Pdelta: bool) -> list:
         """
         Beam load local system
 
@@ -395,6 +405,10 @@ class PointBeam(BeamLoadClass):
         # convert load to beam local
         self.local_system()
         #
+        Pflag = 0
+        if Pdelta:
+           Pflag = 1        
+        #
         # Axial [P, blank, blank, u]
         Fx =  BeamAxial(L=L, E=E, A=Area)
         # Torsion [T, B, psi, phi, Tw]
@@ -414,12 +428,14 @@ class PointBeam(BeamLoadClass):
                 #Axial = Fx.loading_function(x=xstep)
                 Torsion =  Mx.torque(x=xstep, T=self.mx, L1=self.L0)
                 #Torsion = Mx.loading_function(x=xstep, J=J, Cw=Cw)
-                Finp = Finplane.point(x=xstep, axial=self.fx,
+                Finp = Finplane.point(x=xstep,
+                                      axial=self.fx * Pflag,
                                       P=self.fy,
                                       M=self.mz,
                                       L1=self.L0)
                 #Finp = list(map(sum, zip(F_inplane(xstep, E, Iy), M_outplane(xstep, E, Iy))))
-                Foutp = F_outplane.point(x=xstep, axial=self.fx,
+                Foutp = F_outplane.point(x=xstep,
+                                         axial=self.fx * Pflag,
                                          P=self.fz, M=self.my,
                                          L1=self.L0)
                 #Foutp = list(map(sum, zip(F_outplane(xstep, E, Iz), M_inplane(xstep, E, Iz))))
@@ -437,12 +453,14 @@ class PointBeam(BeamLoadClass):
             #Torsion = Mx.loading_function(x=x, J=J, Cw=Cw)
             Torsion =  Mx.torque(x=x, T=self.mx, L1=self.L0)
             #
-            Finp = Finplane.point(x=x, axial=self.fx, 
+            Finp = Finplane.point(x=x,
+                                  axial=self.fx * Pflag, 
                                   P=self.fy,
                                   M=self.mz,
                                   L1=self.L0)
             #Finp = list(map(sum, zip(F_inplane(x, E, Iy), M_outplane(x, E, Iy))))
-            Foutp = F_outplane.point(x=x, axial=self.fx,
+            Foutp = F_outplane.point(x=x,
+                                     axial=self.fx * Pflag,
                                      P=self.fz,
                                      M=self.my,
                                      L1=self.L0)

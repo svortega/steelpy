@@ -156,14 +156,14 @@ def form_geom(npi, npj, jbc, nelt, neq, iband, wk, models):
     #
     return geo
 #
-def beam_geom(length, s):
+def beam_geom(Le, s):
     """
     Calculates the element geometric matrix  
     """
     # initialize all eg elements to zero 
     eg = np.zeros( 12, 12 )
-    emlenz = s / (30.0 * length)
-    alpha = (s / length) * 1.0e-6
+    emlenz = s / (30.0 * Le)
+    alpha = (s / Le) * 1.0e-6
 
     if abs( alpha ) < 1.0e-10:
         alpha = 1.0e-10
@@ -172,11 +172,11 @@ def beam_geom(length, s):
     eg[ 1 ][ 1 ] = 36 * emlenz
     eg[ 2 ][ 2 ] = 36 * emlenz
     eg[ 3 ][ 3 ] = alpha
-    eg[ 4 ][ 4 ] = 4.0 * emlenz * length * length
-    eg[ 5 ][ 5 ] = 4.0 * emlenz * length * length
+    eg[ 4 ][ 4 ] = 4.0 * emlenz * Le * Le
+    eg[ 5 ][ 5 ] = 4.0 * emlenz * Le * Le
     #
-    eg[ 1 ][ 5 ] = 3.0 * emlenz * length
-    eg[ 2 ][ 4 ] = -3.0 * emlenz * length
+    eg[ 1 ][ 5 ] = 3.0 * emlenz * Le
+    eg[ 2 ][ 4 ] = -3.0 * emlenz * Le
     #
     eg[ 6 ][ 6 ] = eg[ 0 ][ 0 ]
     eg[ 7 ][ 7 ] = eg[ 1 ][ 1 ]
@@ -205,31 +205,31 @@ def beam_geom(length, s):
     #
     return eg
 #
-def beam_KG(length: float, 
-            area:float, J:float,
-            Iy:float, Iz:float,
-            Emod:float, Gmod:float, 
-            areasy:float, areasz:float):
+def beam_KG(T: float, Le: float,
+            Ax: float, Asy: float, Asz: float,
+            Jx: float, Iy: float, Iz: float,
+            Emod: float, Gmod: float):
     """
     3D geometric stiffness matrix for frame elements in local coordinates
     including axial, bending, shear and torsional warping effects (H.P. Gavin).
     """
+    P = Emod*Ax/Le*T
     #
-    ax = min(areasy, areasz)
-    Phiy = 12*Emod*Iz / (Gmod * areasy * length**2)
-    Phiz = 12*Emod*Iy / (Gmod * areasz * length**2)    
+    #ax = min(Asy, Asz)
+    Phiy = 12*Emod*Iz / (Gmod * Asy * Le**2)
+    Phiz = 12*Emod*Iy / (Gmod * Asz * Le**2)    
     #
     gk = np.zeros(( 12, 12 ))
     #
     gk[ 0 ][ 0 ] = 0
     gk[ 1 ][ 1 ] = (6/5 + 2*Phiy + Phiy**2) / (1 + Phiy)**2
     gk[ 2 ][ 2 ] = (6/5 + 2*Phiz + Phiz**2) / (1 + Phiz)**2
-    gk[ 3 ][ 3 ] = J/ax
-    gk[ 4 ][ 4 ] = (2*length**2/15 + length**2*Phiz/6 + length**2*Phiz**2/12) / (1+Phiz)**2
-    gk[ 5 ][ 5 ] = (2*length**2/15 + length**2*Phiy/6 + length**2*Phiy**2/12) / (1+Phiy)**2
+    gk[ 3 ][ 3 ] = Jx/Ax
+    gk[ 4 ][ 4 ] = (2*Le**2/15 + Le**2*Phiz/6 + Le**2*Phiz**2/12) / (1+Phiz)**2
+    gk[ 5 ][ 5 ] = (2*Le**2/15 + Le**2*Phiy/6 + Le**2*Phiy**2/12) / (1+Phiy)**2
     #
-    gk[ 1 ][ 5 ] =  length/10 / (1+Phiy)**2
-    gk[ 2 ][ 4 ] = -length/10 / (1+Phiz)**2
+    gk[ 1 ][ 5 ] =  Le/10 / (1+Phiy)**2
+    gk[ 2 ][ 4 ] = -Le/10 / (1+Phiz)**2
     #
     gk[ 6 ][ 6 ]  = -gk[ 0 ][ 0 ]
     gk[ 7 ][ 7 ]  = -gk[ 1 ][ 1 ]
@@ -240,12 +240,14 @@ def beam_KG(length: float,
     #
     # impose the geometry
     gk += np.triu(gk, k=1).T
-    return gk      
+    return gk*P/Le
 #
 #
-def kg_beam(self, P: float, length: float, 
-             area:float, J:float, Iy:float, Iz:float,
-             Emod:float, Gmod:float):
+def kg_beam(T: float,
+            Le: float,
+            Ax: float,
+            Jx: float, Iy: float, Iz: float,
+            Emod: float, Gmod: float):
     """
     Returns the condensed (expanded) local geometric stiffness matrix for the member.
 
@@ -254,10 +256,11 @@ def kg_beam(self, P: float, length: float,
     P : number, optional
         The axial force acting on the member (compression = +, tension = -)
     """
+    P = Emod*Ax/Le*T
     # Get the properties needed to form the local geometric stiffness matrix
     Ip = Iy + Iz
-    A = area
-    L = length
+    A = Ax
+    L = Le
     # Create the uncondensed local geometric stiffness matrix
     kg = np.array([[0, 0,    0,     0,     0,         0,         0, 0,     0,    0,     0,         0],
                    [0, 6/5,  0,     0,     0,         L/10,      0, -6/5,  0,    0,     0,         L/10],

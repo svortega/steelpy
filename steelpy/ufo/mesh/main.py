@@ -386,50 +386,42 @@ class Mesh(ufoBasicModel):
     #    """number of equations"""
     #    return self._nodes.neq(supports=self._boundaries._nodes)
     #
-    def Ks(self, sparse: bool = False,
-           condensed: bool = True):
+    def Ke(self, sparse: bool = True):
+           #condensed: bool = True):
         """Returns the model's global stiffness matrix.
         
         Solver: numpy/banded/sparse
         """
         # get data
-        #jbc = self._nodes.jbc()
-        #neq = self._nodes.neq()
-        #
-        #if self._plane.m2D:
-        #    jbc = jbc[self._plane.dof]
-        #
         Ka = Kmatrix(elements=self._elements,
                      nodes=self._nodes, 
                      ndof=self._plane.ndof,
-                     condensed=condensed,
+                     #condensed=condensed,
                      sparse=sparse)
         #
-        #if drop:
-        #    with open("stfmx.f2u", "wb") as f:
-        #        pickle.dump(jbc, f)
-        #        pickle.dump(aa, f)
-        #
-        #
-        #else:
         return Ka
-        #print('---')
-        #return None, None
     #
-    def Kg(self, solver: str|None = None):
-        """ Element global geometric stiffness matrix"""
-        jbc = self.jbc()
-        neq = self.neq()
-        Kg = Gmatrix(elements=self._elements, jbc=jbc, neq=neq,
-                     plane=self._plane.ndof, solver=solver)
+    def Kg(self, D, sparse: bool = True):
+        """
+        Element global geometric stiffness matrix
+        
+        D : 
+        """
+        #D = D.set_index('node_name', inplace=True)
+        Kg = Gmatrix(elements=self._elements,
+                     nodes=self._nodes,
+                     D=D, 
+                     ndof=self._plane.ndof,
+                     sparse=sparse)
         return Kg
     #
-    def Km(self, solver: str|None = None):
+    def Km(self, sparse: bool = True):
         """ Element global mass matrix"""
-        jbc = self.jbc()
-        neq = self.neq()
-        Ma = Mmatrix(elements=self._elements, jbc=jbc, neq=neq,
-                     plane=self._plane.ndof, solver=solver)
+        #
+        Ma = Mmatrix(elements=self._elements,
+                     nodes=self._nodes, 
+                     ndof=self._plane.ndof,
+                     sparse=sparse)
         return Ma
     #
     # --------------------

@@ -54,14 +54,15 @@ from steelpy.utils.dataframe.main import DBframework
 @dataclass
 class BeamBasic:
     __slots__ = ['L','area', 'Iy', 'Iz', 'J', 'E', 'G', 'Cw',
-                 'Asy', 'Asz', 
+                 'Asy', 'Asz', '_Pdelta', 
                  '_response', '_support0', '_support1',
                  '_torsion', '_axial', '_bminplane', '_bmoutplane']
 
     def __init__(self, L: float, area: float,
                  Iy:float, Iz:float, J:float,
                  E:float, G:float, Cw:float,
-                 Asy: float, Asz: float) -> None:
+                 Asy: float, Asz: float,
+                 Pdelta: bool) -> None:
         """
         L : beam length
         E : Elastic modulus
@@ -70,6 +71,7 @@ class BeamBasic:
         Iy,z : moment of inertia [m^4]
         Cw : Warping constant [m^6]
         alpha_sy,z: Shear correction coefficient
+        Pdelta : True/False
         """
         self.L = L
         self.area = area
@@ -81,7 +83,7 @@ class BeamBasic:
         self.Cw = Cw
         self.Asy = Asy
         self.Asz = Asz
-        #
+        self._Pdelta = Pdelta
         #
         self._torsion = BeamTorsion(L=L, E=E, G=G,
                                     J=self.J, Cw=self.Cw)
@@ -135,6 +137,9 @@ class BeamBasic:
         R0 [Fa, T, Ry, Rz]
         R1 [Fa, T, Ry, Rz]
         """
+        Pflag = 0
+        if self._Pdelta:
+            Pflag = 1        
         # get initial condition beam local system
         # [Axial, Torsion, BM_inplane, BM_outplane]
         R0 = self.R0(Fbar=Fbar)        
@@ -169,7 +174,7 @@ class BeamBasic:
         #Fx.append(Fa[0])
         #Rf = [*R0[2], R0.x[0]]
         R1y = self._bminplane.response(x=self.L,
-                                       R0=[*R0[2], R0.x[0]],
+                                       R0=[*R0[2], R0.x[0] * Pflag],
                                        Fx=[-1 * item for item in Fbar[10]])
         #R1y = [-1*item for item in R1y]
         #R1y[0] *= -1
@@ -178,7 +183,7 @@ class BeamBasic:
         #Fx = [-1 * item for item in Fbar[11]]
         #Fx.append(Fa[0])
         R1z = self._bmoutplane.response(x=self.L,
-                                        R0=[*R0[3],R0.x[0]],
+                                        R0=[*R0[3], R0.x[0] * Pflag],
                                         Fx=[-1 * item for item in Fbar[11]])
         #R1z = [-1*item for item in R1z]
         #R1z[0] *= -1
@@ -202,7 +207,10 @@ class BeamBasic:
         Return: 
         R0 [Fa, T, Ry, Rz]
         """
-        #1 / 0
+        #
+        Pflag = 0
+        if self._Pdelta:
+            Pflag = 1         
         #
         # Axial [P, blank, blank, u]
         suppx = self._axial.R0(Fbar=Fbar[8])
@@ -213,12 +221,12 @@ class BeamBasic:
         #
         # Bending in plane [V, M, theta, w, P]
         bload = [-1 * item for item in Fbar[10]]
-        bload.append(suppx[0])
+        bload.append(suppx[0] * Pflag)
         suppy = self._bminplane.R0(Fbar=bload)
         #suppy[1] *= -1
         # Bending out plane [V, M, theta, w, P]
         bload = [-1 * item for item in Fbar[11]]
-        bload.append(suppx[0])
+        bload.append(suppx[0] * Pflag)
         suppz =  self._bmoutplane.R0(Fbar=bload)
         #suppz[1] *= -1
         #
@@ -254,6 +262,10 @@ class BeamBasic:
         Fax, Ftx, Fyx, Fzx = Fx
         R0x, R0t, R0y, R0z = R0
         #
+        Pflag = 0
+        if self._Pdelta:
+            Pflag = 1         
+        #
         # Axial [P, blank, blank, u]
         R1x = self._axial.response(x=x, R0=R0x, Fx=Fax)
         # Torsion [T, Phi, Psi, B, Tw]
@@ -269,13 +281,13 @@ class BeamBasic:
         #Fx = [-1 * item for item in Fyx]
         #Fx.append(R0x[0])
         R1y = self._bminplane.response(x=x,
-                                       R0=[*R0y, R0x[0]],
+                                       R0=[*R0y, R0x[0] * Pflag],
                                        Fx=[-1 * item for item in Fyx])
         # Bending out plane [V, M, theta, w, P]
         #Fx = [-1 * item for item in Fzx]
         #Fx.append(R0x[0])
         R1z = self._bmoutplane.response(x=x,
-                                        R0=[*R0z, R0x[0]],
+                                        R0=[*R0z, R0x[0] * Pflag],
                                         Fx=[-1 * item for item in Fzx])
         #
         return R1x, R1t, R1y, R1z
@@ -304,7 +316,8 @@ class BeamBasic:
                            Iy=self.Iy, Iz=self.Iz,
                            J=self.J, Cw=self.Cw,
                            Area=self.area,
-                           Asy=self.Asy, Asz=self.Asz)
+                           Asy=self.Asy, Asz=self.Asz,
+                           Pdelta=self._Pdelta)
             
             reac[item.load_name].append([item.load_name, item.component_name, 
                                          item.title, item.load_type, 'basic', 
@@ -465,8 +478,8 @@ class BeamBasic:
                          Iy=self.Iy, Iz=self.Iz,
                          J=self.J, Cw=self.Cw,
                          Area=self.area,
-                         Asy=self.Asy, Asz=self.Asz)
-                         #alpha_s=self.alpha_s)
+                         Asy=self.Asy, Asz=self.Asz, 
+                         Pdelta=self._Pdelta)
             #beamfun[item.load_name].extend(lout)
             beamfun.extend(Fx)
         #

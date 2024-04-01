@@ -235,7 +235,8 @@ class BeamLoadItemSQL(BeamSQLMaster):
     #
     # -----------------------------------------------
     #
-    def fer2(self, beams, load_name: str|int):
+    def fer2(self, beams, load_name: str|int,
+             Pdelta: bool = False):
         """
         Beam reacition global system according to boundaries
         """
@@ -254,7 +255,8 @@ class BeamLoadItemSQL(BeamSQLMaster):
             node1, node2 = beam.nodes
             #print(f'line load {key}')
             lnload = bload.fer_beam(beam=beam,
-                                    system=global_system)
+                                    system=global_system,
+                                    Pdelta=Pdelta)
             # local to global system
             #gnload = [*res[7], *res[8]]
             #lnload = trnsload(gnload, beam.T3D())
@@ -276,7 +278,8 @@ class BeamLoadItemSQL(BeamSQLMaster):
             node1, node2 = beam.nodes
             #print(f'point load {key}')
             lnload = bload.fer_beam(beam=beam,
-                                    system=global_system)
+                                    system=global_system,
+                                    Pdelta=Pdelta)
             #gnload = [*res[7], *res[8]]
             #lnload = trnsload(gnload, beam.T3D())
             #
@@ -773,7 +776,8 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
     #
     # -----------------------------------------------
     #
-    def load_function(self, steps:int):
+    def load_function(self, steps:int,
+                      Pdelta: bool):
         """ """
         print('-->')
         beams = BeamSQL(db_file=self._db_file,
@@ -795,7 +799,8 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
                                 Iy=sec.Iy, Iz=sec.Iz,
                                 J=sec.J, Cw=sec.Cw,
                                 Area=sec.area,
-                                Asy=sec.Asy, Asz=sec.Asz)
+                                Asy=sec.Asy, Asz=sec.Asz,
+                                Pdelta=Pdelta)
                 #beamfun[key].extend(lout)
                 #beamfun[key].append(lout)
                 #
@@ -818,7 +823,8 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
                                 Iy=sec.Iy, Iz=sec.Iz,
                                 J=sec.J, Cw=sec.Cw,
                                 Area=sec.area,
-                                Asy=sec.Asy, Asz=sec.Asz)
+                                Asy=sec.Asy, Asz=sec.Asz,
+                                Pdelta=Pdelta)
                 #beamfun[key].append([bitem.name, lout])
                 #beamfun[key].extend(lout)
                 #beamfun[key].append(lout)

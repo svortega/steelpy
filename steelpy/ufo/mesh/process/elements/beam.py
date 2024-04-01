@@ -10,7 +10,7 @@ from collections.abc import Mapping
 
 # package imports
 from steelpy.ufo.mesh.process.elements.bstiffness import Rmatrix2, beam3D_B3D2, beam3D_Ksb
-from steelpy.ufo.mesh.process.elements.bgeometry import kg_beam
+from steelpy.ufo.mesh.process.elements.bgeometry import kg_beam, beam_KG
 from steelpy.ufo.mesh.process.elements.bmass import beam_mass
 from steelpy.utils.geometry.L3D import DistancePointLine3D #, LineLineIntersect3D
 from steelpy.utils.math.operations import remove_column_row
@@ -108,40 +108,37 @@ class BeamItemBasic:
     # Stiffness
     #
     @property
-    def K(self):
+    def Ke_global(self):
         """
         Return Beam stiffness matrix in global coordinates
         """
+        #Tlg =  self.T
+        #Kl = self.K_local
+        #return Tlg.T @ Kl @ Tlg
+        return self.Ke()
+    #
+    def Ke(self, item: None = None):
+        """ """
         Tlg =  self.T
-        Kl = self.ks_local
-        #Kl = self.k3D()
-        #if self._plane.m2D:
-        #    # removing z, Mx, My
-        #    for i in self._plane.index_off:
-        #        Kl = remove_column_row(Kl, i, i)
-        #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
-        return Tlg.T @ Kl @ Tlg
+        Kl = self.Ke_local
+        return Tlg.T @ Kl @ Tlg        
     #
     @property
-    def ks_local(self):
+    def Ke_local(self):
         """Return the 2D/3D stiffness matrix in local coordinates """
-        kl = self.k3D()
+        kl = self.Ke3D()
         if self._plane.plane2D:
             for i in self._plane.index_off:
                 kl = remove_column_row(kl, i, i)
-        #else:
-        #    return self.k3D()
+        #
         return kl
     #
-    def k3D(self):
+    def Ke3D(self):
         """Returns the condensed (and expanded) local stiffness matrix for 3D beam"""
         # get material properties
         material = self.material        
         # get section properties 
-        section = self.section
-        #section = self._cls._f2u_sections[section]
-        section = section.properties(poisson=material.poisson)
-        #material = self._cls._f2u_materials[material]        
+        section = self.section.properties(poisson=material.poisson)     
         #
         # solve K matrix
         #
@@ -164,80 +161,90 @@ class BeamItemBasic:
         #                 Emod=material.E, Gmod=material.G)
         #
         k_cond = self._k_unc(kb)
-        return k_cond
-        #return K    
+        return k_cond   
     #
     # Geometry
     #
-    def Kg(self, axial):
+    def Kg(self, axial: float):
         """
         Return Beam geometrical stiffness matrix in global coordinates
         """
         Tlg =  self.T
-        Kl = self.kg_local(axial=axial)
+        Kl = self.Kg_local(axial=axial)
         #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
         return Tlg.T @ Kl @ Tlg
     #
-    def kg_local(self, axial):
+    def Kg_local(self, axial):
         """
         Return Beam geometrical stiffness matrix in local coordinates
         """
-        kg = self.kg3D(axial=axial)
+        kg = self.Kg3D(axial=axial)
         if self._plane.plane2D:
             for i in self._plane.index_off:
                 kg = remove_column_row(kg, i, i)
         return kg
     #
-    def kg3D(self, axial: float = 0):
+    def Kg3D(self, axial: float = 0):
         """
         Returns the condensed (and expanded) local geometrical stiffness matrix for 3D beam
         """
-        # get section properties 
-        section = self.section
-        section = section.properties()
-        # get material properties
-        material = self.material       
+        material = self.material
+        section = self.section.properties(poisson=material.poisson)      
         #
-        #        
-        kg = kg_beam(axial, self.L,
-                      section.area, section.J,
-                      section.Iy, section.Iz,
-                      material.E, material.G)
+        #kg = kg_beam(T=axial, Le=self.L,
+        #             Ax=section.area,
+        #             Jx=section.J,
+        #             Iy=section.Iy, Iz=section.Iz,
+        #             Emod=material.E, Gmod=material.G)
+        #
+        kg = beam_KG(T=axial, 
+                        Le=self.L,
+                        Ax=section.area,
+                        Asy=section.Asy,
+                        Asz=section.Asz,
+                        Jx=section.J,
+                        Iy=section.Iy, Iz=section.Iz,
+                        Emod=material.E, Gmod=material.G)
         #
         k_cond = self._k_unc(kg)
         return k_cond
     #
     # Mass
     #
-    #@property
-    def Km(self):
+    @property
+    def Km_global(self):
         """
         Return Beam mass matrix in global coordinates
         """
-        Tlg =  self.T
-        Km = self.mlocal()
+        #Tlg =  self.T
+        #Km = self.Km_local
         #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
-        return Tlg.T @ Km @ Tlg
+        #return Tlg.T @ Km @ Tlg
+        return self.Kmass()
     #
-    def km_local(self):
+    def Km(self, item: None = None):
+        """ """
+        Tlg =  self.T
+        Km = self.Km_local
+        return Tlg.T @ Km @ Tlg        
+    #
+    @property
+    def Km_local(self):
         """
         Return Beam mass matrix in local coordinates
         """
-        km = self.m3D()
+        km = self.Km3D()
         if self._plane.plane2D:
             for i in self._plane.index_off:
                 km = remove_column_row(km, i, i)
         return km
     #
-    def m3D(self):
+    def Km3D(self):
         """ Returns the condensed (and expanded) local mass matrix for 3D beam"""
         # get section properties 
-        section = self.section
-        section = section.properties()
-        # get material properties
-        material = self.material       
+        material = self.material
+        section = self.section.properties(poisson=material.poisson)        
         #
-        #        
         em = beam_mass(self.length,
                        section, material,
                        ilump=2)
@@ -249,7 +256,8 @@ class BeamItemBasic:
     #
     def _partition(self, unp_matrix):
         """
-        Partitions a matrix into sub-matrices based on unreleased and released degree of freedom indices.
+        Partitions a matrix into sub-matrices based on
+        unreleased and released degree of freedom indices.
         """
         unp_matrix =  np.array(unp_matrix)
         # Create auxiliary lists of released/unreleased DOFs
@@ -268,7 +276,8 @@ class BeamItemBasic:
     #
     def _aux_list(self):
         """
-        Builds lists of unreleased and released degree of freedom indices for the member.
+        Builds lists of unreleased and released degree of freedom
+        indices for the member.
 
         Returns
         -------
@@ -278,7 +287,7 @@ class BeamItemBasic:
             A list of the indices for the released DOFs
         """
         R1i = [i for i, rel in enumerate(self._releases)
-                      if not rel]
+               if not rel]
         R2i = [i for i, rel in enumerate(self._releases)
                if rel]
         return R1i, R2i
