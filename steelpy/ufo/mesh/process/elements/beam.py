@@ -9,11 +9,12 @@ from collections.abc import Mapping
 #from typing import NamedTuple
 
 # package imports
-from steelpy.ufo.mesh.process.elements.bstiffness import Rmatrix2, beam3D_B3D2, beam3D_Ksb
-from steelpy.ufo.mesh.process.elements.bgeometry import kg_beam, beam_KG
+from steelpy.ufo.mesh.process.elements.bstiffness import Rmatrix2, beam3D_B3D2, B3D2_Ke
+from steelpy.ufo.mesh.process.elements.bgeometry import B3D2_Kt, beam_KG
 from steelpy.ufo.mesh.process.elements.bmass import beam_mass
 from steelpy.utils.geometry.L3D import DistancePointLine3D #, LineLineIntersect3D
 from steelpy.utils.math.operations import remove_column_row
+#from steelpy.ufo.mesh.process.elements.StfBeamTimoshenko import TangStfBeamTimoshenko, GeoStfBeamTimoshenko
 #
 import numpy as np
 from numpy.linalg import inv
@@ -142,70 +143,134 @@ class BeamItemBasic:
         #
         # solve K matrix
         #
-        kb = beam3D_Ksb(Le=self.L,
-                        Ax=section.area,
-                        Asy=section.Asy,
-                        Asz=section.Asz,
-                        Jx=section.J,
-                        Iy=section.Iy, Iz=section.Iz,
-                        Emod=material.E, Gmod=material.G,
-                        shear=False)
+        kb = B3D2_Ke(Le=self.L,
+                    Ax=section.area,
+                    Asy=section.Asy,
+                    Asz=section.Asz,
+                    Jx=section.J,
+                    Iy=section.Iy, Iz=section.Iz,
+                    Emod=material.E, Gmod=material.G,
+                    shear=True)
         #        
         # TODO : check if this element is reliable
-        #kb = beam3D_B3D2(Le=self.L,
+        #kb2 = beam3D_B3D2(Le=self.L,
         #                 Ax=section.area,
         #                 Asy=section.Asy,
-        #                 Asz=section.Asz,                         
+        #                 Asz=section.Asz,
         #                 Jx=section.J,
         #                 Iy=section.Iy, Iz=section.Iz,
-        #                 Emod=material.E, Gmod=material.G)
+        #                 Emod=material.E, Gmod=material.G,
+        #                 shear=True)
         #
         k_cond = self._k_unc(kb)
         return k_cond   
     #
     # Geometry
     #
-    def Kg(self, axial: float):
+    def Kg(self, Un: list):
         """
         Return Beam geometrical stiffness matrix in global coordinates
         """
-        Tlg =  self.T
-        Kl = self.Kg_local(axial=axial)
-        #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
-        return Tlg.T @ Kl @ Tlg
+        Tb =  self.T
+        Kg = self.Kg_local(Un=Un)
+        return Tb.T @ Kg @ Tb
     #
-    def Kg_local(self, axial):
+    def Kg_local(self, Un:list):
         """
         Return Beam geometrical stiffness matrix in local coordinates
         """
-        kg = self.Kg3D(axial=axial)
+        kg = self.Kg3D(Un=Un)
         if self._plane.plane2D:
             for i in self._plane.index_off:
                 kg = remove_column_row(kg, i, i)
         return kg
     #
-    def Kg3D(self, axial: float = 0):
+    def Kg3D(self, Un: list):
         """
         Returns the condensed (and expanded) local geometrical stiffness matrix for 3D beam
         """
         material = self.material
-        section = self.section.properties(poisson=material.poisson)      
+        section = self.section.properties(poisson=material.poisson)
         #
-        #kg = kg_beam(T=axial, Le=self.L,
-        #             Ax=section.area,
-        #             Jx=section.J,
-        #             Iy=section.Iy, Iz=section.Iz,
-        #             Emod=material.E, Gmod=material.G)
+        # ---------------------------------------------
+        # convert global end-node disp in beam's local system
+        nd_local = self.T @ Un # nd_global
         #
-        kg = beam_KG(T=axial, 
-                        Le=self.L,
-                        Ax=section.area,
-                        Asy=section.Asy,
-                        Asz=section.Asz,
-                        Jx=section.J,
-                        Iy=section.Iy, Iz=section.Iz,
-                        Emod=material.E, Gmod=material.G)
+        #T = nd_local[6] - nd_local[0]
+        #P = material.E * section.area / self.L * T
         #
+        # ---------------------------------------------
+        # convert beam end-node disp to force [F = Kd] in global system
+        Fb = self.Ke_local @ nd_local
+        #
+        #kg = GeoStfBeamTimoshenko(Le=self.L,
+        #                          Ax=section.area,
+        #                          Asy=section.Asz,
+        #                           Asz=section.Asy,
+        #                           Jx=section.J,
+        #                           Iy=section.Iz, Iz=section.Iy,
+        #                           Emod=material.E, Gmod=material.G,
+        #                           Fb=Fb,
+        #                           shear=True,
+        #                           order=4)
+        #
+        kg = beam_KG(Le=self.L,
+                     Ax=section.area,
+                     Asy=section.Asy,
+                     Asz=section.Asz,
+                     Jx=section.J,
+                     Iy=section.Iy, Iz=section.Iz,
+                     Emod=material.E, Gmod=material.G,
+                     Fb=Fb,
+                     shear=True)
+        #
+        k_cond = self._k_unc(kg)
+        return k_cond
+    #
+    # Tangent
+    #
+    def Kt(self, Un: list):
+        """ Return Beam tangent stiffness matrix in global coordinates"""
+        Tb = self.T
+        Kt = self.Kt_local(Un=Un)
+        #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
+        return Tb.T @ Kt @ Tb
+    #
+    def Kt_local(self, Un:list):
+        """
+        Return Beam geometrical stiffness matrix in local coordinates
+        """
+        kt = self.Kt3D(Un=Un)
+        if self._plane.plane2D:
+            for i in self._plane.index_off:
+                kt = remove_column_row(kt, i, i)
+        return kt
+    #
+    def Kt3D(self, Un: list):
+        """
+        Returns the condensed (and expanded) local tangent stiffness matrix for 3D beam
+        """
+        material = self.material
+        section = self.section.properties(poisson=material.poisson)
+        # ---------------------------------------------
+        # convert global end-node disp in beam's local system
+        nd_local = self.T @ Un # nd_global
+        # ---------------------------------------------
+        # convert beam end-node disp to force [F = Kd] in global system
+        Fb = self.Ke_local @ nd_local
+        # ---------------------------------------------
+        kg = B3D2_Kt(Le=self.L,
+                    Ax=section.area,
+                    Asy=section.Asz,
+                    Asz=section.Asy,
+                    Jx=section.J,
+                    Iy=section.Iz, Iz=section.Iy,
+                    Emod=material.E, Gmod=material.G,
+                    Fb=Fb,
+                    shear=True,
+                    toler=0.01)
+        #
+        # ---------------------------------------------
         k_cond = self._k_unc(kg)
         return k_cond
     #

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # package imports
-from steelpy.trave.process.static import StaticSolver, PDeltaSolver
+from steelpy.trave.process.static import StaticSolver
 
 #
 # ---------------------------------
@@ -48,9 +48,9 @@ class UnSolver:
         return StaticSolver(plane=self._mesh._plane)
     #
     #
-    def _Pdelta(self):
+    def dynamic(self):
         """ """
-        return PDeltaSolver(plane=self._mesh._plane)
+        1 / 0
     #
 #
 #

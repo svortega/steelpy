@@ -181,14 +181,14 @@ class TeeBasic(ShapeStressBasic):
         rp = (Jx / area)**0.50
         #
         #
-        alpha_sy = self.alpha_s(poisson=poisson)
+        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
                              J=J, Cw=Cw,
                              alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sy)                             
+                             alpha_sz=alpha_sz)
     #
     #
     def curved(self, R):
@@ -347,12 +347,13 @@ class TeeBasic(ShapeStressBasic):
         h = self.d - self.tb * 0.50
         j = (self.b * self.tb) / (h * self.tw)
         k = self.b / h
-        alpha_sy = (((12 + 96 * j + 276 * j**2 + 192 * j**3)
+        alpha_sz = (((12 + 96 * j + 276 * j**2 + 192 * j**3)
                     + poisson * (11 + 88 * j + 248 * j**2 + 216 * j**3)
                     + 30 * k**2 * (j + j**2)
                     + 10 * poisson * k**2 * (4 * j + 5 * j**2 + j**3))
                     / (10 * (1 + poisson) * (1 + 4 * j)**2))
-        return alpha_sy    
+        alpha_sy = self.b * self.tb
+        return alpha_sy, alpha_sz
     #
     # ----------------------------------------
     #

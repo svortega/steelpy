@@ -59,7 +59,7 @@ def form_Gmatrix(elements, nn:int, ndof: int,
     for key, element in elements.items():
         #nodes = element.nodes
         nodes = element.connectivity
-        Tb = element.T
+        #Tb = element.T
         # ---------------------------------------------
         # displacement
         nd_global = np.concatenate((item.loc[nodes[0]],
@@ -67,10 +67,15 @@ def form_Gmatrix(elements, nn:int, ndof: int,
         # ---------------------------------------------
         # convert global end-node disp in beam's local system
         # [x,y,z,rx,ry,rz]
-        nd_local = Tb @ nd_global        
-        P = nd_local[6]-nd_local[0]
+        #nd_local = Tb @ nd_global
+        #P = nd_local[6]-nd_local[0]
         #
-        keg = getattr(element, mitem)(P)
+        # ---------------------------------------------
+        # get matrix
+        keg = getattr(element, mitem)(nd_global)
+        #
+        # ---------------------------------------------
+        # Assemble matrix
         idof, jdof = element.DoF
         # node and corresponding dof (start, end)
         niqi, niqj = idof*ndof, idof*ndof + ndof
@@ -82,6 +87,49 @@ def form_Gmatrix(elements, nn:int, ndof: int,
         Ka[njqi:njqj, njqi:njqj] += keg[ndof:2*ndof, ndof:2*ndof] # 4th
     # 
     return Ka
+#
+#
+def form_Lmatrix(elements, nn: int, ndof: int,
+                 mitem: str, item):
+    """
+    Global system stiffness matrix
+
+    elements :
+    nn  : node number
+    ndof : node degree of freedom
+    miten : str
+    item:
+    :return
+    Ka : global stiffness matrix
+    """
+    # Initialize a K matrix of zeros
+    Ka = np.zeros((nn * ndof, nn * ndof), dtype=np.float64)
+    for key, element in elements.items():
+        # nodes = element.nodes
+        nodes = element.connectivity
+        #Tb = element.T
+        # ---------------------------------------------
+        # displacement
+        nd_global = np.concatenate((item.loc[nodes[0]],
+                                    item.loc[nodes[1]]), axis=None)
+        # ---------------------------------------------
+        # get matrix
+        keg = getattr(element, mitem)(nd_global)
+        #
+        #
+        idof, jdof = element.DoF
+        # node and corresponding dof (start, end)
+        niqi, niqj = idof * ndof, idof * ndof + ndof
+        njqi, njqj = jdof * ndof, jdof * ndof + ndof
+        # assemble global stiffness matrix, quadrant 1 to 4
+        Ka[niqi:niqj, niqi:niqj] += keg[:ndof, :ndof]  # 2nd
+        Ka[niqi:niqj, njqi:njqj] += keg[:ndof, ndof:2 * ndof]  # 1st
+        Ka[njqi:njqj, niqi:niqj] += keg[ndof:2 * ndof, :ndof]  # 3rd
+        Ka[njqi:njqj, njqi:njqj] += keg[ndof:2 * ndof, ndof:2 * ndof]  # 4th
+    #
+    return Ka
+
+
 #
 #
 def sparse_matrix(elements, nn:int, ndof: int, mitem: str):
@@ -163,8 +211,7 @@ def assemble_matrix(elements, nodes,
     #nn = len(jbc)
     #neq = nn*ndof
     Ka = form_matrix(elements=elements,
-                     nn=nn,
-                     ndof=ndof,
+                     nn=nn, ndof=ndof,
                      mitem=mitem, item=item)
     #
     #Kas = sparse_matrix(elements, nn, ndof, mitem)
@@ -196,8 +243,7 @@ def assemble_Gmatrix(elements, nodes,
     #
     nn = len(nodes.keys())
     Ka = form_Gmatrix(elements=elements,
-                      nn=nn,
-                      ndof=ndof,
+                      nn=nn, ndof=ndof,
                       mitem=mitem, item=item)
     #
     #Kas = sparse_matrix(elements, nn, ndof, mitem)
@@ -212,5 +258,4 @@ def assemble_Gmatrix(elements, nodes,
     uptime = time.time() - start_time
     print(f"** [{mitem}] assembly Finish Time: {uptime:1.4e} sec")
     return Ka
-#
 #

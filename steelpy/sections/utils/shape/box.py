@@ -164,14 +164,14 @@ class BoxBasic(ShapeStressBasic):
         rp = math.sqrt(Jx / area)
         #
         #
-        alpha_sy = self.alpha_s(poisson=poisson)
+        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
                              J=J, Cw=Cw,
                              alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sy)
+                             alpha_sz=alpha_sz)
     #
     def curved(self, R):
         """
@@ -250,7 +250,23 @@ class BoxBasic(ShapeStressBasic):
                     + poisson * (11 + 66 * j + 135 * j**2 + 90 * j**3)
                     + 10 * k**2 * ((3 + poisson) * j + 3 * j**2))
                     / (10 * (1 + poisson) * (1 + 3 * j)**2))
-        return alpha_sy    
+        #
+        b = self.d
+        a = self.b
+        t =self.tw
+        Ax = a*b - (a - 2*t)*(b - 2*t)
+        if a > b:
+            Asy = (Ax / (0.93498 - 1.28084*(t / b)
+                         + 1.36441*(b / a) + 0.00295*(a / b)**2 + 0.25797*(t*a / b**2)))
+            Asz = (Ax / (1.63544 - 8.34935*(t / b)
+                         + 0.60125*(a / b) + 0.41403*(a / b)**2 + 4.95373*(t*a / b**2)))
+        else:
+            Asy = (Ax / (1.63544 - 8.34935*(t / a)
+                         + 0.60125*(b / a) + 0.41403*(b / a)**2 + 4.95373*(t*b / a**2)))
+            Asz = (Ax / (0.93498 - 1.28084*(t / a)
+                         + 1.36441*(a / b) + 0.00295*(b / a)**2 + 0.25797*(t*b / a**2)))
+        #
+        return Asy, Asz
     #
     # --------------------------------------------
     #

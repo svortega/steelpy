@@ -51,7 +51,7 @@ class TableBasic:
             try:
                 # Beam on Elastic Foundation, k, with Shear Deformation Effects
                 1 / k
-                #print('elastic foundation')
+                print('elastic foundation')
                 raise NotImplementedError('soil k to be included')
             
             except ZeroDivisionError:
@@ -208,7 +208,7 @@ class BendingGE(TableBasic):
         return (self.w0 * ef.Lambda * EI * (ef.e2 + ef.Zeta * ef.e4)
                 - self.theta0 * ef.Lambda * EI * ef.e3
                 + self.V0 * (ef.e1 + ef.Zeta * ef.e3)
-                - self.M0 * (ef.Lambda * ef.e4)
+                - self.M0 * ef.Lambda * ef.e4
                 + self.FV)
 
     #
@@ -217,7 +217,7 @@ class BendingGE(TableBasic):
         EI = self.E * self.I
         #func = self.ei(x=x, k=0)
         return (self.w0 * ef.Lambda * EI * ef.e3
-                + self.theta0 * EI * (ef.e0 - ef.Eta * ef.e3)
+                + self.theta0 * EI * (ef.e0 - ef.Eta * ef.e2)
                 + self.V0 * ef.e2
                 + self.M0 * (ef.e1 - ef.Eta * ef.e3)
                 + self.FM)
@@ -237,7 +237,6 @@ class BendingGE(TableBasic):
     def w(self, x: float, ef: tuple) -> float:
         """ Deflection"""
         EI = self.E * self.I
-        #func = self.ei(x=x, k=0)
         #
         if self.As == 0:
             func1 = 0
@@ -245,12 +244,6 @@ class BendingGE(TableBasic):
             GAs = self.G * self.As
             func1 = (ef.e2 + ef.Zeta * ef.e4) / GAs
         #
-        #try:
-        #    GAs = self.G * self.A / self.alpha_s
-        #    func1 = (ef.e2 + ef.Zeta * ef.e4) / GAs
-        #except ZeroDivisionError:
-        #    func1 = 0
-        
         return (self.w0 * (ef.e1 + ef.Zeta * ef.e3)
                 - self.theta0 * ef.e2
                 - self.V0 * (ef.e4 / EI - func1)

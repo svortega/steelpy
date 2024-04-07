@@ -56,7 +56,7 @@ class TraveItem:
         
     #
     #
-    def static(self, #mesh= None, 
+    def staticX(self, #mesh= None, 
                sparse:bool=True,
                second_order: bool = False):
         """
@@ -70,7 +70,7 @@ class TraveItem:
         static = self._solver.static()
         self._Pdelta = False
         #
-        if self._mesh:
+        if (mesh := self._mesh):
             #self._mesh = mesh
             #self._mesh.plane(self._plane2D)
             #
@@ -78,9 +78,9 @@ class TraveItem:
             # Get K matrix
             # ------------------------------
             #mesh = self._mesh
-            Ks = self._mesh.Ke(sparse = sparse)
+            Ks = mesh.Ke(sparse = sparse)
                               # condensed = False) 
-            jbc = self._mesh.jbc()
+            jbc = mesh.jbc()
             #Ddof = self._mesh._nodes.DOF_unreleased()
             #
             # ------------------------------
@@ -92,7 +92,7 @@ class TraveItem:
             #load =  self._mesh.load()
             #basic_load = load.basic()
             #Fn_df = self._mesh.load().case().Fn()
-            Fn = self._mesh._load._basic.Fn()
+            Fn = mesh._load._basic.Fn()
             #
             # ------------------------------
             # Static solution
@@ -119,6 +119,67 @@ class TraveItem:
         #
         #print('-->')
     #
+    def static(self,
+               sparse:bool=True,
+               second_order: bool = False,
+               max_iter: int = 30):
+        """
+        Solves the static system by the Direct Stiffness Method (DSM)
+        
+        method : banded, frontal
+        second_order : Second order (True/False)
+        """
+        #
+        static = self._solver.static()
+        #
+        self._Pdelta = False
+        solve = static.solveLinear
+        if second_order:
+            self._Pdelta = True
+            solve = static.solvePdelta
+        #
+        if (mesh := self._mesh):
+            #
+            # ------------------------------
+            # Get Ke matrix
+            # ------------------------------
+            #
+            Ke = mesh.Ke
+            Kg = mesh.Kg
+            Kt = mesh.Kt
+            jbc = mesh.jbc
+            #
+            # ------------------------------
+            # Get load vector
+            # ------------------------------        
+            #
+            Fn = mesh._load._basic.Fn()
+            #
+            
+            colgrp = ['load_name', 'load_id', 
+                      'load_level', 'load_title',
+                      'load_system', 'component_name',
+                      'node_name', 'node_index']
+            #
+            hforce =  mesh._plane.hforce
+            hdisp = mesh._plane.hdisp
+            #
+            Fi = Fn[colgrp+hforce]
+            Di = Fn[colgrp+hdisp]
+            #
+            # ------------------------------
+            # Linear solution
+            # ------------------------------                
+            Un = solve(Ke=Ke, Kg=Kg, Kt=Kt,
+                       Fn=Fi, Dn=Di, 
+                       jbc=jbc,
+                       sparse=sparse,
+                       max_iter=max_iter)
+            #
+            self._postprocess.Un.df = Un
+        
+        else:
+            return static        
     #
     def Pdelta(self, sparse:bool=True,
                max_iter: int = 30):
@@ -128,19 +189,19 @@ class TraveItem:
         self._Pdelta = True
         #
         # ------------------------------
-        if self._mesh:
+        if (mesh := self._mesh):
             # ------------------------------
             # Get K stiffness matrix
             # ------------------------------
             #
-            Ke = self._mesh.Ke(sparse = sparse)
-            jbc = self._mesh.jbc()
+            Ke = mesh.Ke(sparse = sparse)
+            jbc = mesh.jbc()
             #
             # ------------------------------
             # Get load vector
             # ------------------------------        
             #
-            Fn = self._mesh._load._basic.Fn()
+            Fn = mesh._load._basic.Fn()
             #
             # ------------------------------
             # Linear solution
@@ -151,13 +212,13 @@ class TraveItem:
                       'load_system', 'component_name',
                       'node_name', 'node_index']
             #
-            hforce =  self._mesh._plane.hforce
-            hdisp = self._mesh._plane.hdisp
+            hforce =  mesh._plane.hforce
+            hdisp = mesh._plane.hdisp
             #
             Fi = Fn[colgrp+hforce]
             Di = Fn[colgrp+hdisp]
             #
-            Un = pdelta.solveLinear(Ks=Ke,
+            Un = pdelta.solveLinear(Ke=Ke,
                                     Fn=Fi,
                                     Dn=Di, 
                                     jbc=jbc,
@@ -173,7 +234,7 @@ class TraveItem:
             Ugrp = Un.groupby(colgrp)
             Dgrp = Di.groupby(colgrp)
             #
-            hdisp = ['node_name', *self._mesh._plane.hdisp]
+            hdisp = ['node_name', *mesh._plane.hdisp]
             #
             Utemp = []
             for key, noded in Ugrp:
@@ -185,7 +246,7 @@ class TraveItem:
                 #
                 # ------------------------------
                 # Assambly matrix start            
-                Kg = self._mesh.Kg(D=Uii)
+                Kg = mesh.Kg(D=Uii)
                 Kt = Ke + Kg
                 #
                 Ustep = Dgrp.get_group(key)

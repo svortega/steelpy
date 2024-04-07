@@ -98,7 +98,7 @@ def solver_sparse(a, b):
 # ---------------------------------------------
 #
 @dataclass
-class StaticSolver:
+class StaticSolverX:
     """ Linear static solver class"""
     __slots__ = ['_plane',  '_method']
     
@@ -470,7 +470,7 @@ class StaticSolver:
 # ---------------------------------------------
 #
 @dataclass
-class PDeltaSolver:
+class StaticSolver:
     """ Linear static solver class"""
     __slots__ = ['_plane',  '_method']
     
@@ -480,8 +480,55 @@ class PDeltaSolver:
         """
         self._plane = plane
     #
-    def solveLinear(self, Ks, Fn, Dn, jbc, 
-                    sparse: bool=False):
+    #
+    def _get_solver(self, Ke, jbc, sparse: bool):
+        """ """
+        jbc = jbc()
+        Ke = Ke(sparse = sparse)
+        Kfactor = Ke.max()
+        
+        if sparse:
+            solver = solver_sparse
+            Ke = Ke.tolil()
+        else:
+            solver = solver_np
+        
+        return Ke, Kfactor, jbc, solver
+    #
+    def solveLinear(self, Ke, Kg, Kt,
+                    Fn, Dn, jbc,
+                    sparse: bool=False,
+                    max_iter: int|None = None):
+        """
+        Linear Static Analysis (2nd Order)
+        
+        Input: 
+        Ke  : Global stiffness matrix
+        Fn  : FER Node load dataframe
+        jbc : Node boundary condition dataframe
+        
+        Return: 
+        Udf : Node displacement global system dataframe
+        """
+        #
+        order = "1st"
+        print(f"** Solving U = K^-1 F [{order} order] ")
+        #start_time = time.time()
+        #
+        #
+        (Ke, Kfactor,
+         jbc, solver) = self._get_solver(Ke, jbc, sparse)
+        #
+        Us = self.PMT(Ke, Fn, Dn, jbc,
+                      solver, Kfactor)        
+        #
+        return Us
+    #
+    def solvePdelta(self,
+                    Ke, Kg, Kt,
+                    Fn, Dn, jbc,
+                    sparse: bool=False, 
+                    max_iter: int = 30):
         """
         Linear Static Analysis (2nd Order)
         
@@ -494,41 +541,150 @@ class PDeltaSolver:
         Udf : Node displacement global system dataframe
         """
         #
-        order = "1st"
+        order = "2nd"
         print(f"** Solving U = K^-1 F [{order} order] ")
         #start_time = time.time()
         #
-        maxstiff = Ks.max()
-        # Select solver
-        if sparse:
-            solver = solver_sparse
-            Ks = Ks.tolil() #copy=True
-        else:
-            solver = solver_np
+        # ------------------------------
         #
-        #colgrp = ['load_name', 'load_id', 
-        #          'load_level', 'load_title',
-        #          'load_system', 'component_name',
-        #          'node_name', 'node_index']
+        (Ke, Kfactor,
+         jbc, solver) = self._get_solver(Ke, jbc, sparse)
         #
-        #hforce =  self._plane.hforce
-        #hdisp = self._plane.hdisp
+        # ------------------------------
+        # Step 1 
+        Un = self.PMT(Ke, Fn, Dn, jbc,
+                      solver, Kfactor)
         #
-        #F = Fn[colgrp+hforce]
-        #D = Fn[colgrp+hdisp]
+        # ------------------------------
+        # Pdelta solution
+        # ------------------------------            
         #
-        Us = self.PMT(Ks, Fn, Dn, jbc,
-                      solver, maxstiff)        
+        colgrp = ['load_name', 'load_id', 'load_level',
+                  'load_system', 'component_name',]
         #
-        return Us
+        Ugrp = Un.groupby(colgrp)
+        Dgrp = Dn.groupby(colgrp)
+        #
+        hdisp = ['node_name', *self._plane.hdisp]
+        #
+        Utemp = []
+        for key, noded in Ugrp:
+            #
+            # ------------------------------
+            # TODO: select basic only
+            if key[2] != 'basic':
+                continue
+            #
+            # ------------------------------
+            #
+            Dstep = Dgrp.get_group(key)          
+            #            
+            # ------------------------------
+            #
+            Uii = noded[hdisp].set_index('node_name')
+            #
+            # ------------------------------
+            #
+            # Assembly matrix start
+            #kg = Kg(D=Uii)
+            #kt = Ke + kg
+            #
+            kl = Kt(D=Uii)
+            kl = kl.tolil()
+            #
+            # ------------------------------
+            #
+            #Ui = self.PMT(Ke=kt, F=Fn,
+            #              D=Dstep,
+            #              jbc=jbc,
+            #              solver=solver,
+            #              maxstiff=Kfactor)
+            #
+            Uni = self.PMT(Ke=kl, F=Fn,
+                           D=Dstep,
+                           jbc=jbc,
+                           solver=solver,
+                           maxstiff=Kfactor)
+            # ------------------------------
+        #
+        #Uni.mask(np.isclose(a=Uni, b=0.0, atol=0.001), 0.0, inplace=True)
+        return Uni
     #
-    def PMT(self, Ks, F, D, 
+    def solvePdeltaXX(self, elements,
+                    Ke, Fn, Un, jbc, 
+                    sparse: bool=False, 
+                    max_iter: int = 30):
+        """
+        Linear Static Analysis (2nd Order)
+        
+        Input: 
+        Ks  : Global stiffness matrix
+        Fn  : FER Node load dataframe
+        jbc : Node boundary condition dataframe
+        
+        Return: 
+        Udf : Node displacement global system dataframe
+        """
+        #
+        order = "2nd"
+        print(f"** Solving U = K^-1 F [{order} order] ")
+        #start_time = time.time()
+        #
+        Ke, Kfactor, solver = self._get_solver(Ke, sparse)
+        #
+        colgrp = ['load_name', 'load_id', 
+                  'load_level', 'load_title',
+                  'load_system', 'component_name',
+                  'node_name', 'node_index']
+        #
+        hforce =  self._plane.hforce
+        hdisp = self._plane.hdisp
+        #
+        F = Fn[colgrp+hforce]
+        D = Fn[colgrp+hdisp]
+        #
+        #
+        colgrp = ['load_name', 'component_name',
+                  'load_level',  'load_system']      
+        #
+        #
+        # group FER node load
+        Fgrp = F.groupby(colgrp)
+        Dgrp = D.groupby(colgrp)
+        Ugrp = Un.groupby(colgrp)
+        #
+        Utemp = []
+        for key, item in Fgrp:
+            # set FER df by nodes
+            Fitem = item.set_index(['node_name'])
+            #Fitem
+            ndisp = Ugrp.get_group(key).set_index(['node_name'])
+            ndisp
+            for mname, element in elements.items():
+                nodes = element.connectivity
+                Tb = element.T
+                # ---------------------------------------------
+                # displacement
+                nd_global = np.concatenate((ndisp.loc[nodes[0]],
+                                            ndisp.loc[nodes[1]]), axis=None)
+                #
+                # ---------------------------------------------
+                # convert global end-node disp in beam's local system
+                # [x,y,z,rx,ry,rz]
+                nd_local = Tb @ nd_global
+                #
+                # --------------------------------------------
+                # get kg matrix            
+    #    
+    #
+    #
+    def PMT(self, Ke, F, D, 
             jbc, solver,
             maxstiff: float):
         """
         Penalty Method
         
-        Ks : Global stiffness matrix
+        Ke : Global stiffness matrix
         Fn : Global force & displacement matrix
         jbc = Nodes with boundary
         
@@ -570,7 +726,7 @@ class PDeltaSolver:
         #
         Utemp = []
         for key, item in Fgrp:
-            Kitem = Ks.copy()
+            Kitem = Ke.copy()
             # set FER df by nodes
             Fn = item.set_index(['node_name'])
             # Select load nodes with free DOF
@@ -697,79 +853,6 @@ class PDeltaSolver:
         #    dfjbc[col].values[:] = float(0.0)
         #
         return dfbool.astype('bool'), dfjbc.astype('float64')
-    #
-    #
-    def solvePdelta(self, elements,
-                    Ks, Fn, Un, jbc, 
-                    sparse: bool=False, 
-                    max_iter: int = 30):
-        """
-        Linear Static Analysis (2nd Order)
-        
-        Input: 
-        Ks  : Global stiffness matrix
-        Fn  : FER Node load dataframe
-        jbc : Node boundary condition dataframe
-        
-        Return: 
-        Udf : Node displacement global system dataframe
-        """
-        #
-        order = "2nd"
-        print(f"** Solving U = K^-1 F [{order} order] ")
-        #start_time = time.time()
-        #
-        maxstiff = Ks.max()
-        # Select solver
-        if sparse:
-            solver = solver_sparse
-            Ks = Ks.tolil() #copy=True
-        else:
-            solver = solver_np
-        #
-        colgrp = ['load_name', 'load_id', 
-                  'load_level', 'load_title',
-                  'load_system', 'component_name',
-                  'node_name', 'node_index']
-        #
-        hforce =  self._plane.hforce
-        hdisp = self._plane.hdisp
-        #
-        F = Fn[colgrp+hforce]
-        D = Fn[colgrp+hdisp]
-        #
-        #
-        colgrp = ['load_name', 'component_name',
-                  'load_level',  'load_system']      
-        #
-        #
-        # group FER node load
-        Fgrp = F.groupby(colgrp)
-        Dgrp = D.groupby(colgrp)
-        Ugrp = Un.groupby(colgrp)
-        #
-        Utemp = []
-        for key, item in Fgrp:
-            # set FER df by nodes
-            Fitem = item.set_index(['node_name'])
-            #Fitem
-            ndisp = Ugrp.get_group(key).set_index(['node_name'])
-            ndisp
-            for mname, element in elements.items():
-                nodes = element.connectivity
-                Tb = element.T
-                # ---------------------------------------------
-                # displacement
-                nd_global = np.concatenate((ndisp.loc[nodes[0]],
-                                            ndisp.loc[nodes[1]]), axis=None)
-                #
-                # ---------------------------------------------
-                # convert global end-node disp in beam's local system
-                # [x,y,z,rx,ry,rz]
-                nd_local = Tb @ nd_global
-                #
-                # --------------------------------------------
-                # get kg matrix            
     #
     #
     def _Us(self, Ks, Fs, solver, 

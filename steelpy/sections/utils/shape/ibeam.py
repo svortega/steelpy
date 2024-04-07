@@ -317,14 +317,13 @@ class IbeamBasic(ShapeStressBasic):
         #
         Zc = self.d * 0.50 - Zc
         #
-        alpha_sy = self.alpha_s(poisson=poisson)
+        Asy, Asz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
                              J=J, Cw=Cw,
-                             alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sy)
+                             alpha_sy=Asy, alpha_sz=Asz)
     #
     def curved(self, R:float):
         """
@@ -554,7 +553,16 @@ class IbeamBasic(ShapeStressBasic):
                     + 30 * k**2 * (j + j**2)
                     + 5 * poisson * k**2 * (8 * j + 9 * j**2))
                     / (10 * (1 + poisson) * (1 + 3 * j)**2))
-        return alpha_sy
+        #
+        #-------------------------------------------------
+        #   Cross-Sectional Area
+        area = (self.bft*self.tft + self.bfb*self.tfb
+                + h * self.tw)
+        Asy = area / (1.64 * b * (self.tft + self.tfb) * 0.50)
+        Asz = area / (self.d * self.tw)
+        #
+        #return alpha_sy
+        return Asy, Asz
     #
     # --------------------------------------------
     # Torsion

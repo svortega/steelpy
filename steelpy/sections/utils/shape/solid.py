@@ -139,8 +139,8 @@ class TrapezoidBasic(ShapeStressBasic):
     #
     def alpha_s(self, poisson: float):
         """Shear correction factor"""
-        alpha_sy = (12 + 11 * poisson) / (10 * (1 + poisson))
-        return alpha_sy     
+        alpha_s = (12 + 11 * poisson) / (10 * (1 + poisson))
+        return alpha_s, alpha_s
 #
 #
 @dataclass
@@ -282,14 +282,14 @@ d   |     |   Z
         #
         #-------------------------------------------------
         #
-        alpha_sy = self.alpha_s(poisson=poisson)
+        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
                              J=J, Cw=Cw,
                              alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sy)                             
+                             alpha_sz=alpha_sz)
     #
     #
     def taux_max(self, Mt):
@@ -907,14 +907,14 @@ class CircleSolid(ShapeStressBasic):
         rp = self.d / math.sqrt(8.0)
         #
         #
-        alpha_sy = self.alpha_s(poisson=poisson)
+        alpha_sy,alpha_sz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
                              J=J, Cw=Cw,
                              alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sy)
+                             alpha_sz=alpha_sz)
     #
     def taux_max(self, Mt):
         """
@@ -1022,8 +1022,8 @@ class CircleSolid(ShapeStressBasic):
     #
     def alpha_s(self, poisson: float):
         """Shear correction factor"""
-        alpha_sy = (7 + 6 * poisson) / (6 * (1 + poisson))
-        return alpha_sy    
+        alpha_s = (7 + 6 * poisson) / (6 * (1 + poisson))
+        return alpha_s, alpha_s
     #
     # --------------------------------------------
     #

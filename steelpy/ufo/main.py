@@ -50,7 +50,7 @@ class UFOmodel:
         """
         mesh_type : sqlite/inmemory
         """
-        print("-- module : fem2ufo Version 5.00dev")
+        print("-- module : ufo Version 6.00dev")
         print('{:}'.format(52*'-'))
         #
         #if not component:

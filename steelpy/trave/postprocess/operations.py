@@ -341,17 +341,7 @@ class MainProcess:
             if key[2] != 'basic':
                 continue
             ndisp = noded[hdisp]
-            ndisp.set_index('node_name', inplace=True)        
-            #
-            # check if basic load
-            #try:
-            #    mbload = blgrp.get_group(key[:3])
-            #    mbload = mbload.groupby(['element_name'])
-            #    #
-            #    benl = benlgrp.get_group(key)
-            #    benl = benl.groupby(['element_name'])
-            #except KeyError:
-            #    mbload = {}
+            ndisp.set_index('node_name', inplace=True)
             #
             for mname, element in elements.items():
                 nodes = element.connectivity
@@ -372,7 +362,7 @@ class MainProcess:
                 # displacement
                 nd_global = np.concatenate((ndisp.loc[nodes[0]],
                                             ndisp.loc[nodes[1]]), axis=None)
-                #       
+                #
                 # ---------------------------------------------
                 # convert global end-node disp in beam's local system
                 # [x,y,z,rx,ry,rz]
@@ -382,6 +372,7 @@ class MainProcess:
                 # set beam to general response expresions --> R0
                 # [V, M, theta, w]
                 #
+                # convert beam end-node disp to force [F = Kd] in global system
                 FUan = element.Ke_local @ nd_local
                 #
                 #TODO: confirm change reactions sign
@@ -431,8 +422,8 @@ class MainProcess:
                     #
                     #bload0 = nf_local.loc[nodes[0]]
                     #tload0 = mtload.loc[nodes[0]]
-                    R0 = eq.R0(bload= Pload(*Pu[:6]) , #nf_local.loc[nodes[0]],
-                               tload= mtload.loc[nodes[0]])
+                    R0 = eq.R0(bload=Pu, #nf_local.loc[nodes[0]],
+                               tload=mtload.loc[nodes[0]])
                     #
                     lbforce = [['local', mname, bstep.node_end,
                                 *beam.response(x=bstep.node_end,
@@ -442,15 +433,10 @@ class MainProcess:
                     #print('-->')
                 except KeyError : # (KeyError, AttributeError, TypeError): # No load on beam
                     # --------------------------------------------
-                    # convert beam end-node disp to force [F = Kd] in global system
                     # [Fx,Fy,Fz,Mx,My,Mz]
-                    #nf_local = element.ks_local @ nd_local
-                    #bload = Pload(lnforce[:6])
-                    #tload = Tload(0, 0, 0)     # Psi, B, Tw
-                    #
                     Pu = -1 * FUan
-                    #
-                    R0 = eq.R0(bload=Pload(*Pu[:6]),
+                    #Pu[1] *= -1
+                    R0 = eq.R0(bload=Pu,
                                tload=Tload(0, 0, 0)) 
                     # [beam_number, load_title, x, Fx, Fy, Fz, Mx, My, Mz]
                     Lsteps = linspace(start=0, stop=element.L, num=steps+1, endpoint=True)
@@ -778,7 +764,7 @@ class NodeGenRespEq:
         self.nd_local = nd_local
         self.plane = plane
     #
-    def R0(self,
+    def R0XX(self,
            bload: list|None = None,
            tload: list|None = None) -> tuple:
         """
@@ -787,12 +773,15 @@ class NodeGenRespEq:
         Torsion [T, Phi, Psi, B, Tw] 
         """
         # select node disp end 0
-        n0dlocal = self.nd_local[:6]
+        nd0 = self.nd_local[:self.plane.dof]
         #
+        axial = bload.Fx
+        if np.isclose(a=axial, b=0.0, atol=0.01):
+            axial = 0
         # Axial
-        R0x = [bload.Fx,                  # Fx
+        R0x = [1 * axial,                 # Fx
                0, 0,                      # blank, blank
-               1 * n0dlocal[0]]           # dx   
+               -1 * n0dlocal[0]]          # dx
         #
         # In plane
         R0y = [-1 *  bload.Fy,            # Vy
@@ -822,6 +811,92 @@ class NodeGenRespEq:
             R0t = [T0,  rx,  *thetas]  # [T, Phi, Psi, B, Tw]
         #
         return Req(R0x, R0t, R0y, R0z)
+    #
+    def R0(self, bload: list, tload: tuple|list) -> tuple:
+        """
+        Axial   [FP, blank, blank, Fu]
+        Bending [V, M, theta, w]
+        Torsion [T, Phi, Psi, B, Tw]
+        """
+        # select node disp end 0
+        nd0 = self.nd_local[:self.plane.ndof]
+        bload = bload[:self.plane.ndof]
+        #
+        # Axial
+        axial = bload[0]
+        if np.isclose(a=axial, b=0.0, atol=0.01):
+            axial = 0
+        #
+        R0x = [1 * axial,            # Fx
+               0, 0,                 # blank, blank
+               -1 * nd0[0]]          # dx
+        #
+        if self.plane.plane2D:
+            R0t, R0y, R0z = self.D2(nd0, bload)
+        else:
+            R0t, R0y, R0z = self.D3(nd0, bload, tload)
+        #
+        # Inverting sign to calculate beam load along length
+        #
+        # In plane
+        R0y[0] *= -1   # Vy
+        #R0y[1] *= -1  # Mz
+        #R0y[2] *= -1  # rz
+        R0y[3] *= -1   # dy
+        #
+        # Out plane
+        R0z[0] *= -1    # Vz
+        # R0z[1] *= -1  # My
+        # R0z[2] *= -1  # ry
+        R0z[3] *= -1    # dz
+        #
+        return Req(R0x, R0t, R0y, R0z)
+    def D3(self, nd0:list, bload:list,
+           tload:tuple):
+        """
+        3D plane
+        nd0 = [dx,dy,dz,rx,ry,rz]
+        bload : [Fx,Fy,Fz,mx,my,mz]
+        """
+        # In plane
+        R0y = [bload[1],   # Vy
+               bload[5],   # Mz
+               nd0[5],     # rz
+               nd0[1]]     # dy
+        # Out plane
+        R0z = [bload[2],  # Vz
+               bload[4],  # My
+               nd0[4],    # ry
+               nd0[2]]    # dz
+        #
+        # Torsion
+        T0 = 1 * bload[3]
+        rx = 1 * nd0[3]
+        #
+        # Thin walled sections (Ibeam, Channel & Z)
+        thetas = [1 * tload.Psi,
+                  1 * tload.B,
+                  1 * tload.Tw]
+        #
+        R0t = [T0, rx, *thetas]
+        #
+        return R0t, R0y, R0z
+    #
+    def D2(self, nd0:list, bload:list):
+        """
+        2D plane
+        nd0 : [dx, dy, rz]
+        bload : [Fx,Fy,mz]
+        """
+        # In plane
+        R0y = [bload[1],   # Vy
+               bload[2],   # Mz
+               nd0[2],     # rz
+               nd0[1]]     # dy
+        # Out plane
+        R0z = [0, 0, 0, 0]  # [Vz, My, ry, dz]
+        R0t = [0, 0, 0, 0, 0]  # [T, Phi, Psi, B, Tw]
+        return R0t, R0y, R0z
 #
 #
 #

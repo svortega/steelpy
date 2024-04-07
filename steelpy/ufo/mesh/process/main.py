@@ -10,15 +10,19 @@ from __future__ import annotations
 #from steelpy.f2uModel.mesh.process.matrix.Kassemble import assemble_banded_Kmatrix
 #
 #from steelpy.utils.math.operations import remove_column_row
-from steelpy.ufo.mesh.process.operations import assemble_matrix, assemble_Gmatrix
+from steelpy.ufo.mesh.process.operations import assemble_matrix, assemble_Gmatrix #, assemble_Lmatrix
+
+
 #
 
-def Kmatrix(elements,
-            nodes, 
-            ndof: int = 6,
-            #condensed: bool = True,
-            sparse: bool = True):
+def Ke_matrix(elements,
+              nodes,
+              ndof: int = 6,
+              #condensed: bool = True,
+              sparse: bool = True):
     """
+    Stiffness matrix
+
     elements:
     nodes:
     ndof :
@@ -38,7 +42,7 @@ def Kmatrix(elements,
     # numpy matrix
     #
     Ka = assemble_matrix(elements=elements,
-                         nodes=nodes, 
+                         nodes=nodes,
                          ndof=ndof,
                          mitem="Ke", item=None)
     #
@@ -46,7 +50,7 @@ def Kmatrix(elements,
     if sparse:
         from scipy.sparse import coo_matrix
         Ka = coo_matrix(Ka)
-    
+
     #elif condensed:
     #    #dof_index = nodes.DOF_unreleased()
     #    jbcc = jbc.stack().values
@@ -56,14 +60,16 @@ def Kmatrix(elements,
     #        Ka = remove_column_row(Ka, i, i)
     #
     return Ka
+
+
 #
-def Mmatrix(elements,
-            nodes, 
-            ndof: int = 6,
-            sparse: bool = True):
-    """ """
+def Km_matrix(elements,
+              nodes,
+              ndof: int = 6,
+              sparse: bool = True):
+    """ Mass matrix"""
     Ka = assemble_matrix(elements=elements,
-                         nodes=nodes, 
+                         nodes=nodes,
                          ndof=ndof,
                          mitem="Km", item=None)
     #
@@ -71,21 +77,37 @@ def Mmatrix(elements,
     if sparse:
         from scipy.sparse import coo_matrix
         Ka = coo_matrix(Ka)
-    return Ka   
+    return Ka
+
+
 #
-def Gmatrix(elements,
-            nodes, D, 
-            ndof: int = 6,
-            sparse: bool = True):
-    """ """
+def Kg_matrix(elements,
+              nodes, D,
+              ndof: int = 6,
+              sparse: bool = True):
+    """ Geometric stiffness matrix """
     Kg = assemble_Gmatrix(elements=elements,
-                          nodes=nodes, 
+                          nodes=nodes,
                           ndof=ndof,
                           mitem="Kg", item=D)
     #
     if sparse:
         from scipy.sparse import coo_matrix
-        Kg = coo_matrix(Kg)    
-    return Kg  
+        Kg = coo_matrix(Kg)
+    return Kg
 #
+def Kt_matrix(elements,
+              nodes, D,
+              ndof: int = 6,
+              sparse: bool = True):
+    """ Tangent stiffness matrix """
+    Kt = assemble_Gmatrix(elements=elements,
+                          nodes=nodes,
+                          ndof=ndof,
+                          mitem="Kt", item=D)
+    #
+    if sparse:
+        from scipy.sparse import coo_matrix
+        Kt = coo_matrix(Kt)
+    return Kt
 #

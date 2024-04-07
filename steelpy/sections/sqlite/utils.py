@@ -440,9 +440,9 @@ class ShapeGeometrySQL(ShapeStressBasic):
             row = cur.fetchone()
         #
         #
-        alpha_sy = self.geometry.alpha_s(poisson=poisson)
+        alpha_sy, alpha_sz = self.geometry.alpha_s(poisson=poisson)
         #
-        return ShapeProperty(*row[2:15], alpha_sy, alpha_sy)
+        return ShapeProperty(*row[2:15], alpha_sy, alpha_sz)
     #
     #@property
     #def section(self):

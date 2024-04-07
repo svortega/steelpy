@@ -17,7 +17,7 @@ from steelpy.ufo.load.main import MeshLoad
 from steelpy.ufo.mesh.sqlite.nodes import NodeSQL
 from steelpy.ufo.mesh.sqlite.elements import ElementsSQL
 from steelpy.ufo.mesh.sqlite.boundary import BoundarySQL
-from steelpy.ufo.mesh.process.main import Kmatrix, Gmatrix, Mmatrix
+from steelpy.ufo.mesh.process.main import Ke_matrix, Kg_matrix, Km_matrix, Kt_matrix
 from steelpy.ufo.mesh.elements.sets import Groups
 from steelpy.ufo.plot.main import PlotMesh
 #
@@ -393,11 +393,11 @@ class Mesh(ufoBasicModel):
         Solver: numpy/banded/sparse
         """
         # get data
-        Ka = Kmatrix(elements=self._elements,
-                     nodes=self._nodes, 
-                     ndof=self._plane.ndof,
-                     #condensed=condensed,
-                     sparse=sparse)
+        Ka = Ke_matrix(elements=self._elements,
+                       nodes=self._nodes,
+                       ndof=self._plane.ndof,
+                       #condensed=condensed,
+                       sparse=sparse)
         #
         return Ka
     #
@@ -408,20 +408,29 @@ class Mesh(ufoBasicModel):
         D : 
         """
         #D = D.set_index('node_name', inplace=True)
-        Kg = Gmatrix(elements=self._elements,
-                     nodes=self._nodes,
-                     D=D, 
-                     ndof=self._plane.ndof,
-                     sparse=sparse)
+        Kg = Kg_matrix(elements=self._elements,
+                       nodes=self._nodes,
+                       D=D,
+                       ndof=self._plane.ndof,
+                       sparse=sparse)
         return Kg
+    #
+    def Kt(self, D, sparse: bool = True):
+        """ Element Tangent Stiffness matrix"""
+        Kt = Kt_matrix(elements=self._elements,
+                       nodes=self._nodes,
+                       D=D,
+                       ndof=self._plane.ndof,
+                       sparse=sparse)
+        return Kt
     #
     def Km(self, sparse: bool = True):
         """ Element global mass matrix"""
         #
-        Ma = Mmatrix(elements=self._elements,
-                     nodes=self._nodes, 
-                     ndof=self._plane.ndof,
-                     sparse=sparse)
+        Ma = Km_matrix(elements=self._elements,
+                       nodes=self._nodes,
+                       ndof=self._plane.ndof,
+                       sparse=sparse)
         return Ma
     #
     # --------------------
