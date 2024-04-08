@@ -74,7 +74,7 @@ beam.support = ["fixed", "free"]
 #          'name': 'selfweight_y'}
 #
 beam.P = {'L1':28*units.ft,
-          #'Fx': -890 * units.kN,
+          'Fx': -445 * units.kN,
           'Fy': -4.45 * units.kN,
           'name': 'AISC_C-C2.3'}
 #
@@ -187,12 +187,12 @@ mesh.section([[155, 'ub', 253.5*units.mm, 8.60*units.mm,
                204.0*units.mm, 15.10*units.mm]])
 
 mesh.node([(1, 0*units.ft,   0*units.ft),
-           #(2, 15*units.ft,  0*units.ft),
-           #(2, 1*units.m,  0*units.m), 
+           ##(2, 15*units.ft,  0*units.ft),
+           #(2, 1*units.m,  0*units.m),
            #(3, 2*units.m,  0*units.m),
            #(4, 3*units.m,  0*units.m),
            #(5, 4*units.m,  0*units.m),
-           #(6, 5*units.m,  0*units.m)
+           #(6, 5*units.m,  0*units.m)])
            (6, 28*units.ft,  0*units.m)])
 
 mesh.boundary([[1, 'support', 'fixed'],
@@ -204,12 +204,18 @@ mesh.element([#(1,  'beam',  1, 2, 10, 15, 0),
               #(4,  'beam',  4, 5, 10, 15, 0),
               #(5,  'beam',  5, 6, 10, 15, 0)])
               (5,  'beam',  1, 6, 10, 15, 0)])
-
+#
+#
+# ----------------------------------------------------
+# Load input
+# ----------------------------------------------------
+#
 load = mesh.load()
+#
+# ----------------------------------------------------
+# Basic Load
 basic = load.basic()
 #
-
-
 #
 #basic[1] = 'dispExample'
 #nodeload = basic[1].node()
@@ -254,10 +260,15 @@ basic = load.basic()
 #            'type': 'line',
 #            'qy': -15 * units.kN / units.m})
 #
-#basic.beam({'load': 'snow load',
-#            'beam': 5, 
-#            'type': 'line',
-#            'qy': -15 * units.kN / units.m})
+basic.beam({'load': 'snow load',
+            'beam': 5, 
+            'type': 'line',
+            'qy': -15 * units.kN / units.m})
+
+basic.beam({'load': 'snow load',
+            'beam': 5, 
+            'type': 'line',
+            'qy': -5 * units.kN / units.m})
 #
 #basic.beam({'load': 'snow load',
 #            'beam': 5, 
@@ -296,24 +307,69 @@ basic = load.basic()
 #
 #basic.node({'load': 'dispExample',
 #            'node': 6,
-#            'type': 'force',
-#            'Fy': -75 * units.kN ,})
+##            'type': 'force',
+##            'Fy': -75 * units.kN ,})
+#            'type': 'displacement', 
 #            'y': -0.0511813 * units.m,})
 #            #'rz': 0.0136483 * units.rad,})
 #
 basic.node({'load': 'AISC_C-C2.3',
             'node': 6,
             'type': 'force',
-            #'Fx': -890 * units.kN,
-            'Fy': 4.45 * units.kN ,})
+            'Fx': -890 * units.kN,
+            'Fy': -4.45 * units.kN})
 #            'y': -0.0511813 * units.m,})
 #            #'rz': 0.0136483 * units.rad,})
 #
+# ----------------------------------------------------
+# Load Combinations
+#
+#
+#comb = load.combination([['factored comb 1', 'basic', 11, 1.20],
+#                         ['factored comb 1', 'basic', 22, 1.25],
+#                         ['factored comb 1', 'basic', 33, 1.30]])
+#
+#
+comb = load.combination()
+comb[100] = 'Factored Comb 1'
+comb[100].basic['AISC_C-C2.3'] = 1.20
+comb[100].basic['snow load'] = 1.25
+#comb[100].basic[33] = 1.30
+#
+#comb[200] = 'factored comb 2'
+#comb[200].basic[11] = 1.35
+#comb[200].basic[22] = 1.40
+#comb[200].basic[33] = 1.45
+#
+comb[300] = 'factored comb 3'
+comb[300].combination[100] = 1.50
+comb[300].basic['snow load'] = 1.60
+#
+#
+# ----------------------------------------------------
+# Meshing input
+# ----------------------------------------------------
+#
 mesh.build()
 #
+# ----------------------------------------------------
+# Plot mesh
+# ----------------------------------------------------
+#
+#plot = mesh.plot()
+#plot.frame()
+#
+# ----------------------------------------------------
+# Structural Analysis
+# ----------------------------------------------------
+#
 frame = Trave3D(mesh=mesh)
-frame.static()
+frame.static(second_order=False)
 results = frame.results(beam_steps=4)
+#
+# ----------------------------------------------------
+# Results
+# ----------------------------------------------------
 #
 beamres = results.beam()
 #print(beamres)

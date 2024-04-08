@@ -17,28 +17,34 @@ from steelpy.ufo.load.sqlite.load_case import BasicLoadSQL
 from steelpy.ufo.load.process.operations import duplicates, indices
 from steelpy.ufo.load.process.combination import LoadCombinationBasic
 # steelpy
-from steelpy.utils.sqlite.utils import create_connection
+from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.dataframe.main import DBframework
 #
 #
 class LoadCombSQL(LoadCombinationBasic):
     
-    __slots__ = ['_labels', '_title', '_number', 'bd_file', '_plane', 
-                 '_index', '_basic', '_combination', '_metocean']
+    __slots__ = ['_labels', '_title', '_number', 'db_file', '_plane', 
+                 '_index', '_basic', '_combination', '_metocean',
+                 '_component']
     #
-    def __init__(self, bd_file:str, plane: NamedTuple,
+    def __init__(self, db_file:str, plane: NamedTuple,
                  component: int):
         """
         """
         super().__init__()
         #
-        self.bd_file = bd_file
+        self.db_file = db_file
         self._plane=plane
+        self._component = component
         #
-        self._basic = BasicLoadSQL(db_file=self.bd_file,
+        self._basic = BasicLoadSQL(db_file=self.db_file,
                                    component=component,
                                    plane=self._plane)
         self._combination = {} #LoadCombinationSQL(self)
+        #
+        conn = create_connection(self.db_file)
+        with conn: 
+            self._create_table(conn)
     #
     def __setitem__(self, load_name:int|str, load_title:str) -> None:
         """
@@ -53,18 +59,23 @@ class LoadCombSQL(LoadCombinationBasic):
             self._title.append(load_title)
             load_id = next(self.get_number())
             self._number.append(load_id)
-            #conn = create_connection(self.bd_file)
             #
             self._combination[load_name] = CombTypeSQL(name=load_name,
                                                        title=load_title,
-                                                       bd_file=self.bd_file)
+                                                       component=self._component, 
+                                                       db_file=self.db_file)
             #
-            self._combination[load_name].number = load_id
+            #self._combination[load_name].number = load_id
             #
-            #with conn:
-            #    load_id = self._push_load_combination(conn, load_name, load_title)
-            #    self._number.append(load_id)
-            #    conn.commit()
+            #
+            conn = create_connection(self.db_file)
+            with conn:
+                load_no = self._push_combination(conn, load_name,
+                                                 self._component, 
+                                                 'combination', 
+                                                 load_title)
+                
+                self._combination[load_name].number = load_no
     #
     def __getitem__(self, load_name:str|int):
         """
@@ -72,19 +83,42 @@ class LoadCombSQL(LoadCombinationBasic):
         load_name = str(load_name)
         try:
             self._index = self._labels.index(load_name)
-            #return CombTypeSQL(self)
             return self._combination[load_name]
         except ValueError:
             raise IOError("load combination {:} not defined".format(load_name))
     #
+    def _create_table(self, conn):
+        """ """
+        table = "CREATE TABLE IF NOT EXISTS LoadCombination(\
+                number INTEGER PRIMARY KEY NOT NULL,\
+                load_id INTEGER NOT NULL REFERENCES Load(number),\
+                bl_number INTEGER REFERENCES Load(number),\
+                lc_number INTEGER REFERENCES Load(number),\
+                factor DECIMAL NOT NULL);"
+        create_table(conn, table)
+    #
+    def _push_combination(self, conn, name:int|str,
+                          component:int, level:str, title:str):
+        """
+        """
+        project = (name, component, level, title)
+        sql = 'INSERT INTO Load(\
+               name, component_id, level, title)\
+               VALUES(?,?,?,?)'
+        #
+        cur = conn.cursor()
+        cur.execute(sql, project)
+        #conn.commit()
+        return cur.lastrowid
+        
     #
     def to_basic2(self):
         """ """
         #
-        db = DBframework()
-        dftemp = []
+        #db = DBframework()
+        #dftemp = []
         #
-        conn = create_connection(self.bd_file)
+        conn = create_connection(self.db_file)
         cur = conn.cursor()
         cur.execute ( "SELECT load_id, bl_number, factor\
                       FROM LoadCombination\
@@ -159,6 +193,93 @@ class LoadCombSQL(LoadCombinationBasic):
     #                    beam_load[mname] =  member * factor
     #        memb_comb[lcomb] = beam_load
     #    return comb_res, memb_comb
+    #
+    #
+    def Fn(self):
+        """ """
+        #
+        values=['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                'x', 'y', 'z', 'rx', 'ry', 'rz']
+        #
+        dfbasic = self._basic.Fn()
+        #
+        dfcomb = self.to_basic() 
+        #
+        colgrp = ['load_name', 'load_id', 
+                  'load_level', 'load_title',
+                  'load_system', 'component_name',
+                  'node_name', 'node_index']
+        #
+        try:
+            dfnew = self._update(dfbasic, dfcomb, 
+                                 values=values)
+        except UnboundLocalError:
+            raise IOError('2nd order requires Load Combination as input')
+        #
+        #
+        dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
+        return dfnew
+    #
+    def _update(self, dfbasic, dfcomb, 
+                values:list[str]):
+        """
+        Update node displacements to include lcomb
+        """
+        db = DBframework()
+        # group basic load by name
+        grp = dfbasic.groupby('load_name')
+        combgrp = dfcomb.groupby('load_name')
+        for key, combfactors in combgrp:
+            for row in combfactors.itertuples():
+                comb = grp.get_group(row.basic_load).copy()
+                comb.loc[:, values] *= row.factor
+                comb['load_level'] = 'combination'
+                comb['load_name'] = row.load_name
+                comb['load_id'] = row.load_id
+                comb['load_title'] = row.load_title
+                #
+                try:
+                    dftemp = db.concat([dftemp, comb], ignore_index=True)
+                except UnboundLocalError:
+                    dftemp = comb
+        #
+        #try:
+        #    dftemp = dftemp.groupby(item, as_index=False)[values].sum()
+        #    #test
+        #    dfmemb = db.concat([dfmemb, dftemp], ignore_index=True)
+        #except UnboundLocalError:
+        #    dfmemb = dftemp
+        #
+        return dftemp
+    #
+    #
+    def ENL(self):
+        """Equivalent Nodal Loads """
+        #
+        #print('comb enl')
+        #
+        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                  'Psi', 'B', 'Tw']
+        
+        ENLbasic = self._basic.ENL()
+        cols = tuple(set(ENLbasic['load_name'].tolist()))
+        
+        dfcomb = self.to_basic()
+        grpcomb = dfcomb.groupby(['basic_load'])
+        #
+        # basic loading
+        dfnew = self._update(ENLbasic,
+                             grpcomb.get_group(cols), 
+                             values=values)
+        #
+        # 
+        colgrp = ['load_name', 'load_id', 
+                  'load_level', 'load_title',
+                  'load_system', 'component_name',
+                  'node_name', 'node_index']        
+        dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
+        #
+        return dfnew
 #     
 #
 class CombTypeSQL:
@@ -166,39 +287,35 @@ class CombTypeSQL:
     """
     __slots__ = ['name', 'number', 'title', 
                  '_basic', '_metocean', '_combination',
-                 'bd_file']
+                 'db_file', '_component']
 
-    def __init__(self, name:str, title:str, bd_file:str):
+    def __init__(self, name:str, title:str,
+                 component: int, db_file:str):
         """
         """
-        #self._cls = cls
+        self._component = component
         self.name = name
         self.title = title
-        self.bd_file = bd_file
+        self.db_file = db_file
         #
         self._basic = BasicCombSQL(bl_type="basic",
-                                   comb_name=self.name, 
-                                   bd_file=self.bd_file)
+                                   comb_name=self.name,
+                                   component=self._component, 
+                                   db_file=self.db_file)
+        
         self._metocean = BasicCombSQL(bl_type="metocean",
                                       comb_name=self.name,
-                                      bd_file=self.bd_file)
+                                      component=self._component, 
+                                      db_file=self.db_file)
+        
         self._combination = BasicCombSQL(bl_type="combination",
                                          comb_name=self.name,
-                                         bd_file=self.bd_file)        
+                                         component=self._component, 
+                                         db_file=self.db_file)        
         #
-        conn = create_connection(self.bd_file)
-        with conn:
-            self._push_load_combination(conn, name, title)
-    #
-    def _push_load_combination(self, conn, load_name:int, load_title:str):
-        """ """
-        #
-        project = (load_name, load_title, "combination")
-        sql = 'INSERT INTO Load(name, title, type) VALUES(?,?,?)'
-        cur = conn.cursor()
-        cur.execute(sql, project)
-        conn.commit() 
-        return cur.lastrowid
+        #conn = create_connection(self.db_file)
+        #with conn: 
+        #    self._create_table(conn)
     #
     @property
     def combination(self):
@@ -225,31 +342,33 @@ class BasicCombSQL(Mapping):
     """
     FE Metocean Combination Class
     """
-    __slots__ = ['_labels', '_type', '_number', 'bd_file', '_comb_name']
+    __slots__ = ['_labels', '_type', '_number',
+                 'db_file', '_comb_name', '_component']
 
-    def __init__(self, bl_type:str, comb_name:str|int, bd_file:str):
+    def __init__(self, bl_type:str, comb_name:str|int,
+                 component: int, db_file:str):
         """
         """
         self._comb_name = comb_name
         self._labels: list[str,int] = []
         self._number: list[str,int] = []
         self._type = bl_type
-        self.bd_file = bd_file
-
+        self.db_file = db_file
+        self._component = component
     #
     def __setitem__(self, load_name:int|str, factor: float) -> None:
         """
         """
         load_name = str(load_name)
-        #
         self._labels.append(load_name)
-        #self._number.append(comb_name)
         #
-        conn = create_connection(self.bd_file)
+        conn = create_connection(self.db_file)
         with conn:
             if self._type == 'basic':
                 try:
-                    bl_number = get_basic_number(conn, load_name)
+                    bl_number = get_load_number(conn, load_name,
+                                                self._component,
+                                                'basic')
                     lc_number = None
                 except TypeError:
                     raise IOError(f' Basic Load {load_name} not found')
@@ -257,14 +376,18 @@ class BasicCombSQL(Mapping):
             elif self._type == 'combination':
                 try:
                     bl_number = None
-                    lc_number = get_comb_number(conn, load_name)
+                    lc_number = get_load_number(conn, load_name,
+                                                self._component, 'combination')
                 except TypeError:
                     raise IOError(f' Load Combination {load_name} not found')            
             else:
                 1 / 0
             #
-            load_id = get_comb_number(conn, self._comb_name)
-            self._push_combination(conn, load_id, bl_number, lc_number, factor)
+            load_id = get_load_number(conn, self._comb_name,
+                                      self._component, 'combination')
+            #
+            self._push_combination(conn, load_id, bl_number,
+                                   lc_number, factor)
             
     #
     def __getitem__(self, load_name:int|str):
@@ -272,27 +395,31 @@ class BasicCombSQL(Mapping):
         """
         load_name = str(load_name)
         try:
-            #index = self._cls._index
             comb_name = self._comb_name
-            #load_title = self._title[index]
-            # load_id = self._load_id.index(load_name)
-            bd_file = self.bd_file
-            conn = create_connection(bd_file)
-
+            db_file = self.db_file
+            conn = create_connection(db_file)
             # get beam load
             with conn:
-                comb_number = get_comb_number( conn, comb_name )
+                comb_number = get_load_number(conn, comb_name,
+                                              self._component, 'combination')
                 if self._type == 'basic':
-                    basicn = get_basic_number(conn, load_name)                
-                    factor = get_basic_factor(conn, comb_number, basicn)
+                    basicn = get_load_number(conn, load_name,
+                                             self._component, 'basic')
+                    
+                    factor = get_load_factor(conn, comb_number, 
+                                             'bl_number', basicn)
                 
                 elif self._type == 'combination':
-                    combn = get_comb_number(conn, load_name)                
-                    factor = get_comb_factor(conn, comb_number, combn)
+                    combn = get_load_number(conn, load_name,
+                                            self._component, 'combination')
+                    
+                    factor = get_load_factor(conn, comb_number,
+                                             'lc_number', combn)
                 
                 else:
                     1 / 0
             return factor
+        
         except TypeError:
             raise KeyError(f"{load_name}")
 
@@ -301,15 +428,14 @@ class BasicCombSQL(Mapping):
                           lc_name:int, factor:float):
         """
         """
-        #
-        #
         project = (load_id, bl_name, lc_name, factor)
         sql = 'INSERT INTO LoadCombination(\
                load_id, bl_number, lc_number, factor)\
                VALUES(?,?,?,?)'
         cur = conn.cursor()
         cur.execute(sql, project)
-        conn.commit()
+        #conn.commit
+        #
     #
     @property
     def load_type(self):
@@ -415,38 +541,43 @@ class LoadCombinationSQL(Mapping):
         return iter(comb_load)
 #   
 #
-def get_load_list(conn):
+def get_load_list(conn, component: int):
     """ """
+    query = (component)
+    table = "SELECT * FROM Load WHERE component_id = ?"
+    #
     cur = conn.cursor()
-    cur.execute("SELECT * FROM Load")
+    cur.execute(table, query)
     loads = cur.fetchall()
     return loads
 #
 #
-def get_comb_number(conn, load_name:int|str):
+#
+def get_load_number(conn, load_name:int|str,
+                    component:int, level:str):
     """ """
+    
+    query = (load_name, component, level)
+    table = "SELECT * FROM Load \
+             WHERE name = ? \
+             AND component_id = ? \
+             AND level = ?"
+    #
     cur = conn.cursor()
-    cur.execute("SELECT * FROM Load\
-                 WHERE name = {:} \
-                 AND type = 'combination'".format(load_name))
+    cur.execute(table, query)
     loads = cur.fetchone()
     return loads[0]
 #
-def get_basic_number(conn, load_name:int):
+def get_load_factor(conn, lc_id, load_type:str, 
+                    load_number: int):
     """ """
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM Load\
-                 WHERE name = {:} \
-                 AND type = 'basic'".format(load_name))
-    loads = cur.fetchone()
-    return loads[0]
-#
-def get_basic_factor(conn, load_id, basic_number):
-    """ """
+    query = (lc_id, load_number,)
+    table = f"SELECT * FROM LoadCombination\
+              WHERE load_id = ? \
+              AND {load_type} = ?"
+    #
     cur = conn.cursor ()
-    cur.execute ( "SELECT * FROM LoadCombination\
-                 WHERE load_id = {:} \
-                 AND bl_number = {:}".format(load_id, basic_number))
+    cur.execute(table, query)
     loads = cur.fetchone ()
     return loads[4]
 #

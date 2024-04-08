@@ -23,53 +23,6 @@ import numpy as np
 from scipy.sparse.linalg import spsolve
 #
 #
-# --------------------
-# solver pure python
-# --------------------
-# 
-#
-def BAK(a: list[float], b: list[float]) -> list:
-    """
-    back substitution
-    """
-    #neq, iband = np.shape(a)
-    neq = len(a)
-    iband = len(a[0])
-    wk = copy(b)
-    # forward substitution
-    for i in range(neq):
-        j = max(i - iband + 1, 0)
-        wk[i] -= fsum([a[k][i - k] * wk[k]
-                       for k in range(j, i)])
-        #
-        #wk[i] -= np.sum(a[j: i, i - j: 0] * wk[j: i])
-    # middle terms
-    wk = array('d', [wk[i] / a[i][0] for i in range(neq)])
-    #wk = wk[:neq] / a[:neq, 0]
-    #wkk = copy(wk)
-    # backward substitution
-    for i in range(neq - 1, -1, -1):
-        j = min(i + iband, neq)
-        wk[i] -= fsum([a[i][k - i] * wk[k]
-                       for k in range(i+1, j)])
-        #
-        #wk[i] -= np.sum(a[i, 1: j - i] * wk[i+1: j])
-    #
-    return wk
-#
-#
-def solver_Mbanded(stf, nloads):
-    """ """
-    nloads = nloads.values        
-    #
-    # get displacement in global system
-    #x = cho_solve_banded(stf, nloads)
-    ndisp = BAK(stf, nloads)
-    #
-    return ndisp    
-#
-#
-#
 # ---------------------------------------------
 # solver using numpy
 # ---------------------------------------------
@@ -472,19 +425,20 @@ class StaticSolverX:
 @dataclass
 class StaticSolver:
     """ Linear static solver class"""
-    __slots__ = ['_plane',  '_method']
+    __slots__ = ['_mesh',  '_method']
     
-    def __init__(self, plane) -> None:
+    def __init__(self, mesh) -> None:
         """
         plane : Plane system (3D/2D)
         """
-        self._plane = plane
+        self._mesh = mesh
     #
     #
-    def _get_solver(self, Ke, jbc, sparse: bool):
+    def _get_solver(self, sparse: bool):
         """ """
-        jbc = jbc()
-        Ke = Ke(sparse = sparse)
+        
+        jbc = self._mesh.jbc()
+        Ke = self._mesh.Ke(sparse = sparse)
         Kfactor = Ke.max()
         
         if sparse:
@@ -495,12 +449,111 @@ class StaticSolver:
         
         return Ke, Kfactor, jbc, solver
     #
-    def solveLinear(self, Ke, Kg, Kt,
+    def _basicload(self):
+        """ """
+        Fn = self._mesh._load._basic.Fn()
+        #
+        if len(Fn) == 0:
+            raise IOError('Load Combination is required')
+        #
+        colgrp = ['load_name', 'load_id', 
+                  'load_level', 'load_title',
+                  'load_system', 'component_name',
+                  'node_name', 'node_index']
+        #
+        hforce =  self._mesh._plane.hforce
+        hdisp = self._mesh._plane.hdisp
+        #
+        Fi = Fn[colgrp+hforce]
+        Di = Fn[colgrp+hdisp]
+        #
+        return Fi, Di
+    #
+    def solveLinear(self,
+                    sparse: bool=False,
+                    max_iter: int|None = None):
+        """
+        Linear Static Analysis
+        
+        Input: 
+        Ke  : Global stiffness matrix
+        Fn  : FER Node load dataframe
+        jbc : Node boundary condition dataframe
+        
+        Return: 
+        Udf : Node displacement global system dataframe
+        """
+        #
+        #
+        #order = "1st"
+        #print(f"** Solving U = K^-1 F [{order} order] ")
+        #start_time = time.time()
+        #
+        #
+        (Ke, Kfactor,
+         jbc, solver) = self._get_solver(sparse)
+        #
+        # Get basic nodal load and displacement
+        Fn, Dn = self._basicload()
+        #
+        Un = self.PMT(Ke, Fn, Dn, jbc,
+                      solver, Kfactor)
+        #
+        # Post processing load combinations
+        # 
+        load_comb = self._mesh._load.combination()
+        df_comb = load_comb.to_basic()
+        #
+        # Update load comb displacments
+        Un = self._update_ndf(dfnode=Un, dfcomb=df_comb)        
+        #
+        return Un
+    #
+    def _update_ndf(self, dfnode, dfcomb, 
+                   values:list[str] = ['x', 'y', 'z', 'rx', 'ry', 'rz']):
+        """
+        Update node displacements to include lcomb
+        """
+        db = DBframework()
+        # group basic load by name
+        ndgrp = dfnode.groupby('load_name')
+        # get combinations with basic loads 
+        #
+        combgrp = dfcomb.groupby('load_name')
+        for key, combfactors in combgrp:
+            for row in combfactors.itertuples():
+                comb = ndgrp.get_group(row.basic_load).copy()
+                comb.loc[:, values] *= row.factor
+                comb['load_level'] = 'combination'
+                comb['load_name'] = row.load_name
+                comb['load_id'] = row.load_id
+                comb['load_title'] = row.load_title
+                comb['component_name'] = row.component_name
+                #
+                try:
+                    dftemp = db.concat([dftemp, comb], ignore_index=True)
+                except UnboundLocalError:
+                    dftemp = comb
+        #
+        try:
+            #check = dftemp.groupby(['node_name', 'c']).sum().reset_index()
+            dftemp = dftemp.groupby(['load_name', 'load_id','load_level',
+                                     'load_title', 'load_system',
+                                     'component_name', 'node_name'],
+                                      as_index=False)[values].sum()
+            #test
+            dfnode = db.concat([dfnode, dftemp], ignore_index=True)
+        except UnboundLocalError:
+            pass
+        #
+        return dfnode #, memb_comb
+    #    
+    def solveLinearX(self, Ke, Kg, Kt,
                     Fn, Dn, jbc,
                     sparse: bool=False,
                     max_iter: int|None = None):
         """
-        Linear Static Analysis (2nd Order)
+        Linear Static Analysis
         
         Input: 
         Ke  : Global stiffness matrix
@@ -517,20 +570,135 @@ class StaticSolver:
         #
         #
         (Ke, Kfactor,
-         jbc, solver) = self._get_solver(Ke, jbc, sparse)
+         jbc, solver) = self._get_solver(sparse)
         #
         Us = self.PMT(Ke, Fn, Dn, jbc,
-                      solver, Kfactor)        
+                      solver, Kfactor)
         #
         return Us
     #
+    #
+    #
+    def _combload(self):
+        """ """
+        Fn = self._mesh._load._combination.Fn()
+        colgrp = ['load_name', 'load_id', 
+                  'load_level', 'load_title',
+                  'load_system', 'component_name',
+                  'node_name', 'node_index']
+        #
+        hforce =  self._mesh._plane.hforce
+        hdisp = self._mesh._plane.hdisp
+        #
+        Fi = Fn[colgrp+hforce]
+        Di = Fn[colgrp+hdisp]
+        #
+        return Fi, Di    
+    #
     def solvePdelta(self,
+                    sparse: bool=False, 
+                    max_iter: int = 30):
+        """
+        Linear Static Analysis (2nd Order)
+        Aproximate method: Two cycles iterative method.
+        
+        Input: 
+        Ks  : Global stiffness matrix
+        Fn  : FER Node load dataframe
+        jbc : Node boundary condition dataframe
+        
+        Return: 
+        Udf : Node displacement global system dataframe
+        """
+        #
+        #order = "2nd"
+        #print(f"** Solving U = K^-1 F [{order} order] ")
+        #start_time = time.time()
+        #
+        # ------------------------------
+        # Get basic data
+        (Ke, Kfactor,
+         jbc, solver) = self._get_solver(sparse)
+        #
+        # ------------------------------
+        # Get basic nodal load and displacement
+        Fn, Dn = self._combload()
+        #
+        # ------------------------------
+        # Step 1 
+        Un = self.PMT(Ke, Fn, Dn, jbc,
+                      solver, Kfactor)
+        #
+        # ------------------------------
+        # Pdelta solution
+        # ------------------------------            
+        #
+        colgrp = ['load_name', 'load_id', 'load_level',
+                  'load_system', 'component_name',]
+        #
+        Fgrp = Fn.groupby(colgrp)
+        Ugrp = Un.groupby(colgrp)
+        Dgrp = Dn.groupby(colgrp)
+        #
+        hdisp = ['node_name', *self._mesh._plane.hdisp]
+        #
+        Utemp = []
+        for key, noded in Ugrp:
+            #
+            # ------------------------------
+            # TODO: select basic only
+            #if key[2] != 'basic':
+            #    continue
+            #
+            # ------------------------------
+            #
+            Fstep = Fgrp.get_group(key)  
+            Dstep = Dgrp.get_group(key)
+            #            
+            # ------------------------------
+            #
+            Uii = noded[hdisp].set_index('node_name')
+            #
+            # ------------------------------
+            #
+            # Assembly matrix start
+            #kg = Kg(D=Uii)
+            #kt = Ke + kg
+            #
+            kl = self._mesh.Kt(D=Uii)
+            kl = kl.tolil()
+            #
+            # ------------------------------
+            #
+            #Ui = self.PMT(Ke=kt, F=Fn,
+            #              D=Dstep,
+            #              jbc=jbc,
+            #              solver=solver,
+            #              maxstiff=Kfactor)
+            #
+            Uni = self.PMT(Ke=kl,
+                           F=Fstep,
+                           D=Dstep,
+                           jbc=jbc,
+                           solver=solver,
+                           maxstiff=Kfactor)
+            # ------------------------------
+            Utemp.append(Uni)
+        #
+        db = DBframework()
+        Us = db.concat(Utemp, ignore_index=True)
+        #Us = self.df(Utemp)
+        return Us
+    #    
+    #
+    def solvePdeltaX(self,
                     Ke, Kg, Kt,
                     Fn, Dn, jbc,
                     sparse: bool=False, 
                     max_iter: int = 30):
         """
         Linear Static Analysis (2nd Order)
+        Aproximate method: Two cycles iterative method.
         
         Input: 
         Ks  : Global stiffness matrix
@@ -572,8 +740,8 @@ class StaticSolver:
             #
             # ------------------------------
             # TODO: select basic only
-            if key[2] != 'basic':
-                continue
+            #if key[2] != 'basic':
+            #    continue
             #
             # ------------------------------
             #
@@ -606,9 +774,10 @@ class StaticSolver:
                            solver=solver,
                            maxstiff=Kfactor)
             # ------------------------------
+            Utemp.extend(Uni)
         #
-        #Uni.mask(np.isclose(a=Uni, b=0.0, atol=0.001), 0.0, inplace=True)
-        return Uni
+        Us = self.df(Utemp)
+        return Us
     #
     def solvePdeltaXX(self, elements,
                     Ke, Fn, Un, jbc, 
@@ -698,10 +867,10 @@ class StaticSolver:
                   'load_level','load_system',
                   'component_name']
         #
-        ndof = self._plane.ndof
-        hforce =  self._plane.hforce
-        hdisp = self._plane.hdisp
-        colrename = self._plane.colrename
+        ndof = self._mesh._plane.ndof
+        hforce =  self._mesh._plane.hforce
+        hdisp = self._mesh._plane.hdisp
+        colrename = self._mesh._plane.colrename
         #
         Ktrans = maxstiff * 10_000
         Krot = maxstiff * 100_000
@@ -774,33 +943,22 @@ class StaticSolver:
                     # update global K matrix with dummy stiffness
                     Kitem[niqi:niqj, niqi:niqj] += ksup
                     #print('--->', niqi, niqj)
-            #except ZeroDivisionError:
-            #    pass
             #
             # FIXME: Matrix condensed
             K11, K12 = self._Msplit(Kitem, jbcflat)
-            #Kitem1 = self._Mcond(Kitem, jbcflat)
             #
             # get load matrix as vector
-            #Fs = Fs[Findex].stack()
             Fs = Fs.stack()
             Fs = Fs.loc[Fbool]
             #
             # Solve displacements U
             Us = self._Us(K11, Fs, solver,
                           jbcflat, ndof)
-            #Us = iter(solver(K11, Fs))
-            ##
-            ## reshape vector in matrix form [row, col]
-            #Us = [next(Us) if ieqnum != 0 else ieqnum
-            #      for ieqnum in jbcflat]
-            # bak to matrix form
-            #Us = to_matrix(Us, ndof)
+            #
             # pack basic load data for df's dumping 
             Utemp.extend([[*key,  item['load_title'].iloc[0],
                            nname, *Us[x]]
                            for x, nname in enumerate(jbc.index)])
-        #
         #
         Us = self.df(Utemp)
         return Us
@@ -837,7 +995,8 @@ class StaticSolver:
         # remove rows with zeros
         dfjbc = jbc.copy()
         if rename :
-            dfjbc.rename(columns=self._plane.colrename, inplace=True)
+            dfjbc.rename(columns=self._mesh._plane.colrename,
+                         inplace=True)
         dfjbc = dfjbc[jbc.any(axis=1)]
         dfjbc = dfjbc.replace(float(0.0), np.nan)
         #
@@ -873,7 +1032,7 @@ class StaticSolver:
         db = DBframework()
         header = ['load_name', 'load_id', 'load_level',
                   'load_system', 'component_name', 'load_title', 
-                  'node_name', *self._plane.hdisp]
+                  'node_name', *self._mesh._plane.hdisp]
         return db.DataFrame(data=dftemp, columns=header, index=None)
     #    
 #

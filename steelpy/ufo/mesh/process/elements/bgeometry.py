@@ -61,6 +61,7 @@ def beam_geom(Le, s):
     #
     return eg
 #
+#
 def beam_KG(Le: float,
             Ax: float, Asy: float, Asz: float,
             Jx: float, Iy: float, Iz: float,

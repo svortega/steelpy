@@ -11,13 +11,14 @@ from __future__ import annotations
 
 # package imports
 from steelpy.trave.process.dynamic import eigen, trnsient
-from steelpy.trave.process.solution import UnSolver
+#from steelpy.trave.process.solution import UnSolver
+from steelpy.trave.process.static import StaticSolver
 from steelpy.trave.postprocess.main import PostProcess
 #
 from steelpy.trave.beam.main import Beam
 from steelpy.utils.dataframe.main import DBframework
 #
-import numpy as np
+#import numpy as np
 #
 #
 #
@@ -48,76 +49,13 @@ class TraveItem:
         self._mesh = mesh
         self._mesh.plane(self._plane2D)
         #
-        self._solver = UnSolver(mesh=self._mesh)
+        #self._solver = UnSolver(mesh=self._mesh)
         #
         self._postprocess = PostProcess(mesh=self._mesh,
                                         name=name)
                                         #sql_file=sql_file)
         
     #
-    #
-    def staticX(self, #mesh= None, 
-               sparse:bool=True,
-               second_order: bool = False):
-        """
-        Solves the static system by the Direct Stiffness Method (DSM)
-        
-        method : banded, frontal
-        second_order : Second order (True/False)
-        """
-        #
-        #static = StaticSolver(plane2D=self._plane2D)
-        static = self._solver.static()
-        self._Pdelta = False
-        #
-        if (mesh := self._mesh):
-            #self._mesh = mesh
-            #self._mesh.plane(self._plane2D)
-            #
-            # ------------------------------
-            # Get K matrix
-            # ------------------------------
-            #mesh = self._mesh
-            Ks = mesh.Ke(sparse = sparse)
-                              # condensed = False) 
-            jbc = mesh.jbc()
-            #Ddof = self._mesh._nodes.DOF_unreleased()
-            #
-            # ------------------------------
-            # Get load vector
-            # ------------------------------        
-            #
-            #self._mesh._load._basic._nodes.displacement
-            #
-            #load =  self._mesh.load()
-            #basic_load = load.basic()
-            #Fn_df = self._mesh.load().case().Fn()
-            Fn = mesh._load._basic.Fn()
-            #
-            # ------------------------------
-            # Static solution
-            # ------------------------------
-            #
-            #      
-            Udf = static.solve(Ks=Ks,
-                               Fn=Fn,
-                               jbc=jbc,
-                               sparse = sparse)
-            #
-            #static.PMT(K=Kg, basic=basic_load, jbc=jbc)
-            #
-            # -----------------------------------
-            # Postprocess
-            # -----------------------------------
-            #
-            #self._mesh.Un = Udf
-            #
-            self._postprocess.Un.df = Udf
-            #self._postprocess = PostProcess(mesh=self._mesh)
-        else:
-            return static
-        #
-        #print('-->')
     #
     def static(self,
                sparse:bool=True,
@@ -129,19 +67,58 @@ class TraveItem:
         method : banded, frontal
         second_order : Second order (True/False)
         """
+        if (mesh := self._mesh):
+            static =  StaticSolver(mesh=mesh)
+            #
+            if second_order:
+                order = "2nd"
+                self._Pdelta = True
+                solve = static.solvePdelta
+                #Fn = mesh._load._combination.Fn()
+            else:
+                order = "1st"
+                self._Pdelta = False
+                solve = static.solveLinear
+                #Fn = mesh._load._basic.Fn()
+            #
+            print(f"** Solving Linear Static [{order} order] ")
+            #start_time = time.time()            
+            Un = solve(sparse=sparse,
+                       max_iter=max_iter)
+            #
+            self._postprocess.Un.df = Un
+        else:
+            raise IOError('** error: mesh missing')        
+    #
+    #
+    def staticXX(self,
+                 sparse:bool=True,
+                 second_order: bool = False,
+                 max_iter: int = 30):
+        """
+        Solves the static system by the Direct Stiffness Method (DSM)
+        
+        method : banded, frontal
+        second_order : Second order (True/False)
+        """
         #
-        static = self._solver.static()
-        #
-        self._Pdelta = False
-        solve = static.solveLinear
-        if second_order:
-            self._Pdelta = True
-            solve = static.solvePdelta
+        #static = self._solver.static()
+        static =  StaticSolver(plane=self._mesh)
+        #          
         #
         if (mesh := self._mesh):
+            # prepare inputs
+            if second_order:
+                self._Pdelta = True
+                solve = static.solvePdelta
+                Fn = mesh._load._combination.Fn()
+            else:
+                self._Pdelta = False
+                solve = static.solveLinear
+                Fn = mesh._load._basic.Fn()
             #
             # ------------------------------
-            # Get Ke matrix
+            # Get K matrix
             # ------------------------------
             #
             Ke = mesh.Ke
@@ -153,9 +130,6 @@ class TraveItem:
             # Get load vector
             # ------------------------------        
             #
-            Fn = mesh._load._basic.Fn()
-            #
-            
             colgrp = ['load_name', 'load_id', 
                       'load_level', 'load_title',
                       'load_system', 'component_name',
@@ -169,159 +143,72 @@ class TraveItem:
             #
             # ------------------------------
             # Linear solution
-            # ------------------------------                
+            # ------------------------------
+            #
             Un = solve(Ke=Ke, Kg=Kg, Kt=Kt,
                        Fn=Fi, Dn=Di, 
                        jbc=jbc,
                        sparse=sparse,
                        max_iter=max_iter)
             #
+            # ------------------------------
+            # Load Combination
+            # ------------------------------            
+            #
+            if not second_order:
+                load_comb = mesh._load.combination()
+                df_comb = load_comb.to_basic()
+                #
+                # displacments
+                Un = self._update_ndf(dfnode=Un, dfcomb=df_comb)
+            #            
+            #
             self._postprocess.Un.df = Un
         
         else:
-            return static        
-    #
-    def Pdelta(self, sparse:bool=True,
-               max_iter: int = 30):
-        """ Performs second order (P-Delta) analysis """
-        #
-        pdelta = self._solver._Pdelta()
-        self._Pdelta = True
-        #
-        # ------------------------------
-        if (mesh := self._mesh):
-            # ------------------------------
-            # Get K stiffness matrix
-            # ------------------------------
-            #
-            Ke = mesh.Ke(sparse = sparse)
-            jbc = mesh.jbc()
-            #
-            # ------------------------------
-            # Get load vector
-            # ------------------------------        
-            #
-            Fn = mesh._load._basic.Fn()
-            #
-            # ------------------------------
-            # Linear solution
-            # ------------------------------
-            #
-            colgrp = ['load_name', 'load_id', 
-                      'load_level', 'load_title',
-                      'load_system', 'component_name',
-                      'node_name', 'node_index']
-            #
-            hforce =  mesh._plane.hforce
-            hdisp = mesh._plane.hdisp
-            #
-            Fi = Fn[colgrp+hforce]
-            Di = Fn[colgrp+hdisp]
-            #
-            Un = pdelta.solveLinear(Ke=Ke,
-                                    Fn=Fi,
-                                    Dn=Di, 
-                                    jbc=jbc,
-                                    sparse = sparse)
-            #
-            # ------------------------------
-            # Pdelta solution
-            # ------------------------------            
-            #
-            colgrp = ['load_name', 'load_id', 'load_level',
-                      'load_system', 'component_name',]
-            #
-            Ugrp = Un.groupby(colgrp)
-            Dgrp = Di.groupby(colgrp)
-            #
-            hdisp = ['node_name', *mesh._plane.hdisp]
-            #
-            Utemp = []
-            for key, noded in Ugrp:
-                # TODO: select basic only
-                if key[2] != 'basic':
-                    continue
-                Uii = noded[hdisp].set_index('node_name')
-                #ndisp.set_index('node_name', inplace=True)
-                #
-                # ------------------------------
-                # Assambly matrix start            
-                Kg = mesh.Kg(D=Uii)
-                Kt = Ke + Kg
-                #
-                Ustep = Dgrp.get_group(key)
-                #Ui = Ustep.copy()
-                #
-                Ui = pdelta.solveLinear(Ks=Kt,
-                                        Fn=Fi,
-                                        Dn=Ustep,
-                                        jbc=jbc,
-                                        sparse = sparse)
-                #
-                #
-                Us = Ui[hdisp].set_index('node_name')
-                Utemp.extend([[*key,  noded['load_title'].iloc[0],
-                              nname, *Us.loc[nname]]
-                              for x, nname in enumerate(jbc.index)])
-                #
-                #
-                #for x in range(max_iter):
-                #    #
-                #    # ------------------------------
-                #    # solve displacements
-                #    #
-                #    Ui = pdelta.solveLinear(Ks=Kt,
-                #                            Fn=Fi,
-                #                            Dn=Ustep,
-                #                            jbc=jbc,
-                #                            sparse = sparse)
-                #    #
-                #    #
-                #    # ------------------------------
-                #    #
-                #    Ui = Ui[hdisp].set_index('node_name')
-                #    print(Ui)
-                #    #
-                #    #try:
-                #    #Ud = Uii + Ui
-                #    #print(Ud)
-                #    #
-                #    #Ui.loc[:,'x'] = Ui.loc[:,'x'].add(Ud.loc[:,'x'])
-                #    #Ui = ndisp + Ud
-                #    Uii.loc[:,'x'] =  Ui.loc[:,'x'] - Uii.loc[:,'x']
-                #    print('------------')
-                #    print(Uii)
-                #    #except UnboundLocalError:
-                #    #    pass
-                #    #
-                #    # ------------------------------
-                #    # Assambly matrix start i
-                #    #
-                #    #Uii = Ui[hdisp]
-                #    #Uii.set_index('node_name', inplace=True)
-                #    Kg = self._mesh.Kg(D=Uii)
-                #    # Tangent stiffness matrix Kt
-                #    Kt = Ke + Kg
-                #    #
-                #    # M = scipy.linalg.det(Kt)
-                #    # M = np.linalg.det(Kt)
-                #    #
-                #    Uii = Ui.copy()
-                #    #1 / 0
-        #
-        #1 / 0
-        Us = self.df(Utemp)
-        self._postprocess.Un.df = Us
+            #return static
+            raise IOError('** error: mesh missing')
     #
     #
-    def df(self, dftemp):
-        """displacement dataframe"""
+    def _update_ndf(self, dfnode, dfcomb, 
+                   values:list[str] = ['x', 'y', 'z', 'rx', 'ry', 'rz']):
+        """
+        Update node displacements to include lcomb
+        """
         db = DBframework()
-        header = ['load_name', 'load_id', 'load_level',
-                  'load_system', 'component_name', 'load_title', 
-                  'node_name', *self._mesh._plane.hdisp]
-        return db.DataFrame(data=dftemp, columns=header, index=None)
-    # 
+        # group basic load by name
+        ndgrp = dfnode.groupby('load_name')
+        # get combinations with basic loads 
+        #
+        combgrp = dfcomb.groupby('load_name')
+        for key, combfactors in combgrp:
+            for row in combfactors.itertuples():
+                comb = ndgrp.get_group(row.basic_load).copy()
+                comb.loc[:, values] *= row.factor
+                comb['load_level'] = 'combination'
+                comb['load_name'] = row.load_name
+                comb['load_id'] = row.load_id
+                comb['load_title'] = row.load_title
+                comb['component_name'] = row.component_name
+                #
+                try:
+                    dftemp = db.concat([dftemp, comb], ignore_index=True)
+                except UnboundLocalError:
+                    dftemp = comb
+        #
+        try:
+            #check = dftemp.groupby(['node_name', 'c']).sum().reset_index()
+            dftemp = dftemp.groupby(['load_name', 'load_id','load_level',
+                                     'load_title', 'load_system',
+                                     'component_name', 'node_name'],
+                                      as_index=False)[values].sum()
+            #test
+            dfnode = db.concat([dfnode, dftemp], ignore_index=True)
+        except UnboundLocalError:
+            pass
+        #
+        return dfnode #, memb_comb
+    #    
     #
     def dynamic(self):
         """ """

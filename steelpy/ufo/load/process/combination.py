@@ -95,22 +95,20 @@ class LoadCombinationBasic(Mapping):
                         item._basic[precomb] += prefactor * factor
                     except KeyError:
                         item._basic[precomb] = prefactor * factor
-        # organize basic load
-        #basic_loads = defaultdict(list)
+        #
+        # Organize basic load
         # form combination formed by basic loads only
         dftemp = []
         for key, item in self._combination.items():
             for bl_name, factor in item._basic.items():
-                #basic_loads[key].append([bl_name, factor])
-                dftemp.append([key, item.number, 'combination', item.title, bl_name, factor])
-                #try:
-                #    #basic = self._basic[bname]
-                #    #basic_loads[item.name].append([basic.title, factor])
-                #    basic_loads[key].append([bl_name, factor])
-                #except KeyError:
-                #    raise Warning("  warning basic load {:} not found".format(bname))
+                dftemp.append([key, item.number, 'combination',
+                               item.title, self._component, 
+                               bl_name, factor])
         #
-        header = ['load_name', 'load_id','load_type', 'load_title', 'basic_load', 'factor']
+        header = ['load_name', 'load_id','load_type',
+                  'load_title', 'component_name', 
+                  'basic_load', 'factor']
         df_comb = db.DataFrame(data=dftemp, columns=header, index=None)
-        return df_comb #, basic_loads    
+        #
+        return df_comb 
     #

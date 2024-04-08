@@ -285,15 +285,26 @@ class MainProcess:
         """ """
         elements = self._mesh._elements
         #
-        basic_load = self._mesh._load._basic
+        bload = self._mesh._load._basic
+        bload_func = bload.process(steps=steps, Pdelta=Pdelta)
         #
-        bload_func = basic_load.process(steps=steps, Pdelta=Pdelta) 
+        Un = Un.groupby(['load_level'])
         #
-        # Solve node and element foce and displacements
-        #df_nload = basic_load._nodes.df
-        benl_df = self._mesh._load._basic.ENL()
-        #df_nload = self._mesh._load._basic.Fn()       
-        # 
+        if Pdelta:
+            Un = Un.get_group(('combination', ))
+            #print('pdelta')
+            cload = self._mesh._load.combination()
+            #df_comb = cload.to_basic()
+            benl_df = cload.ENL()
+            #1 / 0
+        else:
+            Un = Un.get_group(('basic', ))
+            # Solve node and element foce and displacements
+            #df_nload = basic_load._nodes.df
+            benl_df = self._mesh._load._basic.ENL()
+            #df_nload = self._mesh._load._basic.Fn()       
+        #
+        #
         df_beamf, df_nforce = self.solve_forces(elements, bload_func,
                                                 Un, benl_df,
                                                 steps=steps, Pdelta=Pdelta)
@@ -309,12 +320,9 @@ class MainProcess:
         """
         #
         ndgrp = df_ndisp.groupby(['load_name', 'component_name',
-                                  #'load_id', 'load_title',
                                   'load_level',  'load_system'])
-        #nfgrp = df_nforce.groupby(['load_name',  'load_type', 'load_id', 'load_title'])
         #
         benlgrp = benl_df.groupby(['load_name', 'component_name',
-                                  #'load_id', 'load_title',
                                   'load_level', 'load_system'])
         #
         blgrp = bload_func.groupby(['load_name', 'component_name',
@@ -338,8 +346,8 @@ class MainProcess:
         mif_data: list = []
         for key, noded in ndgrp:
             # TODO: select basic only
-            if key[2] != 'basic':
-                continue
+            #if key[2] != 'basic':
+            #    continue
             ndisp = noded[hdisp]
             ndisp.set_index('node_name', inplace=True)
             #
@@ -379,8 +387,8 @@ class MainProcess:
                 eq = NodeGenRespEq(nd_local, self._plane)
                 #
                 # ---------------------------------------------
-                #
-                try:   # Beam load (udl/point)
+                # Beam load (udl/point)
+                try:
                     #
                     # [load_name, member_load_title, load_type, load_system, 
                     # beam_number, x, Fx, Fy, Fz]
@@ -435,9 +443,9 @@ class MainProcess:
                     # --------------------------------------------
                     # [Fx,Fy,Fz,Mx,My,Mz]
                     Pu = -1 * FUan
-                    #Pu[1] *= -1
                     R0 = eq.R0(bload=Pu,
-                               tload=Tload(0, 0, 0)) 
+                               tload=Tload(0, 0, 0))
+                    #
                     # [beam_number, load_title, x, Fx, Fy, Fz, Mx, My, Mz]
                     Lsteps = linspace(start=0, stop=element.L, num=steps+1, endpoint=True)
                     lbforce = [['local', mname,  xstep,
@@ -455,7 +463,6 @@ class MainProcess:
                 #
                 dftemp.append([*key, mname, nodes[0], *gnforce[:ndof]])
                 dftemp.append([*key, mname, nodes[1], *gnforce[ndof:]])                
-                #                      
                 #
                 # ---------------------------------------------
                 # Member total force in local system
@@ -630,31 +637,42 @@ class MainProcess:
         """
         print("** Postprocessing")
         start_time = time.time()
+        #      
         #
         df_beamf, df_Qn = self.solve(Un, beam_steps, Pdelta=Pdelta)
         #
         #
-        # combination
-        load_comb = self._mesh._load.combination()
-        df_comb = load_comb.to_basic() 
+        if not Pdelta:
+            # combination
+            load_comb = self._mesh._load.combination()
+            df_comb = load_comb.to_basic() 
+            #
+            df_beamf = update_memberdf(dfmemb=df_beamf,
+                                       dfcomb=df_comb,
+                                       item='node_end', 
+                                       values=['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                                               'x', 'y', 'z', 'rx', 'ry', 'rz',
+                                               'Psi', 'B', 'Tw'])
+            #
+            # End node force combination
+            df_Qn = update_memberdf(dfmemb=df_Qn,
+                                    dfcomb=df_comb,
+                                    item='node_name',
+                                    values=self._plane.hforce)
         #
-        df_beam = update_memberdf(dfmemb=df_beamf,
-                                  dfcomb=df_comb,
-                                  values=['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                                          'x', 'y', 'z', 'rx', 'ry', 'rz',
-                                          'Psi', 'B', 'Tw'])
         #
-        df_Qbeam = df_beam[['load_name', 'component_name', 
-                            'load_level', 'load_system',
-                            'element_name', 'node_end',
-                            'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                            #'rx', 'ry', 'rz',
-                            'Psi', 'B', 'Tw']]
         #
-        df_Dbeam = df_beam[['load_name', 'component_name', 
-                            'load_level', 'load_system',
-                            'element_name', 'node_end',
-                            'x', 'y', 'z', 'rx', 'ry', 'rz']]
+        df_Qbeam = df_beamf[['load_name', 'component_name', 
+                             'load_level', 'load_system',
+                             'element_name', 'node_end',
+                             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                             #'rx', 'ry', 'rz',
+                             'Psi', 'B', 'Tw']]
+        #
+        df_Dbeam = df_beamf[['load_name', 'component_name', 
+                             'load_level', 'load_system',
+                             'element_name', 'node_end',
+                             'x', 'y', 'z', 'rx', 'ry', 'rz']]
         # Push to sql
         conn = create_connection(self._db_file)
         with conn:        
@@ -663,12 +681,7 @@ class MainProcess:
             #
             df_Dbeam.to_sql('ResultBeamU', conn, 
                             if_exists='append', index=False)
-        #
-        #
-        # End node force combination
-        df_Qn = update_memberdf(dfmemb=df_Qn,
-                                dfcomb=df_comb,
-                                values=self._plane.hforce)
+        #        
         #
         #
         #header = ['load_name', 'load_level', 'system',
@@ -764,54 +777,6 @@ class NodeGenRespEq:
         self.nd_local = nd_local
         self.plane = plane
     #
-    def R0XX(self,
-           bload: list|None = None,
-           tload: list|None = None) -> tuple:
-        """
-        Axial   [FP, blank, blank, Fu]
-        Bending [V, M, theta, w]
-        Torsion [T, Phi, Psi, B, Tw] 
-        """
-        # select node disp end 0
-        nd0 = self.nd_local[:self.plane.dof]
-        #
-        axial = bload.Fx
-        if np.isclose(a=axial, b=0.0, atol=0.01):
-            axial = 0
-        # Axial
-        R0x = [1 * axial,                 # Fx
-               0, 0,                      # blank, blank
-               -1 * n0dlocal[0]]          # dx
-        #
-        # In plane
-        R0y = [-1 *  bload.Fy,            # Vy
-               1 *  bload.Mz,             # Mz            
-               1 * n0dlocal[5],           # thetaz
-               -1 * n0dlocal[1]]          # dy
-        #
-        if self.plane.plane2D:
-            #
-            R0z = [0, 0, 0, 0]    # [Vz, My, thetay, dz]
-            R0t = [0, 0, 0, 0, 0] # [T, Phi, Psi, B, Tw] 
-        else:
-            R0z = [-1 *  bload.Fz,        # Vz
-                    1 *  bload.My,        # My                
-                   1 * n0dlocal[4],       # thetay
-                   -1 * n0dlocal[2]]      # dz
-            #
-            # Torsion
-            T0 = 1 * bload.Mx
-            rx = 1 * n0dlocal[3] 
-            #
-            # Thin walled sections (Ibeam, Channel & Z)
-            thetas = [1 * tload.Psi,
-                      1 * tload.B,
-                      1 * tload.Tw]
-            #
-            R0t = [T0,  rx,  *thetas]  # [T, Phi, Psi, B, Tw]
-        #
-        return Req(R0x, R0t, R0y, R0z)
-    #
     def R0(self, bload: list, tload: tuple|list) -> tuple:
         """
         Axial   [FP, blank, blank, Fu]
@@ -851,6 +816,7 @@ class NodeGenRespEq:
         R0z[3] *= -1    # dz
         #
         return Req(R0x, R0t, R0y, R0z)
+    #
     def D3(self, nd0:list, bload:list,
            tload:tuple):
         """
@@ -901,7 +867,7 @@ class NodeGenRespEq:
 #
 #
 Req = namedtuple('Reactions', ['x', 't', 'y', 'z'])
-Pload = namedtuple('PointLoad', ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
+#Pload = namedtuple('PointLoad', ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
 Tload = namedtuple('TorsionLoad', ['Psi', 'B', 'Tw'])
 #
 # -----------------------------------------------------------
@@ -909,7 +875,8 @@ Tload = namedtuple('TorsionLoad', ['Psi', 'B', 'Tw'])
 # -----------------------------------------------------------
 #
 #
-def update_memberdf(dfmemb, dfcomb, 
+def update_memberdf(dfmemb, dfcomb,
+                    item: str, 
                      values:list[str]):
     """
     Update node displacements to include lcomb
@@ -933,9 +900,10 @@ def update_memberdf(dfmemb, dfcomb,
                 dftemp = comb
     #
     try:
-        dftemp = dftemp.groupby(['load_name', 'load_id','load_level',
-                                 'load_title', 'load_system',
-                                 'element_name' ,'node_name'],
+        dftemp = dftemp.groupby(['load_name', 'component_name',
+                                 'load_level', 'load_system',
+                                 #'load_title',  'load_id',
+                                 'element_name', item],
                                   as_index=False)[values].sum()
         #test
         dfmemb = db.concat([dfmemb, dftemp], ignore_index=True)

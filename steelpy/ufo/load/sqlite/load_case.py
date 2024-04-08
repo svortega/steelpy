@@ -102,23 +102,21 @@ class BasicLoadSQL(LoadCaseBasic):
     #
     def _create_table(self, conn):
         """ """
-        table_load = "CREATE TABLE IF NOT EXISTS Load(\
-                      number INTEGER PRIMARY KEY NOT NULL,\
-                      name NOT NULL,\
-                      component_id INTEGER NOT NULL REFERENCES Component(number), \
-                      level TEXT NOT NULL,\
-                      title TEXT );"
-
-        table_comb_load = "CREATE TABLE IF NOT EXISTS LoadCombination(\
-                            number INTEGER PRIMARY KEY NOT NULL,\
-                            load_id INTEGER NOT NULL REFERENCES Load(number),\
-                            bl_number INTEGER REFERENCES Load(number),\
-                            lc_number INTEGER REFERENCES Load(number),\
-                            factor DECIMAL NOT NULL);"
-
-        #conn = create_connection(self.db_file)
-        create_table(conn, table_load)
-        create_table(conn, table_comb_load)    
+        table = "CREATE TABLE IF NOT EXISTS Load(\
+                number INTEGER PRIMARY KEY NOT NULL,\
+                name NOT NULL,\
+                component_id INTEGER NOT NULL REFERENCES Component(number), \
+                level TEXT NOT NULL,\
+                title TEXT );"
+        create_table(conn, table)
+        #
+        #table = "CREATE TABLE IF NOT EXISTS LoadCombination(\
+        #        number INTEGER PRIMARY KEY NOT NULL,\
+        #        load_id INTEGER NOT NULL REFERENCES Load(number),\
+        #        bl_number INTEGER REFERENCES Load(number),\
+        #        lc_number INTEGER REFERENCES Load(number),\
+        #        factor DECIMAL NOT NULL);"
+        #create_table(conn, table)    
     #
     # -----------------------------------------------
     #

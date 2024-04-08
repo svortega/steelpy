@@ -152,14 +152,15 @@ class UnSQL:
         """ """
         conn = create_connection(self.db_file)
         #
+        #1 / 0
         # TODO: here combine with load displacement
         #
         # TODO: check this works
         # combination
-        load_comb = self.mesh._load.combination()
-        df_comb = load_comb.to_basic()        
+        #load_comb = self.mesh._load.combination()
+        #df_comb = load_comb.to_basic()        
         # displacments
-        df = self._update_ndf(dfnode=df, dfcomb=df_comb)
+        #df = self._update_ndf(dfnode=df, dfcomb=df_comb)
         #
         #
         header = ['load_name', 'component_name',

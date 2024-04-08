@@ -330,7 +330,6 @@ class BeamLoadItemSQL(BeamSQLMaster):
         #print('--> get_end_forces')
         if res:
             with conn:  
-                #self._node_eq._push_node_load(conn, res)
                 push_FER(conn, node_load=res)
     #
     # -----------------------------------------------
