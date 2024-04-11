@@ -1,4 +1,4 @@
-from steelpy import Beam #, SimpleBeam
+from steelpy import Beam
 from steelpy import Units
 #
 from steelpy import UFOmodel
@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 # set units
 units = Units()
 #
+Fx_factor = 1.0
 #
 #
 # beam class
@@ -74,7 +75,7 @@ beam.support = ["fixed", "free"]
 #          'name': 'selfweight_y'}
 #
 beam.P = {'L1':28*units.ft,
-          'Fx': -445 * units.kN,
+          'Fx': 445 * Fx_factor * units.kN,
           'Fy': -4.45 * units.kN,
           'name': 'AISC_C-C2.3'}
 #
@@ -260,15 +261,15 @@ basic = load.basic()
 #            'type': 'line',
 #            'qy': -15 * units.kN / units.m})
 #
-basic.beam({'load': 'snow load',
-            'beam': 5, 
-            'type': 'line',
-            'qy': -15 * units.kN / units.m})
+#basic.beam({'load': 'snow load',
+#            'beam': 5, 
+#            'type': 'line',
+#            'qy': -15 * units.kN / units.m})
 
-basic.beam({'load': 'snow load',
-            'beam': 5, 
-            'type': 'line',
-            'qy': -5 * units.kN / units.m})
+#basic.beam({'load': 'snow load',
+#            'beam': 5, 
+#            'type': 'line',
+#            'qy': -5 * units.kN / units.m})
 #
 #basic.beam({'load': 'snow load',
 #            'beam': 5, 
@@ -316,7 +317,7 @@ basic.beam({'load': 'snow load',
 basic.node({'load': 'AISC_C-C2.3',
             'node': 6,
             'type': 'force',
-            'Fx': -890 * units.kN,
+            'Fx': 445 * Fx_factor * units.kN,
             'Fy': -4.45 * units.kN})
 #            'y': -0.0511813 * units.m,})
 #            #'rz': 0.0136483 * units.rad,})
@@ -332,8 +333,8 @@ basic.node({'load': 'AISC_C-C2.3',
 #
 comb = load.combination()
 comb[100] = 'Factored Comb 1'
-comb[100].basic['AISC_C-C2.3'] = 1.20
-comb[100].basic['snow load'] = 1.25
+comb[100].basic['AISC_C-C2.3'] = 1.00
+#comb[100].basic['snow load'] = 1.25
 #comb[100].basic[33] = 1.30
 #
 #comb[200] = 'factored comb 2'
@@ -341,9 +342,9 @@ comb[100].basic['snow load'] = 1.25
 #comb[200].basic[22] = 1.40
 #comb[200].basic[33] = 1.45
 #
-comb[300] = 'factored comb 3'
-comb[300].combination[100] = 1.50
-comb[300].basic['snow load'] = 1.60
+#comb[300] = 'factored comb 3'
+#comb[300].combination[100] = 1.50
+#comb[300].basic['snow load'] = 1.60
 #
 #
 # ----------------------------------------------------
@@ -364,7 +365,7 @@ mesh.build()
 # ----------------------------------------------------
 #
 frame = Trave3D(mesh=mesh)
-frame.static(second_order=False)
+frame.static(second_order=True)
 results = frame.results(beam_steps=4)
 #
 # ----------------------------------------------------

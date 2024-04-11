@@ -25,6 +25,7 @@ class e_values(NamedTuple):
     e5: float
     e6: float
     Zeta: float
+    alpha: float
     Lambda: float
     Eta: float
 #
@@ -85,14 +86,15 @@ class TableBasic:
                         e4=x**3 / 6.0,
                         e5=x**4 / 24.0,
                         e6=x**5 / 120.0,
-                        Zeta=0,
-                        Lambda=0,
-                        Eta=0)        
+                        Zeta=0.0,
+                        alpha=0.0,
+                        Lambda=0.0,
+                        Eta=0.0)        
     #
     def _beam_compression(self, x: float, load: bool):
         """ Beam with Compressive Axial Force P"""
-        alpha2 = abs(self.P / (self.E * self.I))
-        alpha = sqrt(alpha2)
+        Zeta = abs(self.P / (self.E * self.I))
+        alpha = sqrt(Zeta)
         
         e1 = cos(alpha*x)
         if load and x == 0:
@@ -105,14 +107,15 @@ class TableBasic:
                         e4= (alpha*x - sin(alpha*x)) / alpha**3,
                         e5= (alpha**2 * x**2 / 2.0 + cos(alpha*x) - 1.0) / alpha**4,
                         e6= (alpha**3 * x**3 / 6.0 + sin(alpha*x) - alpha*x) / alpha**5,
-                        Zeta= alpha2,
-                        Lambda=0,
-                        Eta=0)
+                        Zeta= Zeta,
+                        alpha=alpha, 
+                        Lambda=0.0,
+                        Eta=0.0)
     #
     def _beam_tension(self, x: float, load: bool):
         """ Beam with Tensile Axial Force P"""
-        alpha2 = abs(self.P / (self.E * self.I))
-        alpha = sqrt(alpha2)
+        Zeta = abs(self.P / (self.E * self.I))
+        alpha = sqrt(Zeta)
         
         e1 = cosh(alpha*x)
         if load and x == 0:
@@ -125,9 +128,10 @@ class TableBasic:
                         e4= (sinh(alpha*x) - alpha*x) / alpha**3,
                         e5= (-1*alpha**2 * x**2 / 2.0 + cosh(alpha*x) - 1.0) / alpha**4,
                         e6= (-1*alpha**3 * x**3 / 6.0 + sinh(alpha*x) - alpha*x) / alpha**5,
-                        Zeta= -1*alpha2,
-                        Lambda= 0,
-                        Eta= 0)
+                        Zeta= Zeta,
+                        alpha=alpha,
+                        Lambda=0.0,
+                        Eta=0.0)
     #
     def Pcr(self):
         """P critical"""

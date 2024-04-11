@@ -39,7 +39,7 @@ from steelpy.trave.beam.pilkey.chapter12.table_2axial import (PBarConcentrated,
                                                               PBarSupports,
                                                               AxialBarGE)
 #
-from steelpy.utils.math.operations import linspace
+from steelpy.utils.math.operations import linspace, linstep
 from steelpy.utils.dataframe.main import DBframework
 #
 #from steelpy.trave.beam.roark.chapter10.table103 import (TOpenConcentrated,
@@ -460,7 +460,8 @@ class BeamBasic:
         Dataframe [load_name, load_title, load_type, load_system,
                    element_name, x, Fx, Mx, Fy, Fz]
         """
-        Lsteps = linspace(start=0, stop=self.L, num=steps+1, endpoint=True)        
+        Lsteps = linspace(start=0, stop=self.L, num=steps+1, endpoint=True)
+        #Lsteps = linstep(d=d, L=self.L, steps=steps)
         #
         # -----------------------------------------------------
         #

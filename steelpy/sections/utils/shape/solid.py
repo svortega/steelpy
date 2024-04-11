@@ -141,6 +141,10 @@ class TrapezoidBasic(ShapeStressBasic):
         """Shear correction factor"""
         alpha_s = (12 + 11 * poisson) / (10 * (1 + poisson))
         return alpha_s, alpha_s
+    #
+    @property
+    def d(self):
+        return self.depth
 #
 #
 @dataclass

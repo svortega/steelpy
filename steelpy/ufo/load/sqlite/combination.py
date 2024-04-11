@@ -263,7 +263,10 @@ class LoadCombSQL(LoadCombinationBasic):
         
         ENLbasic = self._basic.ENL()
         cols = tuple(set(ENLbasic['load_name'].tolist()))
-        
+        if not cols:
+            return ENLbasic
+        #
+        #
         dfcomb = self.to_basic()
         grpcomb = dfcomb.groupby(['basic_load'])
         #

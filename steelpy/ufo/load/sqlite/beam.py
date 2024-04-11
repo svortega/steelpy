@@ -12,23 +12,15 @@ from math import isclose
 # package imports
 #
 from steelpy.ufo.mesh.sqlite.beam import BeamItemSQL, BeamSQL
-from steelpy.ufo.mesh.sqlite.utils import check_element, check_nodes
-from steelpy.ufo.load.process.beam.beam import (LineBeam, # BeamLoad, 
-                                                PointBeam)
-                                                #BeamLoadBasic)
-from steelpy.ufo.load.process.beam.main import BeamTypeBasic, BeamLineBasic, BeamPointBasic
-from steelpy.ufo.load.process.nodes import PointNode # NodeLoadBasic,
-#from steelpy.ufo.load.process.operations import(check_list_units,
-#                                                check_beam_dic,
-#                                                check_point_dic,
-#                                                get_beam_node_load,
-#                                                get_beam_udl_load)
-from steelpy.ufo.load.sqlite.utils import get_load_data
-from steelpy.utils.math.operations import linspace
+from steelpy.ufo.mesh.sqlite.utils import check_element #, check_nodes
 
-#from steelpy.utils.math.operations import trnsload
-#from steelpy.utils.units.buckingham import Number
-#from steelpy.utils.sqlite.main import ClassBasicSQL
+from steelpy.ufo.load.process.beam.beam import LineBeam, PointBeam
+from steelpy.ufo.load.process.beam.main import (BeamTypeBasic,
+                                                BeamLineBasic,
+                                                BeamPointBasic)
+from steelpy.ufo.load.sqlite.utils import get_load_data
+
+from steelpy.utils.math.operations import linstep
 from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.dataframe.main import DBframework
 #
@@ -778,7 +770,7 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
     def load_function(self, steps:int,
                       Pdelta: bool):
         """ """
-        print('-->')
+        #print('-->')
         beams = BeamSQL(db_file=self._db_file,
                         component=self._component,
                         plane=self._plane)        
@@ -791,7 +783,10 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
             mat = beam.material
             sec = beam.section.properties(poisson=mat.poisson)
             #
-            Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
+            Lsteps = linstep(d=beam.section.geometry.d,
+                             L=beam.L, steps=steps)
+            #Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
+            #
             for bitem in items:
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
                                 E=mat.E, G=mat.G, 
@@ -815,7 +810,11 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
             beam = beams[key]
             mat = beam.material
             sec = beam.section.properties(poisson=mat.poisson)
-            Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
+            #
+            Lsteps = linstep(d=beam.section.geometry.d,
+                             L=beam.L, steps=steps)
+            #Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
+            #
             for bitem in items:
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
                                 E=mat.E, G=mat.G, 

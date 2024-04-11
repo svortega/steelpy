@@ -169,6 +169,20 @@ class linspace2(Sequence):
         return hash((type(self), self.start, self.stop, self.num))
 #
 #
+def linstep(d: float, L:float, steps:int):
+    """ """
+    pad = L / steps
+    
+    if L < pad:
+        return np.array([0.0, L])
+    
+    if d > pad:
+        steps = int(L / d)
+    
+    Lsteps = linspace(start=0, stop=L, num=steps+1, endpoint=True)
+    
+    return Lsteps
+#
 # --------------------
 #      
 # --------------------

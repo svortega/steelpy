@@ -363,7 +363,7 @@ class Beam:
     #
     #
     #@property
-    def response(self, steps: int = 10):
+    def response(self):
         """
         Results:
         Beam force response 
@@ -407,7 +407,7 @@ class Beam:
         return df_mload
     #
     #
-    def stress(self, steps: int = 10):
+    def stress(self):
         """calculate beam stress"""
         mat = self.material
         #

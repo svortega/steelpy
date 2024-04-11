@@ -1,5 +1,14 @@
+#
+# Copyright (c) 2009 steelpy
+# 
+# Python stdlib imports
 
+#
+# package imports
+#
 
+#
+#
 def get_load_data(conn, load_name:int|str, load_level: str,
                   component: int):
     """ """
@@ -18,3 +27,5 @@ def get_load_data(conn, load_name:int|str, load_level: str,
     cur.execute (table, query)
     loads = cur.fetchone()
     return loads
+#
+#

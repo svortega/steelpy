@@ -15,7 +15,7 @@ from steelpy.trave.beam.main import BeamBasic
 from steelpy.trave.postprocess.beam import Beam
 from steelpy.trave.postprocess.nodes import Nodes
 #
-from steelpy.utils.math.operations import linspace
+from steelpy.utils.math.operations import linstep
 from steelpy.utils.dataframe.main import DBframework
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #
@@ -286,7 +286,8 @@ class MainProcess:
         elements = self._mesh._elements
         #
         bload = self._mesh._load._basic
-        bload_func = bload.process(steps=steps, Pdelta=Pdelta)
+        bload_func = bload.process(steps=steps,
+                                   Pdelta=Pdelta)
         #
         Un = Un.groupby(['load_level'])
         #
@@ -380,8 +381,11 @@ class MainProcess:
                 # set beam to general response expresions --> R0
                 # [V, M, theta, w]
                 #
+                #
                 # convert beam end-node disp to force [F = Kd] in global system
-                FUan = element.Ke_local @ nd_local
+                #FUan = element.Ke_local @ nd_local
+                kt_local = element.Kt_local(nd_global)
+                FUtn = kt_local @ nd_local
                 #
                 #TODO: confirm change reactions sign
                 eq = NodeGenRespEq(nd_local, self._plane)
@@ -424,7 +428,7 @@ class MainProcess:
                     #
                     FUen = Tb @ FUen
                     #
-                    Pu = FUen - FUan  
+                    Pu = FUen - FUtn  
                     #
                     # get reactions with correct sign for postprocessing
                     #
@@ -442,12 +446,16 @@ class MainProcess:
                 except KeyError : # (KeyError, AttributeError, TypeError): # No load on beam
                     # --------------------------------------------
                     # [Fx,Fy,Fz,Mx,My,Mz]
-                    Pu = -1 * FUan
+                    Pu = -1 * FUtn
                     R0 = eq.R0(bload=Pu,
                                tload=Tload(0, 0, 0))
                     #
                     # [beam_number, load_title, x, Fx, Fy, Fz, Mx, My, Mz]
-                    Lsteps = linspace(start=0, stop=element.L, num=steps+1, endpoint=True)
+                    #
+                    Lsteps = linstep(d=element.section.geometry.d,
+                                     L=element.L, steps=steps)                    
+                    #Lsteps = linspace(start=0, stop=element.L, num=steps+1, endpoint=True)
+                    #
                     lbforce = [['local', mname,  xstep,
                                 *beam.response(x=xstep, R0=[R0.x, R0.t, R0.y, R0.z],
                                                Fx=[Fblank, Fblank_t, Fblank, Fblank])]
@@ -639,7 +647,8 @@ class MainProcess:
         start_time = time.time()
         #      
         #
-        df_beamf, df_Qn = self.solve(Un, beam_steps, Pdelta=Pdelta)
+        df_beamf, df_Qn = self.solve(Un, beam_steps,
+                                     Pdelta=Pdelta)
         #
         #
         if not Pdelta:
