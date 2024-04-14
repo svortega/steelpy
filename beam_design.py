@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # set units
 units = Units()
 #
-Fx_factor = 1.0
+Fx_factor = 0.0
 #
 #
 # beam class
@@ -75,7 +75,7 @@ beam.support = ["fixed", "free"]
 #          'name': 'selfweight_y'}
 #
 beam.P = {'L1':28*units.ft,
-          'Fx': 445 * Fx_factor * units.kN,
+          'Fx': -445 * Fx_factor * units.kN,
           'Fy': -4.45 * units.kN,
           'name': 'AISC_C-C2.3'}
 #
@@ -198,7 +198,8 @@ mesh.node([(1, 0*units.ft,   0*units.ft),
 
 mesh.boundary([[1, 'support', 'fixed'],
                [6, 'support', 'free']])
-
+#
+# [element_id, node1, node2, material, section, roll_angle]
 mesh.element([#(1,  'beam',  1, 2, 10, 15, 0),
               #(2,  'beam',  2, 3, 10, 15, 0),
               #(3,  'beam',  3, 4, 10, 15, 0),
@@ -317,7 +318,7 @@ basic = load.basic()
 basic.node({'load': 'AISC_C-C2.3',
             'node': 6,
             'type': 'force',
-            'Fx': 445 * Fx_factor * units.kN,
+            'Fx': -445 * Fx_factor * units.kN,
             'Fy': -4.45 * units.kN})
 #            'y': -0.0511813 * units.m,})
 #            #'rz': 0.0136483 * units.rad,})

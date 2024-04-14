@@ -319,6 +319,7 @@ class MainProcess:
         """
         Beam's internal forces along its lenght
         """
+        start_time = time.time()
         #
         ndgrp = df_ndisp.groupby(['load_name', 'component_name',
                                   'load_level',  'load_system'])
@@ -506,6 +507,8 @@ class MainProcess:
         #                              'x', 'y', 'z', 'rx', 'ry', 'rz'], 
         #                 if_exists='append', index=False)
         #
+        uptime = time.time() - start_time
+        print(f"** Beam Force Calculation Time: {uptime:1.4e} sec")
         #print('ok')
         return df_mif, df_nforce
     #    
@@ -610,11 +613,9 @@ class MainProcess:
     #
     def solve_stress(self, bforce_df):
         """get elements stress"""
-        print("** Beam stress calculation")
+        #print("** Beam stress calculation")
         start_time = time.time()
-        #
         elements = self._mesh._elements
-        #
         members = bforce_df.groupby(['element_name',
                                      'load_name', 'component_name',
                                      'load_level', 'load_system'])
@@ -633,7 +634,7 @@ class MainProcess:
                                 if_exists='append', index=False)
         #
         uptime = time.time() - start_time
-        print(f"** Time: {uptime:1.4e} sec")
+        print(f"** Beam stress calculation Time: {uptime:1.4e} sec")
     #
     # -----------------------------------------------------------
     # 
@@ -644,7 +645,6 @@ class MainProcess:
         beam_steps : Integration points beam element (10 default)
         """
         print("** Postprocessing")
-        start_time = time.time()
         #      
         #
         df_beamf, df_Qn = self.solve(Un, beam_steps,
@@ -750,8 +750,6 @@ class MainProcess:
         #              nodereac=df_nreac,
         #              beamres=df_beam)
         #
-        uptime = time.time() - start_time
-        print(f"** Finish Time: {uptime:1.4e} sec")
         #
         #
         #

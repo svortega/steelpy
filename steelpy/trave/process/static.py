@@ -483,12 +483,7 @@ class StaticSolver:
         Return: 
         Udf : Node displacement global system dataframe
         """
-        #
-        #
-        #order = "1st"
-        #print(f"** Solving U = K^-1 F [{order} order] ")
-        #start_time = time.time()
-        #
+        start_time = time.time()
         #
         (Ke, Kfactor,
          jbc, solver) = self._get_solver(sparse)
@@ -507,6 +502,8 @@ class StaticSolver:
         # Update load comb displacments
         Un = self._update_ndf(dfnode=Un, dfcomb=df_comb)        
         #
+        uptime = time.time() - start_time
+        print(f"** {{U}} = {{F}}/[Ke] Solution Time: {uptime:1.4e} sec")
         return Un
     #
     def _update_ndf(self, dfnode, dfcomb, 
@@ -610,10 +607,7 @@ class StaticSolver:
         Return: 
         Udf : Node displacement global system dataframe
         """
-        #
-        #order = "2nd"
-        #print(f"** Solving U = K^-1 F [{order} order] ")
-        #start_time = time.time()
+        start_time = time.time()
         #
         # ------------------------------
         # Get basic data
@@ -688,6 +682,8 @@ class StaticSolver:
         db = DBframework()
         Us = db.concat(Utemp, ignore_index=True)
         #Us = self.df(Utemp)
+        uptime = time.time() - start_time
+        print(f"** {{U}} = {{F}}/[Kt] Solution Time: {uptime:1.4e} sec")
         return Us
     #    
     #
@@ -1018,7 +1014,10 @@ class StaticSolver:
             jbcflat: list, ndof: float):
         """ """
         # Solve displacements U
+        #try:
         Us = iter(solver(Ks, Fs))
+        #except Warning:
+        #    print('-->')
         # reshape vector in matrix form [row, col]
         Us = [next(Us) if ieqnum != 0 else ieqnum
               for ieqnum in jbcflat]

@@ -31,8 +31,8 @@ from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            get_unitvector, 
                                            update_element_item,
                                            check_element)
-from steelpy.ufo.mesh.process.elements.beam import BeamBasic, BeamItemBasic
-from steelpy.ufo.mesh.process.elements.bstiffness import Tmatrix, unitvec_0
+from steelpy.ufo.mesh.elements.beam import BeamBasic, BeamItemBasic
+from steelpy.ufo.mesh.process.bstiffness import unitvec_0,  Tmatrix
 from steelpy.utils.sqlite.utils import create_connection
 #
 import numpy as np
@@ -118,20 +118,21 @@ class BeamSQL(BeamBasic):
                  roll_angle)
         #
         table = 'INSERT INTO Element(name, component_id, type, \
-                                        material_id, section_id,\
-                                        roll_angle)\
+                                     material_id, section_id,\
+                                     roll_angle)\
                                 VALUES(?,?,?,?,?,?) ;'
         cur = conn.cursor()
         cur.execute(table, query)
+        beam_number = cur.lastrowid
         #
         # connectivity
-        beam_number = cur.lastrowid
         node_id = push_connectivity(conn, beam_number, parameters[:2],
                                     component=self._component)
         #
         # Unit Vector
         coord = get_node_coord(conn, node_id)
-        uvec = unitvec_0(nodei=coord[0], nodej=coord[1])
+        uvec = unitvec_0(nodei=coord[0], nodej=coord[1],
+                         beta=roll_angle)
         self._push_unitvec(conn, element_id=beam_number,
                            unitvac=uvec)
         #
@@ -543,14 +544,14 @@ class BeamItemSQL(BeamItemBasic):
         uv = list(map(sub, node2[:3], node1[:3]))
         return np.array([item / L for item in uv])      
     #
-    def T3D(self):
-        """ """
-        #nodei, nodej = self.nodes
-        #return Rmatrix(*self.unit_vector, self.beta)
-        #return Rmatrix2(nodei, nodej, L=self.L)
-        unitvec = np.array(self.unit_vector)
-        return Tmatrix(dirCos=unitvec)
-        #return Tr
+    #def T3D(self):
+    #    """ """
+    #    #nodei, nodej = self.nodes
+    #    #return Rmatrix(*self.unit_vector, self.beta)
+    #    #return Rmatrix2(nodei, nodej, L=self.L)
+    #    unitvec = np.array(self.unit_vector)
+    #    return Tmatrix(dirCos=unitvec)
+    #    #return Tr
 #
 #
 

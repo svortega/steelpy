@@ -11,7 +11,7 @@ import re
 from operator import sub, add
 
 # package imports
-from steelpy.ufo.mesh.process.elements.bstiffness import Rmatrix2
+from steelpy.ufo.mesh.process.bstiffness import Rmatrix2
 from steelpy.utils.units.main import Units
 #
 #
@@ -696,9 +696,9 @@ class BeamItemConcept(ElementConcept):
         #if self.type in ['beam', 'truss']:
         #return Rmatrix(*self.unit_vector, self.beta)
         nodei, nodej = self.nodes
-        L = self.L #.value
+        #L = self.L #.value
         #r3 = Rmatrix2(nodei, nodej, L=L)
         #return Rmatrix(*self.unit_vector, self.beta)
-        return Rmatrix2(nodei, nodej, L=L)
+        return Rmatrix2(nodei, nodej)
 #
 #
