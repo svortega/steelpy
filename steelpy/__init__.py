@@ -6,8 +6,8 @@ from steelpy.design.codes.main import CodeCheck
 from steelpy.utils.roarks.main import RoarksFormulas
 from steelpy.design.main import ClampDesign as Clamp
 from steelpy.metocean.main import Metocean
-from steelpy.trave.main import Trave2D, Trave3D, Beam
-#from steelpy.beam.main import Beam #, SimpleBeam
+from steelpy.trave.main import Trave2D, Trave3D
+from steelpy.trave.beam.main import Beam
 from steelpy.ufo.main import UFOmodel
 #
 from steelpy.material.main import Material

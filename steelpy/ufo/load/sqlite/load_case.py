@@ -124,8 +124,8 @@ class BasicLoadSQL(LoadCaseBasic):
     # Loading Operations
     # -----------------------------------------------
     #
-    def process(self, steps:int,
-                Pdelta=bool):
+    def function(self, steps:int,
+                 Pdelta:bool):
         """process element load"""
         #
         #beams = elements.beam()

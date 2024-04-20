@@ -83,11 +83,14 @@ class BoundaryNode(Mapping):
             if re.match(r"\b(fix(ed)?)\b", fixity, re.IGNORECASE):
                 return [1,1,1,1,1,1]
             
-            elif re.match(r"\b(pinn(ed)?|roll(er)?)\b", fixity, re.IGNORECASE):
+            elif re.match(r"\b(pinn(ed)?)\b", fixity, re.IGNORECASE):
                 return [1,1,1,1,0,0]
             
-            elif re.match(r"\b(guide(d)?)\b", fixity, re.IGNORECASE):
+            elif re.match(r"\b(roll(er)?)\b", fixity, re.IGNORECASE):
                 return [0,1,1,1,0,0]
+
+            elif re.match(r"\b(guide(d)?)\b", fixity, re.IGNORECASE):
+                return [1,0,0,1,0,0]
             
             elif re.match(r"\b(free)\b", fixity, re.IGNORECASE):
                 return [0,0,0,0,0,0]
@@ -96,6 +99,8 @@ class BoundaryNode(Mapping):
                 raise IOError("boundary type {:} not implemented".format(fixity))
         
         elif isinstance(fixity, (list, tuple)):
+            if isinstance(fixity[0], (list, tuple)):
+                fixity = fixity[0]
             return fixity
         
         elif isinstance(fixity, dict):

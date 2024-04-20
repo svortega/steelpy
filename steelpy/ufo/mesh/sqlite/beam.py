@@ -32,10 +32,10 @@ from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            update_element_item,
                                            check_element)
 from steelpy.ufo.mesh.elements.beam import BeamBasic, BeamItemBasic
-from steelpy.ufo.mesh.process.bstiffness import unitvec_0,  Tmatrix
+from steelpy.ufo.mesh.process.bstiffness import unitvec_0 #, Rmatrix
 from steelpy.utils.sqlite.utils import create_connection
 #
-import numpy as np
+#import numpy as np
 #
 #
 class BeamSQL(BeamBasic):
@@ -133,6 +133,10 @@ class BeamSQL(BeamBasic):
         coord = get_node_coord(conn, node_id)
         uvec = unitvec_0(nodei=coord[0], nodej=coord[1],
                          beta=roll_angle)
+        
+        #uvec2 = Rmatrix(nodei=coord[0], nodej=coord[1],
+        #                 beta=roll_angle)
+        
         self._push_unitvec(conn, element_id=beam_number,
                            unitvac=uvec)
         #
@@ -525,7 +529,6 @@ class BeamItemSQL(BeamItemBasic):
             unitvec = get_unitvector(conn,
                                      beam_name=self.name,
                                      component=self._component)
-        #
         return unitvec
     #
     @property
@@ -542,7 +545,8 @@ class BeamItemSQL(BeamItemBasic):
         # direction cosines
         L = dist(node1[:3], node2[:3])
         uv = list(map(sub, node2[:3], node1[:3]))
-        return np.array([item / L for item in uv])      
+        #return np.array([item / L for item in uv])
+        return [item / L for item in uv]
     #
     #def T3D(self):
     #    """ """

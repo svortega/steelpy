@@ -44,7 +44,8 @@ print(beam.material)
 #
 # set supports : pinned/fixed/free/guided/spring [k=F/x]
 #
-beam.support = ["fixed", "free"]
+#beam.support = ["fixed", "free"]
+beam.support = ["fixed", "pinned"]
 #
 #beam.support[1] = "pinned"
 #beam.support[1] = ["spring", 200 * units.kN/units.m]
@@ -74,10 +75,10 @@ beam.support = ["fixed", "free"]
 #          'Mx':90*units.kip*units.inch,
 #          'name': 'selfweight_y'}
 #
-beam.P = {'L1':28*units.ft,
-          'Fx': -445 * Fx_factor * units.kN,
-          'Fy': -4.45 * units.kN,
-          'name': 'AISC_C-C2.3'}
+#beam.P = {'L1':28*units.ft,
+#          'Fx': -445 * Fx_factor * units.kN,
+#          'Fy': -4.45 * units.kN,
+#          'name': 'AISC_C-C2.3'}
 #
 #beam.P = {'L1':90*units.inch, 'Mx':90*units.kip*units.inch, 'name': 'point_3'}
 #beam.load.point = [2.5*units.m, 1000*units.N, 2000*units.N]
@@ -102,6 +103,9 @@ beam.P = {'L1':28*units.ft,
 #
 #beam.q = {'qz1':15*units.kN/units.m, 'qz2':15*units.kN/units.m,
 #          'name': 'selfweight_z'}
+#
+beam.q = {'qy':0.20 * units.kip / units.ft,
+          'name': 'AISC_C-C2.2'}
 #
 #beam.load[1].line = {'qy1':9*units.kN/units.m, 'qz1':-9*units.kN/units.m}
 #
@@ -194,10 +198,11 @@ mesh.node([(1, 0*units.ft,   0*units.ft),
            #(4, 3*units.m,  0*units.m),
            #(5, 4*units.m,  0*units.m),
            #(6, 5*units.m,  0*units.m)])
-           (6, 28*units.ft,  0*units.m)])
+           (6, 28*units.ft,  0*units.ft)])
 
 mesh.boundary([[1, 'support', 'fixed'],
-               [6, 'support', 'free']])
+               #[6, 'support', 'free']])
+                [6, 'support', 'pinned']])
 #
 # [element_id, node1, node2, material, section, roll_angle]
 mesh.element([#(1,  'beam',  1, 2, 10, 15, 0),
@@ -267,10 +272,10 @@ basic = load.basic()
 #            'type': 'line',
 #            'qy': -15 * units.kN / units.m})
 
-#basic.beam({'load': 'snow load',
-#            'beam': 5, 
-#            'type': 'line',
-#            'qy': -5 * units.kN / units.m})
+basic.beam({'load': 'AISC_C-C2.2',
+            'beam': 5,
+            'type': 'line',
+            'qy': -0.20 * units.kip / units.ft})
 #
 #basic.beam({'load': 'snow load',
 #            'beam': 5, 
@@ -318,8 +323,8 @@ basic = load.basic()
 basic.node({'load': 'AISC_C-C2.3',
             'node': 6,
             'type': 'force',
-            'Fx': -445 * Fx_factor * units.kN,
-            'Fy': -4.45 * units.kN})
+            'Fx': -445 * Fx_factor * units.kN,})
+#            'Fy': -4.45 * units.kN})
 #            'y': -0.0511813 * units.m,})
 #            #'rz': 0.0136483 * units.rad,})
 #
@@ -334,7 +339,8 @@ basic.node({'load': 'AISC_C-C2.3',
 #
 comb = load.combination()
 comb[100] = 'Factored Comb 1'
-comb[100].basic['AISC_C-C2.3'] = 1.00
+comb[100].basic['AISC_C-C2.2'] = 1.00
+#comb[100].basic['AISC_C-C2.3'] = 1.00
 #comb[100].basic['snow load'] = 1.25
 #comb[100].basic[33] = 1.30
 #
@@ -365,7 +371,7 @@ mesh.build()
 # Structural Analysis
 # ----------------------------------------------------
 #
-frame = Trave3D(mesh=mesh)
+frame = Trave2D(mesh=mesh)
 frame.static(second_order=True)
 results = frame.results(beam_steps=4)
 #

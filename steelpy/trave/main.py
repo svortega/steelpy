@@ -15,8 +15,8 @@ from steelpy.trave.process.dynamic import eigen, trnsient
 from steelpy.trave.process.static import StaticSolver
 from steelpy.trave.postprocess.main import PostProcess
 #
-from steelpy.trave.beam.main import Beam
-from steelpy.utils.dataframe.main import DBframework
+#from steelpy.trave.beam.main import Beam
+#from steelpy.utils.dataframe.main import DBframework
 #
 #import numpy as np
 #
@@ -57,8 +57,9 @@ class TraveItem:
     #
     #
     def static(self,
-               sparse:bool=True,
                second_order: bool = False,
+               ineleastic: bool = False,
+               sparse:bool=True,
                max_iter: int = 30):
         """
         Solves the static system by the Direct Stiffness Method (DSM)
@@ -90,9 +91,22 @@ class TraveItem:
             raise IOError('** error: mesh missing')        
     #   
     #
-    def dynamic(self):
+    def modal(self):
+        """ Natural Period"""
+        pass
+    #
+    #
+    def buckling(self,
+                 ineleastic: bool = False):
+        """ Eigen Buckling"""
+        pass
+    #
+    #
+    def time_history(self,
+                     second_order: bool = False,
+                     ineleastic: bool = False,):
         """ """
-        1 / 0
+        pass
     #
     #
     def results(self,

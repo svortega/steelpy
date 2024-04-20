@@ -285,36 +285,36 @@ class MainProcess:
         """ """
         elements = self._mesh._elements
         #
-        bload = self._mesh._load._basic
-        bload_func = bload.process(steps=steps,
-                                   Pdelta=Pdelta)
-        #
         Un = Un.groupby(['load_level'])
         #
         if Pdelta:
             Un = Un.get_group(('combination', ))
             #print('pdelta')
-            cload = self._mesh._load.combination()
+            cload = self._mesh._load._combination
+            load_func = cload.function(steps=steps,
+                                       Pdelta=Pdelta)
             #df_comb = cload.to_basic()
             benl_df = cload.ENL()
-            #1 / 0
         else:
             Un = Un.get_group(('basic', ))
             # Solve node and element foce and displacements
             #df_nload = basic_load._nodes.df
-            benl_df = self._mesh._load._basic.ENL()
+            bload = self._mesh._load._basic
+            load_func = bload.function(steps=steps,
+                                       Pdelta=Pdelta)
+            benl_df = bload.ENL()
             #df_nload = self._mesh._load._basic.Fn()       
         #
         #
-        df_beamf, df_nforce = self.solve_forces(elements, bload_func,
-                                                Un, benl_df,
+        df_beamf, df_nforce = self.solve_forces(elements, Un,
+                                                load_func, benl_df,
                                                 steps=steps, Pdelta=Pdelta)
         #
         return df_beamf, df_nforce
     #
     #
-    def solve_forces(self, elements, bload_func,
-                     df_ndisp, benl_df,
+    def solve_forces(self, elements, df_ndisp,
+                     load_func, benl_df,
                      steps: int, Pdelta: bool):
         """
         Beam's internal forces along its lenght
@@ -327,7 +327,7 @@ class MainProcess:
         benlgrp = benl_df.groupby(['load_name', 'component_name',
                                   'load_level', 'load_system'])
         #
-        blgrp = bload_func.groupby(['load_name', 'component_name',
+        blgrp = load_func.groupby(['load_name', 'component_name',
                                     'load_level'])
         #
         # Dummy Bending [V, M, theta, w]

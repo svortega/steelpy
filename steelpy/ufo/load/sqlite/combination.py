@@ -115,27 +115,28 @@ class LoadCombSQL(LoadCombinationBasic):
     def to_basic2(self):
         """ """
         #
-        #db = DBframework()
-        #dftemp = []
-        #
+        1/0
+        # get basic load
         conn = create_connection(self.db_file)
         cur = conn.cursor()
-        cur.execute ( "SELECT load_id, bl_number, factor\
+        cur.execute("SELECT load_id, bl_number, factor\
                       FROM LoadCombination\
                       WHERE bl_number IS NOT NULL")
         basic_loads = cur.fetchall()
-        # get basic load
+        # get basic load factors
         blc = defaultdict(list)
         for basic in basic_loads:
             blc[basic[0]].append([basic[1], basic[2]])
+        #
         # get load combination and convert to basic loads
-        cur.execute ( "SELECT load_id, lc_number, factor\
+        cur.execute("SELECT load_id, lc_number, factor\
                       FROM LoadCombination\
                       WHERE lc_number IS NOT NULL")
         comb_loads = cur.fetchall()
         for comb in comb_loads:
             for bl in blc[comb[1]]:
                 blc[comb[0]].append([bl[0], bl[1]*comb[2]])
+        #
         # organize basic load in user load name
         load_list = get_load_list(conn)
         lnumber = {item[0]:item[2] for item in load_list}
@@ -195,24 +196,23 @@ class LoadCombSQL(LoadCombinationBasic):
     #    return comb_res, memb_comb
     #
     #
-    def Fn(self):
+    def function(self, steps:int,
+                 Pdelta:bool):
         """ """
+        #print('load function')
+
+        dfbasic = self._basic.function(steps=steps, Pdelta=Pdelta)
+        dfcomb = self.to_basic()
         #
-        values=['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                'x', 'y', 'z', 'rx', 'ry', 'rz']
-        #
-        dfbasic = self._basic.Fn()
-        #
-        dfcomb = self.to_basic() 
-        #
-        colgrp = ['load_name', 'load_id', 
+        values = ['axial', 'torsion', 'VM_inplane', 'VM_outplane']
+        colgrp = ['load_name', 'load_id',
                   'load_level', 'load_title',
                   'load_system', 'component_name',
-                  'node_name', 'node_index']
+                  'element_name', 'node_end']
         #
         try:
-            dfnew = self._update(dfbasic, dfcomb, 
-                                 values=values)
+            dfnew = self.update_combination(dfbasic, dfcomb,
+                                            values=values)
         except UnboundLocalError:
             raise IOError('2nd order requires Load Combination as input')
         #
@@ -220,8 +220,56 @@ class LoadCombSQL(LoadCombinationBasic):
         dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
         return dfnew
     #
-    def _update(self, dfbasic, dfcomb, 
-                values:list[str]):
+    def Fn(self):
+        """ """
+        dfbasic = self._basic.Fn()
+        dfcomb = self.to_basic()
+        #
+        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                  'x', 'y', 'z', 'rx', 'ry', 'rz']
+        try:
+            dfnew = self.update_combination(dfbasic, dfcomb,
+                                            values=values)
+        except UnboundLocalError:
+            raise IOError('2nd order requires Load Combination as input')
+        #
+        colgrp = ['load_name', 'load_id', 
+                  'load_level', 'load_title',
+                  'load_system', 'component_name',
+                  'node_name', 'node_index']
+        #        
+        dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
+        return dfnew
+    #
+    def ENL(self):
+        """Equivalent Nodal Loads """
+        #print('comb enl')
+        ENLbasic = self._basic.ENL()
+        cols = tuple(set(ENLbasic['load_name'].tolist()))
+        if not cols:
+            return ENLbasic
+        #
+        dfcomb = self.to_basic()
+        grpcomb = dfcomb.groupby(['basic_load'])
+        #
+        # basic loading
+        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                  'Psi', 'B', 'Tw']
+        dfnew = self.update_combination(ENLbasic,
+                                        grpcomb.get_group(cols),
+                                        values=values)
+        #
+        colgrp = ['load_name', 'load_id', 
+                  'load_level', 'load_title',
+                  'load_system', 'component_name',
+                  'element_name', 
+                  'node_name', 'node_index']        
+        dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
+        #
+        return dfnew
+    #
+    def update_combination(self, dfbasic, dfcomb,
+                            values:list[str]):
         """
         Update node displacements to include lcomb
         """
@@ -252,37 +300,6 @@ class LoadCombSQL(LoadCombinationBasic):
         #
         return dftemp
     #
-    #
-    def ENL(self):
-        """Equivalent Nodal Loads """
-        #
-        #print('comb enl')
-        #
-        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                  'Psi', 'B', 'Tw']
-        
-        ENLbasic = self._basic.ENL()
-        cols = tuple(set(ENLbasic['load_name'].tolist()))
-        if not cols:
-            return ENLbasic
-        #
-        #
-        dfcomb = self.to_basic()
-        grpcomb = dfcomb.groupby(['basic_load'])
-        #
-        # basic loading
-        dfnew = self._update(ENLbasic,
-                             grpcomb.get_group(cols), 
-                             values=values)
-        #
-        # 
-        colgrp = ['load_name', 'load_id', 
-                  'load_level', 'load_title',
-                  'load_system', 'component_name',
-                  'node_name', 'node_index']        
-        dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
-        #
-        return dfnew
 #     
 #
 class CombTypeSQL:
