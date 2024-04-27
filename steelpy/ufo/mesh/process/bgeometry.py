@@ -227,7 +227,7 @@ def Kt_NoAxial(Le:float, Ax:float,
     #
     L2 = Le*Le
     L3 = L2*Le
-    pi = np.pi
+    #pi = np.pi
     #P = 0.0
     kvvy = 1.0 / niy
     kvry = 1.0 / niy
@@ -1507,7 +1507,7 @@ def Kt_tensionX(Le:float, Ax:float,
     et[10,11] = -(L**2*(2*Vy**2*Vz**2*Mxb*(sinh((L*Vy)/2)**2 - 2*(sinh((L*Vy)/2)**2 + 1)*(sinh((L*Vz)/2)**2 + 1) + sinh((L*Vz)/2)**2 + 2) + (Vy*Vz**3*Mxb*sinh(L*Vy)*sinh(L*Vz))/2 + (Vy**3*Vz*Mxb*sinh(L*Vy)*sinh(L*Vz))/2) + L*(2*Vy**3*Mxb*(sinh(L*Vy) - 2*sinh((L*Vy)/2)*(sinh((L*Vz)/2)**2 + 1)*(2*sinh((L*Vy)/4)**2 + 1)) + 2*Vz**3*Mxb*(sinh(L*Vz) - 2*sinh((L*Vz)/2)*(sinh((L*Vy)/2)**2 + 1)*(2*sinh((L*Vz)/4)**2 + 1)) - 2*Vy*Vz**2*Mxb*(sinh(L*Vy) - 2*sinh((L*Vy)/2)*(sinh((L*Vz)/2)**2 + 1)*(2*sinh((L*Vy)/4)**2 + 1)) - 2*Vy**2*Vz*Mxb*(sinh(L*Vz) - 2*sinh((L*Vz)/2)*(sinh((L*Vy)/2)**2 + 1)*(2*sinh((L*Vz)/4)**2 + 1))) + L**3*(2*Vy**3*Vz**2*Mxb*(Oy*sinh(L*Vy) - Oz*sinh(L*Vy) - 2*Oy*sinh((L*Vy)/2)*(sinh((L*Vz)/2)**2 + 1)*(2*sinh((L*Vy)/4)**2 + 1) + 2*Oz*sinh((L*Vy)/2)*(sinh((L*Vz)/2)**2 + 1)*(2*sinh((L*Vy)/4)**2 + 1)) - 2*Vy**2*Vz**3*Mxb*(Oy*sinh(L*Vz) - Oz*sinh(L*Vz) - 2*Oy*sinh((L*Vz)/2)*(sinh((L*Vy)/2)**2 + 1)*(2*sinh((L*Vz)/4)**2 + 1) + 2*Oz*sinh((L*Vz)/2)*(sinh((L*Vy)/2)**2 + 1)*(2*sinh((L*Vz)/4)**2 + 1))))/((Vy**2 - Vz**2)*(L*Vy*sinh(L*Vy) - 4*sinh((L*Vy)/2)**2 + 4*L**2*Vy**2*Oy*sinh((L*Vy)/2)**2)*(L*Vz*sinh(L*Vz) - 4*sinh((L*Vz)/2)**2 + 4*L**2*Vz**2*Oz*sinh((L*Vz)/2)**2))
 
     # --------------------------------------------- Torsion for symetric sections --------------------------------------------- */
-    if (Iy == Iz) :
+    if Iy == Iz :
         et[1,4] = (Vy*Mxb*(sinh(L*Vy) - L*Vy))/(2*(L*Vy*sinh(L*Vy) - 2*L**2*Vy**2*Oy - 2*cosh(L*Vy) + 2*L**2*Vy**2*Oy*cosh(L*Vy) + 2))
         et[2,5] = (Vy*Mxb*(sinh(L*Vy) - L*Vy))/(2*(L*Vy*sinh(L*Vy) - 2*L**2*Vy**2*Oz - 2*cosh(L*Vy) + 2*L**2*Vy**2*Oz*cosh(L*Vy) + 2))
         et[4,7] = -(Vy*Mxb*(sinh(L*Vy) - L*Vy))/(2*(L*Vy*sinh(L*Vy) - 2*L**2*Vy**2*Oy - 2*cosh(L*Vy) + 2*L**2*Vy**2*Oy*cosh(L*Vy) + 2))

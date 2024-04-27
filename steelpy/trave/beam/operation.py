@@ -317,7 +317,7 @@ class BeamBasic:
                            J=self.J, Cw=self.Cw,
                            Area=self.area,
                            Asy=self.Asy, Asz=self.Asz,
-                           Pdelta=self._Pdelta)
+                           P=0.0, factor=1.0) # FIXME: comb maybe?
             
             reac[item.load_name].append([item.load_name, item.component_name, 
                                          item.title, item.load_type, 'basic', 
@@ -480,7 +480,7 @@ class BeamBasic:
                          J=self.J, Cw=self.Cw,
                          Area=self.area,
                          Asy=self.Asy, Asz=self.Asz, 
-                         Pdelta=self._Pdelta)
+                         P=0.0, factor=1.0) # FIXME: comb maybe?
             #beamfun[item.load_name].extend(lout)
             beamfun.extend(Fx)
         #

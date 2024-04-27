@@ -279,6 +279,71 @@ class MainProcess:
     # Operations Node, Element forces and displacement
     # -----------------------------------------------------------
     #
+    def _get_beam_end_disp(self, elements, df_ndisp,
+                           Pdelta: bool):
+        """convert beam end-node disp to force [F = Kd] in global system"""
+        ndgrp = df_ndisp.groupby(['load_name', 'component_name',
+                                  'load_level',  'load_system'])
+        #
+        ndof = 6
+        hdisp = ['node_name', 'x', 'y', 'z', 'rx', 'ry', 'rz']
+        #
+        #ndof = self._plane.ndof
+        #hdisp = ['node_name', *self._plane.hdisp]
+        #
+        df_Fb_local: list = []
+        df_Fb_global: list = []
+        for key, noded in ndgrp:
+            ndisp = noded[hdisp]
+            ndisp.set_index('node_name', inplace=True)
+            #
+            for mname, element in elements.items():
+                nodes = element.connectivity
+                Tb = element.T3D()
+                #
+                # ---------------------------------------------
+                # displacement
+                nd_global = np.concatenate((ndisp.loc[nodes[0]],
+                                            ndisp.loc[nodes[1]]), axis=None)
+                #
+                # ---------------------------------------------
+                # convert global end-node disp in beam's local system
+                # [x,y,z,rx,ry,rz]
+                nd_local = Tb @ nd_global
+                #
+                # ---------------------------------------------
+                # convert beam end-node disp to force [F = Kd] in global system
+                #
+                Kb = element.Ke3D()
+                Fb_local = Kb @ nd_local
+                #
+                # --------------------------------------------
+                # convert beam end-node disp to force [F = Kd] in global system
+                # get local beam K
+                if Pdelta:
+                    Kb = element.Kt3D(Fb=Fb_local)
+                    Fb_local = Kb @ nd_local
+                #
+                # Calculate global end force
+                Fb_global = Tb @ Fb_local
+                # Fb_g2 = (Tb.T @ Kb @ Tb) @ nd_global
+                #
+                # ---------------------------------------------
+                #
+                df_Fb_local.append([*key, mname, nodes[0], *Fb_local[:ndof]])
+                df_Fb_local.append([*key, mname, nodes[1], *Fb_local[ndof:]])
+                #
+                # ---------------------------------------------
+                #
+                df_Fb_global.append([*key, mname, nodes[0], *Fb_global[:ndof]])
+                df_Fb_global.append([*key, mname, nodes[1], *Fb_global[ndof:]])
+        #
+        # ---------------------------------------------
+        #
+        hforce = ['node_name', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+        df_Fb_global = self.dfmend(dftemp=df_Fb_global, hforce=hforce)
+        df_Fb_local = self.dfmend(dftemp=df_Fb_local, hforce=hforce)
+        return df_Fb_local, df_Fb_global
     #
     def solve(self, Un, steps: int,
               Pdelta: bool):
@@ -289,20 +354,22 @@ class MainProcess:
         #
         if Pdelta:
             Un = Un.get_group(('combination', ))
+            #
+            Fb_local, Fb_global = self._get_beam_end_disp(elements, Un, Pdelta)
             #print('pdelta')
             cload = self._mesh._load._combination
-            load_func = cload.function(steps=steps,
-                                       Pdelta=Pdelta)
-            #df_comb = cload.to_basic()
             benl_df = cload.ENL()
+            load_func = cload.function(steps=steps,
+                                       Fb_local=Fb_local)
+            #df_comb = cload.to_basic()
         else:
             Un = Un.get_group(('basic', ))
             # Solve node and element foce and displacements
             #df_nload = basic_load._nodes.df
             bload = self._mesh._load._basic
-            load_func = bload.function(steps=steps,
-                                       Pdelta=Pdelta)
             benl_df = bload.ENL()
+            load_func = bload.function(steps=steps,
+                                       Pa=0.0, factor=1.0)
             #df_nload = self._mesh._load._basic.Fn()       
         #
         #
@@ -327,7 +394,7 @@ class MainProcess:
         benlgrp = benl_df.groupby(['load_name', 'component_name',
                                   'load_level', 'load_system'])
         #
-        blgrp = load_func.groupby(['load_name', 'component_name',
+        lfgrp = load_func.groupby(['load_name', 'component_name',
                                     'load_level'])
         #
         # Dummy Bending [V, M, theta, w]
@@ -395,10 +462,13 @@ class MainProcess:
                 # Beam load (udl/point)
                 try:
                     #
+                    # get axial load on element
+                    #P = nd_local[ndof] - nd_local[0]
+                    #
                     # [load_name, member_load_title, load_type, load_system, 
                     # beam_number, x, Fx, Fy, Fz]
                     #
-                    mbload = blgrp.get_group(key[:3])
+                    mbload = lfgrp.get_group(key[:3])
                     mbload = mbload.groupby(['element_name'])                    
                     mnload = mbload.get_group((mname, ))
                     mnload = mnload.groupby(['node_end'],
@@ -427,9 +497,8 @@ class MainProcess:
                     FUen = np.concatenate((nf_local.loc[nodes[0]],
                                            nf_local.loc[nodes[1]]), axis=None)
                     #
-                    FUen = Tb @ FUen
-                    #
-                    Pu = FUen - FUtn  
+                    #FUen = Tb @ FUen
+                    Pu = Tb @ FUen - FUtn
                     #
                     # get reactions with correct sign for postprocessing
                     #
@@ -493,8 +562,9 @@ class MainProcess:
         #
         #
         # ---------------------------------------------
-        #        
-        df_nforce = self.dfmend(dftemp=dftemp)
+        #
+        hforce = ['node_name', *self._plane.hforce]
+        df_nforce = self.dfmend(dftemp=dftemp, hforce=hforce)
         # Member internal forces
         df_mif = self.df_mif(mif_data)
         #
@@ -555,9 +625,9 @@ class MainProcess:
         return df_membf
     #
     #
-    def dfmend(self, dftemp):
+    def dfmend(self, dftemp, hforce:list):
         """ """
-        hforce = ['node_name', *self._plane.hforce]
+        #hforce = ['node_name', *self._plane.hforce]
         # get df 
         db = DBframework()
         header: list[str] = ['load_name', 'component_name',

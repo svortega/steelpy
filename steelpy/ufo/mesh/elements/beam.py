@@ -120,7 +120,7 @@ class BeamItemBasic:
         return self.Ke()
     #
     def Ke(self, item: None = None):
-        """ """
+        """ Return Beam stiffness matrix in global coordinates """
         Tlg =  self.T
         Kl = self.Ke_local
         return Tlg.T @ Kl @ Tlg        
@@ -238,25 +238,31 @@ class BeamItemBasic:
     #
     def Kt_local(self, Un:list):
         """
-        Return Beam geometrical stiffness matrix in local coordinates
+        Un : node displacement global system
+
+        Return :
+        Kt : Beam geometrical stiffness matrix in local coordinates
         """
-        kt = self.Kt3D(Un=Un)
-        if self._plane.plane2D:
-            kt = self._M2D(kt)
-        return kt
-    #
-    def Kt3D(self, Un: list):
-        """
-        Returns the condensed (and expanded) local tangent stiffness matrix for 3D beam
-        """
-        material = self.material
-        section = self.section.properties(poisson=material.poisson)
         # ---------------------------------------------
         # convert global end-node disp in beam's local system
         nd_local = self.T @ Un # nd_global
         # ---------------------------------------------
-        # convert beam end-node disp to force [F = Kd] in global system
+        # convert beam end-node disp to force [F = Kd] in local system
         Fb = self.Ke_local @ nd_local
+        # ---------------------------------------------
+        kt = self.Kt3D(Fb=Fb)
+        if self._plane.plane2D:
+            kt = self._M2D(kt)
+        return kt
+    #
+    def Kt3D(self, Fb: list):
+        """
+        Fb : Member force local system
+        Returns :
+        Kt : the condensed (and expanded) local tangent stiffness matrix for 3D beam
+        """
+        material = self.material
+        section = self.section.properties(poisson=material.poisson)
         # ---------------------------------------------
         kg = B3D2_Kt(Le=self.L,
                     Ax=section.area,

@@ -4,6 +4,9 @@
 # Python stdlib imports
 from __future__ import annotations
 from dataclasses import dataclass
+
+import numpy as np
+
 #from typing import NamedTuple
 #import pickle
 #from typing import NamedTuple
@@ -144,8 +147,11 @@ class UnSQL:
                 'x', 'y', 'z', 'rx', 'ry', 'rz']         
         db = DBframework()
         Un = db.DataFrame(data=ndata, columns=cols)
+        #Un = Un.copy()
+        Un.fillna(value=float(0.0), inplace=True)
         Un.drop(labels=['number'], axis=1, inplace=True)
-        return Un
+        return Un.astype({'x': 'float64', 'y': 'float64', 'z': 'float64',
+                          'rx': 'float64', 'ry': 'float64', 'rz': 'float64'})
     
     @df.setter
     def df(self, df):
@@ -249,23 +255,20 @@ class UnSQL:
     #
     def _pull_data(self, conn):
         """ """
-        #table = "SELECT Load.name AS load_name, \
-        #                Load.title AS load_title, \
-        #                Load.level AS load_level, \
-        #                Nodes.name AS node_name, \
-        #                SolutionUn.* \
-        #        FROM Load, Nodes, SolutionUn \
-        #        WHERE SolutionUn.load_id = Load.number \
-        #        AND SolutionUn.node_id = Nodes.number "
+        #table = "SELECT number AS number, load_name AS load_name, \
+        #                component_name AS component_name,  load_level AS load_level, \
+        #                load_system AS load_system, node_name AS node_name, \
+        #                IFNULL(x, 0.0) AS x, IFNULL(y, 0.0) AS y, IFNULL(z, 0.0) AS z,\
+        #                IFNULL(rx, 0.0) AS rx, IFNULL(ry, 0.0) AS ry, IFNULL(rz, 0.0) AS rz \
+        #        FROM ResultNodeU"
         #
-        table = "SELECT ResultNodeU.* FROM ResultNodeU"    
+        table = "SELECT ResultNodeU.* FROM ResultNodeU"
         #
         # Node load
         with conn:
             cur = conn.cursor()
             cur.execute(table)
             rows = cur.fetchall()
-        #
         return rows
     #    
 #

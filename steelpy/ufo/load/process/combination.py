@@ -102,7 +102,7 @@ class LoadCombinationBasic(Mapping):
         for key, item in self._combination.items():
             for bl_name, factor in item._basic.items():
                 dftemp.append([key, item.number, 'combination',
-                               item.title, self._component, 
+                               item.title, item._component_name,
                                bl_name, factor])
         #
         header = ['load_name', 'load_id','load_type',

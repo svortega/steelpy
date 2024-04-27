@@ -379,7 +379,6 @@ class BeamItemSQL(BeamItemBasic):
             
             mat = get_materialSQL(conn, data[4],
                                   component=self._component)
-        #
         return mat
 
     @material.setter
@@ -442,10 +441,6 @@ class BeamItemSQL(BeamItemBasic):
         item = "section"
         with conn:
             update_element_item(conn, self.name, item, section_name)
-    #
-    #def _pull_section(self):
-    #    """ get section """
-    #    1 / 0
     #
     #
     @property

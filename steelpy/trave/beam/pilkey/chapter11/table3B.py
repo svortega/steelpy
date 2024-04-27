@@ -150,7 +150,7 @@ class Trapezoidal(ArbitraryLoading):
         #                      + 2 * ef.Zeta * ef.e4 * self.function_n(step2, 1)))
         func2 = (self.q2 * (ef2.e2 + ef2.Zeta * ef2.e4 )
                  - self.q1 * (ef.e2 - ef.Zeta * ef.e4 
-                              + 2 * ef2.Zeta * ef2.e4))        
+                              + 2 * ef.Zeta * ef.e4))
         
         return func1 + func2
 

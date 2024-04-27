@@ -80,8 +80,7 @@ class BeamLoadClass:
     # Load Process Formulas
     # -------------------------
     #
-    def fer_beam(self, beam,
-                 system :int, Pdelta: bool) -> list:
+    def fer_beam(self, beam, system :int) -> list:
         """ """
         L =beam.L
         material = beam.material
@@ -94,7 +93,7 @@ class BeamLoadClass:
                          G=material.G, Cw=section.Cw,
                          Asy=section.Asy,
                          Asz=section.Asz,
-                         Pdelta=Pdelta)
+                         Pdelta=False)
         #
         boundary1 = 'fixed'
         #if nodes[0].boundary:
@@ -114,7 +113,7 @@ class BeamLoadClass:
                        J=section.J, Cw=section.Cw,
                        Area=section.area,
                        Asy=section.Asy, Asz=section.Asz,
-                       Pdelta=Pdelta)
+                       P=0.0)
         #
         # Axial   [P, blank, blank, u]
         # Torsion [T, Phi, Psi, B, Tw]
@@ -205,11 +204,11 @@ class LineBeam(BeamLoadClass):
     # ------------------------
     #
     def Fx(self, x:float|list, L:float,
-           E:float, G: float,
+           E:float, G:float,
            Iy:float, Iz:float,
-           J: float, Cw: float,
-           Area: float, Asy: float, Asz: float, 
-           Pdelta: bool):
+           J:float, Cw:float,
+           Area:float, Asy:float, Asz:float, 
+           P:float, factor:float = 1.0):
         """
         Beam load local system
 
@@ -227,12 +226,11 @@ class LineBeam(BeamLoadClass):
         beam_name, x, Fx, Fy, Fz]
         Fx, Fy, Fz --> [V, M, theta, w] Note positive load is upwards
         """
+        #TODO: return list
+        #if isinstance(x, (int|float)):
+        #    x = [x]
         # convert load to beam local
         self.local_system()
-        #
-        Pflag = 0
-        if Pdelta:
-           Pflag = 1
         #
         # Axial [P, blank, blank, u]
         Fx = BeamAxial(L=L, E=E, A=Area)
@@ -254,45 +252,58 @@ class LineBeam(BeamLoadClass):
                                self.title, self.load_type, 'basic',
                                self.coordinate_system,
                                self.name, xstep,
+                               
                                np.array(Fx.axial(x=xstep,
-                                                 P=self.qx0, L1=self.L0,
-                                                 P2=self.qx1, L2=self.L1)),
+                                                 P=self.qx0 * factor,
+                                                 L1=self.L0,
+                                                 P2=self.qx1 * factor,
+                                                 L2=self.L1)),
                                # TODO : torsion
-                               #np.array(Mx_blank),
                                np.array(Mx.torque(x=xstep,
-                                                  T=self.qt0, L1=self.L0,
-                                                  T2=self.qt1, L2=self.L1)),
-                               #
+                                                  T=self.qt0 * factor,
+                                                  L1=self.L0,
+                                                  T2=self.qt1 * factor,
+                                                  L2=self.L1)),
+                               
                                np.array(in_plane.line(x=xstep,
-                                                      axial=self._Fa(L) * Pflag, 
-                                                      q1=self.qy0, q2=self.qy1,
+                                                      axial=P, 
+                                                      q1=self.qy0 * factor,
+                                                      q2=self.qy1 * factor,
                                                       L1=self.L0, L2=self.L1)),
                                
                                np.array(out_plane.line(x=xstep,
-                                                       axial=self._Fa(L) * Pflag,
-                                                       q1=self.qz0, q2=self.qz1,
+                                                       axial=P,
+                                                       q1=self.qz0 * factor,
+                                                       q2=self.qz1 * factor,
                                                        L1=self.L0, L2=self.L1))])
         else:
             Fx_out = [self.load_name, self.component_name,
                       self.title, self.load_type, 'basic',
                       self.coordinate_system,
                       self.name, x,
+                      
                       np.array(Fx.axial(x=x,
-                                        P=self.qx0, L1=self.L0,
-                                        P2=self.qx1, L2=self.L1)),
+                                        P=self.qx0 * factor,
+                                        L1=self.L0,
+                                        P2=self.qx1 * factor,
+                                        L2=self.L1)),
                       # TODO : torsion
-                      #np.array(Mx_blank),
                       np.array(Mx.torque(x=x,
-                                         T=self.qt0, L1=self.L0,
-                                         T2=self.qt1, L2=self.L1)),
-                      #
+                                         T=self.qt0 * factor,
+                                         L1=self.L0,
+                                         T2=self.qt1 * factor,
+                                         L2=self.L1)),
+                      
                       np.array(in_plane.line(x=x,
-                                             axial=self._Fa(L) * Pflag, 
-                                             q1=self.qy0, q2=self.qy1,
+                                             axial=P, 
+                                             q1=self.qy0 * factor,
+                                             q2=self.qy1 * factor,
                                              L1=self.L0, L2=self.L1)),
+                      
                       np.array(out_plane.line(x=x,
-                                              axial=self._Fa(L) * Pflag,
-                                              q1=self.qz0, q2=self.qz1,
+                                              axial=P,
+                                              q1=self.qz0 * factor,
+                                              q2=self.qz1 * factor,
                                               L1=self.L0, L2=self.L1))]
         #
         # [load_name, load_title, load_type, load_system, 
@@ -376,11 +387,11 @@ class PointBeam(BeamLoadClass):
     #
     #
     def Fx(self, x:float|list, L: float,
-           E:float, G: float, 
+           E:float, G:float, 
            Iy:float, Iz:float,
-           J: float, Cw: float,
-           Area: float, Asy: float, Asz: float,
-           Pdelta: bool) -> list:
+           J: float, Cw:float,
+           Area:float, Asy:float, Asz:float,
+           P:float, factor:float = 1.0) -> list:
         """
         Beam load local system
 
@@ -401,13 +412,11 @@ class PointBeam(BeamLoadClass):
         Axial, Bending_inplane, Bending_outplane = [V, M, w, theta]
         Torsion = [T, B, psi, phi, Tw]
         """
-        
+        #TODO: return list
+        #if isinstance(x, (int|float)):
+        #    x = [x]
         # convert load to beam local
-        self.local_system()
-        #
-        Pflag = 0
-        if Pdelta:
-           Pflag = 1        
+        self.local_system()       
         #
         # Axial [P, blank, blank, u]
         Fx =  BeamAxial(L=L, E=E, A=Area)
@@ -424,21 +433,25 @@ class PointBeam(BeamLoadClass):
         if isinstance(x, (list,tuple)):
             Fx_out = []
             for xstep in x:
-                Axial =  Fx.axial(x=xstep, P=self.fx, L1=self.L0)
-                #Axial = Fx.loading_function(x=xstep)
-                Torsion =  Mx.torque(x=xstep, T=self.mx, L1=self.L0)
-                #Torsion = Mx.loading_function(x=xstep, J=J, Cw=Cw)
+                Axial =  Fx.axial(x=xstep,
+                                  P=self.fx * factor,
+                                  L1=self.L0)
+                #Axial
+                Torsion =  Mx.torque(x=xstep,
+                                     T=self.mx * factor,
+                                     L1=self.L0)
+                #Torsion
                 Finp = Finplane.point(x=xstep,
-                                      axial=self.fx * Pflag,
-                                      P=self.fy,
-                                      M=self.mz,
+                                      axial=P,
+                                      P=self.fy * factor,
+                                      M=self.mz * factor,
                                       L1=self.L0)
-                #Finp = list(map(sum, zip(F_inplane(xstep, E, Iy), M_outplane(xstep, E, Iy))))
+                #
                 Foutp = F_outplane.point(x=xstep,
-                                         axial=self.fx * Pflag,
-                                         P=self.fz, M=self.my,
+                                         axial=P,
+                                         P=self.fz * factor,
+                                         M=self.my * factor,
                                          L1=self.L0)
-                #Foutp = list(map(sum, zip(F_outplane(xstep, E, Iz), M_inplane(xstep, E, Iz))))
                 #
                 Fx_out.append([self.load_name, self.component_name,
                                self.title, self.load_type, 'basic',
@@ -447,25 +460,26 @@ class PointBeam(BeamLoadClass):
                                np.array(Axial), np.array(Torsion),
                                np.array(Finp), np.array(Foutp)])
         else:
-            Axial =  Fx.axial(x=x, P=self.fx, L1=self.L0)
-            #Axial = Fx.loading_function(x=x)
+            Axial =  Fx.axial(x=x,
+                              P=self.fx * factor,
+                              L1=self.L0)
             # torsion = [FT, FB, Fpsi, Fphi]
-            #Torsion = Mx.loading_function(x=x, J=J, Cw=Cw)
-            Torsion =  Mx.torque(x=x, T=self.mx, L1=self.L0)
-            #
+            Torsion =  Mx.torque(x=x,
+                                 T=self.mx * factor,
+                                 L1=self.L0)
+            
             Finp = Finplane.point(x=x,
-                                  axial=self.fx * Pflag, 
-                                  P=self.fy,
-                                  M=self.mz,
+                                  axial=P, 
+                                  P=self.fy * factor,
+                                  M=self.mz * factor,
                                   L1=self.L0)
-            #Finp = list(map(sum, zip(F_inplane(x, E, Iy), M_outplane(x, E, Iy))))
+            
             Foutp = F_outplane.point(x=x,
-                                     axial=self.fx * Pflag,
-                                     P=self.fz,
-                                     M=self.my,
+                                     axial=P,
+                                     P=self.fz * factor,
+                                     M=self.my * factor,
                                      L1=self.L0)
-            #Foutp = list(map(sum, zip(F_outplane(x, E, Iz), M_inplane(x, E, Iz))))
-            #
+            
             Fx_out = [self.load_name, self.component_name,
                       self.title, self.load_type, 'basic',
                       self.coordinate_system, 

@@ -125,16 +125,16 @@ class BasicLoadSQL(LoadCaseBasic):
     # -----------------------------------------------
     #
     def function(self, steps:int,
-                 Pdelta:bool):
+                 Pa:float=0.0, factor:float=1):
         """process element load"""
         #
-        #beams = elements.beam()
-        #
-        #beamload = self.beam()
-        #dftemp = beamload.beam_function(beams=beams, steps=steps)
+        #df_nload = []
+        #if Pdelta:
+        #    df_nload = self._nodes.df
         #
         dftemp = self._beams.load_function(steps=steps,
-                                           Pdelta=Pdelta) 
+                                           Pa=Pa, factor=factor)
+                                           #nload=df_nload)
         #
         #
         #print('---')
@@ -427,6 +427,18 @@ class LoadTypeSQL(LoadTypeBasic):
         #
         return items
     #
+    @property
+    def _component_name(self):
+        """ component name """
+        query = (self._component, )
+        table = 'SELECT name \
+                 FROM Component WHERE number = ?;'
+        conn = create_connection(self._db_file)
+        with conn:
+            cur = conn.cursor()
+            cur.execute(table, query)
+            items = cur.fetchone()
+        return items[0]
     #  
 #
 #

@@ -19,6 +19,7 @@ class DBframework:
         # FIXME : allow for more modules
         try:
             import pandas as pd
+            #pd.options.mode.copy_on_write = True
             self._df = pd
         except ModuleNotFoundError:
             #self._df = DataFrameBasic

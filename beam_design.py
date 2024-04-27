@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # set units
 units = Units()
 #
-Fx_factor = 0.0
+Fx_factor = 1.0
 #
 #
 # beam class
@@ -111,9 +111,9 @@ beam.q = {'qy':0.20 * units.kip / units.ft,
 #
 #print(beam.load)
 #
-#
-#beam.load_combination = ['udl_1', 0.80]
-#beam.load_combination = ['point_1', 0.85]
+# TODO: fix combination
+#beam.load_combination = ['AISC_C-C2.2', 1.0]
+#beam.load_combination = ['AISC_C-C2.3', 1.0]
 #
 #beam.load_combination = {'point_1': 0.50, 'point_2': 0.75, 'point_3': 1.0}
 #
@@ -202,7 +202,7 @@ mesh.node([(1, 0*units.ft,   0*units.ft),
 
 mesh.boundary([[1, 'support', 'fixed'],
                #[6, 'support', 'free']])
-                [6, 'support', 'pinned']])
+                [6, 'support', (0,1,1,1,0,0)]])
 #
 # [element_id, node1, node2, material, section, roll_angle]
 mesh.element([#(1,  'beam',  1, 2, 10, 15, 0),
@@ -323,7 +323,7 @@ basic.beam({'load': 'AISC_C-C2.2',
 basic.node({'load': 'AISC_C-C2.3',
             'node': 6,
             'type': 'force',
-            'Fx': -445 * Fx_factor * units.kN,})
+            'Fx': -667 * Fx_factor * units.kN,})
 #            'Fy': -4.45 * units.kN})
 #            'y': -0.0511813 * units.m,})
 #            #'rz': 0.0136483 * units.rad,})
@@ -340,7 +340,7 @@ basic.node({'load': 'AISC_C-C2.3',
 comb = load.combination()
 comb[100] = 'Factored Comb 1'
 comb[100].basic['AISC_C-C2.2'] = 1.00
-#comb[100].basic['AISC_C-C2.3'] = 1.00
+comb[100].basic['AISC_C-C2.3'] = 1.00
 #comb[100].basic['snow load'] = 1.25
 #comb[100].basic[33] = 1.30
 #

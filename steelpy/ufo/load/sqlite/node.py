@@ -810,7 +810,7 @@ def pull_load_specs(conn, node_name: str|int,
     """ """
     # Node check
     node_id = pull_node_number(conn, node_name,
-                            component=component)
+                               component=component)
     #
     if not node_id:
         raise IOError(f"Node {node_name} not found")    

@@ -197,28 +197,58 @@ class LoadCombSQL(LoadCombinationBasic):
     #
     #
     def function(self, steps:int,
-                 Pdelta:bool):
+                 Fb_local):
         """ """
         #print('load function')
-
-        dfbasic = self._basic.function(steps=steps, Pdelta=Pdelta)
+        basic = self._basic
         dfcomb = self.to_basic()
+        header = ['load_name', 'component_name']
+        combgrp = dfcomb.groupby(header)
+        Fbgrp = Fb_local.groupby(header)
         #
-        values = ['axial', 'torsion', 'VM_inplane', 'VM_outplane']
-        colgrp = ['load_name', 'load_id',
-                  'load_level', 'load_title',
-                  'load_system', 'component_name',
+        loadfun = []
+        for key, items in combgrp:
+            Fb = Fbgrp.get_group(key)
+            Fb.set_index('element_name', inplace=True)
+            for item in items.itertuples():
+                #print(item)
+                lbasic = basic[item.basic_load]
+                lfout = lbasic._beam.load_function(Fb=Fb,
+                                                   factor=item.factor,
+                                                   steps=steps)
+                loadfun.extend(lfout)
+                #
+                #beamdf = lbasic._beam.df
+                #for lname, litem in lbasic._beam.items():
+                #    print(lname)
+                #for bname, bitem in Fbgrp:
+                #    bload = lbitem._beam[bname]
+                #    for key, items in bload._line.items():
+                #        print(key)
+        #
+        header = ['load_name', 'basic_load',
+                  'component_name',
+                  'load_comment', 'load_type', 
+                  'load_level', 'load_system',
                   'element_name', 'node_end']
+                  #'axial', 'torsion', 'VM_inplane', 'VM_outplane']
+        values = ['axial', 'torsion', 'VM_inplane', 'VM_outplane']
         #
-        try:
-            dfnew = self.update_combination(dfbasic, dfcomb,
-                                            values=values)
-        except UnboundLocalError:
-            raise IOError('2nd order requires Load Combination as input')
+        df = DBframework()
+        dfload = df.DataFrame(data=loadfun,
+                              columns=header + values,
+                              index=None)       
         #
         #
-        dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
-        return dfnew
+        header = ['load_name', 'component_name',
+                  #'load_comment', 'load_type',
+                  'load_level', 'load_system',
+                  'element_name', 'node_end']
+        dfload.drop(columns=['basic_load', 'load_comment', 'load_type'],
+                    inplace=True)
+        dfload = dfload.groupby(header, as_index=False)[values].sum()
+        dfload['load_level'] = 'combination'
+        return dfload
     #
     def Fn(self):
         """ """
@@ -275,21 +305,22 @@ class LoadCombSQL(LoadCombinationBasic):
         """
         db = DBframework()
         # group basic load by name
-        grp = dfbasic.groupby('load_name')
-        combgrp = dfcomb.groupby('load_name')
+        header = ['component_name','load_name']
+        blgrp = dfbasic.groupby(header)
+        combgrp = dfcomb.groupby(header)
+        dftemp = []
         for key, combfactors in combgrp:
             for row in combfactors.itertuples():
-                comb = grp.get_group(row.basic_load).copy()
+                try: # check for beam load only
+                    comb = blgrp.get_group((key[0], row.basic_load,)).copy()
+                except KeyError:
+                    continue
                 comb.loc[:, values] *= row.factor
                 comb['load_level'] = 'combination'
                 comb['load_name'] = row.load_name
                 comb['load_id'] = row.load_id
                 comb['load_title'] = row.load_title
-                #
-                try:
-                    dftemp = db.concat([dftemp, comb], ignore_index=True)
-                except UnboundLocalError:
-                    dftemp = comb
+                dftemp.append(comb)
         #
         #try:
         #    dftemp = dftemp.groupby(item, as_index=False)[values].sum()
@@ -298,6 +329,7 @@ class LoadCombSQL(LoadCombinationBasic):
         #except UnboundLocalError:
         #    dfmemb = dftemp
         #
+        dftemp = db.concat(dftemp, ignore_index=True)
         return dftemp
     #
 #     
@@ -355,7 +387,20 @@ class CombTypeSQL:
     def metocean(self):
         """
         """
-        return self._metocean    
+        return self._metocean
+    #
+    @property
+    def _component_name(self):
+        """ component name """
+        query = (self._component, )
+        table = 'SELECT name \
+                 FROM Component WHERE number = ?;'
+        conn = create_connection(self.db_file)
+        with conn:
+            cur = conn.cursor()
+            cur.execute(table, query)
+            items = cur.fetchone()
+        return items[0]
 #
 #
 class BasicCombSQL(Mapping):

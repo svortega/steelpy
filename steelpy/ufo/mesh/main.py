@@ -386,7 +386,7 @@ class Mesh(ufoBasicModel):
     #    """number of equations"""
     #    return self._nodes.neq(supports=self._boundaries._nodes)
     #
-    def Ke(self, sparse: bool = True):
+    def Ke(self, sparse:bool = True):
            #condensed: bool = True):
         """Returns the model's global stiffness matrix.
         

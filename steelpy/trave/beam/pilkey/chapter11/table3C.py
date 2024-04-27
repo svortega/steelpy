@@ -496,14 +496,8 @@ class FixedPinned(ArbitrarySupport):
             func1 = 0
         else:
             GAs = self.G * self.As
-            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs            
+            func1 = (eb.e2 + eb.Zeta * eb.e4) / GAs
         #
-        #try:
-        #    GAs = self.G * self.As
-        #    func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
-        #except ZeroDivisionError:
-        #    func1 = 0
-            
         return ((eb.e2 * eb.e3 / EI
                  - (eb.e4 / EI - func1) * (eb.e1 - eb.Eta * eb.e3)))
     #
@@ -527,16 +521,10 @@ class FixedPinned(ArbitrarySupport):
             func1 = 0
         else:
             GAs = self.G * self.As
-            func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs            
-        #
-        #try:
-        #    GAs = self.G * self.As
-        #    func1 =  (eb.e2 + eb.Zeta * eb.e4) / GAs
-        #except ZeroDivisionError:
-        #    func1 = 0        
+            func1 = (eb.e2 + eb.Zeta * eb.e4) / GAs
         #
         return ((self.Fw_bar * eb.e2
-                 + self.FM_bar * (eb.e4 / EI + func1)) / op)
+                 + self.FM_bar * (eb.e4 / EI - func1)) / op)
 #
 @dataclass
 class FixedFixed(ArbitrarySupport):

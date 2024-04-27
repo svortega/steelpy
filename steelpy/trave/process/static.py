@@ -438,7 +438,7 @@ class StaticSolver:
         """ """
         
         jbc = self._mesh.jbc()
-        Ke = self._mesh.Ke(sparse = sparse)
+        Ke = self._mesh.Ke(sparse=sparse)
         Kfactor = Ke.max()
         
         if sparse:
@@ -499,15 +499,17 @@ class StaticSolver:
         load_comb = self._mesh._load.combination()
         df_comb = load_comb.to_basic()
         #
-        # Update load comb displacments
-        Un = self._update_ndf(dfnode=Un, dfcomb=df_comb)        
+        # Update load comb displacements
+        Un = self._update_ndf(dfnode=Un,
+                              dfcomb=df_comb,
+                              values=self._mesh._plane.hdisp)
         #
         uptime = time.time() - start_time
         print(f"** {{U}} = {{F}}/[Ke] Solution Time: {uptime:1.4e} sec")
         return Un
     #
     def _update_ndf(self, dfnode, dfcomb, 
-                   values:list[str] = ['x', 'y', 'z', 'rx', 'ry', 'rz']):
+                   values:list[str]): #  = ['x', 'y', 'z', 'rx', 'ry', 'rz']
         """
         Update node displacements to include lcomb
         """
