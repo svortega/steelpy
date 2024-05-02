@@ -49,7 +49,8 @@ class BeamIMMaster(Mapping):
         self._system: array = array("I", [])
     #
     def __len__(self) -> int:
-        return len(self._labels)
+        beams = list(dict.fromkeys(self._labels))
+        return len(beams)
     #
     def __contains__(self, value) -> bool:
         return value in self._labels
@@ -174,78 +175,6 @@ class BeamLoadItemIM(BeamIMMaster):
     #
     # ----------------------------------------
     #
-    #def _get_line(self, line_load: list|dict):
-    #    """ get line load in beam local system"""
-    #    #
-    #    # update inputs
-    #    if isinstance(line_load, dict):
-    #        udl = check_beam_dic(line_load)
-    #        title = udl.pop()
-    #        
-    #    elif isinstance(line_load[-1], str):
-    #        title = line_load.pop()
-    #        if isinstance(line_load[0], Number):
-    #            udl = check_list_units(line_load)
-    #        else:
-    #            udl = get_beam_udl_load(line_load)
-    #    else:
-    #        title ='NULL'
-    #        udl = get_beam_udl_load(line_load)
-    #    #
-    #    # get system local = 1
-    #    try:
-    #        1 / self._system_flag
-    #        return [*udl, 1, title]
-    #    except ZeroDivisionError:
-    #        # local nodal loading
-    #        nload = [*udl[:3], 0, 0, 0,
-    #                 *udl[3:6], 0, 0, 0,]
-    #        nload = trnsload(nload, self._beam.T3D())
-    #        nload = [*nload[:3], *nload[6:9]] 
-    #        return [*nload, *udl[6:], 1, title]
-    ##
-    #def _get_point(self, point_load: list|dict):
-    #    """ get point load in beam local system"""
-    #    # update inputs
-    #    if isinstance(point_load, dict):
-    #        point = check_point_dic(point_load)
-    #        title = point.pop()
-    #    
-    #    elif isinstance(point_load[-1], str):
-    #        title = point_load.pop()
-    #        if isinstance(point_load[0], Number):
-    #            point = check_list_units(point_load)
-    #        else:
-    #            point = get_beam_node_load(point_load)
-    #    
-    #    else:
-    #        title = 'NULL'
-    #        point = get_beam_node_load(point_load)
-    #    #
-    #    # get system local = 1
-    #    try: # Local system
-    #        1 / self._system_flag
-    #        return [*point, 1, title]
-    #    except ZeroDivisionError: # global to local system
-    #        pload = [*point[:6], 0, 0, 0, 0, 0, 0]
-    #        pload = trnsload(pload, self._beam.T3D())
-    #        return [*pload[:6], point[6], 1, title]
-    #
-    # ----------------------------------------
-    #
-    #def fer(self, beams):
-    #    """ Return Fix End Reactions (FER) global system"""
-    #    #beams = self._f2u_beams
-    #    for key in set(self._labels):
-    #        beam = beams[key]
-    #        end_nodes = beam.connectivity
-    #        res = self._load(beam=beam).fer()
-    #        for gnload in res:
-    #            self._node_eq[key] = [[end_nodes[0], *gnload[4], gnload[2]],
-    #                                  [end_nodes[1], *gnload[5], gnload[2]]]
-    #    #print('--> get_end_forces')
-    #    #1 / 0
-    #    
 #
 #
 #
@@ -286,95 +215,6 @@ class BeamLoadTypeIM(BeamTypeBasic):
     #
     #
     # ------------------
-    #
-    #@property
-    #def line(self):
-    #    """
-    #    Linear Varying Load (lvl) - Non Uniformly Distributed Load
-    #    
-    #    value : [qx1, qy1, qz1, qx2, qy2, qz2, L1, L2]
-    #
-    #                    |
-    #         q0         | q1
-    #    o------|        |----------o
-    #    |                          |
-    #    +  L0  +        +    L1    +
-    #
-    #    """
-    #    #beam_name = self._beam.name
-    #    #1 / 0
-    #    #beam_name = self._beam_id
-    #    return self._line #[beam_name]
-    
-    #@line.setter
-    #def line(self, values: list):
-    #    """
-    #    Linear Varying Load (lvl) - Non Uniformly Distributed Load
-    #            value : [qx1, qy1, qz1, qx2, qy2, qz2, L1, L2]
-    #
-    #                    |
-    #         q0         | q1
-    #    o------|        |----------o
-    #    |                          |
-    #    +  L0  +        +    L1    +
-    #    """
-    #    beam_name = self._beam.name
-    #    #beam_name = self._beam_id
-    #    #
-    #    if isinstance(values, dict):
-    #        load = self._get_line(values)
-    #        load.insert(0, 'load')
-    #        self._line[beam_name] = load
-    #
-    #    elif isinstance(values[0], (list, tuple)):
-    #        for item in values:
-    #            load =  self._get_line(item)
-    #            load.insert(0, 'load')
-    #            self._line[beam_name] = load
-    #    else:
-    #        load =  self._get_line(values)
-    #        load.insert(0, 'load')
-    #        self._line[beam_name] = load
-    #
-    #
-    # ------------------
-    #
-    #@property
-    #def point(self):
-    #    """ Concentrated force """
-    #    #beam_name = self._beam.name
-    #    #beam_name = self._beam_id
-    #    #1 / 0
-    #    return self._point #[beam_name]
-    
-    #@point.setter
-    #def point(self, values: list):
-    #    """
-    #    Concentrated force
-    #    """
-    #    beam_name = self._beam.name
-    #    #beam_name = self._beam_id
-    #    #
-    #    if isinstance(values, dict):
-    #        load = self._get_point(values)
-    #        load.insert(0, 'force')
-    #        self._point[beam_name] = load
-    #
-    #    elif isinstance(values[0], (list, tuple)):
-    #        for item in values:
-    #            #value.insert(0, self._Lbeam)
-    #            #load = get_beam_point_load(load=values)
-    #            load = self._get_point(item)
-    #            load.insert(0, 'force')
-    #            self._point[beam_name] = load
-    #    else:
-    #        #values.insert(0, self._Lbeam)
-    #        #load = get_beam_point_load(load=values)
-    #        load =  self._get_point(values)
-    #        load.insert(0, 'force')
-    #        self._point[beam_name] = load
-    #
-    #       
 #
 #
 #
@@ -467,7 +307,7 @@ class BeamDistributedIM(BeamLineBasic):
         """
         index_list: list = [x for x, item in enumerate(self._labels)
                             if item == beam_name]
-        
+        #1/0
         udl_list: list = []
         for index in index_list:
             udl_list.append(LineBeam(self._labels[index], # name

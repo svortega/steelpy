@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections import namedtuple
 from dataclasses import dataclass
 import time
-from typing import NamedTuple
+#from typing import NamedTuple
 from datetime import datetime as dt
 #
 #
@@ -578,7 +578,7 @@ class MainProcess:
         #                 if_exists='append', index=False)
         #
         uptime = time.time() - start_time
-        print(f"** Beam Force Calculation Time: {uptime:1.4e} sec")
+        print(f"** Beam Force Calculation: {uptime:1.4e} sec")
         #print('ok')
         return df_mif, df_nforce
     #    
@@ -704,7 +704,7 @@ class MainProcess:
                                 if_exists='append', index=False)
         #
         uptime = time.time() - start_time
-        print(f"** Beam stress calculation Time: {uptime:1.4e} sec")
+        print(f"** Beam Stress Calculation: {uptime:1.4e} sec")
     #
     # -----------------------------------------------------------
     # 
@@ -881,16 +881,16 @@ class NodeGenRespEq:
         # Inverting sign to calculate beam load along length
         #
         # In plane
-        R0y[0] *= -1   # Vy
-        #R0y[1] *= -1  # Mz
-        #R0y[2] *= -1  # rz
-        R0y[3] *= -1   # dy
+        #R0y[0] *= -1   # Vy
+        R0y[1] *= -1  # Mz
+        R0y[2] *= -1  # rz
+        #R0y[3] *= -1   # dy
         #
         # Out plane
-        R0z[0] *= -1    # Vz
-        # R0z[1] *= -1  # My
-        # R0z[2] *= -1  # ry
-        R0z[3] *= -1    # dz
+        R0z[0] *= -1   # Vz
+        R0z[1] *= -1   # My
+        R0z[2] *= -1   # ry
+        R0z[3] *= -1   # dz
         #
         return Req(R0x, R0t, R0y, R0z)
     #
@@ -913,7 +913,7 @@ class NodeGenRespEq:
                nd0[2]]    # dz
         #
         # Torsion
-        T0 = 1 * bload[3]
+        T0 = -1 * bload[3]
         rx = 1 * nd0[3]
         #
         # Thin walled sections (Ibeam, Channel & Z)

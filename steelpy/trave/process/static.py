@@ -505,7 +505,7 @@ class StaticSolver:
                               values=self._mesh._plane.hdisp)
         #
         uptime = time.time() - start_time
-        print(f"** {{U}} = {{F}}/[Ke] Solution Time: {uptime:1.4e} sec")
+        print(f"** {{F}} = [Ke] {{U}} Solution: {uptime:1.4e} sec")
         return Un
     #
     def _update_ndf(self, dfnode, dfcomb, 
@@ -685,7 +685,7 @@ class StaticSolver:
         Us = db.concat(Utemp, ignore_index=True)
         #Us = self.df(Utemp)
         uptime = time.time() - start_time
-        print(f"** {{U}} = {{F}}/[Kt] Solution Time: {uptime:1.4e} sec")
+        print(f"** {{F}} = [Kt] {{U}} Solution: {uptime:1.4e} sec")
         return Us
     #    
     #

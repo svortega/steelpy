@@ -61,12 +61,12 @@ class TableBasic:
                 # Axial force 
                 if self.P > 0: # Tension
                     # Beam with Tensile Axial Force P
-                    #print('tension')
+                    #print(f'tension : {self.P}')
                     return self._beam_tension(x, load=load)
                 
                 else: # compression
                     # Beam with Compressive Axial Force P
-                    #print('compression')
+                    #print(f'compression : {self.P}')
                     return self._beam_compression(x, load=load)
                  
         except ZeroDivisionError:

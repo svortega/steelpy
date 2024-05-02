@@ -377,10 +377,11 @@ class BeamLoadBasic(Mapping):
         self._system_flag = 0  # Global system default       
     
     def __len__(self) -> int:
-        return len(self._labels)
+        items = list(set(dict.fromkeys(self._labels)))
+        return len(items)
 
     def __iter__(self):
-        items = list(dict.fromkeys(self._labels))
+        items = list(set(dict.fromkeys(self._labels)))
         return iter(items)
     
     def __contains__(self, value) -> bool:

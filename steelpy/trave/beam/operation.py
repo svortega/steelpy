@@ -165,8 +165,8 @@ class BeamBasic:
         Fa = [-1*item for item in Fa]
         #
         # Torsion [T, Phi, Psi, B,Tw]
-        T1x = self._torsion.response(x=self.L, R0=R0[1],
-                                     Fx=[-1 * item for item in Fbar[9]])
+        T1x = self._torsion.response(x=self.L, R0=R0[1], Fx=Fbar[9])
+                                     #Fx=[-1 * item for item in Fbar[9]])
         T1x = [-1*item for item in T1x]
         #
         # Bending in plane [V, M, theta, w, P]
@@ -217,7 +217,7 @@ class BeamBasic:
         #
         # Torsion [T, Phi, Psi, B, Tw]
         suppt = self._torsion.R0(Fbar=Fbar[9])
-        suppt = [-1*item for item in suppt]
+        #suppt = [-1*item for item in suppt]
         #
         # Bending in plane [V, M, theta, w, P]
         bload = [-1 * item for item in Fbar[10]]
@@ -274,9 +274,8 @@ class BeamBasic:
         #    1 / self.Cw
         #    tload =  Ftx
         #except ZeroDivisionError:
-        tload = [-1 * item for item in Ftx]
-        
-        R1t = self._torsion.response(x=x, R0=R0t, Fx=tload)
+        #tload = [-1 * item for item in Ftx]
+        R1t = self._torsion.response(x=x, R0=R0t, Fx=Ftx)
         # Bending in plane [V, M, theta, w, P]
         #Fx = [-1 * item for item in Fyx]
         #Fx.append(R0x[0])
@@ -318,7 +317,7 @@ class BeamBasic:
                            Area=self.area,
                            Asy=self.Asy, Asz=self.Asz,
                            P=0.0, factor=1.0) # FIXME: comb maybe?
-            
+
             reac[item.load_name].append([item.load_name, item.component_name, 
                                          item.title, item.load_type, 'basic', 
                                          item.coordinate_system,

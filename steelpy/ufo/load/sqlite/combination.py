@@ -260,7 +260,7 @@ class LoadCombSQL(LoadCombinationBasic):
         try:
             dfnew = self.update_combination(dfbasic, dfcomb,
                                             values=values)
-        except UnboundLocalError:
+        except ValueError:
             raise IOError('2nd order requires Load Combination as input')
         #
         colgrp = ['load_name', 'load_id', 

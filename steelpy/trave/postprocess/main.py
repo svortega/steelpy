@@ -147,11 +147,14 @@ class UnSQL:
                 'x', 'y', 'z', 'rx', 'ry', 'rz']         
         db = DBframework()
         Un = db.DataFrame(data=ndata, columns=cols)
-        #Un = Un.copy()
-        Un.fillna(value=float(0.0), inplace=True)
         Un.drop(labels=['number'], axis=1, inplace=True)
-        return Un.astype({'x': 'float64', 'y': 'float64', 'z': 'float64',
-                          'rx': 'float64', 'ry': 'float64', 'rz': 'float64'})
+        Un = Un.astype({'x': 'float64', 'y': 'float64', 'z': 'float64',
+                        'rx': 'float64', 'ry': 'float64', 'rz': 'float64'}).fillna(value=0.0)
+        #Un.fillna(value=0.0, inplace=True)
+        #Un.drop(labels=['number'], axis=1, inplace=True)
+        #return Un.astype({'x': 'float64', 'y': 'float64', 'z': 'float64',
+        #                  'rx': 'float64', 'ry': 'float64', 'rz': 'float64'})
+        return Un
     
     @df.setter
     def df(self, df):

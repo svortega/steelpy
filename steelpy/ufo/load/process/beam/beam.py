@@ -90,7 +90,7 @@ class BeamLoadClass:
                          area=section.area,
                          Iy=section.Iy, Iz=section.Iz,
                          J=section.J, E=material.E,
-                         G=material.G, Cw=section.Cw,
+                         G=material.G, Cw=section.Cw*0,
                          Asy=section.Asy,
                          Asz=section.Asz,
                          Pdelta=False)
@@ -110,7 +110,7 @@ class BeamLoadClass:
         Fbar = self.Fx(x=L, L=L,
                        E=material.E, G=material.G, 
                        Iy=section.Iy, Iz=section.Iz,
-                       J=section.J, Cw=section.Cw,
+                       J=section.J, Cw=section.Cw*0,
                        Area=section.area,
                        Asy=section.Asy, Asz=section.Asz,
                        P=0.0)
@@ -123,19 +123,19 @@ class BeamLoadClass:
         #
         # Force = [fx, fy, fz, mx, my, mz]
         # Node 1
-        Fend1 = [end1.x[0], -1 * end1.y[0], -1 *end1.z[0], # Fx, Fy, Fz
-                 end1.t[0], 1 * end1.z[1], 1 * end1.y[1]]  # Mx, My, Mz
+        Fend1 = [end1.x[0], 1 * end1.y[0], -1 *end1.z[0], # Fx, Fy, Fz
+                 end1.t[0], -1 * end1.z[1], -1 * end1.y[1]]  # Mx, My, Mz
         # Node 2
-        Fend2 = [end2.x[0], -1 * end2.y[0], -1 * end2.z[0], # Fx, Fy, Fz
-                 end2.t[0], -1 * end2.z[1], -1 * end2.y[1]]  # Mx, My, Mz
+        Fend2 = [end2.x[0], 1 * end2.y[0], -1 * end2.z[0], # Fx, Fy, Fz
+                 end2.t[0], 1 * end2.z[1], 1 * end2.y[1]]  # Mx, My, Mz
         #
         # Displacement = [x, y, z, rx, ry, rz]
         # Node 1
-        Rend1 = [end1.x[3], -1 * end1.y[3], -1 * end1.z[3],  # x, y, z,
+        Rend1 = [end1.x[3], 1 * end1.y[3], 1 * end1.z[3],  # x, y, z,
                  end1.t[1], 1 * end1.z[2], 1 * end1.y[2]]  # rx, ry, rz
         # Node 2
         Rend2 = [end2.x[3], 1 * end2.y[3], 1 * end2.z[3],  # x, y, z,
-                 end2.t[1], -1 * end2.z[2], -1 * end2.y[2]]  # rx, ry, rz
+                 end2.t[1], 1 * end2.z[2], 1 * end2.y[2]]  # rx, ry, rz
         #
         try: # local
             1 / system

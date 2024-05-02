@@ -21,7 +21,8 @@ def Ke_matrix(elements,
               nodes,
               ndof: int = 6,
               #condensed: bool = True,
-              sparse: bool = True):
+              sparse: bool = True,
+              mitem:str = "Ke"):
     """
     Stiffness matrix
 
@@ -31,59 +32,79 @@ def Ke_matrix(elements,
     solver :
     condensed : Matrix with dof = 0 removed
     """
+    start_time = time.time()
+    #mitem = "Ke"
     Ka = assemble_matrix(elements=elements,
                          nodes=nodes,
                          ndof=ndof,
-                         mitem="Ke", item=None)
+                         mitem=mitem, item=None)
     if sparse:
         from scipy.sparse import coo_matrix
         Ka = coo_matrix(Ka)
+    #
+    uptime = time.time() - start_time
+    print(f"** [{mitem}] assembly: {uptime:1.4e} sec")
     return Ka
 
 
 #
 def Km_matrix(elements,
               nodes,
-              ndof: int = 6,
-              sparse: bool = True):
+              ndof:int = 6,
+              sparse:bool = True,
+              mitem:str = "Km"):
     """ Mass matrix"""
+    start_time = time.time()
     Ka = assemble_matrix(elements=elements,
                          nodes=nodes,
                          ndof=ndof,
-                         mitem="Km", item=None)
+                         mitem=mitem, item=None)
     if sparse:
         from scipy.sparse import coo_matrix
         Ka = coo_matrix(Ka)
+    #
+    uptime = time.time() - start_time
+    print(f"** [{mitem}] assembly: {uptime:1.4e} sec")
     return Ka
 
 
 #
 def Kg_matrix(elements,
               nodes, D,
-              ndof: int = 6,
-              sparse: bool = True):
+              ndof:int = 6,
+              sparse:bool = True,
+              mitem:str="Kg"):
     """ Geometric stiffness matrix """
+    start_time = time.time()
     Kg = assemble_Gmatrix(elements=elements,
                           nodes=nodes,
                           ndof=ndof,
-                          mitem="Kg", item=D)
+                          mitem=mitem, item=D)
     if sparse:
         from scipy.sparse import coo_matrix
         Kg = coo_matrix(Kg)
+    #
+    uptime = time.time() - start_time
+    print(f"** [{mitem}] assembly: {uptime:1.4e} sec")
     return Kg
 #
 def Kt_matrix(elements,
               nodes, D,
-              ndof: int = 6,
-              sparse: bool = True):
+              ndof:int = 6,
+              sparse:bool = True,
+              mitem:str="Kt"):
     """ Tangent stiffness matrix """
+    start_time = time.time()
     Kt = assemble_Gmatrix(elements=elements,
                           nodes=nodes,
                           ndof=ndof,
-                          mitem="Kt", item=D)
+                          mitem=mitem, item=D)
     if sparse:
         from scipy.sparse import coo_matrix
         Kt = coo_matrix(Kt)
+    #
+    uptime = time.time() - start_time
+    print(f"** [{mitem}] assembly: {uptime:1.4e} sec")
     return Kt
 #
 #
@@ -222,8 +243,8 @@ def assemble_matrix(elements, nodes,
                      nn=nn, ndof=ndof,
                      mitem=mitem, item=item)
     #
-    uptime = time.time() - start_time
-    print(f"** [{mitem}] assembly Time: {uptime:1.4e} sec")
+    #uptime = time.time() - start_time
+    #print(f"** [{mitem}] assembly: {uptime:1.4e} sec")
     return Ka
 #
 def assemble_Gmatrix(elements, nodes,
@@ -237,13 +258,13 @@ def assemble_Gmatrix(elements, nodes,
     ndof : node degree of freedom
     mitem : matrix item
     """
-    print(f"** Processing Global [{mitem}] Matrix")
-    start_time = time.time()
+    #print(f"** Processing Global [{mitem}] Matrix")
+    #start_time = time.time()
     nn = len(nodes.keys())
     Ka = form_Gmatrix(elements=elements,
                       nn=nn, ndof=ndof,
                       mitem=mitem, item=item)
-    uptime = time.time() - start_time
-    print(f"** [{mitem}] assembly Finish Time: {uptime:1.4e} sec")
+    #uptime = time.time() - start_time
+    #print(f"** [{mitem}] assembly: {uptime:1.4e} sec")
     return Ka
 #

@@ -367,9 +367,9 @@ class FixedPinned(ArbitrarySupport):
     def T0(self) -> float:
         """Twisting moment"""
         CL = self.C * self.L
-        # operator = (sinh(CL) -  CL * cosh(CL))
+        operator = (sinh(CL) -  CL * cosh(CL))
         return (self.Fphi_bar * self.E * self.Cw * self.C**3 * cosh(CL)
-                - self.C * (1.0 - cosh(CL)) * self.FB_bar)
+                - self.C * (1.0 - cosh(CL)) * self.FB_bar) / operator
 
     #
     @property
@@ -407,7 +407,7 @@ class FixedFixed(ArbitrarySupport):
     def T0(self) -> float:
         """Twisting moment"""
         CL = self.C * self.L
-        operator = cosh(CL)
+        operator = CL * cosh(CL)
         #
         #part0 = self.G * self.J / operator
         #part1 = self.C * self.Fphi_bar * sinh(CL)
@@ -415,19 +415,20 @@ class FixedFixed(ArbitrarySupport):
         #print(part0, part1, part2)
         #diff = part1 - part2
         #print(diff, diff*part0)
+        #1/0
         return (self.G * self.J / operator
-                * (self.C * self.Fphi_bar * sinh(CL)
-                   - (1.0 - cosh(CL)) * self.Fpsi_bar))
+                * (self.C * self.Fpsi_bar * sinh(CL)
+                   - (1.0 - cosh(CL)) * self.Fphi_bar))
 
     #
     @property
     def B0(self) -> float:
         """Bimoment"""
         CL = self.C * self.L
-        operator = cosh(CL)
-        return (1.0 / operator
-                * (self.E * self.Cw * self.C * (CL - sinh(CL)) * self.Fpsi_bar
-                   - self.G * self.J * (cosh(CL) - 1.0) * self.Fphi_bar))
+        operator = CL * cosh(CL)
+        #1 / 0
+        return (self.E * self.Cw * self.C * (CL - sinh(CL)) * self.Fpsi_bar
+                - self.G * self.J * (cosh(CL) - 1.0) * self.Fphi_bar) / operator
 
 
 #

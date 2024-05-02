@@ -341,7 +341,7 @@ class BeamItemBasic:
             m12 = unp_matrix[R1_indices, :][:, R2_indices]
             m21 = unp_matrix[R2_indices, :][:, R1_indices]
             m22 = unp_matrix[R2_indices, :][:, R2_indices]
-            return  m11, m12, m21, m22
+            return m11, m12, m21, m22
     #
     def _aux_list(self):
         """

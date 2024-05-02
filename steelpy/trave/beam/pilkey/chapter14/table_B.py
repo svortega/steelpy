@@ -133,7 +133,7 @@ class TOpenConcentrated(ArbitraryLoading):
         C = self.C(E=E, G=G, J=J, Cw=Cw)
         return (self.T / (G * J)
                 * (self.function_n(step, 0)
-                   -  self.fun_sincos(fun=cosh, step=step, C=C)))
+                   - self.fun_sincos(fun=cosh, step=step, C=C)))
 
     #
     def FT(self, x, E: float, G: float, J: float, Cw: float) -> float:

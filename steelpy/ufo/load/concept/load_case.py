@@ -134,10 +134,10 @@ class LoadTypesConcept:
         self._selfweight[self.name] = [*values, self.title]
     #
     #
-    @property
-    def points(self):
-        """ return all points"""
-        return self._node
+    #@property
+    #def points(self):
+    #    """ return all points"""
+    #    return self._node
     #
     @property
     def point(self):
@@ -154,20 +154,20 @@ class LoadTypesConcept:
             node_id = self.f2u_points.get_new_point(values)
         self._node_id = node_id
     #
-    @property
-    def line(self):
-        """ """
-        return self._line[self._line_id]
+    #@property
+    #def line(self):
+    #    """ """
+    #    return self._line[self._line_id]
     #
-    @line.setter
-    def line(self, values):
-        """ """
-        1 / 0
+    #@line.setter
+    #def line(self, values):
+    #    """ """
+    #    1 / 0
     #
-    @property
-    def beams(self):
-        """ return all beam"""
-        return self._beam
+    #@property
+    #def beams(self):
+    #    """ return all beam"""
+    #    return self._beam
     #
     @property
     def beam(self):
@@ -231,110 +231,4 @@ class LoadTypesConcept:
 #
 #
 # ---------------------------------
-#
-#
-#class BasicLoadIM(BasicLoadBasic):
-#    """
-#    FE Load Cases
-#    
-#    LoadType
-#        |_ name
-#        |_ number
-#        |_ basic
-#        |_ combination_level
-#        |_ time_series
-#        |_ 
-#        |_ temperature
-#    
-#    **Parameters**:  
-#      :number:  integer internal number 
-#      :name:  string node external name
-#    """
-#    __slots__ = ['_labels', '_title','_number', 'gravity',
-#                 '_basic', '_f2u_elements', '_f2u_nodes']
-#
-#    def __init__(self, nodes, elements):
-#        """
-#        """
-#        super().__init__()
-#        self._labels: list = []
-#        self._title: list[str] = []
-#        self._number: array = array("I", [])        
-#        #
-#        self._basic: dict = {}
-#        self._f2u_elements = elements
-#        self._f2u_nodes = nodes
-#    #
-#    def __setitem__(self, load_name: str|int, load_title: str) -> None:
-#        """
-#        load_name :
-#        load_title :
-#        """
-#        1 / 0
-#        try:
-#            self._labels.index(load_name)
-#            self._title.index(load_title)
-#            raise Warning("Basic Load {:} already defined".format(load_title))
-#        except ValueError:
-#            self._labels.append(load_name)
-#            self._title.append(load_title)
-#            load_id = next(self.get_number())
-#            self._basic[load_name] = LoadTypeInMemory(name=load_name,
-#                                                      number=load_id,
-#                                                      title=load_title,
-#                                                      nodes=self._f2u_nodes,
-#                                                      elements=self._f2u_elements)
-#            self._number.append(load_id)
-#
-#    def __getitem__(self, load_name: str|int):
-#        """
-#        """
-#        try:
-#            return self._basic[load_name]
-#        except KeyError:
-#            raise IOError("Basic load case {:} not defined".format(load_name))
-#
-#    #
-#    def __delitem__(self, load_name: str|int):
-#        """
-#        """
-#        del self._basic[load_name]
-#    #
-#    #
-#    # def get_basic_load(self, elements, nodes, materials,
-#    #                   sections):
-#    #    """
-#    #    """
-#    #    1/0
-#    #    #return get_basic_load(self, elements, nodes, 
-#    #    #                      materials, sections)
-#    #
-##
-##
-##
-#class LoadTypeInMemory(LoadTypeBasic):
-#    """
-#    """
-#    __slots__ = ['_node', '_beam', '_selfweight',
-#                 'name', 'number', 'title', '_wave']
-#                 #'_f2u_beams', '_f2u_nodes']
-#
-#    def __init__(self, nodes, elements):
-#        """
-#        """
-#        #super().__init__(name, number, title)
-#        #self.name = name
-#        #self.number = number
-#        #self.title = title
-#        self._selfweight = SelfWeight()
-#        self._node = NodeLoadItemIM(load_name=name,
-#                                    load_title = title, 
-#                                    nodes=nodes)
-#        beams = elements.beams()
-#        self._beam = BeamLoadItemIM(load_name=name,
-#                                    load_title = title,
-#                                    beams=beams)
-#        #
-#        self._wave = WaveLoadItemIM(load_name=name)
-#    #
-#
+
