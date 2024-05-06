@@ -70,7 +70,6 @@ class Beam(BeamResBasic):
     #
     # -----------------------------
     #
-    #@property
     def _plane(self):
         """ """
         conn = create_connection(self.db_file)
@@ -86,7 +85,6 @@ class Beam(BeamResBasic):
     #
     # -----------------------------
     #
-    #@property
     def force(self, units:str='si'):
         """beam integration forces"""
         #
@@ -99,8 +97,12 @@ class Beam(BeamResBasic):
         #
         return BeamForce(df, units=units)
     #
-    #@property
     def displacement(self, units:str='si'):
+        """beam integration forces"""
+        return self.deflection(units)
+        
+    #
+    def deflection(self, units:str='si'):
         """beam integration forces"""
         #
         conn = create_connection(self.db_file)
@@ -110,7 +112,7 @@ class Beam(BeamResBasic):
         if self.plane.plane2D:
             df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)        
         #
-        return BeamDeflection(df, units=units)  
+        return BeamDeflection(df, units=units)    
     #
     def stress(self, units:str='si'):
         """ beam stress """
@@ -167,7 +169,7 @@ class BeamResItem:
         #
         return BeamForce(df, units=units)
     #
-    def displacement(self, units:str='si'):
+    def deflection(self, units:str='si'):
         """ """
         beam_name = self._beam.name
         conn = create_connection(self._db_file)
@@ -287,10 +289,10 @@ def get_displacement(conn, element_name: int|str|None=None,
     """ """
     if element_name:
         #project = (node_name,)
-        query = f'SELECT {item} FROM ResultBeamU \
+        query = f'SELECT {item} FROM ResultBeamDeflection \
                   WHERE element_name = {element_name}'
     else:
-        query = f'SELECT {item} FROM ResultBeamU'
+        query = f'SELECT {item} FROM ResultBeamDeflection'
     
     cols = ['number', 'load_name', 'component_name', 
             'load_level', 'load_system', 

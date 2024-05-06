@@ -76,8 +76,8 @@ print(mesh.boundary())
 # ----------------------------------------------------
 #
 # Example:
-# Elements[number] = [beam, material, section, node1, node2, roll_angle]
-# Elements[number] = [plate, material, section, node1, node2, node3, node4]
+# Elements[number] = [beam, node1, node2, material, section, roll_angle]
+# Elements[number] = [plate, node1, node2, node3, node4, material, section, ]
 #
 #
 mesh.element([(1,  'beam',  1, 2, 10, 15, 0),
@@ -212,7 +212,7 @@ print(bl_blinedf)
 # Structural Analysis Implicit
 # ----------------------------------------------------
 #
-frame = Trave3D(mesh=mesh)
+frame = Trave2D(mesh=mesh)
 frame.static()
 results = frame.results()
 #
@@ -227,12 +227,12 @@ ndisp = noderes[1].displacement()
 #
 beamres = results.beam()
 #print(beamres)
-bdisp = beamres.displacement()
+bdisp = beamres.deflection()
 bforce = beamres.force()
 bstress = beamres.stress()
 # get individual beam results
-bforce = beamres[1].displacement()
-bdisp = beamres[2].force()
+bdisp = beamres[1].deflection()
+bforce = beamres[2].force()
 bstress = beamres[3].stress()
 # get pandas df
 bstress_df = bstress.df

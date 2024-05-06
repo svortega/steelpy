@@ -210,7 +210,7 @@ class MainProcess:
         # ---------------------------------------------------
         #        
         # Beam local deflection
-        table_nodes = "CREATE TABLE IF NOT EXISTS ResultBeamU (\
+        table_nodes = "CREATE TABLE IF NOT EXISTS ResultBeamDeflection (\
                         number INTEGER PRIMARY KEY NOT NULL,\
                         load_name NOT NULL,\
                         component_name NOT NULL, \
@@ -715,7 +715,6 @@ class MainProcess:
         beam_steps : Integration points beam element (10 default)
         """
         print("** Postprocessing")
-        #      
         #
         df_beamf, df_Qn = self.solve(Un, beam_steps,
                                      Pdelta=Pdelta)
@@ -740,7 +739,6 @@ class MainProcess:
                                     values=self._plane.hforce)
         #
         #
-        #
         df_Qbeam = df_beamf[['load_name', 'component_name', 
                              'load_level', 'load_system',
                              'element_name', 'node_end',
@@ -758,7 +756,7 @@ class MainProcess:
             df_Qbeam.to_sql('ResultBeamForce', conn,
                             if_exists='append', index=False)
             #
-            df_Dbeam.to_sql('ResultBeamU', conn, 
+            df_Dbeam.to_sql('ResultBeamDeflection', conn, 
                             if_exists='append', index=False)
         #        
         #
@@ -944,7 +942,6 @@ class NodeGenRespEq:
 #
 #
 Req = namedtuple('Reactions', ['x', 't', 'y', 'z'])
-#Pload = namedtuple('PointLoad', ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
 Tload = namedtuple('TorsionLoad', ['Psi', 'B', 'Tw'])
 #
 # -----------------------------------------------------------

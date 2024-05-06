@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # set units
 units = Units()
 #
-Fx_factor = 1.0
+Fx_factor = 0.0
 #
 #
 # beam class
@@ -45,7 +45,7 @@ print(beam.material)
 # set supports : pinned/fixed/free/guided/spring [k=F/x]
 #
 #beam.support = ["fixed", "free"]
-beam.support = ["fixed", "pinned"]
+beam.support = ["fixed", "fixed"]
 #
 #beam.support[1] = "pinned"
 #beam.support[1] = ["spring", 200 * units.kN/units.m]
@@ -66,14 +66,14 @@ beam.support = ["fixed", "pinned"]
 #          0*units.kN*units.m, 200*units.kN*units.m, 300*units.kN*units.m,
 #          'point_2']
 #
-#beam.P = {'L1':4.5*units.m,
+beam.P = {#'L1':4.5*units.m,
 #          'Fy':-75 * units.kN,
 #          #'Mz': 33.75  * units.kN * units.m,
 #          #'Fx': -0.1 * units.N,
-#          #'L1':90*units.inch,
+          'L1':14*units.ft,
 #          #'Fy':15*units.kips,
-#          'Mx':90*units.kip*units.inch,
-#          'name': 'selfweight_y'}
+          'Mx':-90*units.kip*units.inch,
+          'name': 'selfweight_y'}
 #
 #beam.P = {'L1':28*units.ft,
 #          'Fx': -445 * Fx_factor * units.kN,
@@ -104,8 +104,8 @@ beam.support = ["fixed", "pinned"]
 #beam.q = {'qz1':15*units.kN/units.m, 'qz2':15*units.kN/units.m,
 #          'name': 'selfweight_z'}
 #
-beam.q = {'qy':0.20 * units.kip / units.ft,
-          'name': 'AISC_C-C2.2'}
+#beam.q = {'qy':0.20 * units.kip / units.ft,
+#          'name': 'AISC_C-C2.2'}
 #
 #beam.load[1].line = {'qy1':9*units.kN/units.m, 'qz1':-9*units.kN/units.m}
 #
@@ -119,6 +119,8 @@ beam.q = {'qy':0.20 * units.kip / units.ft,
 #
 #
 # beam results
+Mx =  -90*units.kip*units.inch
+print(Mx.convert('newton*metre'))
 #
 reactions = beam.reactions()
 print(reactions)

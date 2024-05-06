@@ -5,12 +5,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
 
-import numpy as np
-
-#from typing import NamedTuple
-#import pickle
-#from typing import NamedTuple
-#from datetime import datetime as dt
 
 #
 # package imports
@@ -190,7 +184,7 @@ class UnSQL:
         #nodeconn['title'] = df['title']
         #
         with conn:
-            nodeconn.to_sql('ResultNodeU', conn,
+            nodeconn.to_sql('ResultNodeDisplacement', conn,
                             index_label=header, 
                             if_exists='append', index=False)
         #
@@ -239,7 +233,7 @@ class UnSQL:
     def _create_table(self, conn) -> None:
         """ """
         # Node displacement solution
-        table_nodes = "CREATE TABLE IF NOT EXISTS ResultNodeU (\
+        table_nodes = "CREATE TABLE IF NOT EXISTS ResultNodeDisplacement (\
                         number INTEGER PRIMARY KEY NOT NULL,\
                         load_name NOT NULL,\
                         component_name NOT NULL, \
@@ -258,14 +252,9 @@ class UnSQL:
     #
     def _pull_data(self, conn):
         """ """
-        #table = "SELECT number AS number, load_name AS load_name, \
-        #                component_name AS component_name,  load_level AS load_level, \
-        #                load_system AS load_system, node_name AS node_name, \
-        #                IFNULL(x, 0.0) AS x, IFNULL(y, 0.0) AS y, IFNULL(z, 0.0) AS z,\
-        #                IFNULL(rx, 0.0) AS rx, IFNULL(ry, 0.0) AS ry, IFNULL(rz, 0.0) AS rz \
-        #        FROM ResultNodeU"
         #
-        table = "SELECT ResultNodeU.* FROM ResultNodeU"
+        table = "SELECT ResultNodeDisplacement.* \
+                 FROM ResultNodeDisplacement"
         #
         # Node load
         with conn:

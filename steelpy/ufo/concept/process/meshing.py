@@ -24,15 +24,7 @@ class MeshingConcept:
         """
         """
         self.concept = concept
-        #self._component = component
-        #
-        #filename = component + "_f2u.db"
-        #path = os.path.abspath(filename)
-        #db_file = path        
-        #
-        #self._mesh = Mesh(db_name=component)
         self._mesh = concept._mesh
-        #print('--')
     #
     def get_mesh(self) -> None:
         """
@@ -42,6 +34,7 @@ class MeshingConcept:
         self._set_mesh()
         self._set_boundary()
         self._set_load()
+        self._set_combination()
         uptime = time.time() - start_time
         print(f"** Meshing: {uptime:1.4e} sec")
         return self._mesh
@@ -224,6 +217,7 @@ class MeshingConcept:
                 #    break
         #print(' end meshing boundary')
     #
+    #
     def _set_load(self):
         """ """
         print('--- Meshing Basic Load')
@@ -353,7 +347,6 @@ class MeshingConcept:
         #
         #print('--> end mesh loading')
     #
-    #
     def _beam_pload(self, beam, pload,
                     node_load, mlbeam,
                     Li=None, point=None):
@@ -383,7 +376,32 @@ class MeshingConcept:
             print(f'Beam {beam.name} Point load L1: {L1:4.2f}')
             #beam_load[beam.name].point = [L1, *load]
             mlbeam.point = [L1, *load]
+    #
+    #
+    def _set_combination(self):
+        """Load combination"""
+        print('--- Meshing Load Combination')
+        # Mesh
+        mesh = self._mesh
+        # Mesh Load
+        Mload = mesh.load()
+        Mlcomb = Mload.combination()
+        # Concept
+        Concept = self.concept
+        Cloads = Concept.load()
+        Clcomb = Cloads.combination()
         #
+        for clc_name, clc_item in Clcomb.items():
+            # clone mesh load
+            Mlcomb[clc_name] = clc_item.title
+            #
+            for lname, lfactor in clc_item.basic.items():
+                Mlcomb[clc_name].basic[lname] = lfactor
+            #
+            for lname, lfactor in clc_item.combination.items():
+                Mlcomb[clc_name].combination[lname] = lfactor
+        #
+        #1 / 0
 #
 #
 @dataclass

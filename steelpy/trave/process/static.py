@@ -859,7 +859,6 @@ class StaticSolver:
         U : Global node displacement
         """
         # TODO : must be better ways to manipulate dfs
-        #db = DBframework()
         # group FER node load
         colgrp = ['load_name', 'load_id', 
                   'load_level','load_system',

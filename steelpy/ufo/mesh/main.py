@@ -192,9 +192,9 @@ class Mesh(ufoBasicModel):
         #
         return path
     #
-    def check_file(self, name: str):
-        """ """
-        pass
+    #def check_file(self, name: str):
+    #    """ """
+    #    pass
     #
     # --------------------
     # Mesh items
@@ -258,22 +258,6 @@ class Mesh(ufoBasicModel):
         #
         return self._boundaries
     #
-    #def groups(self):
-    #    """
-    #    """
-    #    return self._groups
-    #
-    #@property
-    #def sections(self):
-    #    """ """
-    #    1 / 0
-    #    return self._sections
-    #
-    #@property
-    #def materials(self):
-    #    """ """
-    #    1 / 0
-    #    return self._materials
     #    
     #
     # ------------------
@@ -282,7 +266,6 @@ class Mesh(ufoBasicModel):
     #
     def _create_table(self, conn) -> None:
         """ """
-        # conn = create_connection(self.db_file)
         table = "CREATE TABLE IF NOT EXISTS Component (\
                     number INTEGER PRIMARY KEY NOT NULL,\
                     name NOT NULL,\
@@ -291,16 +274,13 @@ class Mesh(ufoBasicModel):
                     superelement DECIMAL NOT NULL , \
                     date TEXT NOT NULL,\
                     title TEXT);"
-        #
         create_table(conn, table)
-        #
     #
     #
     def _push_data(self, conn,
                    component: str|int|None,
                    title: str|None = None):
         """ """
-        #
         table = 'INSERT INTO Component(name, type, units,\
                                        superelement, date, title)\
                             VALUES(?,?,?,?,?,?)'
@@ -311,7 +291,6 @@ class Mesh(ufoBasicModel):
         cur = conn.cursor()
         out = cur.execute(table, data)
         return out.lastrowid
-    #
     #
     #
     def _set_type(self, component: str|int,

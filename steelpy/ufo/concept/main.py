@@ -192,42 +192,6 @@ class ConceptItem(ufoBasicModel):
             
         return self._boundaries
     #
-    #def groups(self):
-    #    """
-    #    """
-    #    return self._groups
-    #    
-    #
-    #def elements(self):
-    #    """ """
-    #    return self._elements
-    #
-    #
-    #@property
-    #def get_name(self):
-    #    """
-    #    """
-    #    return self._name
-    #
-    #
-    #def __delattr__(self, name:str) -> None:
-    #    """
-    #    """
-    #    _joints = []
-    #    if 'piles' in name:
-    #        _tobe_deleted = [key for key in self.piles.keys()]
-    #        for _item in _tobe_deleted:
-    #            for _element in self.piles[_item].elements:
-    #                _joints.extend(_element.connectivity)
-    #            del self.piles[_item]
-    #    #
-    #    # deleting redundant link joints
-    #    _joints = set(_joints)
-    #    for _number in _joints:
-    #        try:
-    #            del self.joints[_number]
-    #        except KeyError:
-    #            print('-->', _number)
     #
     #
     # --------------------

@@ -11,7 +11,7 @@ from typing import NamedTuple
 # package imports
 # steelpy.f2uModel
 from steelpy.ufo.load.process.actions import SelfWeight
-from steelpy.ufo.load.process.basic_load import LoadCaseBasic, LoadTypeBasic # BasicLoadMain, 
+from steelpy.ufo.load.process.basic_load import LoadCaseBasic, LoadTypeBasic 
 from steelpy.ufo.load.sqlite.beam import BeamLoadItemSQL, BeamLoadGloabalSQL
 from steelpy.ufo.load.sqlite.node import  NodeLoadItemSQL, NodeLoadGlobalSQL
 #
@@ -109,14 +109,6 @@ class BasicLoadSQL(LoadCaseBasic):
                 level TEXT NOT NULL,\
                 title TEXT );"
         create_table(conn, table)
-        #
-        #table = "CREATE TABLE IF NOT EXISTS LoadCombination(\
-        #        number INTEGER PRIMARY KEY NOT NULL,\
-        #        load_id INTEGER NOT NULL REFERENCES Load(number),\
-        #        bl_number INTEGER REFERENCES Load(number),\
-        #        lc_number INTEGER REFERENCES Load(number),\
-        #        factor DECIMAL NOT NULL);"
-        #create_table(conn, table)    
     #
     # -----------------------------------------------
     #
@@ -128,16 +120,8 @@ class BasicLoadSQL(LoadCaseBasic):
                  Pa:float=0.0, factor:float=1):
         """process element load"""
         #
-        #df_nload = []
-        #if Pdelta:
-        #    df_nload = self._nodes.df
-        #
         dftemp = self._beams.load_function(steps=steps,
                                            Pa=Pa, factor=factor)
-                                           #nload=df_nload)
-        #
-        #
-        #print('---')
         #
         # Axial   [FP, blank, blank, Fu]
         # torsion [T, B, Psi, Phi, Tw]
@@ -167,21 +151,16 @@ class BasicLoadSQL(LoadCaseBasic):
         Convert element load to global node loads
         """
         print('--- FER Operation')
-        #
         beams = elements.beam()
         load_name = list(self.keys())
         for lname in load_name:
             lcase = self.__getitem__(lname)
             #
-            # -------------------------------
-            # Node load (displacement)
-            # -------------------------------            
-            #
-            #lcase._node.pft(beams=beams)
             #
             # -------------------------------
             # beam line load (line & point)
             # -------------------------------
+            #
             lcase._beam.fer(beams=beams)
             #
             # -------------------------------
@@ -190,52 +169,18 @@ class BasicLoadSQL(LoadCaseBasic):
             #
             #
             # -------------------------------
-            # wave
+            # 
             # -------------------------------
-            # FIXME: broken 
-            #lcase._wave.fer()
             #
     #
     #
     def ENL(self):
         """Equivalent Nodal Loads """
-        #columns = [*self._plane.hforce, *self._plane.hdisp]
-        #headgrp = ['load_name', 'component_name',
-        #           'load_id', 'load_level',
-        #           'load_title','load_system',
-        #           'node_name', 'node_index']        
-        #
-        # [Fx, Fy, Fz, Mx, My, Mz] and [x, y, z, rx, ry, rz]
-        #columns = [*self._plane.hforce, *self._plane.hdisp]
-        # Sum total 
-        #dfnodal = df_nload.groupby(['load_name', 'component_name',
-        #                            'load_id', 'load_level',
-        #                            'load_title','load_system',
-        #                            'node_name', 'node_index'])
-        #           #[columns].sum())
-        #
-        #fhead = ['node_name', 'Fx', 'Fy', 'Fz']
-        #for key, group in dfnodal:
-        #    fdata = group[fhead]
-        #    fdata.set_index('node_name', inplace=True)
-        #    xxx = fdata.diff()
-        #    print(xxx)
-        #    #for item in fdata.diff
-        #
-        #dfnodal.reset_index(inplace=True)
         #
         # beam FER
         conn = create_connection(self.db_file)
         with conn:
             dfbeam = pull_ENL_df(conn, self._component)
-        #
-        #dfbeam = dfbeam.groupby(headgrp)[columns].sum()
-        #
-        #dfbgrp = dfbeam.groupby(headgrp)
-        #for key, item in dfbgrp:
-        #    key, item 
-        #
-        #1 / 0
         return dfbeam
     #
     #
@@ -263,7 +208,6 @@ class BasicLoadSQL(LoadCaseBasic):
         Fn_df = dfnodal.add(dfbeam, fill_value=0)
         Fn_df.reset_index(inplace=True)
         #
-        #
         return Fn_df.reindex(columns=['load_name', 'component_name', 
                                       'load_id', 'load_level',
                                       'load_title','load_system',
@@ -272,13 +216,6 @@ class BasicLoadSQL(LoadCaseBasic):
                                       'node_name', 'node_index', 
                                       'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                                       'x', 'y', 'z', 'rx', 'ry', 'rz'])
-        # Select FER's force & displacement
-        # [Fx, Fy, Fz, Mx, My, Mz] and [x, y, z, rx, ry, rz]
-        #columns = [*self._plane.hforce, *self._plane.hdisp]
-        # Sum total 
-        #dfnodal = (dfnodal.groupby(headgrp)[columns].sum())
-        #dfnodal.reset_index(inplace=True)
-        #return dfnodal 
 #
 #
 def pull_ENL_df(conn, component: int):
@@ -310,8 +247,7 @@ def pull_FER_df(conn, component: int):
              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
              'x', 'y', 'z', 'rx', 'ry', 'rz']]
              #'Psi', 'B', 'Tw']]
-    #
-    #return df
+#
 #
 def pull_FER_data(conn, component: int):
     """ """
@@ -367,7 +303,6 @@ class LoadTypeSQL(LoadTypeBasic):
                  bd_file:str):
         """
         """
-        #super().__init__(name, number, title)
         self.name = load_name
         self._db_file = bd_file
         self._plane = plane
@@ -384,18 +319,8 @@ class LoadTypeSQL(LoadTypeBasic):
                                      component=component, 
                                      db_file=self._db_file)
         #
-        #                             
-        #
         self._selfweight = SelfWeight()          
     #
-    #
-    #def __setitem__(self, load_name: str | int,
-    #                properties: list[float]) -> None:
-    #    """
-    #    """
-    #    super().__setitem__(load_name, properties)
-    #  
-    #    #1 / 0
     #
     @property
     def _labels(self):

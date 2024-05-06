@@ -16,7 +16,7 @@ from typing import NamedTuple
 from math import isclose, dist
 #
 # package imports
-from steelpy.utils.math.operations import zeros, to_matrix
+#from steelpy.utils.math.operations import zeros, to_matrix
 from steelpy.utils.dataframe.main import DBframework
 
 
@@ -53,11 +53,7 @@ class NodeBasic(Mapping):
         """
         system : cartesian/cylindrical/spherical
         """
-        #self._labels : list = []
-        #self._number : array = array('I', [])
         self._system = system  # get_coordinate_system(system)
-        #
-        #self._jbc: array = array('I', [])
         self._db = DBframework()
 
     #
@@ -143,6 +139,7 @@ class NodeBasic(Mapping):
                 self._labels.index(node_number)
             except ValueError:
                 break
+        #
         self.__setitem__(node_number, coordinates)
         #
         try:

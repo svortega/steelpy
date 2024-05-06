@@ -270,10 +270,10 @@ def get_displacement(conn, node_name: int|str|None=None,
     """ """
     if node_name:
         #project = (node_name,)
-        query = f'SELECT {item} FROM ResultNodeU \
+        query = f'SELECT {item} FROM ResultNodeDisplacement \
                   WHERE node_name = {node_name}'
     else:
-        query = f'SELECT {item} FROM ResultNodeU'
+        query = f'SELECT {item} FROM ResultNodeDisplacement'
         
     cols = ['number', 'load_name', 'component_name',
             'load_level', 'load_system', 
