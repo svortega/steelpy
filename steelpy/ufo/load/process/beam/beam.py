@@ -123,11 +123,11 @@ class BeamLoadClass:
         #
         # Force = [fx, fy, fz, mx, my, mz]
         # Node 1
-        Fend1 = [end1.x[0], 1 * end1.y[0], -1 *end1.z[0], # Fx, Fy, Fz
+        Fend1 = [end1.x[0],  1 * end1.y[0], -1 * end1.z[0],  # Fx, Fy, Fz
                  end1.t[0], -1 * end1.z[1], -1 * end1.y[1]]  # Mx, My, Mz
         # Node 2
-        Fend2 = [end2.x[0], 1 * end2.y[0], -1 * end2.z[0], # Fx, Fy, Fz
-                 end2.t[0], 1 * end2.z[1], 1 * end2.y[1]]  # Mx, My, Mz
+        Fend2 = [end2.x[0], 1 * end2.y[0], -1 * end2.z[0],  # Fx, Fy, Fz
+                 end2.t[0], 1 * end2.z[1],  1 * end2.y[1]]  # Mx, My, Mz
         #
         # Displacement = [x, y, z, rx, ry, rz]
         # Node 1

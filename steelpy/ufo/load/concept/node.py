@@ -29,7 +29,7 @@ class NodeLoadItemIM(Mapping):
         #self._number = []
         #
         self._node = NodeItemIM(load_name=load_name,
-                                    load_title=load_title)        
+                                load_title=load_title)
         self._f2u_nodes = nodes
     #
     def __setitem__(self, node_name: int|str,
@@ -61,7 +61,8 @@ class NodeLoadItemIM(Mapping):
         """
         """
         try:
-            self._f2u_nodes[node_id]
+            node_name =self._f2u_nodes.get_name(node_id)
+            #self._f2u_nodes[node_id]
             if not node_id in self._labels:
                 self._labels.append(node_id)
             #

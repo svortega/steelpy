@@ -27,7 +27,7 @@ from steelpy.ufo.mesh.sqlite.utils import (get_connectivity,
                                            get_element_data,
                                            check_element)
 from steelpy.sections.sqlite.utils import get_section
-from steelpy.ufo.mesh.sqlite.nodes import pull_Node 
+from steelpy.ufo.mesh.sqlite.nodes import pull_node
 #
 from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.math.operations import linspace, trnsload
@@ -591,38 +591,35 @@ class MetoceanLoadSQL(MetoceanLoad):
     #
     def process(self):
         """ """
-        #print('-->')
-        conn = create_connection(self.db_file)
-        #with conn:
-        #    labels = self.get_elements(conn)
-        #    labels = [item[1] for item in labels]
-        #
-        # ------------------------------------------
-        # 
-        beams = BeamSQL(db_file=self.db_file,
-                        component=self._component,
-                        plane=self._plane)        
-        #
-        # ------------------------------------------
-        #
-        for item in self._condition:
-            #sname =  f'MET_{key}'
-            #sload = item.load()
-            #self.get_beam_load(wnumber=item.number,
-            #                   title=sname,
-            #                   wload=sload)
-            #
-            df_bload = item.get_beam_load(beams)
+        if self._condition:
+            print('--- Metocean Process')
             #
             # ------------------------------------------
-            # push data in database        
             #
-            with conn:
-                df_bload.to_sql('LoadBeamLine', conn,
-                                #index_label=header, 
-                                if_exists='append', index=False)            
-            #res.Fwave()
-        print('-->')
+            beams = BeamSQL(db_file=self.db_file,
+                            component=self._component,
+                            plane=self._plane)
+            #
+            # ------------------------------------------
+            conn = create_connection(self.db_file)
+            for item in self._condition:
+                #sname =  f'MET_{key}'
+                #sload = item.load()
+                #self.get_beam_load(wnumber=item.number,
+                #                   title=sname,
+                #                   wload=sload)
+                #
+                df_bload = item.get_beam_load(beams)
+                #
+                # ------------------------------------------
+                # push data in database
+                #
+                with conn:
+                    df_bload.to_sql('LoadBeamLine', conn,
+                                    #index_label=header,
+                                    if_exists='append', index=False)
+                #res.Fwave()
+        #print('-->')
         #1 / 0
     #
     #
@@ -1036,7 +1033,7 @@ class BeamItemWave:
         conn = create_connection(self.db_file)
         for _node in self.connectivity:
             with conn:
-                _nodes.append(pull_Node(conn, node_name=_node))
+                _nodes.append(pull_node(conn, node_name=_node))
         return _nodes
     #
     def _unit_vector(self) -> list[ float ]:
@@ -1045,8 +1042,8 @@ class BeamItemWave:
         nodes = self.connectivity
         conn = create_connection(self.db_file)
         with conn:
-            node1 = pull_Node(conn, node_name=nodes[0])
-            node2 = pull_Node(conn, node_name=nodes[1])
+            node1 = pull_node(conn, node_name=nodes[0])
+            node2 = pull_node(conn, node_name=nodes[1])
         # direction cosines
         L =  dist(node1[:3], node2[:3])
         uv = list(map(sub, node2[:3], node1[:3]))

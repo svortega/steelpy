@@ -109,7 +109,7 @@ class ElementsSQL(ClassBasicSQL):
             if concept_id:
                 conn = create_connection(self.db_file)
                 with conn:              
-                    self._update_concept(conn, number=number, 
+                    self._update_element(conn, number=number,
                                          title=concept_id[0],
                                          idx=concept_id[1])
     #
@@ -199,7 +199,7 @@ class ElementsSQL(ClassBasicSQL):
         create_table(conn, _table_univectors)
     #
     #
-    def _update_concept(self, conn, number: int,
+    def _update_element(self, conn, number: int,
                         title: str, idx: int):
         """ title, idx """
         #item = 'concept'
@@ -216,7 +216,7 @@ class ElementsSQL(ClassBasicSQL):
             comp = cur.execute(table, query)
         #
         if not comp:
-            raise IOError(f' component {component} not valid')        
+            raise IOError(f' element {number} not valid')
     #    
     #
     #

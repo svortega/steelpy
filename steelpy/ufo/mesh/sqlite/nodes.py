@@ -92,12 +92,19 @@ class NodeSQL(NodeBasic):
             self._labels.index(node_number)
             raise Exception(f' warning node {node_number} already exist')
         except ValueError:
-            coordinates = self._get_coordinates(coordinates)
-            #self._labels.append(node_number)
+            coord = self._get_coordinates(coordinates)
+            #
+            try:
+                node_id = coordinates.name
+            except AttributeError:
+                node_id = node_number
             #
             conn = create_connection(self.db_file)
             with conn:
-                self._push_node(conn, node_number, coordinates)
+                self._push_node(conn,
+                                node_number=node_number,
+                                node_name=node_id, 
+                                coordinates=coord)
                 #conn.commit()
     #
     def __getitem__(self, node_number: int) -> tuple:
@@ -108,7 +115,7 @@ class NodeSQL(NodeBasic):
             self._labels.index(node_number)
             conn = create_connection(self.db_file)
             with conn:
-                node = pull_Node(conn, node_number, self._component)
+                node = self._pull_node(conn, node_number)
             return node
         except ValueError:
             raise IndexError(f' node id : {node_number} not valid')
@@ -123,7 +130,7 @@ class NodeSQL(NodeBasic):
                 number INTEGER NOT NULL,\
                 name INTEGER NOT NULL,\
                 component_id INTEGER NOT NULL REFERENCES Component(number), \
-                title TEXT,\
+                title NOT NULL,\
                 mesh_idx INTEGER NOT NULL, \
                 PRIMARY KEY (number));"
         #
@@ -146,9 +153,13 @@ class NodeSQL(NodeBasic):
     #
     #
     def _push_node(self, conn, node_number: int,
-                   coordinates: list):
+                   node_name: int | str,
+                   coordinates: list|tuple):
         """
         Create a new project into the projects table
+        node_number: int
+        node_name: int|str
+        coordinate: list|tuple [x,y,z,r,theta,phi]
         """
         # get row number
         cur = conn.cursor()
@@ -158,7 +169,7 @@ class NodeSQL(NodeBasic):
         #
         # -------------------------------------------
         #
-        query = (node_number, self._component, None, idx)
+        query = (node_number, self._component, node_name, idx)
         table = 'INSERT INTO Node(name, component_id, \
                                   title, mesh_idx) \
                                   VALUES(?,?,?,?);' 
@@ -189,15 +200,23 @@ class NodeSQL(NodeBasic):
         cur.execute(sql, project)
         #print('-->')
     #
+    def _pull_node(self, conn, node_number: int,
+                   item: str = '*'):
+        """ """
+        return pull_node(conn, node_name=node_number,
+                         component=self._component,
+                         item=item)
+    #
     def _isclose(self, key:str, item:str, value:float,
-                    rel_tol:float=1e-9, abs_tol:float=0.0)-> tuple:
+                    rel_tol:float=1e-6, abs_tol:float=0.0)-> tuple:
         """ """
         query = (self._component, )
-        table = 'SELECT NodeCoordinate.{:} \
-                 FROM Node, NodeCoordinate \
-                 WHERE Node.component_id = ? \
-                 AND ABS({:} - {:}) <= {:} * MAX(ABS({:}), ABS({:}), {:})'\
-            .format(key, item, value, rel_tol, item, value, abs_tol)
+        table = f'SELECT NodeCoordinate.{key}, Node.title \
+                  FROM Node, NodeCoordinate \
+                  WHERE Node.component_id = ? \
+                  AND Node.name = NodeCoordinate.node_id \
+                  AND ABS({item} - {value}) <= MAX({rel_tol} * MAX(ABS({item}), ABS({value})), {abs_tol})'
+            #.format(key, item, value, rel_tol, item, value, abs_tol)
         #
         conn = create_connection(self.db_file)
         cur = conn.cursor()
@@ -211,7 +230,7 @@ class NodeSQL(NodeBasic):
         project = (value, name, self._component, )
         sql = f'UPDATE Node SET {item} = ? \
                 WHERE name = ? AND component_id = ? '
-        
+
         cur = conn.cursor()
         cur.execute(sql, project)
     #
@@ -232,43 +251,20 @@ class NodeSQL(NodeBasic):
     # ---------------------------------
     # ops
     #
-    def get_point_name(self, coordinates,
-                       tol:float=0.01, rel_tol:float=1e-6) -> int:
-        """
-        tol: absolte tolerance in metres (0.010 m default)
-        """
-        # get index of x coord location in existing database
-        coord = self._get_coordinates(coordinates)
-        #
-        items = self._isclose(key='*', item='x', value=coord[0],
-                              abs_tol=tol, rel_tol=rel_tol)
-        # check if y and z coord match
-        if items:
-            for item in items:
-                if isclose(coord[1], item[4], abs_tol=tol, rel_tol=rel_tol):
-                    if isclose(coord[2], item[5], abs_tol=tol, rel_tol=rel_tol):
-                        return item[1]
-        raise IOError('   error coordinate not found')
-    #
-    #
     def renumbering(self, new_numbers:list[int]):
         """ """
-        indexes = [self._labels.index(node_name) 
-                   for node_name in new_numbers]
-        indexes = [(val, j + 1, self._component, )
-                   for j, val in enumerate(indexes)]
-        #
         conn = create_connection(self.db_file)
         with conn:
+            # [row number, node name]
+            rows = pull_node_rows(conn, self._component)
+            rows = {item[1]: item[0] for item in rows}
+
+            indexes = [(x, rows[node_name], self._component,)
+                       for x, node_name in enumerate(new_numbers)]
+
             update_colum(conn, colname='mesh_idx',
                          newcol=indexes)
-            #
-            #nodes = get_nodes(conn)
-            #nindex = [item[1] for item in nodes]
-            #nodes = [nodes[indx][1:] for indx in indexes]
-            #update_table(conn, nodes)
-            #conn.commit()
-        #print('-->?')
+    #
     #
     #def update_number(self, node_name:int, value:Union[float,int]):
     #    """ """
@@ -310,6 +306,13 @@ class NodeSQL(NodeBasic):
         return [max_x, max_y, max_z], [min_x, min_y, min_z]
     #
     #
+    def get_name(self, title:int|str):
+        """get node name based on title"""
+        conn = create_connection(self.db_file)
+        with conn:
+            name = pull_node_name(conn, title,
+                                  self._component)
+        return name
     #
     #
     # ---------------------------------
@@ -526,21 +529,20 @@ class NodeSQL(NodeBasic):
 #
 #
 #
-def pull_Node(conn, node_name:int, component: int, item:str='*'):
+def pull_node(conn, node_name:int, component: int, item:str='*'):
     """ """
     #with conn:
     data = pull_node_item(conn, node_name, component, item)
     #system = get_coordinate_system(data[3])
     #return system(x=data[4], y=data[5], z=data[6],
-    #              name=node_name, number=data[0], 
+    #              name=node_name, number=data[0],
     #              index=data[10])
     #
     boundary = pull_node_boundary(conn,
                                   node_name=node_name,
                                   component=component)
     #
-    node = NodePoint(*data,
-                     boundary=boundary)
+    node = NodePoint(*data, boundary=boundary)
     return node.system()
 #
 def pull_node_item(conn, node_name, component, item):
@@ -608,16 +610,39 @@ def pull_boundary(conn, component: int,
     return data
 #
 def pull_node_number(conn, node_name:int,
-                     component: int,):
+                     component: int):
     """ """
     project = (node_name, component)
     table = f'SELECT number FROM Node \
-              WHERE Node.name = ? \
-              AND Node.component_id = ?'
+              WHERE name = ? \
+              AND component_id = ?'
     cur = conn.cursor()
     cur.execute(table, project)
     record = cur.fetchone()
     return record[0]
+#
+def pull_node_rows(conn, component: int):
+    """ """
+    project = (component,)
+    table = f'SELECT number, name FROM Node \
+              WHERE component_id = ?'
+    cur = conn.cursor()
+    cur.execute(table, project)
+    records = cur.fetchall()
+    return records
+#
+def pull_node_name(conn, node_title: int|str,
+                   component: int,):
+    """ """
+    project = (node_title, component)
+    table = f'SELECT name FROM Node \
+              WHERE title = ? \
+              AND component_id = ?'
+    cur = conn.cursor()
+    cur.execute(table, project)
+    record = cur.fetchone()
+    return record[0]
+#
 #
 # ---------------------------------
 #
@@ -625,8 +650,8 @@ def update_colum(conn, colname: str, newcol: list):
     """update entire column values"""
     #query = (component, )
     table = f'UPDATE Node SET {colname} = ? \
-            WHERE rowId = ? \
-            AND component_id = ?;'
+              WHERE rowId = ? \
+              AND component_id = ?;'
     cur = conn.cursor()
     cur.executemany(table, newcol)
 #

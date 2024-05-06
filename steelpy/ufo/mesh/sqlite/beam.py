@@ -22,10 +22,11 @@ from math import dist
 from steelpy.sections.sqlite.utils import ShapeGeometrySQL #, get_section
 from steelpy.sections.utils.shape.main import ShapeGeometry #, get_shape
 from steelpy.material.sqlite.isotropic import  get_materialSQL
-from steelpy.ufo.mesh.sqlite.nodes import pull_Node
+from steelpy.ufo.mesh.sqlite.nodes import pull_node
 from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            get_element_data ,
                                            get_connectivity,
+                                           get_connectivities,
                                            update_connectivity,
                                            get_node_coord,
                                            get_unitvector, 
@@ -184,11 +185,13 @@ class BeamSQL(BeamBasic):
     #
     #
     #
-    def get_connectivities(self):
-        """ """
+    def get_connectivities(self)-> list[int]:
+        """
+        Return [element_id, node1, node2]
+        """
         conn = create_connection(self.db_file)
         with conn:
-            nodes = get_nodes_connec(conn)
+            nodes = get_connectivities(conn, self._component)
         return nodes
     #
     #
@@ -351,8 +354,15 @@ class BeamItemSQL(BeamItemBasic):
         """
         conn = create_connection(self.db_file)
         with conn:
-            #push_connectivity(conn, self.name, nodes)
-            update_connectivity(conn, self.name, nodes)
+            data = get_element_data(conn, self.name,
+                                    element_type='beam',
+                                    component=self._component)
+            nnodes = []
+            for node in nodes:
+                item = pull_node(conn, node_name=node,
+                                 component=self._component)
+                nnodes.append(item.number)
+            update_connectivity(conn, data[1], nnodes)
         #self._connectivity[self.index] = nodes
     #
     @property
@@ -361,9 +371,9 @@ class BeamItemSQL(BeamItemBasic):
         """
         nodes = []
         conn = create_connection(self.db_file)
-        for node in self.connectivity:
-            with conn:
-                nodes.append(pull_Node(conn, node_name=node,
+        with conn:
+            for node in self.connectivity:
+                nodes.append(pull_node(conn, node_name=node,
                                        component=self._component))
         return nodes
     #
@@ -493,8 +503,8 @@ class BeamItemSQL(BeamItemBasic):
         conn = create_connection(self.db_file)
         dof = [ ]
         for node_name in self.connectivity:
-            node = pull_Node(conn, node_name=node_name,
-                            component=self._component)
+            node = pull_node(conn, node_name=node_name,
+                             component=self._component)
             #number = node[0] - 1
             number = node.index
             dof.append(number) #  * 6
@@ -507,9 +517,9 @@ class BeamItemSQL(BeamItemBasic):
         nodes = self.connectivity
         conn = create_connection(self.db_file)
         with conn:
-            node1 = pull_Node(conn, node_name=nodes[0],
+            node1 = pull_node(conn, node_name=nodes[0],
                              component=self._component)
-            node2 = pull_Node(conn, node_name=nodes[1],
+            node2 = pull_node(conn, node_name=nodes[1],
                              component=self._component)
         return dist(node1[:3], node2[:3])
         #return dist(node1[3:6], node2[3:6])
@@ -533,9 +543,9 @@ class BeamItemSQL(BeamItemBasic):
         conn = create_connection(self.db_file)
         nodes = self.connectivity
         with conn:
-            node1 = pull_Node(conn, node_name=nodes[0],
+            node1 = pull_node(conn, node_name=nodes[0],
                              component=self._component)
-            node2 = pull_Node(conn, node_name=nodes[1],
+            node2 = pull_node(conn, node_name=nodes[1],
                              component=self._component)
         # direction cosines
         L = dist(node1[:3], node2[:3])

@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -8,7 +8,7 @@ from collections.abc import Mapping
 import re
 from typing import NamedTuple
 
-
+from steelpy.ufo.mesh.elements.nodes import check_point_list, check_point_dic
 #
 # -----------------------
 # TODO: merge with slite
@@ -110,4 +110,13 @@ class BoundaryNode(Mapping):
         else:
             raise Exception('   *** Boundary input format not recognized')
     #
+    def _get_coordinates(self, coordinates):
+        """ """
+        if isinstance(coordinates, (list, tuple)):
+            coordinates = check_point_list(coordinates, steps=3)
+        elif isinstance(coordinates, dict):
+            coordinates = check_point_dic(coordinates)
+        else:
+            raise Exception('Node input format not valid')
+        return coordinates
 #    

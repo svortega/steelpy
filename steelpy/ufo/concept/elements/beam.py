@@ -52,7 +52,8 @@ class ElementConcept:
         #conn = self._cls._connectivity[self.index]
         jnt = []
         for conn in self._cls._connectivity[self.index]:
-            jnt.append(self._cls.f2u_points[conn])
+            nname =self._cls.f2u_points.get_name(conn)
+            jnt.append(self._cls.f2u_points[nname])
         return jnt
     #
     @property

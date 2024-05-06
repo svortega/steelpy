@@ -10,7 +10,7 @@ import re
 #
 # package imports
 #
-from steelpy.ufo.mesh.sqlite.nodes import pull_Node, pull_node_number
+from steelpy.ufo.mesh.sqlite.nodes import pull_node, pull_node_number
 from steelpy.ufo.load.process.nodes import (get_nodal_load,
                                             PointNode,
                                             DispNode)
@@ -254,8 +254,8 @@ class NodeLoadItemSQL(ClassBasicSQL):
         # get load data
         conn = create_connection(self.db_file)
         with conn:  
-            node = pull_Node(conn, node_name,
-                            component=self._component)
+            node = pull_node(conn, node_name,
+                             component=self._component)
         #
         try:
             node_id = node.number
@@ -705,40 +705,6 @@ class NodeItemSQL:
     #
     #
     # -----------------------------------------
-    #
-    #
-    #def __call__(self, node_id: str|int, load_id: str|int):
-    #    self._node_id = node_id
-    #    self._name = load_id
-    #    return self    
-    #
-    #
-    #@property
-    #def load(self):
-    #    """
-    #    """
-    #    1 / 0
-    #    try:
-    #        point_id = self._node_id
-    #        return self._load[point_id]
-    #    except :
-    #        raise IndexError
-    #
-    #@load.setter
-    #def load(self, node_load: list):
-    #    """
-    #    Point Load
-    #    """
-    #    node_name = self._node_id
-    #    #if isinstance(values, dict):
-    #    #    self._load[node_name] = values
-    #    #elif isinstance(values[0], list):
-    #    #    for value in values:
-    #    #        self._load[node_name] = value
-    #    #else:
-    #    #    self._load[node_name] = values
-    #    node_load.insert(0, 'load')
-    #    self.__setitem__(node_name, node_load)
     #
 #    
 #

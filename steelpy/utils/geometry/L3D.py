@@ -257,13 +257,13 @@ class DistancePointLine3D:
         Calculate the scalar distance and direction (beam member 'X' distance) Pa occurs
         from each line segment end point.
         """
-        self.p1 = Point(*p1, name="p1", number=1, index=0)
-        self.p2 = Point(*p2, name="p2", number=2, index=1)
+        self.p1 = Point(*p1, name="p1", number=1, index=0, boundary=None)
+        self.p2 = Point(*p2, name="p2", number=2, index=1, boundary=None)
 
     #
     def point(self, Pb: list[float]) -> None:
         """ """
-        self.Pb = Point(*Pb, name="Pb", number=3, index=2)
+        self.Pb = Point(*Pb, name="Pb", number=3, index=2, boundary=None)
         # return self.dist
 
     #
@@ -279,7 +279,7 @@ class DistancePointLine3D:
         self.Pa = Point(self.p1.x + u * (self.p2.x - self.p1.x),
                         self.p1.y + u * (self.p2.y - self.p1.y),
                         self.p1.z + u * (self.p2.z - self.p1.z),
-                        name="Pa", number=4, index=3)
+                        name="Pa", number=4, index=3, boundary=None)
         #
         # self.Pmem1 = self.Pa
         self.dist = round(self.Pa.distance(self.Pb), 8)
@@ -328,7 +328,7 @@ class DistancePointLine3D:
                             (self.Pa.z - self.Pb.z) / self.dist,
                             name="uv", number=5)
         else:
-            self.uv = Point(0.0, 0.0, 0.0, name="uv", number=5, index=4)
+            self.uv = Point(0.0, 0.0, 0.0, name="uv", number=5, index=4, boundary=None)
 
     #
     def is_on_segment(self, Pb: list[float], tol: float = 0.05) -> bool:

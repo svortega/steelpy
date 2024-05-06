@@ -377,7 +377,10 @@ def printout(disp:list):
     #node_id = disp.groupby('node')
     disp.set_index('node', inplace=True)
     for item in disp.itertuples():
-        output += '{:9d} {: 1.3e} {: 1.3e} {: 1.3e}\n'.format(*item)
+        output += "{:9d} ".format(item.Index)
+        for val in item[1:]:
+            output += "{: 1.3e} ".format(val)
+        output += "\n"
     return output
 #
 #

@@ -66,19 +66,19 @@ class BoundaryNodes(BoundaryNode):
             self._labels.index(node_id)
             raise Warning('    *** warning node {:} already exist'.format(node_id))
         except ValueError:
-            if isinstance(value, dict):
-                self._x.append(value['x'])
-                self._y.append(value['y'])
-                self._z.append(value['z'])
-                self._rx.append(value['rx'])
-                self._ry.append(value['ry'])
-                self._rz.append(value['rz'])
-                try:
-                    title = value['title']
-                except KeyError:
-                    title = "NULL"
-            else:
-                title = self.setup_data(value)
+            #if isinstance(value, dict):
+            #    self._x.append(value['x'])
+            #    self._y.append(value['y'])
+            #    self._z.append(value['z'])
+            #    self._rx.append(value['rx'])
+            #    self._ry.append(value['ry'])
+            #    self._rz.append(value['rz'])
+            #    try:
+            #        title = value['title']
+            #    except KeyError:
+            #        title = "NULL"
+            #else:
+            title = self.setup_data(value)
             #
             self._labels.append(node_id)
             self._number.append(self._labels.index(node_id))
@@ -124,33 +124,34 @@ class BoundaryNodes(BoundaryNode):
     #
     def setup_data(self, value):
         """ """
-        title = "NULL"
-        if isinstance(value, str):
-            value = self.get_boundary(value)
+        title = None
+        value = self._get_fixity(value)
+        #if isinstance(value, str):
+        #    value = self.get_boundary(value)
 
-        elif len(value) == 1:
-            if isinstance(value[0], str):
-                value = self.get_boundary(value[0])
-            else:
-                newvalue = value[0]
-                try:
-                    1/len(newvalue)
-                    value = []
-                    for indx in range(6):
-                        try:
-                            value.append(newvalue[indx])
-                        except KeyError:
-                            value.append(0)
-                except ZeroDivisionError:
-                    raise IOError('*** error input format not recognized')
-        else:
-            try:
-                value[6]
-                title = value.pop()
-            except AttributeError:
-                title = value.name
-            except IndexError:
-                pass
+        #elif len(value) == 1:
+        #    if isinstance(value[0], str):
+        #        value = self.get_boundary(value[0])
+        #    else:
+        #        newvalue = value[0]
+        #        try:
+        #            1/len(newvalue)
+        #            value = []
+        #            for indx in range(6):
+        #                try:
+        #                    value.append(newvalue[indx])
+        #                except KeyError:
+        #                    value.append(0)
+        #        except ZeroDivisionError:
+        #            raise IOError('*** error input format not recognized')
+        #else:
+        #    try:
+        #        value[6]
+        #        title = value.pop()
+        #    except AttributeError:
+        #        title = value.name
+        #    except IndexError:
+        #        pass
         # update data
         self._x.append(value[0])
         self._y.append(value[1])
@@ -194,13 +195,24 @@ class BoundaryNodes(BoundaryNode):
         self._rz.insert(index, value[5])
     #
     #
-    def transposed(self):
-        """ """
-        data = [self._x, self._y, self._z,
-                self._rx, self._ry, self._rz]
-        data = list(map(list, zip(*data)))
-        return data
+    #def transposed(self):
+    #    """ """
+    #    data = [self._x, self._y, self._z,
+    #            self._rx, self._ry, self._rz]
+    #    data = list(map(list, zip(*data)))
+    #    return data
     #
+    def get_number(self, start: int = 1):
+        """
+        """
+        try:
+            n = len(self._labels) + 1
+        except ValueError:
+            n = start
+        #
+        while True:
+            yield n
+            n += 1
     #
 #
 

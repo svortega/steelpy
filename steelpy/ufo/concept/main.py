@@ -141,10 +141,11 @@ class ConceptItem(ufoBasicModel):
         self._hinges = Releases()
         #
         #
-        self._boundaries = BoundaryConcept(points=self._nodes)
+        self._boundaries = BoundaryConcept(points=self._nodes,
+                                           component=self._component)
         #
         # Points
-        self._point = NodesIM(component=component,
+        self._point = NodesIM(component=self._component,
                               boundary=self._boundaries)        
         #
         self._elements = ConceptElements(points=self._nodes,
@@ -246,10 +247,8 @@ class ConceptItem(ufoBasicModel):
     #
     def mesh(self):
         """ Meshing"""
-        #self._sections.get_properties()
-        #
+        print('{:}'.format(52*'-'))
         meshing = MeshingConcept(concept=self)
-                          #component=self._name)
         mesh = meshing.get_mesh()
         mesh.renumbering()
         mesh.build()        

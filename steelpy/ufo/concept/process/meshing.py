@@ -8,8 +8,7 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from dataclasses import dataclass
-#from typing import Tuple
-#import os
+import time
 
 # package imports
 #
@@ -38,12 +37,13 @@ class MeshingConcept:
     def get_mesh(self) -> None:
         """
         """
-        print('-- Meshing Component')
+        start_time = time.time()
         #self._set_properties()
         self._set_mesh()
         self._set_boundary()
         self._set_load()
-        print('-- Meshing Completed')
+        uptime = time.time() - start_time
+        print(f"** Meshing: {uptime:1.4e} sec")
         return self._mesh
     #
     def _set_properties(self):
@@ -96,7 +96,7 @@ class MeshingConcept:
                     melements[mnumber] = ['beam', node_res, new_node,
                                           step.material.name, 
                                           step.section.name, 
-                                          beam.beta, key, idx ]
+                                          beam.beta, key, idx]
                     node_res = new_node
                 except ZeroDivisionError:
                     # elements [node1, node2, material, section, beta, title]
@@ -105,15 +105,16 @@ class MeshingConcept:
                                           step.section.name, 
                                           beam.beta, key, idx]
             #print('-->')
-        print('end meshing')
+        #print('end meshing')
     #
     def _get_node_name(self, coord):
         """ """
         nodes = self._mesh.node()
         try:
-            return nodes.get_point_name(coord)
+            node_title = nodes.get_point_name(coord)
         except IOError:
-            return nodes.get_new_point(coord)
+            node_title = nodes.get_new_point(coord)
+        return nodes.get_name(node_title)
     #
     def _set_boundary(self):
         """ """
@@ -141,7 +142,9 @@ class MeshingConcept:
             support = value.points
             for point in support.points:
                 try:
-                    node_id = mnodes.get_point_name(point)
+                    #print(point)
+                    node_title = mnodes.get_point_name(point)
+                    node_id = mnodes.get_name(node_title)
                     msupports[node_id] = [*support[:6], key]
                     print(f"Boundary: {key}  @ Node: {node_id}")
                 except IOError:
@@ -167,7 +170,8 @@ class MeshingConcept:
                         #missing_found[boundary].append(idx)
                         total_length = 0
                         step_no = len(cbeam.step)
-                        for step in cbeam.step:
+                        for x, step in enumerate(cbeam.step):
+                            idx = x + 1
                             beam = mbeams[step._mesh]
                             total_length += beam.L
                             # TODO: capture warning when point misaligned due to tolerances
@@ -181,7 +185,7 @@ class MeshingConcept:
                             #support = cboundary[boundary].support
                             #support = csupports[boundary]
                             #if support:
-                            msupports[new_node] = boundary
+                            msupports[new_node] = point.boundary
                             print(f"Boundary: {boundary} on Beam: {key} @ Node: {new_node}")
                             #
                             # existing element
@@ -194,7 +198,7 @@ class MeshingConcept:
                             melements[mnumber] = ['beam', new_node, node_end,
                                                   step.material.name,
                                                   step.section.name,
-                                                  beam.beta, cbeam.name]
+                                                  beam.beta, cbeam.name, idx]
                             # introduce new concept beam step to boundary coord
                             step_no += 1
                             cbeams[key].step[step_no].length = left_dist * units.m
@@ -218,11 +222,11 @@ class MeshingConcept:
                 #if not missing[boundary]:
                 #    #del missing[boundary]
                 #    break
-        print(' end meshing boundary')
+        #print(' end meshing boundary')
     #
     def _set_load(self):
         """ """
-        print( '--- Meshing Basic Load' )
+        print('--- Meshing Basic Load')
         # Mesh
         mesh = self._mesh
         Mnodes = mesh.node()
@@ -327,9 +331,10 @@ class MeshingConcept:
                     print(f'Load Title: {label} - Nodal Load')
                     #
                     try:
-                        node_name = Mnodes.get_point_name(point[:3])
+                        node_title = Mnodes.get_point_name(point[:3])
+                        node_name = Mnodes.get_name(node_title)
                         node = Mnodes[node_name]
-                        print(f'---> Load: {CPname} Point: {node_name} Node: {node.name}')
+                        print(f'Load: {CPname} Point: {node_title} Node: {node.name}')
                         mlb_node[node.name].load = [*pload[:6], pload[7]]
                     except IOError: # check if point load on a beam
                         for beam_name, beam in Mbeams.items():
@@ -346,7 +351,7 @@ class MeshingConcept:
         for name, condition in Clwave.items():
             Mlwave[name] = condition
         #
-        print('--> end mesh loading')
+        #print('--> end mesh loading')
     #
     #
     def _beam_pload(self, beam, pload,

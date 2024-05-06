@@ -6,8 +6,7 @@ from __future__ import annotations
 #from dataclasses import dataclass
 from datetime import datetime as dt
 from typing import NamedTuple
-#import pickle
-#import re
+import time
 import os
 #
 
@@ -20,6 +19,8 @@ from steelpy.ufo.mesh.sqlite.boundary import BoundarySQL
 from steelpy.ufo.mesh.process.main import Ke_matrix, Kg_matrix, Km_matrix, Kt_matrix
 from steelpy.ufo.mesh.elements.sets import Groups
 from steelpy.ufo.plot.main import PlotMesh
+#
+from steelpy.ufo.mesh.elements.nodes import node_renumbering
 #
 from steelpy.sections.main import Section
 from steelpy.material.main import Material
@@ -342,29 +343,37 @@ class Mesh(ufoBasicModel):
     def renumbering(self):
         """
         """
-        print("** Renumbering Node")
-        self._nodes.renumbering(self._elements)
+        print('{:}'.format(52 * '-'))
+        start_time = time.time()
+        #print("-- Renumbering Node")
+        new_number = node_renumbering(nodes=self._nodes,
+                                      elements=self._elements)
+        self._nodes.renumbering(new_number)
         #for node in single_nodes:
         #    boundary = self._boundaries.node[node]
         #    if not boundary:
         #        self._boundaries.node[ node ] = 'free'
-        print("** End Renumbering Node")
+        #print("-- End Renumbering Node")
+        uptime = time.time() - start_time
+        print(f"** Renumbering Node: {uptime:1.4e} sec")
     #
     def build(self):
         """ """
-        # sections 
-        # self._sections.get_properties()
-        # hydro
-        #self._load._hydro.solve()
+        print('{:}'.format(52 * '-'))
+        start_time = time.time()
+        # mesh checks
+        orphan_nodes = self._nodes.orphan(self._elements)
+        if orphan_nodes:
+            raise IOError(f' nodes {orphan_nodes} orphan')
         #
-        # FIXME : remove beam nodal load instead --> calculare node load
+        # FIXME : remove beam nodal load instead --> calculate node load
         if self._build :
-            #for key, item in self._mesh.items():
-            # FIXME: Wave
             self._load._hydro.process()
             # TODO : remove second _load for simplification
-            self._load._basic.FER(elements= self._elements)        
+            self._load._basic.FER(elements=self._elements)
         #
+        uptime = time.time() - start_time
+        print(f"** Mesh Building: {uptime:1.4e} sec")
     #
     # --------------------
     # Matrix Operations

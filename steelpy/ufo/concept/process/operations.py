@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2020 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
@@ -8,8 +8,7 @@ import copy
 import logging
 
 # package imports
-import fem2ufo.process.operations.joint as joint
-from fem2ufo.process.graphics.euclid import Point3, Plane
+from steelpy.utils.geometry.euclid import Point3, Plane
 
 #
 def member2node(memb_name, memb_number, elements, concept):

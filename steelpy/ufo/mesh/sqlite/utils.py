@@ -219,20 +219,22 @@ def update_connectivity(conn, element_id: int,
     cur = conn.cursor()
     for x, node in enumerate(connectivity):
         query = (node, element_id, x+1)
-        table = 'UPDATE ElementConnectivity SET node_id = ? \
-                    WHERE element_id = ?\
-                    AND node_end = ?;'
+        table = ('UPDATE ElementConnectivity SET node_id = ? \
+                    WHERE element_id = ? \
+                    AND node_end = ?;')
         cur.execute(table, query)
     #return cur.lastrowid
 #
 def get_connectivities(conn, component: int):
-    """ """
+    """
+    Return [element_id, node_id, node_end]
+    """
     query = (component, )
     table = "SELECT Element.name, Node.name, ElementConnectivity.node_end \
                 FROM Element, Node, ElementConnectivity \
-                WHERE Element.number = ElementConnectivity.element_id \
-                AND Node.number = ElementConnectivity.node_id \
-                AND Element.component_id = ?;"
+             WHERE Element.number = ElementConnectivity.element_id \
+             AND Node.number = ElementConnectivity.node_id \
+             AND Element.component_id = ?;"
     #
     cur = conn.cursor()
     cur.execute(table, query)

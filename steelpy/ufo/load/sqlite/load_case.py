@@ -166,6 +166,7 @@ class BasicLoadSQL(LoadCaseBasic):
         Fixed End Reactions (FER) 
         Convert element load to global node loads
         """
+        print('--- FER Operation')
         #
         beams = elements.beam()
         load_name = list(self.keys())
@@ -194,8 +195,6 @@ class BasicLoadSQL(LoadCaseBasic):
             # FIXME: broken 
             #lcase._wave.fer()
             #
-        #
-        print('---> FER element2node')
     #
     #
     def ENL(self):

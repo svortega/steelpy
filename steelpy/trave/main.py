@@ -40,6 +40,7 @@ class TraveItem:
         if self._plane2D:
             plane = "2D"
         #
+        print('{:}'.format(52 * '-'))
         print (f"-- module : Trave{plane} version 2.50")
         print ('{:}'.format(52 * '-'))
         #
