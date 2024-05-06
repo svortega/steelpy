@@ -319,27 +319,29 @@ def print_nitems(items,
     """
     """
     #
-    items.rename(columns={'node_name': 'node'}, inplace=True)
-    #
-    ndgrp = items.groupby('load_level')
-    ndtype = ndgrp.get_group('basic')
-    nditems = ndtype.groupby(['load_name', 'component_name', 'load_system'])
-    #
     output = ""
+    items.rename(columns={'node_name': 'node'}, inplace=True)
+    ndgrp = items.groupby('load_level')
+    #
     # Basic
-    for key, wk in nditems:
-        #header1 =  wk[['load_name','component_name', 'load_system']].values
-        #
-        output += "-- Basic Load  Name: {:}  Component: {:} System: {:}\n".format(*key)
-        #
-        vals = wk.drop(cols, axis=1)
-        header2 = list(vals)
-        header2 = get_gap(header2)
-        #
-        output += header2
-        output += "\n"
-        output += printout(vals)
-        output += "\n"
+    try:
+        ndtype = ndgrp.get_group('basic')
+        nditems = ndtype.groupby(['load_name', 'component_name', 'load_system'])
+        for key, wk in nditems:
+            #header1 =  wk[['load_name','component_name', 'load_system']].values
+            #
+            output += "-- Basic Load  Name: {:}  Component: {:} System: {:}\n".format(*key)
+            #
+            vals = wk.drop(cols, axis=1)
+            header2 = list(vals)
+            header2 = get_gap(header2)
+            #
+            output += header2
+            output += "\n"
+            output += printout(vals)
+            output += "\n"
+    except KeyError:
+        pass    
     #
     # Combination
     try:

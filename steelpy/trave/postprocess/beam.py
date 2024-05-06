@@ -339,34 +339,35 @@ def print_bitems(items,
                                'load_level', 'load_system']):
     """
     """
+    output = ''
+    #
     items.rename(columns={'element_name': 'beam',
                           'node_end': 'len',
                           'stress_points': 's_points',},
                  inplace=True)
-    #
     blgrp = items.groupby('load_level')
     #  
     # basic
-    bltype = blgrp.get_group('basic')
-    blitems = bltype.groupby(['load_name', 'component_name', 'load_system'])
-    #
-    output = ''
-    # basic
-    for key, wk in blitems:
-        #header =  wk[['load_name', 'load_system']].values
-        #output += "-- Basic Load  Name: {:}  System: {:}".format(*header[0])
-        output += "-- Basic Load  Name: {:}  Component: {:} System: {:}\n".format(*key)
-        output += "\n"
-        #
-        vals = wk.drop(cols, axis=1)
-        header2 = list(vals)
-        #header2 = '       '.join(header2)
-        header2 = get_gap(header2)
-        #
-        output += header2
-        output += "\n"        
-        output += printout(vals)
-        output += "\n"
+    try:
+        bltype = blgrp.get_group('basic')
+        blitems = bltype.groupby(['load_name', 'component_name', 'load_system'])
+        for key, wk in blitems:
+            #header =  wk[['load_name', 'load_system']].values
+            #output += "-- Basic Load  Name: {:}  System: {:}".format(*header[0])
+            output += "-- Basic Load  Name: {:}  Component: {:} System: {:}\n".format(*key)
+            output += "\n"
+            #
+            vals = wk.drop(cols, axis=1)
+            header2 = list(vals)
+            #header2 = '       '.join(header2)
+            header2 = get_gap(header2)
+            #
+            output += header2
+            output += "\n"        
+            output += printout(vals)
+            output += "\n"
+    except KeyError:
+        pass    
     #
     # combination
     try:
