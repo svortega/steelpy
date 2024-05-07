@@ -350,7 +350,7 @@ class RegWaveItem: # (WaveItem)
         with conn:
             items = (self.number, )
             table = f"UPDATE WaveRegular \
-                     SET wave_length = {self._wave._Lw} \
+                     SET wave_length = {self._wave.Lw} \
                      WHERE wave_id = ?"
             cur = conn.cursor()
             cur.execute(table, items)
@@ -551,7 +551,7 @@ class RegWaveItem: # (WaveItem)
         #except sqlite3.OperationalError:
         #    return None
     #
-    def kinematics(self, depth_points:int = 100,
+    def kinematics(self, depth_points:int=100,
                    surface_points:int = 36):
         """ """
         #

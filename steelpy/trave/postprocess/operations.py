@@ -414,9 +414,6 @@ class MainProcess:
         dftemp: list = []
         mif_data: list = []
         for key, noded in ndgrp:
-            # TODO: select basic only
-            #if key[2] != 'basic':
-            #    continue
             ndisp = noded[hdisp]
             ndisp.set_index('node_name', inplace=True)
             #

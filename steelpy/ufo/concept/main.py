@@ -214,7 +214,7 @@ class ConceptItem(ufoBasicModel):
         print('{:}'.format(52*'-'))
         meshing = MeshingConcept(concept=self)
         mesh = meshing.get_mesh()
-        mesh.renumbering()
+        #mesh.renumbering()
         mesh.build()        
         return mesh
     #

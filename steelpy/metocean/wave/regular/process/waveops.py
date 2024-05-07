@@ -37,15 +37,15 @@ class WaveItem:
                  order:int=5, nstep:int=2,
                  niter:int=40, accuracy:float=1e-6):
         """ """
+        self.title = title
         self.H = H
+        self.d = d
         if Lw:
-            self._Lw = Lw
+            self._Lw = Lw / self.d
             self.Tw = None
         else:
             self.Tw = Tw
             self._Lw = None
-        self.d = d
-        self.title = title
         # current 
         self.c_vel = current
         self.c_type = c_type        
@@ -171,14 +171,14 @@ class WaveItem:
         """ wave_length [m]"""
         if not self._Lw:
             self.__call__()
-        return self._Lw
+        return self._Lw * self.d
     
     @Lw.setter
-    def Lw(self, L):
+    def Lw(self, L:float):
         """ wave_length [m]"""
         
-        self._Lw = L
-    #
+        self._Lw = L / self.d
+#
 #
 #
 #

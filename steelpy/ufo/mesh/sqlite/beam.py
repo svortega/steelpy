@@ -506,8 +506,8 @@ class BeamItemSQL(BeamItemBasic):
             node = pull_node(conn, node_name=node_name,
                              component=self._component)
             #number = node[0] - 1
-            number = node.index
-            dof.append(number) #  * 6
+            #number = node.index
+            dof.append(node.index) #  * 6
         return dof
     #
     @property

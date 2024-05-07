@@ -87,7 +87,7 @@ class PlotLoad(PlotBasic):
     def get_load(self, ax, load):
         """ """
         nodes = self._cls._nodes
-        beams = self._cls._elements.beams()
+        beams = self._cls._elements.beam()
         #
         for key, item in load.items():
             #key, item
@@ -95,10 +95,10 @@ class PlotLoad(PlotBasic):
             nodeload(ax, nodes, nload=item._node)
             # beam point load
             beampointload(ax, beams, nodes, 
-                          pointload=item._beam._point)
+                          pointload=item._beam._load._point)
             # beam line load
             beamlineload(ax, beams, nodes, 
-                         lineload=item._beam._line)
+                         lineload=item._beam._load._line)
 #
 #
 def add_mesh_load(ax, beams, nodes, basic):

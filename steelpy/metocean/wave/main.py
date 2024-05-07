@@ -162,7 +162,7 @@ class Wave(WaveBasic):
     def solve(self, surface_points:int = 36,
               depth_points:int = 100):
         """ """
-        #print('--> regular')
+        print('--> regular solve')
         self._regular.solve(surface_points=surface_points,
                             depth_points=depth_points)
         #1 / 0

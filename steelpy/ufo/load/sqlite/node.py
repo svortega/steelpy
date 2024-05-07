@@ -415,8 +415,7 @@ class NodeLoadItemSQL(ClassBasicSQL):
         df = pull_NodeLoad_df(conn,
                               load_name=self._name,
                               node_name='*',
-                              component=self._component, 
-                              beam_flag = True)
+                              component=self._component)
         return df
         
     @df.setter

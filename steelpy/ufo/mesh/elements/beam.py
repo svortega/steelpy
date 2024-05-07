@@ -121,7 +121,7 @@ class BeamItemBasic:
     #
     def Ke(self, item: None = None):
         """ Return Beam stiffness matrix in global coordinates """
-        Tlg =  self.T
+        Tlg = self.T
         Kl = self.Ke_local
         return Tlg.T @ Kl @ Tlg        
     #
@@ -131,7 +131,6 @@ class BeamItemBasic:
         ke = self.Ke3D()
         if self._plane.plane2D:
             ke = self._M2D(ke)
-        #
         return ke
     #
     def Ke3D(self):

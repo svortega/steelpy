@@ -25,7 +25,7 @@ class BeamMorisonWave:
                  '_data', '_type', 'uvector']
     def __init__(self, beam, rho: float):
         """
-        rho : : Sea water density (1025)
+        rho : : Seawater density (1025)
         """
         self._beam = beam
         self.rho = rho

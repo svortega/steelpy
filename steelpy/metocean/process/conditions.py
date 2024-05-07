@@ -702,10 +702,10 @@ class CombTypes:
         profile = (condition[0], MG[0], CdCm[0], *data[2:])
         cur = conn.cursor()
         table = 'INSERT INTO Property(condition_number, \
-                                            mg_id, cdcm_id, \
-                                            flooding_id, cshielding_id, \
-                                            element_refinament, title) \
-                                            VALUES(?,?,?,?,?,?,?)'
+                                      mg_id, cdcm_id, \
+                                      flooding_id, cshielding_id, \
+                                      element_refinament, title) \
+                                      VALUES(?,?,?,?,?,?,?)'
         #
         # push
         cur = conn.cursor()

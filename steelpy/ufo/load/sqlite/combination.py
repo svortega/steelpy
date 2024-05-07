@@ -261,12 +261,15 @@ class LoadCombSQL(LoadCombinationBasic):
         """Equivalent Nodal Loads """
         #print('comb enl')
         ENLbasic = self._basic.ENL()
-        cols = tuple(set(ENLbasic['load_name'].tolist()))
-        if not cols:
-            return ENLbasic
+        bcols = set(ENLbasic['load_name'].tolist())
         #
         dfcomb = self.to_basic()
+        ccols = set(dfcomb['basic_load'].tolist())
         grpcomb = dfcomb.groupby(['basic_load'])
+        #
+        cols = tuple(bcols & ccols)
+        if not cols:
+            return ENLbasic
         #
         # basic loading
         values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',

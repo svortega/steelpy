@@ -85,7 +85,7 @@ class PlotBasic:
     #
     def materials(self, materials, elements, lims:list):
         """ """
-        beams = elements.beams()
+        beams = elements.beam()
         #materials = self._mesh._materials
         #
         fig, ax = self.init_plot(lims)
@@ -98,7 +98,7 @@ class PlotBasic:
     #
     def sections(self, sections, elements, lims:list):
         """ """
-        beams = elements.beams()
+        beams = elements.beam()
         #sections = self._mesh._sections
         fig, ax = self.init_plot(lims)
         ax = add_sections(beams, sections, fig, ax)

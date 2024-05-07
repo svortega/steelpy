@@ -38,12 +38,9 @@ class KinematicResults:
     def get_data(self, name: str, title: str):
         """ """
         #
-        #
-        #
         rows =  np.array([0.0])
         cols = self.z
         #cols =  np.arange(self.depth_points)
-        #
         #
         #etas = self.surface.eta
         xx =  self.surface.x
