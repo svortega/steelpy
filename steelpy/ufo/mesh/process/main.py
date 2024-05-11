@@ -237,7 +237,7 @@ def assemble_matrix(elements, nodes,
     mitem : matrix item
     """
     #print(f"** Processing Global [{mitem}] Matrix")
-    start_time = time.time()
+    #start_time = time.time()
     nn = len(nodes.keys())
     Ka = form_matrix(elements=elements,
                      nn=nn, ndof=ndof,

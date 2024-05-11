@@ -53,16 +53,12 @@ class NodeLoadItemIM(Mapping):
         else:
             raise IOError(f'node load type {load_type} not recognized')
         #
-        #self._labels.append(node_id)
-        #self._type.append(load_type)
-        #self._number.append(load_id)
     #
     def __getitem__(self, node_id: int | str):
         """
         """
         try:
             node_name =self._f2u_nodes.get_name(node_id)
-            #self._f2u_nodes[node_id]
             if not node_id in self._labels:
                 self._labels.append(node_id)
             #
@@ -180,7 +176,7 @@ class NodeItemIM:
         node_name = self._node_id
         if isinstance(values, dict):
             values.update({'type': 'mass',})
-            self._load[node_name] = values
+            self._mass[node_name] = values
             
         elif isinstance(values[0], list):
             for item in values:
@@ -205,7 +201,7 @@ class NodeItemIM:
         node_name = self._node_id
         if isinstance(values, dict):
             values.update({'type': 'displacement',})
-            self._load[node_name] = values
+            self._displacement[node_name] = values
             
         elif isinstance(values[0], list):
             for item in values:
@@ -257,7 +253,7 @@ class NodeLoadIM(NodeLoadMaster):
         super().__init__(load_type)
         self._load_name = load_name
         self._load_title = load_title
-        self._system_flag: int = 0
+        self._system_flag: int = 0 # Global system
 
     #
     def __setitem__(self, node_name: int|str,

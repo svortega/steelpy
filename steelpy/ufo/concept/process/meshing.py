@@ -65,7 +65,6 @@ class MeshingConcept:
         print('--- Meshing Concepts')
         mesh = self._mesh
         melements = mesh.element()
-        #elem_number = elements.get_number()
         celements = self.concept.element()
         cbeams = celements.beam()
         #
@@ -80,7 +79,7 @@ class MeshingConcept:
                 step._mesh = mnumber
                 print(f"concept: {key} --> element: {mnumber}")
                 try:
-                    1/step.length #.value
+                    1/step.length
                     total_length -= step.length
                     coord = beam.find_coordinate(step.length)
                     new_node = self._get_node_name(coord)
@@ -247,12 +246,12 @@ class MeshingConcept:
             # TODO : update linefit
             for bcname, CBloads in Clb_item._beam.items():
                 cbeam = Cbeams[bcname]
-                Lc = cbeam.L #.value
+                Lc = cbeam.L
                 #
                 #print(f'---> Load: {load_name} Beam: {bcname} L: {Lb:4.2f}')
                 lcoord_system = CBloads.coordinate_system
                 # Beam line load process
-                for lbload in CBloads.line[bcname]:
+                for lbload in CBloads.line:
                     #for lbload in rows:
                     label = lbload.load_name
                     print(f'Load Title: {label} - Line Load')
@@ -281,7 +280,7 @@ class MeshingConcept:
                         except RuntimeWarning:
                             continue # no load should be applied to this segment
                         # set load for mesh element
-                        print(f'Element: {bmid} --> {Lbi:4.2f} {xi:4.2f} {qinp} {qoutp} {Li}')
+                        print(f'Element: {bmid} --> {Lbi:4.2f} {xi:4.2f} {qaxial} {qinp} {qoutp} {Li} {lcoord_system}')
                         mlbeam = mlb_beam[bmid]
                         mlbeam.coordinate_system = lcoord_system
                         mlbeam.line = [qaxial[0], qinp[0], qoutp[0], qtorsion[0], 
@@ -289,7 +288,7 @@ class MeshingConcept:
                                        Li[0], Li[1], lbload.title]
                 #
                 # Beam point load process
-                for pbload in CBloads.point[bcname]:
+                for pbload in CBloads.point:
                     #for pbload in rows:
                     label = pbload.load_name
                     print(f'Load Title: {label} - Point Load')
@@ -310,34 +309,50 @@ class MeshingConcept:
                         else:
                             L2 = xi - L1
                             Li = (Lbs - L2)
-                            self._beam_pload(beam,
-                                             pbload,
-                                             mlb_node,
-                                             mlbeam,
+                            self._beam_pload(beam, pbload,
+                                             mlb_node, mlbeam,
                                              Li=Li)
                             break
             #
             # Nodal load process
             for CPname, CPloads in Clb_item._node.items():
                 point = CPoints[CPname]
+                #
+                #for pname, pload in CPloads._load.items():
                 for pload in CPloads.load:
                     label = pload.load_name
-                    print(f'Load Title: {label} - Nodal Load')
+                    print(f'Load: {CPname} Title: {label} - Nodal Load')
                     #
                     try:
-                        node_title = Mnodes.get_point_name(point[:3])
-                        node_name = Mnodes.get_name(node_title)
-                        node = Mnodes[node_name]
-                        print(f'Load: {CPname} Point: {node_title} Node: {node.name}')
+                        #node_title = Mnodes.get_point_name(point[:3])
+                        #node_name = Mnodes.get_name(node_title)
+                        #node = Mnodes[node_name]
+                        #print(f'Point: {node_title} Node: {node.name}')
+                        node = self._get_node(point, nodes=Mnodes)
                         mlb_node[node.name].load = [*pload[:6], pload[7]]
                     except IOError: # check if point load on a beam
-                        for beam_name, beam in Mbeams.items():
-                            # TODO: avoid to loop all beams elements
-                            if beam.intersect_point(point):
-                                self._beam_pload(beam, pload,
-                                                 mlb_node, mlb_beam, 
-                                                 point=point)
-                                break
+                        beam = self._get_beam(point, beams=Mbeams)
+                        self._beam_pload(beam, pload,
+                                         mlb_node, mlb_beam, 
+                                         point=point)
+                        #for beam_name, beam in Mbeams.items():
+                        #    # TODO: avoid to loop all beams elements
+                        #    if beam.intersect_point(point):
+                        #        self._beam_pload(beam, pload,
+                        #                         mlb_node, mlb_beam, 
+                        #                         point=point)
+                        #        break
+                #
+                #for pname, pload in CPloads._displacement.items():
+                for pload in CPloads.displacement:
+                    label = pload.load_name
+                    print(f'Load: {CPname} Title: {label}  - Nodal Displacement')
+                    try:
+                        node = self._get_node(point, nodes=Mnodes)
+                        mlb_node[node.name].displacement = [*pload[:6], pload[7]]
+                    except IOError: # check if point load on a beam
+                        beam = self._get_beam(point, beams=Mbeams)
+                    #1 / 0
         #
         Clwave = Cloads.metocean()
         Mlwave = mload.metocean()
@@ -346,6 +361,21 @@ class MeshingConcept:
             Mlwave[name] = condition
         #
         #print('--> end mesh loading')
+    #
+    def _get_node(self, point, nodes):
+        """ """
+        node_title = nodes.get_point_name(point[:3])
+        node_name = nodes.get_name(node_title)
+        node = nodes[node_name]
+        print(f'Point: {node_title} Node: {node.name}')
+        return node
+    #
+    def _get_beam(self, point, beams):
+        """ """
+        for beam_name, beam in beams.items():
+            if beam.intersect_point(point):
+                return beam
+        raise Warning(f'Point {point.name} orphan')
     #
     def _beam_pload(self, beam, pload,
                     node_load, mlbeam,
@@ -376,6 +406,31 @@ class MeshingConcept:
             print(f'Beam {beam.name} Point load L1: {L1:4.2f}')
             #beam_load[beam.name].point = [L1, *load]
             mlbeam.point = [L1, *load]
+    #
+    def _beam_pdisplacement(self, beam, displacement,
+                            node_load, 
+                            Li=None, point=None):
+        """ """
+        n1, n2 = beam.nodes
+        if point:
+            L1 = n1.distance(point)
+            L2 = n2.distance(point)
+        else:
+            L1 = Li
+            L2 = beam.L - Li
+        #
+        # TODO : adjust tolerancea
+        if math.isclose(L1, 0, rel_tol=1e-09, abs_tol=0.0):
+            print(f'Node {n1.name} Load')
+            1 / 0 # FIXME: check load coord_system
+            node_load[n1.name].displacement = displacement
+        elif math.isclose(L2, 0, rel_tol=1e-09, abs_tol=0.0):
+            print(f'Node {n2.name} Load')
+            1 / 0 # FIXME: check load coord_system
+            node_load[n2.name].displacement = displacement
+        # TODO : need to split beam at node
+        else: 
+            1 / 0
     #
     #
     def _set_combination(self):

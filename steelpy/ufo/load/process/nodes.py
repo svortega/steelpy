@@ -7,7 +7,7 @@ from __future__ import annotations
 from array import array
 from typing import NamedTuple
 from collections.abc import Mapping
-from collections import defaultdict, Counter
+from collections import defaultdict #, Counter
 import re
 
 # package imports
@@ -18,8 +18,7 @@ from .operations import (get_value_point,
                          #check_point_dic)
  
 from steelpy.utils.dataframe.main import DBframework
-import numpy as np
-
+#import numpy as np
 #
 # ---------------------------------
 #
@@ -148,15 +147,14 @@ class NodeLoadBasic(Mapping):
         self._title: list = []
         self._complex: array = array("I", [])
         self._load_id: list = []
-        #self._number: array = array("I", [])
         # 0-global/ 1-local
-        #self._system_flag: int = 0
         self._system: array = array("I", [])
 
     def __iter__(self):
         """
         """
-        items = list(dict.fromkeys(self._labels))
+        items = list(set(dict.fromkeys(self._labels)))
+        #items = list(dict.fromkeys(self._labels))
         #items = set(self._labels)
         return iter(items)
 
@@ -164,7 +162,9 @@ class NodeLoadBasic(Mapping):
         return value in self._labels
 
     def __len__(self) -> int:
-        return len(self._labels)
+        items = list(set(dict.fromkeys(self._labels)))
+        #return len(self._labels)
+        return iter(items)
 
     #
     def __str__(self) -> str:
@@ -219,16 +219,31 @@ class NodeLoadMaster(NodeLoadBasic):
     def __getitem__(self, node_name: int|str) -> list:
         """
         """
-        _index_list: list = [x for x, _item in enumerate(self._labels)
-                             if _item == node_name]
+        idx_list: list = [x for x, _item in enumerate(self._labels)
+                          if _item == node_name]
         #
-        _points: list = []
-        for _index in _index_list:
-            _points.append(PointNode(self._fx[_index], self._fy[_index], self._fz[_index],
-                                     self._mx[_index], self._my[_index], self._mz[_index],
-                                     self._labels[_index], self._title[_index], self._load_id[_index],
-                                     self._system[_index], self._complex[_index], self._type))
-        return _points
+        points: list = []
+        if self._type in ['load']:
+            for idx in idx_list:
+                points.append(PointNode(self._fx[idx], self._fy[idx], self._fz[idx],
+                                        self._mx[idx], self._my[idx], self._mz[idx],
+                                        self._labels[idx], self._title[idx], self._load_id[idx],
+                                        self._system[idx], self._complex[idx], self._type))
+        
+        elif self._type in ['displacement']:
+            for idx in idx_list:
+                points.append(DispNode(self._fx[idx], self._fy[idx], self._fz[idx],
+                                       self._mx[idx], self._my[idx], self._mz[idx],
+                                       self._labels[idx], self._title[idx], self._load_id[idx],
+                                       self._system[idx], self._complex[idx], self._type))
+        
+        elif self._type in ['mass']:
+            raise NotImplementedError()
+        
+        else:
+            raise IOError(f'load type: {self._type} not valid')
+            
+        return points
     #
     #
     def __delitem__(self, node_name: int|str) -> None:

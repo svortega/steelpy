@@ -4,14 +4,6 @@
 
 # Python stdlib imports
 from __future__ import annotations
-#from array import array
-#from collections.abc import Mapping
-#from collections import defaultdict
-#from dataclasses import dataclass
-#from typing import NamedTuple
-#import re
-#from operator import itemgetter
-#from itertools import groupby
 
 # package imports
 from steelpy.ufo.load.process.wave_load import WaveLoadItem, MetoceanLoad

@@ -257,13 +257,13 @@ class Beam:
         #
         #for item in self._basic._load.line.values():
         #    bloads.extend(item)
-        for item in self._basic._load.line.values():
+        for item in self._basic._load._line.values():
             bloads.extend(item)
             
         #if self._basic._load.line:
         #    bloads.extend(self._basic._load.line)
         #
-        for item in self._basic._load.point.values():
+        for item in self._basic._load._point.values():
             bloads.extend(item)
         #
         #if self._basic._load.point:

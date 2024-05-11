@@ -2,10 +2,10 @@
 
 # Python stdlib imports
 from __future__ import annotations
-from array import array
+#from array import array
 #from collections.abc import Mapping
 from itertools import chain, count
-from math import isclose, dist
+#from math import isclose, dist
 from typing import NamedTuple
 import re
 
@@ -327,16 +327,24 @@ class NodeSQL(NodeBasic):
         #    node = self.__getitem__(item)
         #    if node.boundary:
         #        ind = node.index
-        #        jbc[ind] = node.boundary[:6]                
+        #        jbc[ind] = node.boundary[:6]
+        #         
         #
         conn = create_connection(self.db_file)
         with conn:        
             fixity = pull_boundary(conn,
                                    component=self._component)
-        # update jbc 
-        for item in fixity:
-            jbc[item[0]] = item[4:10]
+            #
+            nidx = pull_node_index(conn, self._component)
+            nidx = {item[0]: item[1] for item in nidx}
         #
+        # update jbc
+        #
+        for item in fixity:
+            # [node_idx] = [x,y,z,rx,ry,rz]
+            jbc[item[0]] = item[4:10]
+            #node_name.append(item[1])
+        #      
         #
         #dofu = self.jwbc()
         #
@@ -355,8 +363,9 @@ class NodeSQL(NodeBasic):
         #jbc = to_matrix(self._jbc, self._plane.ndof)
         jbc = to_matrix(jbc, self._plane.ndof)
         df_jbc = self._db.DataFrame(data=jbc, columns=self._plane.dof)
-        node_name = list(self._labels)
-        df_jbc['node_name'] = node_name
+        #node_name = list(self._labels)
+        df_jbc['node_name'] = [nidx[idx]
+                               for idx, item in enumerate(jbc)]
         df_jbc = df_jbc.set_index('node_name', drop=True)    
         # remove rows with zeros
         #df_jbc = df_jbc[df_jbc.any(axis=1)]
@@ -625,6 +634,16 @@ def pull_node_rows(conn, component: int):
     """ """
     project = (component,)
     table = f'SELECT number, name FROM Node \
+              WHERE component_id = ?'
+    cur = conn.cursor()
+    cur.execute(table, project)
+    records = cur.fetchall()
+    return records
+#
+def pull_node_index(conn, component: int):
+    """ """
+    project = (component,)
+    table = f'SELECT mesh_idx, name FROM Node \
               WHERE component_id = ?'
     cur = conn.cursor()
     cur.execute(table, project)

@@ -74,30 +74,6 @@ class BeamIMMaster(Mapping):
         return output
     #
     #
-    #def _get_line_load(self):
-    #    """ return line load in correct format"""
-    #    print('-->')
-    #    1/0
-    #
-    #
-    #
-    #
-    #@property
-    #def coordinate_system(self):
-    #    if self._system_flag != 0:
-    #        return "local"
-    #    return "global"
-    #
-    #@coordinate_system.setter
-    #def coordinate_system(self, system:str|int):
-    #    """
-    #    Coordinate system for load : global or local (member)
-    #    """
-    #    self._system_flag = 0
-    #    if system in ['local', 'member', 1]:
-    #        self._system_flag = 1
-    #
-    #
     # ------------------
     #   
 #
@@ -130,13 +106,6 @@ class BeamLoadItemIM(BeamIMMaster):
                     beam_load: list) -> None:
         """
         """
-        #try:
-        #    beam = self._ufo_beam[beam_name]
-        #except KeyError:
-        #    raise IOError(f"beam {beam_name} not found")
-        #
-        #
-        #self._load(beam=beam)
         #
         if re.match(r"\b(point)\b", str(beam_load[0]), re.IGNORECASE):
             self._load._point[beam_name] = beam_load[1:]
@@ -155,15 +124,8 @@ class BeamLoadItemIM(BeamIMMaster):
     def __getitem__(self, beam_name: int | str):
         """
         """
-        #
-        #try:
-        #    beam = self._ufo_beam[beam_name]
-        #except KeyError:
-        #    raise IOError(f"beam {beam_name} not found")
-        #
-        #if not beam_name in self._labels:
         self._labels.append(beam_name)
-        return self._load(beam=beam_name) # ,  beam_name=beam_name
+        return self._load(beam=beam_name)
     #
     #
     def __str__(self, units: str = "si") -> str:
@@ -272,19 +234,10 @@ class BeamDistributedIM(BeamLineBasic):
          L0, L1,
          system, comment]
         """
-        #try:
-        #    self._beam = self._ufo_beam[beam_name]
-        #except KeyError:
-        #    raise IOError(f"beam {beam_name} not found")        
-        #Ltype =  line_load.pop(0)
-        #1 / 0
         line_load =  self._get_line(line_load)        
         #
         self._labels.append(beam_name)
         self._load_id.append(self._load_name)
-        #self._complex.append(0)
-        #
-        #self._L.append(Lbeam)
         # end 1
         self._qx0.append(line_load[0])
         self._qy0.append(line_load[1])
@@ -305,11 +258,11 @@ class BeamDistributedIM(BeamLineBasic):
     def __getitem__(self, beam_name: int|str) :
         """
         """
-        index_list: list = [x for x, item in enumerate(self._labels)
-                            if item == beam_name]
+        idx_list: list = [x for x, item in enumerate(self._labels)
+                          if item == beam_name]
         #1/0
         udl_list: list = []
-        for index in index_list:
+        for index in idx_list:
             udl_list.append(LineBeam(self._labels[index], # name
                                      self._title[index],  # title
                                      self._load_id[index],      # load_name
@@ -364,28 +317,6 @@ class BeamDistributedIM(BeamLineBasic):
             self._title.pop(index)
             self._complex.pop(index)
     #
-    #
-    #def to_node(self, beam):
-    #    """
-    #    return
-    #    In plane [V, M, w, theta]
-    #    Out plane [V, M, w, theta]
-    #    [fx, fy, fz, mx, my, mz]
-    #    """
-    #    #
-    #    items = []
-    #    for index, name in enumerate(self._labels):
-    #        item = LineBeam(self._qx1[index], self._qy1[index], self._qz1[index],
-    #                        self._qx2[index], self._qy2[index], self._qz2[index],
-    #                        self._L[index], self._L1[index], self._L2[index],
-    #                        self._labels[index], self._title[index],
-    #                        self._system[index], self._complex[index])
-    #        #
-    #        beam.load = item
-    #        reactions = beam.reactions()
-    #        items.append(reactions)
-    #
-    #    return items
     #
     @property
     def df(self):
@@ -456,22 +387,11 @@ class BeamPointIM(BeamPointBasic):
                     point_load: list|dict) -> None:
         """
         """
-        #
-        #try:
-        #    self._beam = self._ufo_beam[beam_name]
-        #except KeyError:
-        #    raise IOError(f"beam {beam_name} not found")          
-        #1 / 0
         point_load =  self._get_point(point_load)        
         #
         self._labels.append(beam_name)
         self._load_id.append(self._load_name)
-        #self._complex.append(0)
         #
-        #Ltype =  point_load.pop(0)
-        #
-        #self._L.append(Lbeam)
-        #point_load = get_beam_point_load(point_load)
         self._fx.append(point_load[0])
         self._fy.append(point_load[1])
         self._fz.append(point_load[2])

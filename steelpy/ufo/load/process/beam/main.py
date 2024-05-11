@@ -13,7 +13,7 @@ from collections.abc import Mapping
 #from steelpy.ufo.load.concept.beam import BeamLoadTypeIM
 from steelpy.ufo.load.process.actions import SelfWeight
 #from steelpy.f2uModel.load.inmemory.combination import BasicLoad
-from steelpy.utils.units.buckingham import Number
+#from steelpy.utils.units.buckingham import Number
 from steelpy.utils.math.operations import trnsload, linspace
 
 from steelpy.ufo.load.process.operations import (get_BeamLoad_dic,
@@ -22,123 +22,6 @@ from steelpy.ufo.load.process.operations import (get_BeamLoad_dic,
                                                  get_BeamNode_load,
                                                  get_BeamLine_load)
 
-#
-class BeamBasicLoad:
-    """
-    FE Load Cases
-
-    LoadType
-        |_ name
-        |_ number
-        |_ basic
-        |_ combination_level
-        |_ time_series
-        |_
-        |_ temperature
-
-    **Parameters**:
-      :number:  integer internal number
-      :name:  string node external name
-    """
-    __slots__ = ['_cls',  '_selfweight', #'gravity',
-                 '_basic', 'combination']
-
-    def __init__(self, beam):
-        """
-        """
-        self._cls = beam
-        #self._system_flag = 1 # local
-        #self.gravity = 9.80665  # m/s^2
-        #
-        self._selfweight = SelfWeight()
-        #self._basic = BeamLoadTypeIM(load_name="beam_load",
-        #                             load_title="basic",
-        #                             component=beam.name)
-        #self._basic.local_system()
-        self.combination = BeamLoadComb("beam_load")
-    #
-    @property
-    def basic(self):
-        """return basic beam load"""
-        return self._basic(beam=self._cls)
-    #
-    #@property
-    #def combination(self):
-    #    """return beam load combinations"""
-    #    return self._combinations
-
-    def __str__(self, units: str = "si") -> str:
-        """ """
-        unit_lenght = " m"
-        unit_force = "  N"
-        unit_bm = "N*m"
-        unit_fl = "N/m"
-        output = "\n"
-        output += "{:}\n".format(80 * "_")
-        output += "\n"
-        output += f"{35 * ' '}BASIC LOAD\n"
-        output += "\n"
-        output += f"--- Beam \n"
-        output += f"Element Name{6 * ' '}L1[{unit_lenght}] qx1[{unit_fl}] qy1[{unit_fl}] qz1[{unit_fl}] System Complex\n"
-        output += f"Line Load{9 * ' '}L2[{unit_lenght}] qx2[{unit_fl}] qy2[{unit_fl}] qz2[{unit_fl}] Comment\n"
-        output += "\n"
-        output += f"--- Beam \n"
-        output += f"Element Name{6 * ' '}L1[{unit_lenght}] fx [{unit_force}] fy [{unit_force}] fz [{unit_force}] System Complex\n"
-        output += f"Point Load{15 * ' '}mx [{unit_bm}] my [{unit_bm}] mz [{unit_bm}] Comment\n"
-        output += "\n"
-        output += f"--- Gravity/Selfweight\n"
-        #output += f"Element Number{4 * ' '}L1[{unit_lenght}] fx [{unit_force}] fy [{unit_force}] fz [{unit_force}] System Complex\n"
-        output += "\n"
-        output += "{:}\n".format(80 * ".")
-        output += "\n"
-        output += f"--- Beam \n"
-        output += self._basic.__str__()
-        output += "\n"
-        return output
-#
-#
-@dataclass
-class BeamLoadComb:
-    
-    def __init__(self, b):
-        """
-        """
-        self._labels = []
-        self._factor: array = array("f", [])
-    #
-    def __setitem__(self, load_name: int|str,
-                    factor: float) -> None:
-        """ """
-        
-        self._labels.append(load_name)
-        self._factor.append(factor)
-    
-    def __getitem__(self, element_name: int|str) :
-        """
-        """
-        pass
-#
-#
-class BeamBasicItem(Mapping):
-    
-    def __init__(self, beam_name:str):
-        """
-        """
-        self._labels = {}
-    
-    
-    def __iter__(self):
-        """
-        """
-        items = list(dict.fromkeys(self._labels))
-        return iter(items)
-
-    def __contains__(self, value) -> bool:
-        return value in self._labels
-
-    def __len__(self) -> int:
-        return len(self._labels)
-#
 #
 #
 # ---------------------------------
@@ -150,7 +33,7 @@ class BeamTypeBasic:
     def __init__(self):
         """
         """
-        self._system_flag = 0  # Global system default
+        self._system_flag = 1  # Local system default
     #
     # -----------------------------------------------
     #
@@ -178,7 +61,8 @@ class BeamTypeBasic:
         +  L0  +        +    L1    +
 
         """
-        return self._line #[beam_name]
+        beam_name = self._beam_id
+        return self._line[beam_name]
 
     @line.setter
     def line(self, values: list):
@@ -215,7 +99,8 @@ class BeamTypeBasic:
     @property
     def point(self):
         """ Concentrated force """
-        return self._point #[beam_name]
+        beam_name = self._beam_id
+        return self._point[beam_name]
 
     @point.setter
     def point(self, values: list):
@@ -251,9 +136,10 @@ class BeamTypeBasic:
         """
         Coordinate system for load : global or local (member)
         """
-        self._system_flag = 0
-        if system in ['local', 'member', 1]:
-            self._system_flag = 1
+        self._system_flag = 1
+        if system in ['global' , 0]:
+        #if system in ['local', 'member', 1]:
+            self._system_flag = 0
         #
         self._line.coordinate_system = self._system_flag
         self._point.coordinate_system = self._system_flag        
@@ -374,7 +260,7 @@ class BeamLoadBasic(Mapping):
     def __init__(self):
         """
         """
-        self._system_flag = 0  # Global system default       
+        self._system_flag = 1  # Local system default       
     
     def __len__(self) -> int:
         items = list(set(dict.fromkeys(self._labels)))
@@ -414,9 +300,9 @@ class BeamLoadBasic(Mapping):
         """
         Coordinate system for load : global or local (member)
         """
-        self._system_flag = 0
-        if system in ['local', 'member', 1]:
-            self._system_flag = 1
+        self._system_flag = 1
+        if system in ['global' , 0]:
+            self._system_flag = 0
     #
 #
 #
@@ -466,10 +352,10 @@ class BeamPointBasic(BeamLoadBasic):
     __slots__ = ['_system_flag']
     #
     #
-    def __init__(self):
-        """
-        """
-        super().__init__()
+    #def __init__(self):
+    #    """
+    #    """
+    #    super().__init__()
     #
     # -----------------------------------------------
     #
