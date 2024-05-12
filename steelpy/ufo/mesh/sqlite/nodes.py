@@ -11,9 +11,11 @@ import re
 
 # package imports
 from steelpy.utils.math.operations import zeros, to_matrix
-from steelpy.ufo.mesh.elements.nodes import NodePoint, NodeBasic
 from steelpy.utils.sqlite.utils import create_connection, create_table
-from steelpy.ufo.mesh.elements.boundary import BoundaryItem
+#
+from steelpy.ufo.process.elements.nodes import NodePoint, NodeBasic
+from steelpy.ufo.process.elements.boundary import BoundaryItem
+#
 from steelpy.utils.dataframe.main import DBframework
 
 
@@ -52,7 +54,6 @@ class NodeSQL(NodeBasic):
         """
         """
         super().__init__(system)
-        #
         self.db_file = db_file
         self._plane = plane
         self._component =  component
@@ -61,7 +62,6 @@ class NodeSQL(NodeBasic):
         with conn:
             self._create_table(conn)
         #print('--> update labels?')
-        #1 / 0
     #
     #
     @property
@@ -92,7 +92,7 @@ class NodeSQL(NodeBasic):
             self._labels.index(node_number)
             raise Exception(f' warning node {node_number} already exist')
         except ValueError:
-            coord = self._get_coordinates(coordinates)
+            coord = self.get_coordinates(coordinates)
             #
             try:
                 node_id = coordinates.name
@@ -266,17 +266,6 @@ class NodeSQL(NodeBasic):
                          newcol=indexes)
     #
     #
-    #def update_number(self, node_name:int, value:Union[float,int]):
-    #    """ """
-    #    conn = create_connection(self.db_file)
-    #    with conn:
-    #        nodes = get_nodes(conn)
-    #        nindex = [item[1] for item in nodes]
-    #        row = nodes.pop(nindex.index(node_name))
-    #        nodes.insert(value-1, row)
-    #        update_table(conn, nodes)
-    #        conn.commit()
-    #
     def get_maxmin(self):
         """
         """
@@ -346,11 +335,11 @@ class NodeSQL(NodeBasic):
             #node_name.append(item[1])
         #      
         #
-        #dofu = self.jwbc()
+        db = DBframework()
         #
         #jbc = to_matrix(jbc, 6)
-        df_jbc = self._db.DataFrame(data=jbc,
-                                    columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])
+        df_jbc = db.DataFrame(data=jbc,
+                              columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])
         jbc = df_jbc[self._plane.dof].values.tolist()
         jbc = list(chain.from_iterable(jbc))
         #
@@ -362,7 +351,7 @@ class NodeSQL(NodeBasic):
         #
         #jbc = to_matrix(self._jbc, self._plane.ndof)
         jbc = to_matrix(jbc, self._plane.ndof)
-        df_jbc = self._db.DataFrame(data=jbc, columns=self._plane.dof)
+        df_jbc = db.DataFrame(data=jbc, columns=self._plane.dof)
         #node_name = list(self._labels)
         df_jbc['node_name'] = [nidx[idx]
                                for idx, item in enumerate(jbc)]

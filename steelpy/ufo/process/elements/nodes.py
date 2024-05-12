@@ -4,9 +4,9 @@
 #
 # Python stdlib imports
 from __future__ import annotations
-from array import array
+#from array import array
 from dataclasses import dataclass
-from itertools import chain, count
+from itertools import chain #, count
 from collections import Counter
 from collections import defaultdict
 from collections.abc import Mapping
@@ -16,8 +16,7 @@ from typing import NamedTuple
 from math import isclose, dist
 #
 # package imports
-#from steelpy.utils.math.operations import zeros, to_matrix
-from steelpy.utils.dataframe.main import DBframework
+#from steelpy.utils.dataframe.main import DBframework
 
 
 #
@@ -46,15 +45,13 @@ class NodeBasic(Mapping):
     sets : List[tuple]
         set with node/element
     """
-    __slots__ = ['_labels', '_system',  #'_number',
-                 '_db', '_plane']  # '_jbc',
+    __slots__ = ['_labels', '_system', '_plane']
 
     def __init__(self, system: str) -> None:
         """
         system : cartesian/cylindrical/spherical
         """
-        self._system = system  # get_coordinate_system(system)
-        self._db = DBframework()
+        self._system = system
 
     #
     def __len__(self) -> int:
@@ -97,28 +94,21 @@ class NodeBasic(Mapping):
         """ """
         return self._plane
 
-    #
     @plane.setter
     def plane(self, plane: NamedTuple) -> None:
         """ """
         self._plane = plane
 
     #
-    # ----------------------------------
-    #
     @property
     def system(self) -> tuple:
         """
         """
         return self._system
-
-    #@system.setter
-    #def system(self, value:str) -> None:
-    #    """
-    #    """
-    #    self._system = get_coordinate_system(value)
+    #    
+    # ----------------------------------
     #
-    def _get_coordinates(self, coordinates):
+    def get_coordinates(self, coordinates):
         """ """
         if isinstance(coordinates, (list, tuple)):
             coordinates = check_point_list(coordinates, steps=3)
@@ -128,7 +118,6 @@ class NodeBasic(Mapping):
             raise Exception('Node input format not valid')
         return coordinates
 
-    #
     #
     def get_new_point(self, coordinates: list | tuple):
         """ """
@@ -156,7 +145,7 @@ class NodeBasic(Mapping):
         tol: absolte tolerance in metres (0.010 m default)
         """
         # get index of x coord location in existing database
-        coord = self._get_coordinates(coordinates)
+        coord = self.get_coordinates(coordinates)
         #
         items = self._isclose(key='*', item='x', value=coord[0],
                               abs_tol=tol, rel_tol=rel_tol)
@@ -327,8 +316,6 @@ def get_node_degree(nodes_conn:dict):
     degree = [item[0] for item in shared_nodes.most_common()]
     degree.reverse()
     return degree
-#
-
 #
 #
 def get_level(levels, nodes_conn, rem):
@@ -511,7 +498,7 @@ class CoordCartesian(NamedTuple):
     #    """ """
     #    return self.index
 
-
+#
 class CoordCylindrical(NamedTuple):
     """
     """
@@ -524,7 +511,7 @@ class CoordCylindrical(NamedTuple):
     boundaries: tuple
     system: str = "cylindrical"
 
-
+#
 class CoordSpherical(NamedTuple):
     """
     """

@@ -22,9 +22,8 @@ from steelpy.utils.dataframe.main import DBframework
 #
 #
 class BasicLoadSQL(LoadCaseBasic):
-    
     __slots__ = ['db_file', '_plane', '_component']
-                # '_nodes', '_beams']
+
     #
     def __init__(self, db_file:str, plane: NamedTuple,
                  component: int) -> None:

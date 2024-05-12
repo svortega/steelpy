@@ -11,14 +11,11 @@ from collections import defaultdict #, Counter
 import re
 
 # package imports
-#import pandas as pd
-# steelpy.f2uModel.load.process
 from .operations import (get_value_point,
                          check_list_number)
                          #check_point_dic)
  
 from steelpy.utils.dataframe.main import DBframework
-#import numpy as np
 #
 # ---------------------------------
 #
@@ -213,7 +210,6 @@ class NodeLoadMaster(NodeLoadBasic):
         self._mx: array = array('f', [])
         self._my: array = array('f', [])
         self._mz: array = array('f', [])
-        #self._distance: array = array('f', [])
     #
     #
     def __getitem__(self, node_name: int|str) -> list:
@@ -263,7 +259,6 @@ class NodeLoadMaster(NodeLoadBasic):
             self._labels.pop(_index)
             self._title.pop(_index)
             self._system.pop(_index)
-            #self._distance.pop(_index)
             self._complex.pop(_index)
     #
     #

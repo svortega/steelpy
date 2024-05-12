@@ -8,7 +8,7 @@ from dataclasses import dataclass
 # from typing import NamedTuple
 
 # package imports
-from steelpy.ufo.mesh.elements.nodes import CoordCartesian as Point
+from steelpy.ufo.process.elements.nodes import CoordCartesian as Point
 
 # from point import Point
 # from euclid import Point3 as Point

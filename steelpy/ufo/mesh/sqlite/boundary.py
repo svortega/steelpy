@@ -9,7 +9,7 @@ import re
 
 
 # package imports
-from steelpy.ufo.mesh.elements.boundary import BoundaryItem, BoundaryNode
+from steelpy.ufo.process.elements.boundary import BoundaryItem, BoundaryNode
 from steelpy.ufo.mesh.sqlite.utils import check_nodes
 from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.dataframe.main import DBframework

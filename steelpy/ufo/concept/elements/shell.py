@@ -1,10 +1,10 @@
 # 
-# Copyright (c) 2009-2018 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 
 
 # Python stdlib imports
-from typing import Tuple, Dict, List, ClassVar, Iterable, MutableMapping
+#from typing import Tuple, Dict, List, ClassVar, Iterable, MutableMapping
 from collections.abc import Mapping
 
 

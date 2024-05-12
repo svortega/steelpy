@@ -30,18 +30,19 @@ class ClassMainSQL:
         """
         #
         self._build = True 
-        #
         if sql_file:
             sql_file = check_input_file(file=sql_file,
                                         file_extension="db")
             self.db_file = sql_file
             self._build = False
-        else:
+        elif name:
             self.db_file = self._get_file(name=name)
             self._name = name
             #conn = create_connection(self.db_file)
             #with conn:
             #    self._create_table(conn)
+        else:
+            IOError('Project name or SQL file missing')
     #
     #
     def _get_file(self, name: str):
@@ -56,7 +57,7 @@ class ClassMainSQL:
             pass
         #
         return path
-    #
+#
 #
 #
 #
@@ -64,12 +65,10 @@ class ClassBasicSQL(Mapping):
     """ """
     __slots__ = ['db_file']
     #
-    #
     def __init__(self, db_file: str):
         """
         """
         self.db_file = db_file
-        #
         # create table
         conn = create_connection(self.db_file)
         with conn:

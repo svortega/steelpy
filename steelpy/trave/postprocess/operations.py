@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations

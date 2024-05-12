@@ -41,8 +41,6 @@ class BeamTypeBasic:
         """ """
         self._beam = beam
         self._beam_id = beam.name
-        #self._line(beam=self._beam)
-        #self._point(beam=self._beam)
         return self
     #
     # -----------------------------------------------

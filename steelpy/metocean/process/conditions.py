@@ -648,18 +648,28 @@ class CombTypes:
         conn = create_connection(self._db_file)
         with conn:
             propitem = self._pull_property(conn)
-        #
-        # MG
-        with conn:
+            # rho
+            project = (propitem[0],)
+            table = 'SELECT Criteria.rho_water \
+                     FROM Criteria, Condition  \
+                     WHERE Condition.number = ? \
+                     AND Condition.criteria_id = Criteria.number'
+            cur = conn.cursor()
+            cur.execute(table, project)      
+            item = cur.fetchone()
+            rho = float(item[0])
+            #
+            # MG
+            #with conn:
             project = (propitem[3],)
             table = 'SELECT * FROM MarineGrowth WHERE number = ?'
             cur = conn.cursor()
             cur.execute(table, project)      
             mgdata = cur.fetchone()       
             mg = MGitem(name=mgdata[1], db_file=self._db_file)
-        #
-        # CdCm
-        with conn:
+            #
+            # CdCm
+            #with conn:
             project = (propitem[4],)        
             table = 'SELECT * FROM CdCm WHERE number = ?'
             cur = conn.cursor()
@@ -670,7 +680,7 @@ class CombTypes:
         return PropertyBasic(number=propitem[0], 
                              name=propitem[1],
                              title=propitem[2],
-                             rho_w=self._properties.rho_w, 
+                             rho_w=rho, 
                              marine_growth=mg, 
                              CdCm=cdcm,
                              flooding=self._properties.flooding)

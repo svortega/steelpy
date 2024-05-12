@@ -6,7 +6,6 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
-#from typing import Dict, List, ClassVar, Tuple, Iterable, Union
 import re
 from operator import sub, add
 
@@ -259,7 +258,6 @@ class ConceptBeam(Mapping):
         """
         self.f2u_materials = materials
         self.f2u_sections = sections
-        #self.f2u_units = Units()
         self.f2u_points = points
         #
         self._beam_type = beam_type
@@ -280,14 +278,7 @@ class ConceptBeam(Mapping):
         #self._offset_index = array('i', [])        
         #self._eccentricities: List = []
         #self._releases: List = []        
-    #
-    #
-    #def _get_labels(self):
-    #    """ """
-    #    idx = [x for x, item in enumerate(self._type)
-    #           if item == self._beam_type]
-    #    labels = [self._labels[x] for x in idx]
-    #    return labels    
+    #   
     #
     #
     def __setitem__(self, element_name: int|str, 

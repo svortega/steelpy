@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 from dataclasses import dataclass
@@ -9,9 +9,6 @@ from collections import namedtuple
 import math
 
 # package imports
-#from fem2ufo.f2u_model.feclass.mesh.mesh import Mesh
-#from fem2ufo.f2u_model.femodel.mesh.boundary import Boundary
-#from fem2ufo.f2u_model.femodel.mesh.node import Node
 
 
 
@@ -42,12 +39,9 @@ class Joint:
       :number:  integer internal number 
       :name:  string node external name
     """
-    #
     __slots__ = ('number', '_nodes', 'name', 'overlap',
                  'chord', 'brace', 'type', '_spring',
                  '_points', '_node')
-
-    #_mesh = Mesh()
 
     def __init__(self, name: str, nodes) -> None:
         """
@@ -57,7 +51,7 @@ class Joint:
         self.brace: list = []
         self.chord: list = []
         self.type: str = 'point'
-
+    #
     def get_name(self, number: int = None, name: str = None)-> str:
         """
         """
@@ -135,9 +129,9 @@ class Joint:
 class Connection(Mapping):
     """
     """
-    __slots__ = ['_joints', '_points', '_nodes', '_boundaries']
+    __slots__ = ['_joints', '_points',
+                 '_nodes', '_boundaries']
 
-    #_joints: Dict = {}
 
     def __init__(self, points) -> None:
         """
@@ -149,12 +143,6 @@ class Connection(Mapping):
                     node_item: str|int|dict|list|tuple) -> None:
         """
         """
-        #try:
-        #self.map_joint_with_node(joint_name, node_item)
-        #except KeyError:
-        #    self._mesh.nodes[node_id] = coordinates
-        #    self.map_joint_with_node(joint_name, node_id)
-        #
         if isinstance(node_item, (str, int, dict)):
             self.map_joint_with_node(joint_name, node_item)
         else:
@@ -190,13 +178,6 @@ class Connection(Mapping):
                     self._joints[joint_name].node = node_id
                 except IndexError:
                     raise KeyError('   *** error : Node {:} not found'.format(joint_name))
-    #
-    #
-    #def get_point_by_node(self, node_id:int)-> bool:
-    #    """ """
-    #    node = [_point.name for _point in self._points.values()
-    #            if _point.node.number == node_id]
-    #    node
     #
     #
     def __len__(self) -> int:
@@ -311,17 +292,6 @@ class Point:
         """ """
         self._type = value
     #
-    # @property
-    # def coordinates(self):
-    #    """
-    #    """
-    #    
-    #    return self._mesh.nodes[self._node]
-    # @coordinates.setter
-    # def coordinates(self):
-    #    """
-    #    """
-    #    pass
 
 
 #
@@ -386,12 +356,6 @@ class Points(Mapping):
         """
         """
         self._nodes.system = coordinate_system
-    #
-    #@property
-    #def boundary(self):
-    #    """ """
-    #    return self._boundaries
-    #
     #
     def __len__(self) -> int:
         return len(self._points)

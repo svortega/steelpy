@@ -22,30 +22,39 @@ from steelpy.utils.sqlite.utils import create_connection, create_table
 
 #
 class HydroCriteria(ClassBasicSQL):
-    """ f2u Concept model Class """
-    __slots__ = ['_labels', '_item',
-                 'db_file', '_properties', '_rho_w']
+    """ Hydro Criteria model Class """
+    __slots__ = ['_item', 'db_file', '_properties', '_rho_w']
     #
     def __init__(self, rho_w, properties, db_file: str):
         """
         """
         super().__init__(db_file=db_file)
-        #self._name = name
-        #self.db_file = db_file
-        self._labels = list = []
+        #self._labels = list = []
         #
         self._properties = properties
         self._rho_w = rho_w
+    #
+    @property
+    def _labels(self):
+        """ """
+        data = ('metocean', )
+        table = "SELECT name FROM Criteria \
+                 WHERE type = ?"
+        conn = create_connection(self.db_file)
+        with conn:
+            cur = conn.cursor()
+            cur.execute(table, data)
+            items = cur.fetchall()
+        return [item[0] for item in items]
     #
     def __setitem__(self, name: int|str, title: int|str) -> None:
         """
         """
         try:
             self._labels.index(name)
-            raise Exception('Concept {:} already exist'.format(name))
+            raise Exception('Criteria {:} already exist'.format(name))
         except ValueError:
-            self._labels.append(name)
-            #
+            #self._labels.append(name)
             conn = create_connection(self.db_file)
             with conn:
                 self._push_data(conn, criteria=name, title=title)
@@ -54,12 +63,10 @@ class HydroCriteria(ClassBasicSQL):
         """ """
         try:
             self._labels.index(name)
-            #return self._item[name]
             conn = create_connection(self.db_file)
             with conn:            
                 data = self._pull_data(conn, name)
             #
-            #1 / 0
             return CriteriaItem(name=name,
                                 number=data.number,
                                 rho_w=data.rho, 
@@ -81,7 +88,6 @@ class HydroCriteria(ClassBasicSQL):
                     rho_water DECIMAL NOT NULL,\
                     date TEXT, \
                     title TEXT);"
-        #
         create_table(conn, table)
     #
     #

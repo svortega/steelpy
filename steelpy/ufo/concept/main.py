@@ -9,10 +9,11 @@ from __future__ import annotations
 from steelpy.ufo.mesh.main import ConceptMesh
 from steelpy.ufo.process.main import ufoBasicModel, ModelClassBasic
 #
-from steelpy.ufo.concept.process.joint import Connection
-from steelpy.ufo.concept.process.boundary import BoundaryConcept
-from steelpy.ufo.concept.process.geometry import Releases
-from steelpy.ufo.concept.process.meshing import MeshingConcept
+from steelpy.ufo.concept.elements.joint import Connection
+from steelpy.ufo.concept.elements.boundary import BoundaryConcept
+from steelpy.ufo.concept.elements.geometry import Releases
+#
+from steelpy.ufo.concept.meshing.main import MeshingConcept
 #
 from steelpy.ufo.concept.elements.sets import Groups
 from steelpy.ufo.concept.elements.points import NodesIM

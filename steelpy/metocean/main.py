@@ -55,13 +55,16 @@ class Metocean(ClassMainSQL):
     def __init__(self, name:str|None = None,
                  sql_file:str|None = None):
         """
-        """  
+        """
         super().__init__(name=name, sql_file=sql_file)
         #
-        self._rho_w: float = 1032.0  # kg/m^3  
+        if self._build:
+            self._rho_w: float = 1032.0  # kg/m^3
+        else:
+            self._rho_w: float = 1032.0 # kg/m^3
+            print('--> existing')
         #
-        self._properties = HydroProperty(rho_w=self._rho_w,
-                                         db_file=self.db_file)
+        self._properties = HydroProperty(db_file=self.db_file)
         #
         self._criteria = HydroCriteria(rho_w= self._rho_w,
                                        properties=self._properties, 

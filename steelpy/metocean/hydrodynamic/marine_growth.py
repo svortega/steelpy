@@ -21,29 +21,19 @@ import numpy as np
 class MarineGrowth(HydroBasic):
     """
     """
-    __slots__ = ['_mg', '_rho_w', 'db_file'] #'f2u_units',
-                 #'_rhow', '_default']
+    __slots__ = ['_mg', '_rho', 'db_file'] 
     
-    def __init__(self, rho_w, db_file: str):
+    def __init__(self, db_file: str):
         """
         """
         super().__init__(db_file)
-        #
-        self._mg:dict = {}
-        self._rho_w:float = rho_w # 1032.0 * f2u_units.kg / f2u_units.m**3
+        #self._rho_w:float = rho_w # 1032.0 * f2u_units.kg / f2u_units.m**3
     #
     #
     def __setitem__(self, name:str|int, value: list|tuple|dict) -> None:
         """
         """
-        #if re.match(r"\b(constant)\b", mg_type, re.IGNORECASE):
-        #    self._mg[mg_name] = MGconstant()
-        #elif re.match(r"\b(profile)\b", mg_type, re.IGNORECASE):
-        #    self._mg[mg_name] = MGprofile(self)
-        #else:
-        #    raise IOError("marine growth type {:} not implemented".format(mg_type))
-        #
-        mg_data = (name, 'profile', self._rho_w, None)
+        mg_data = (name, 'profile', 1032.0, None)
         conn = create_connection(self.db_file)
         with conn:
             self._push_data(conn, mg_data)
@@ -54,7 +44,7 @@ class MarineGrowth(HydroBasic):
         if isinstance(value, list|tuple):
             if isinstance(value[0], list|tuple):
                 #mgtype = 'profile'
-                print('-->')
+                #print('-->')
                 mgitem.profile = value
             else:
                 1 / 0
@@ -95,7 +85,7 @@ class MarineGrowth(HydroBasic):
     #
     def get_mgdata(self, values):
         """ [title, density, constant/profile, thickness] """
-        outval = [None, self._rho_w, None, None]
+        outval = [None, 1032.0, None, None]
         #mgprofile = outval[2]
         #
         if isinstance(values, dict):
@@ -136,7 +126,7 @@ class MarineGrowth(HydroBasic):
                         number INTEGER PRIMARY KEY NOT NULL, \
                         name NOT NULL, \
                         type TEXT NOT NULL, \
-                        water_density DECIMAL NOT NULL, \
+                        mg_density DECIMAL NOT NULL, \
                         title TEXT);"
         create_table(conn, table)
         # Profile
@@ -152,7 +142,7 @@ class MarineGrowth(HydroBasic):
         Create a new project into the projects table
         """
         cur = conn.cursor()
-        table = 'INSERT INTO MarineGrowth(name, type, water_density, title) \
+        table = 'INSERT INTO MarineGrowth(name, type, mg_density, title) \
                  VALUES(?,?,?,?)'
         # push
         cur = conn.cursor()
@@ -210,14 +200,20 @@ class MGitem(HydroItem):
     def __init__(self, name: int|str,
                  db_file: str):
         """ """
-        #self.name = name
-        #self._db_file = db_file
         super().__init__(name=name, db_file=db_file)
     #
     @property
     def rho(self):
         """Water density"""
-        return self.density
+        table = f'SELECT mg_density \
+                  FROM MarineGrowth WHERE name = ?'
+        item_name = (self.name, )
+        conn = create_connection(self._db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table, item_name)
+            item = cur.fetchone()
+        return item[0]
     
     @rho.setter
     def rho(self, value):
@@ -226,7 +222,7 @@ class MGitem(HydroItem):
         #
         mg_name = (density, self.name, )
         table = f"UPDATE MarineGrowth \
-                 SET water_density = ?\
+                 SET mg_density = ?\
                  WHERE name = ?"
         #
         conn = create_connection(self._db_file)
@@ -282,8 +278,8 @@ class MGitem(HydroItem):
     def _pull_item(self, conn):
         """ """
         item_name = (self.name, )
-        cur = conn.cursor()
         table = 'SELECT * FROM MarineGrowth WHERE name = ?'
+        cur = conn.cursor()
         cur.execute(table, item_name)
         item = cur.fetchone()
         return item

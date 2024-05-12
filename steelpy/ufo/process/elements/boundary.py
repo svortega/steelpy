@@ -8,7 +8,7 @@ from collections.abc import Mapping
 import re
 from typing import NamedTuple
 
-from steelpy.ufo.mesh.elements.nodes import check_point_list, check_point_dic
+from steelpy.ufo.process.elements.nodes import check_point_list, check_point_dic
 #
 # -----------------------
 # TODO: merge with slite

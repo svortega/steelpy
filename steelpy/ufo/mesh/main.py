@@ -17,10 +17,10 @@ from steelpy.ufo.mesh.sqlite.nodes import NodeSQL
 from steelpy.ufo.mesh.sqlite.elements import ElementsSQL
 from steelpy.ufo.mesh.sqlite.boundary import BoundarySQL
 from steelpy.ufo.mesh.process.main import Ke_matrix, Kg_matrix, Km_matrix, Kt_matrix
-from steelpy.ufo.mesh.elements.sets import Groups
 from steelpy.ufo.plot.main import PlotMesh
 #
-from steelpy.ufo.mesh.elements.nodes import node_renumbering
+from steelpy.ufo.process.elements.sets import Groups
+from steelpy.ufo.process.elements.nodes import node_renumbering
 #
 from steelpy.sections.main import Section
 from steelpy.material.main import Material

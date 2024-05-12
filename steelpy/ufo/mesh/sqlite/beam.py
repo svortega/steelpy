@@ -32,7 +32,7 @@ from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            get_unitvector, 
                                            update_element_item,
                                            check_element)
-from steelpy.ufo.mesh.elements.beam import BeamBasic, BeamItemBasic
+from steelpy.ufo.process.elements.beam import BeamBasic, BeamItemBasic
 from steelpy.ufo.mesh.process.bstiffness import unitvec_0 #, Rmatrix
 from steelpy.utils.sqlite.utils import create_connection
 #

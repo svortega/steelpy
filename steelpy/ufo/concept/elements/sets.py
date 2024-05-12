@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009-2019 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 
 
@@ -9,10 +9,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 #import logging
 import re
-from typing import NamedTuple, Tuple, List, Dict, Iterable, TypeVar, ClassVar, Union
 
 # package imports
-Tinp = TypeVar('Tinp', int, str)
+#Tinp = TypeVar('Tinp', int, str)
 
 #
 #
@@ -26,7 +25,7 @@ class Group:
     
     #
     def __init__(self, group_name:str, group_number:int,
-                 concepts:ClassVar, mesh: ClassVar):
+                 concepts, mesh):
         """
         """
         self._name: str = group_name
@@ -34,8 +33,8 @@ class Group:
         self._concepts: List = []
         self._elements: List = []
         self._nodes: List = []
-        self._f2u_concepts: ClassVar = concepts
-        self._mesh: ClassVar = mesh
+        self._f2u_concepts = concepts
+        self._mesh = mesh
     #
     @property
     def name(self) -> str:
@@ -60,12 +59,12 @@ class Group:
         self._number = group_number
     #
     @property
-    def nodes(self) -> List:
+    def nodes(self) -> list:
         """
         """
         _new_item: List[int] = []
         _delete: List[int] = []
-        _nodes: ClassVar = self._mesh.nodes
+        _nodes = self._mesh.nodes
         # 
         for _item in self._nodes:
             try:
@@ -183,7 +182,7 @@ class Groups(Mapping):
         self._groups: Dict = {}
     #      
     #
-    def __setitem__(self, set_name:Union[str, int], set_type:str) -> None:
+    def __setitem__(self, set_name:str|int, set_type:str) -> None:
         """
         """
         #self._groups[set_name] = Group(values, set_name)
@@ -206,7 +205,7 @@ class Groups(Mapping):
         else:
             raise IOError("group type {:} not implemented".format(set_type))        
     #
-    def __getitem__(self, set_name:str) -> Tuple:
+    def __getitem__(self, set_name:str) -> tuple:
         """
         """
         try:
@@ -217,7 +216,7 @@ class Groups(Mapping):
             #self.__setitem__(set_name, _number)
         return self._groups[set_name]
     #
-    def __iter__(self) -> Iterable:
+    def __iter__(self) -> iter:
         """
         """
         return iter(self._groups)
@@ -233,7 +232,7 @@ class Groups(Mapping):
         del self._groups[set_name]
     #
     @property
-    def add_group(self) -> Dict:
+    def add_group(self) -> dict:
         """
         """
         return None # self._groups

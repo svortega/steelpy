@@ -6,13 +6,10 @@ from __future__ import annotations
 from array import array
 import logging
 #from math import isclose, dist
-#from typing import NamedTuple
-#import re
+#from collections.abc import Mapping
 #
 # package imports
-# 
-from steelpy.ufo.mesh.elements.nodes import NodePoint, NodeBasic
-                                          #check_point_list, check_point_dic, 
+from steelpy.ufo.process.elements.nodes import NodePoint, NodeBasic
 #
 #
 #
@@ -41,7 +38,7 @@ class NodesIM(NodeBasic):
         set with node/element
     """
     __slots__ = ['_labels', '_number', '_x', '_y', '_z', 
-                 '_system',  '_sets', '_component', '_boundary'] # , 'f2u_units' , 
+                 '_system',  '_sets', '_component', '_boundary']
     
     def __init__(self, component: str, boundary, 
                  system:str = 'cartesian') -> None:
@@ -58,6 +55,9 @@ class NodesIM(NodeBasic):
         self._component = component
         self._boundary = boundary
     #
+    # ----------------------------------
+    #
+    #
     # ---------------------------------
     #
     def __setitem__(self, node_name: int,
@@ -69,7 +69,7 @@ class NodesIM(NodeBasic):
             raise Exception('    *** warning point {:} already exist'
                             .format(node_name))
         except ValueError:
-            coordinates = self._get_coordinates(coordinates)
+            coordinates = self.get_coordinates(coordinates)
             self._labels.append(node_name)
             self._number.append(len(self._labels))
             self._x.append(coordinates[0])
@@ -124,15 +124,6 @@ class NodesIM(NodeBasic):
             return
     #
     #
-    #def scale(self, scalar):
-    #    """Return the product of self and numeric object alpha."""
-    #    if not isinstance(scalar, (float, int)):
-    #        raise TypeError("must be a scalar")
-    #    self._x = array('f',[x * scalar for x in self._x])
-    #    self._y = array('f',[x * scalar for x in self._y])
-    #    self._z = array('f',[x * scalar for x in self._z])
-    #    #return array('f',result)
-    #
     def renumbering(self, new_numbers:list[int]):
         """ """
         indexes = [self._labels.index(node_name) 
@@ -156,30 +147,6 @@ class NodesIM(NodeBasic):
         self._z = [self._z[indx] for indx in indexes]
         #print('-->')
     #
-    #def update_number(self, node_name:int, value:int):
-    #    """ """
-    #    _index1 = self._labels.index(node_name)
-    #    temp1 = self._number[_index1]
-    #    _index2 = self._number.index(value)
-    #    #memb = self._labels[_index2]
-    #    self._number[_index1] = value
-    #    self._number[_index2] = temp1
-    #    #1/0
-    #    #print('---', self._number[_index1], self._number[_index2])
-    #
-    #def update_item(self, node_name:int, item:str, value:float|int):
-    #    """ """
-    #    1/0
-    #    _items = {"number":self._number}
-    #    try:
-    #        _index = self._labels.index(node_name)
-    #        _items[item][_index] = value
-    #    except ValueError:
-    #        raise IndexError('   *** node {:} does not exist'.format(node_name))        
-    #    #print('---')
-    #
-    #
-    #@property
     def get_maxmin(self):
         """
         """

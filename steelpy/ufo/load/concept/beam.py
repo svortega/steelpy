@@ -13,9 +13,6 @@ import re
 
 
 # package imports
-# steelpy
-# steelpy.f2uModel.load
-#from ..process.nodes import NodeLoadMaster
 from ..concept.node import NodeLoadIM
 
 from steelpy.ufo.load.process.beam.beam import LineBeam, PointBeam
@@ -191,18 +188,15 @@ class BeamDistributedIM(BeamLineBasic):
                  '_system', '_title', '_component'] # '_ufo_beam'
 
     def __init__(self, load_name:str|int,
-                 #ufo_beam, 
                  component: int) -> None: 
         """
         """
         super().__init__()
         self._component = component
         self._load_name = load_name
-        #self._ufo_beam = ufo_beam
         #
         self._labels: list = []
         self._title: list = []
-        #self._complex: array = array("I", [])
         self._load_id: list = []
         self._system: array = array("I", [])        
         # ens 1
@@ -355,7 +349,7 @@ class BeamPointIM(BeamPointBasic):
     __slots__ = ['_title', '_labels', '_load_name', '_beam', 
                  '_index', '_complex', '_component', 
                  '_fx', '_fy', '_fz', '_mx', '_my', '_mz',
-                 '_L0', '_type', '_system', '_load_id'] # '_ufo_beam'
+                 '_L0', '_type', '_system', '_load_id']
     
     def __init__(self,  load_name:str|int,
                  #ufo_beam, 
@@ -364,12 +358,10 @@ class BeamPointIM(BeamPointBasic):
         """
         super().__init__()
         self._load_name = load_name
-        self._component = component
-        #self._ufo_beam = ufo_beam        
+        self._component = component       
         #
         self._labels: list = []
         self._title: list = []
-        #self._complex: array = array("I", [])
         self._load_id: list = []
         self._system: array = array("I", [])
         #

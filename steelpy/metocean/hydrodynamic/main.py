@@ -30,35 +30,33 @@ class HydroProperty:
                  '_marine_growth',
                  '_hydro_diametre',
                  '_non_hydro',
-                 'rho_w', '_db_file']
+                 'db_file'] # 'rho_w', 
     
-    def __init__(self, rho_w:float,
-                 db_file: str) -> None:
+    def __init__(self, db_file: str) -> None:
         """
         """
         #
-        self._db_file = db_file
-        #
+        self.db_file = db_file
+        # TODO : class to SQL
         self.flooding = Flooding()
         self._hydro_diametre = HydroDiametre()
         #self._marine_growth = MarineGrowth()
-        # TODO: 
+        # TODO: define classes
         self._non_hydro = {}
         self._buoyancy_area = {}
         self._air_drag = {}
-        self.rho_w: float = rho_w  # 1032.0  * kg / m^3
+        #self.rho_w: float = rho_w  # 1032.0  * kg / m^3
         #
-        self._marine_growth = MarineGrowth(rho_w=self.rho_w,
-                                           db_file=self._db_file)        
+        self._marine_growth = MarineGrowth(db_file=self.db_file)        
         #
-        self._cdcm = CdCmCoefficients(db_file=self._db_file)
-        self._wkf = WaveKinFactor(db_file=self._db_file)
-        self._cbf = CurrentBlockFactor(db_file=self._db_file)
+        self._cdcm = CdCmCoefficients(db_file=self.db_file)
+        self._wkf = WaveKinFactor(db_file=self.db_file)
+        self._cbf = CurrentBlockFactor(db_file=self.db_file)
         #
         # create table
-        conn = create_connection(self._db_file)
+        conn = create_connection(self.db_file)
         with conn:
-            self._create_table(conn)        
+            self._create_table(conn)
     #
     # ------------------
     # SQL ops
@@ -77,6 +75,20 @@ class HydroProperty:
                     element_refinament INTEGER, \
                     title TEXT);"
         create_table(conn, table)    
+    #
+    # ---------------------------------------
+    #
+    @property
+    def rho(self) -> float:
+        """Water density [kg / m^3]"""
+        data = ('metocean', )
+        table = "SELECT name FROM Criteria \
+                 WHERE type = ?"
+        conn = create_connection(self.db_file)
+        with conn:
+            cur = conn.cursor()
+            cur.execute(table, data)
+        1 / 0
     #
     # ---------------------------------------
     #

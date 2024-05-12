@@ -13,15 +13,9 @@ from collections.abc import Mapping
 import functools
 import re
 #import logging
-#from typing import Dict, List, ClassVar, Tuple, Iterable, Union
 
 
 # package imports
-#
-#from steelpy.beam.main import Beam
-#
-# steelpy.f2uModel.mesh.inmemory
-#from .beam_ import BeamIM
 from steelpy.ufo.concept.elements.beam import ConceptBeam
 #
 #
@@ -62,17 +56,12 @@ class ConceptElements(Mapping):
         """
         Manages f2u elements
         """
-        #
-        # f2u classes
-        #self._f2u_nodes = nodes
         self._materials = materials
         self._sections = sections
         #
         self._labels:list = []
         self._type:list = []
-        #self._number: array = array('i', [])
         #
-        #self._beams = BeamIM(nodes=nodes, materials=materials, sections=sections)
         self._beams = ConceptBeam(beam_type="beam",
                                   points=points,
                                   materials=materials,
@@ -80,12 +69,6 @@ class ConceptElements(Mapping):
                                   labels=self._labels,
                                   element_type=self._type)
     #
-    #
-    #@property
-    #def _labels(self):
-    #    """ """
-    #    labels = self._beams._labels
-    #    return labels
     #
     def __setitem__(self, element_name: int, parameters: list) -> None:
         """
@@ -148,56 +131,16 @@ class ConceptElements(Mapping):
         return len(self._labels)
     #
     #
-    #def get_number(self, start:int=0):
-    #    """
-    #    """
-    #    try:
-    #        n = max(self._labels)
-    #    except ValueError:
-    #        n = start
-    #    #
-    #    while True:
-    #        n += 1
-    #        yield n
-    #
-    #def iter_elements(self, arraysize=1000):
-    #    """
-    #    """
-    #    for element_name in self._labels:
-    #        yield BeamElement(self, element_name)
-    #
-    #def spcl_bc(self, element_type:str):
-    #    """
-    #    Impose condition for special global shapes
-    #    1 fix (0 free)
-    #    """
-    #    if element_type == 'truss':
-    #        return [1,1,1,1,0,0]
-    #    else: # beam
-    #        return [1,1,1,1,1,1]
-    #
-    @property
-    def get_free_nodes(self):
-        """
-        find nodes not sharing elements
-        """
-        # FIXME : beam element only
-        #columns = list(zip(*self._connectivity))
-        #column = columns[0]
-        #column
-        #
-        #flat = list(chain.from_iterable(self._connectivity))
-        # Beam
-        flat = list(chain.from_iterable(self._beams._connectivity))
-        # Shell? 
-        return [k for k, v in Counter(flat).items() if v == 1]
-    #
-    #
     #@property
-    #def get_connectivities(self):
-    #    """ """
-    #    1/0
-    #    return self._beams._connectivity
+    #def get_free_nodes(self):
+    #    """
+    #    find nodes not sharing elements
+    #    """
+    #    #flat = list(chain.from_iterable(self._connectivity))
+    #    # Beam
+    #    flat = list(chain.from_iterable(self._beams._connectivity))
+    #    # Shell? 
+    #    return [k for k, v in Counter(flat).items() if v == 1]
     #
     #
     #@property
@@ -209,16 +152,6 @@ class ConceptElements(Mapping):
             if isinstance(values, list):
                 for item in values:
                     element_name = item[0]
-                    #try:
-                    #    self._labels.index(element_name)
-                    #    raise Exception('element {:} already exist'.format(element_name))
-                    #except ValueError:
-                        #element_type = 'beam'
-                        #mnumber = next(self.get_number())
-                        # default
-                        #self._labels.append(element_name)
-                        #self._number.append(mnumber)
-                        #self._type.append(element_type)
                     self._beams[element_name] = item[1:]
         #
         # dataframe input
@@ -229,8 +162,6 @@ class ConceptElements(Mapping):
             pass
         #
         return self._beams
-        #return ElementType(item_type='beam',
-        #                   cls_type=self._beams, cls=self)
 #
 #
 class ElementType(Mapping):
