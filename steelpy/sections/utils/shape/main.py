@@ -405,13 +405,13 @@ def ShapeGeometry(shape_type: str, geometry: list):
         #    return self._solid[shape_name]
         elif re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
             d = geometry[5]
-            return CircleSolid(name=geometry[0], d=d, type=shape_type)
+            return CircleSolid(name=geometry[0], d=d, shape=shape_type)
     
         elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
             d = geometry[5]
             wb = geometry[7]
             return RectangleSolid(name=geometry[0], depth=d, width=wb,
-                                  type=shape_type)
+                                  shape=shape_type)
     
         elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
             d = geometry[5]
@@ -419,7 +419,7 @@ def ShapeGeometry(shape_type: str, geometry: list):
             wt = geometry[9]            
             c = abs(wt - wb) / 2.0
             return TrapeziodSolid(name=geometry[0], depth=d, width=wb,
-                             a=wt, c=c, type=shape_type)    
+                             a=wt, c=c, shape=shape_type)
         
         elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
             return IbeamBasic(name=geometry[0], 

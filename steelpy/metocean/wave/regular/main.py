@@ -553,7 +553,7 @@ class RegWaveItem: # (WaveItem)
     #
     def kinematics(self, depth_points:int=100,
                    surface_points:int = 36):
-        """ """
+        """ Get wave kinematics """
         #
         conn = create_connection(self.db_file)
         #
@@ -620,4 +620,10 @@ class RegWaveItem: # (WaveItem)
                   'ut', 'vt', 'ux', 'uz',
                   'pressure', 'Benoulli_check']
         surface = df.DataFrame(data=data, columns=header)
-        return surface
+        #
+        header = ['wave_name', 'wave_id', 'surface_id','type',
+                  'phase', 'x', 
+                  'z', 'u', 'v', 'dphidt',
+                  'ut', 'vt', 'ux', 'uz',
+                  'pressure', 'Benoulli_check']        
+        return surface[header]

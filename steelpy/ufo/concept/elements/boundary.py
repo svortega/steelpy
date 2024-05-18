@@ -532,6 +532,8 @@ class SupportItems:
                 break
             # create a temporary node
             coord = self.cls._nodes._get_coordinates(coordinates)
+            pname = self.cls._points.get_point_name(coordinates)
+            
             bound = BoundaryItem(*self.cls._fixity[index],
                                  name=self._name,
                                  points=[nname])

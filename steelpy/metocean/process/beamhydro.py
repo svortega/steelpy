@@ -21,21 +21,26 @@ from steelpy.utils.dataframe.main import DBframework
 #
 @dataclass
 class BeamMorisonWave:
-    __slots__ = ['_beam', 'surface', 'rho', 
+    __slots__ = ['_beam', 'surface', 'rho', '_up', 
                  '_data', '_type', 'uvector']
-    def __init__(self, beam, rho: float):
+    def __init__(self, beam, rho: float,
+                 up: str = 'y'):
         """
         rho : : Seawater density (1025)
         """
         self._beam = beam
         self.rho = rho
         self.uvector = self._beam.dircosines
+        self._up = up
     #
     def elevations(self, nelev:int):
         """ Elevation Range"""
+        # FIXME: 3D eleveation 
         n1, n2 = self._beam.nodes
-        zmax = np.maximum(n1.y, n2.y)
-        zmin = np.minimum(n1.y, n2.y)
+        n1 = getattr(n1, self._up)
+        n2 = getattr(n2, self._up)
+        zmax = np.maximum(n1, n2)
+        zmin = np.minimum(n1, n2)
         return np.linspace(zmin, zmax, nelev)
     #
     def dz(self, nelev:int):
@@ -53,12 +58,12 @@ class BeamMorisonWave:
 
     #
     def Dh(self, mg):
-        """Diamtre hydrodynamic"""
+        """Diametre hydrodynamic"""
         # TODO: section naming
         section = self._beam.section.geometry
-        D = section.diameter
+        Dh = section.Dh
         #mg = self.MG(Z)
-        Dh = D + 2 * mg * 0
+        Dh += 2 * mg
         At = np.pi * np.power(Dh, 2) / 4
         return Dh, At
     #
@@ -200,8 +205,8 @@ class BeamMorisonWave:
         # print(f'qx ={np.min(fx): 1.4e}, qy={np.min(fy): 1.4e}, qz={np.min(fz): 1.4e}')
         # print('========================================')
         #
-        return BeamUnitForce(fx, fy, fz, dz, Elev,
-                             self._beam.name, self._beam.number)
+        return BeamUnitForce(fx, fy, fz, Elev,
+                             self._beam, self._up)
     #
     #def ft(self):
     #    """ Component along the axis of the cylinder (a tangential component)"""
@@ -243,10 +248,11 @@ class BeamUnitForce(NamedTuple):
     qx: list
     qy: list
     qz: list
-    dz: list
+    #dz: list
     elevation: list
-    beam_name: str | int
-    beam_number: int
+    #beam_name: str | int
+    beam: tuple
+    up: str
     #
     #
     @property
@@ -319,25 +325,27 @@ class BeamUnitForce(NamedTuple):
         qz = self._get_line(qname='qy', qitem=qitem)
         qitem = self.qz.to_dataframe(name='qz').reset_index()
         qx = self._get_line(qname='qz', qitem=qitem)
+        
         # TODO : fix torsion
         qitem['qt'] = float(0.0)
         qt = self._get_line(qname='qt', qitem=qitem)
         #
-        # TODO: L1 and L2 should not be zero for all cases
         dftemp = []
         for x, row in enumerate(rows):
             for idx, wstep in enumerate(wlength):
-                for hstep, col in enumerate(cols):
+                for hstep in range(len(qx[idx])):
+                #for hstep, col in enumerate(cols):
                     ldata = list(zip(qx[idx][hstep],
                                      qy[idx][hstep],
                                      qz[idx][hstep],
                                      qt[idx][hstep]))
                     #
-                    dftemp.append(['beam', self.beam_name, self.beam_number, 'line',
-                                   *ldata[0], *ldata[1], 0, 0,
+                    dftemp.append(['beam', self.beam.name, self.beam.number, 'line',
+                                   *ldata[0], *ldata[1],                   # q0, q1
+                                   ldata[2][0], self.beam.L - ldata[3][0], # L0, L1
                                    float(Fx[x, hstep, idx].values),
                                    float(OTM[x, hstep, idx].values), 
-                                   row, wstep, col])
+                                   row, wstep, cols[hstep]])
         return dftemp
     #
     #
@@ -374,25 +382,60 @@ class BeamUnitForce(NamedTuple):
     #
     def _get_line(self, qname: str, qitem):
         """ """
+        # FIXME : this is bad code
         elev = self.elevation
+        dz = np.diff(elev)
+        Lbeam = [float(item) * i for i, item in enumerate(dz)] + [self.beam.L]
+        n1, n2 = self.beam.nodes
+        n1 = getattr(n1, self.up)
+        #n2 = getattr(n2, self.up)        
+        #zmin = np.minimum(n1, n2)
+        rev = False
+        if n1 != elev[0]:
+            rev = True
+            Lbeam = Lbeam[::-1]
+        #
         # data = qx.groupby(['x'])[name].agg(lambda x : x.tolist())
         qgrp = qitem.groupby(['x', 'length'])[['z', qname]]
         # TODO : optimize
         load_1 = []
         for key, item in qgrp:
-            load_2 = []
-            step = None
-            for el in elev:
-                idx = item.index[item['z'] == el].tolist()
-                try:
-                    qn = np.round(item[qname][idx[0]], decimals=3)
-                    load_2.append([step, qn])
-                    step = qn
-                except IndexError:
-                    step = 0
+            z, q = item.to_numpy().T
+            #if rev:
+            #    Lbeam = Lbeam[::-1]
+            #    q = q[::-1]
+            # changing z by elev
+            qload = []
+            for x in range(1, z.size):
+                #try:
+                #1 / float(q[x])
+                if rev:
+                    qload.append([q[x-1], q[x], Lbeam[x], Lbeam[x-1]])
+                else:
+                    qload.append([q[x-1], q[x], Lbeam[x-1], Lbeam[x]])
+                #except ZeroDivisionError:
+                #    #print('here')
+                #    #pass
+                #    if rev:
+                #        qload.append([0.0, 0.0, Lbeam[x], Lbeam[x-1]])
+                #    else:
+                #        qload.append([0.0, 0.0, Lbeam[x-1], Lbeam[x]])
+            #load_2 = []
+            #step = None
+            #for el in elev:
+            #    idx = item.index[item['z'] == el].tolist()
+            #    try:
+            #        qn = np.round(item[qname][idx[0]], decimals=3)
+            #        load_2.append([step, qn])
+            #        step = qn
+            #    except IndexError:
+            #        step = 0
             # print(key, item)
-            load_1.append(load_2)
+            load_1.append(qload)
         #
+        if n1 != elev[0]:
+            load_1 = [item[::-1] for item in load_1]
+        #1 / 0
         return load_1
 
     #
@@ -400,11 +443,12 @@ class BeamUnitForce(NamedTuple):
         """ """
         qx = self.qx
         qz = self.qz
-        dz = permute2(self.dz, (qx.shape[0], qx.shape[2]), 1)
+        dz = permute2(self.elevation, (qx.shape[0], qx.shape[2]), 1)
         Fx = qx.cumsum(dim='z') * dz
         Fz = qz.cumsum(dim='z') * dz
         #
-        Z = self.elevation[:-1] + self.dz
+        #Z = self.elevation[:-1] + self.dz
+        Z = self.elevation
         Z = permute2(Z, (qx.shape[0], qx.shape[2]), 1)
         OTM = Fx * Z
         return Fx, Fz, OTM

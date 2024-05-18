@@ -146,7 +146,7 @@ class IbeamBasic(ShapeStressBasic):
     bfb: float
     tfb: float
     root_radius:float = 0
-    type:str = 'I section'
+    shape:str = 'I section'
     #
     # --------------------------------------------
     #
@@ -154,11 +154,11 @@ class IbeamBasic(ShapeStressBasic):
         """
         """
         #
-        self.type = 'Symmetrical I section'
+        self.shape = 'Symmetrical I section'
         #
         try:
             if self.bft != self.bfb:
-                self.type = 'Asymmetrical I section'
+                self.shape = 'Asymmetrical I section'
         except AttributeError:
             try:
                 self.bfb = self.bft
@@ -167,7 +167,7 @@ class IbeamBasic(ShapeStressBasic):
         #
         try:
             if self.tft != self.tfb:
-                self.type = 'Asymmetrical I section'
+                self.shape = 'Asymmetrical I section'
         except AttributeError:
             try:
                 self.tfb = self.tft
@@ -330,7 +330,7 @@ class IbeamBasic(ShapeStressBasic):
         ---------
         R = Radio
         """
-        if 'symmetrical' in self.type.lower():
+        if 'symmetrical' in self.shape.lower():
             b = self.bfb
             b1 = self.tw
             t = self.tfb
@@ -1012,7 +1012,7 @@ class IbeamBasic(ShapeStressBasic):
     #
     def _dimension(self) -> str:
         """ """
-        out = "{:32s}{:1.4E} {:1.4E} {:1.4E}\n".format(self.type, self.d, self.bft, self.bfb)
+        out = "{:32s}{:1.4E} {:1.4E} {:1.4E}\n".format(self.shape, self.d, self.bft, self.bfb)
         out += "{:48s}{:1.4E} {:1.4E} {:1.4E}\n".format("", self.tw, self.tft, self.tfb)
         out += "{:70s}{:1.4E}\n".format("", self.r)
         return  out
@@ -1022,7 +1022,7 @@ class IbeamBasic(ShapeStressBasic):
         """
         """
         _section = []
-        if 'symmetrical' in self.type.lower():
+        if 'symmetrical' in self.shape.lower():
             _section.append("{:2s}+   bf    +{:33s}{:1.3E} {:1.3E}  {:1.3E} {:1.3E}\n"
                             .format("", "", 
                                     self.d, 
@@ -1061,7 +1061,7 @@ class IbeamBasic(ShapeStressBasic):
         check_out = print_header()       
 
         check_out.append("{:23s} {:>19} {:1.4E} {:1.4E} {:1.4E} {:1.4E}\n"
-                         .format(self.type, "", self.d, self.tw, self.bft, self.tft))
+                         .format(self.shape, "", self.d, self.tw, self.bft, self.tft))
         
         check_out.append("{:>65} {:1.4E} {:1.4E}\n"
                          .format("", self.bfb, self.tfb))        
@@ -1087,6 +1087,12 @@ class IbeamBasic(ShapeStressBasic):
     def r(self, value):
         """ """
         self.root_radius = value
+    #
+    #
+    @property
+    def Dh(self):
+        """Hydrodynamic diametre"""
+        return math.hypot(self.d, max(self.bft, self.bfb))   
     #
     #
     #def __getattr__(self, attr):

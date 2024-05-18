@@ -21,15 +21,15 @@ from steelpy.utils.sqlite.utils import create_connection, create_table
 class HydroProperty:
     """
     """
-    __slots__ = ['flooding', 
-                 'conductor_shielding',
+    __slots__ = ['conductor_shielding',
                  'element_refining',
-                 '_buoyancy_area',
+                 #'_buoyancy_area',
                  '_cdcm', '_wkf', '_cbf', 
-                 '_air_drag',
+                 #'_air_drag',
                  '_marine_growth',
-                 '_hydro_diametre',
-                 '_non_hydro',
+                 # 'flooding', 
+                 #'_hydro_diametre',
+                 #'_non_hydro',
                  'db_file'] # 'rho_w', 
     
     def __init__(self, db_file: str) -> None:
@@ -38,13 +38,13 @@ class HydroProperty:
         #
         self.db_file = db_file
         # TODO : class to SQL
-        self.flooding = Flooding()
-        self._hydro_diametre = HydroDiametre()
+        #self.flooding = Flooding()
+        #self._hydro_diametre = HydroDiametre()
         #self._marine_growth = MarineGrowth()
         # TODO: define classes
-        self._non_hydro = {}
-        self._buoyancy_area = {}
-        self._air_drag = {}
+        #self._non_hydro = {}
+        #self._buoyancy_area = {}
+        #self._air_drag = {}
         #self.rho_w: float = rho_w  # 1032.0  * kg / m^3
         #
         self._marine_growth = MarineGrowth(db_file=self.db_file)        
@@ -169,11 +169,11 @@ class HydroProperty:
     #    """
     #    return self._cdcm
     #
-    @property
-    def flooded(self):
-        """
-        """
-        return self.flooding
+    #@property
+    #def flooded(self):
+    #    """
+    #    """
+    #    return self.flooding
     #
     #@property
     #def marine_growth(self):
@@ -181,29 +181,29 @@ class HydroProperty:
     #    """
     #    return self._marine_growth
     #
-    @property
-    def diameter(self):
-        """
-        """
-        return self._hydro_diametre
+    #@property
+    #def diameter(self):
+    #    """
+    #    """
+    #    return self._hydro_diametre
     #
-    @property
-    def buoyancy_area(self):
-        """
-        """
-        return self._buoyancy_area
+    #@property
+    #def buoyancy_area(self):
+    #    """
+    #    """
+    #    return self._buoyancy_area
     #
-    @property
-    def non_hydro(self):
-        """
-        """
-        return self._non_hydro
+    #@property
+    #def non_hydro(self):
+    #    """
+    #    """
+    #    return self._non_hydro
     #
     #
-    @property
-    def air_drag(self):
-        """
-        """
-        return self._air_drag
+    #@property
+    #def air_drag(self):
+    #    """
+    #    """
+    #    return self._air_drag
 #
 #

@@ -153,7 +153,7 @@ class TubularBasic(ShapeStressBasic):
     #name:str | int
     diameter:float
     thickness:float
-    type:str = 'tubular'
+    shape:str = 'tubular'
     #
     # --------------------------------------------
     #
@@ -511,7 +511,7 @@ class TubularBasic(ShapeStressBasic):
     def _dimension(self) -> str:
         """ Print section dimensions"""
         return "{:<9s} {:1.4e} {:1.4e}\n" \
-            .format(self.type, self.d, self.t)
+            .format(self.shape, self.d, self.t)
 
     #
     #
@@ -602,11 +602,15 @@ class TubularBasic(ShapeStressBasic):
         self.thickness = value    
     #     
     #
+    @property
+    def Dh(self):
+        """Hydrodynamic diametre"""
+        return self.diameter
     #
     #
     def _data_df(self):
         """ """
-        return {'type': self.type,
+        return {'type': self.shape,
                 'diameter': self.d,
                 'wall_thickness': self.t}
 #

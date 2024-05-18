@@ -1285,16 +1285,16 @@ def get_line_load(conn, beam_name:int|str,
     #
     beam_line = [] # defaultdict(list)
     for row in rows:
-        if row[7] in ['wave']:
-            raise NotImplemented
-        else:
-            beam_line.append(LineBeam(row[1], row[5],    # name, title,
-                                      row[0], row[-1],   # load_name, component_name
-                                      row[6],            # system,
-                                      #
-                                      *row[9:13],        # q_inplane [qx, qy, qz, qt]
-                                      *row[14:18],       # q_outplane [qx, qy, qz, qt]
-                                      row[8], row[12]))  # L0, L1
+        #if row[7] in ['wave']:
+        #    raise NotImplemented
+        #else:
+        beam_line.append(LineBeam(row[1], row[5],    # name, title,
+                                  row[0], row[-1],   # load_name, component_name
+                                  row[6],            # system,
+                                  #
+                                  *row[9:13],        # q_inplane [qx, qy, qz, qt]
+                                  *row[14:18],       # q_outplane [qx, qy, qz, qt]
+                                  row[8], row[12]))  # L0, L1
     return beam_line
 #
 #
@@ -1539,12 +1539,12 @@ def push_point_load(conn, load_name: str|int,
         raise NotImplemented
     #
     sql = 'INSERT INTO LoadBeamPoint(load_id, element_id,\
-                                        title, system, type, \
-                                        L0, fx, fy, fz, mx, my, mz,\
-                                        x, y, z, rx, ry, rz)\
-                                        VALUES(?,?,?,?,?,\
-                                               ?,?,?,?,?,?,?,\
-                                               ?,?,?,?,?,?)'
+                                    title, system, type, \
+                                    L0, fx, fy, fz, mx, my, mz,\
+                                    x, y, z, rx, ry, rz)\
+                                    VALUES(?,?,?,?,?,\
+                                           ?,?,?,?,?,?,?,\
+                                           ?,?,?,?,?,?)'
     with conn:
         cur = conn.cursor()
         cur.execute(sql, project)
@@ -1588,18 +1588,18 @@ def get_point_load(conn, beam_name:int|str,
         rows = cur.fetchall()
     #
     #
-    beam_line = []
+    beam_point = []
     for row in rows:
         if row[7] in ['mass']:
             raise NotImplemented
         else:
-            beam_line.append(PointBeam(row[1], row[5],  # name, title, 
-                                       row[0], row[-1], # load_name, component_name
-                                       row[6],          # system,
-                                       #
-                                       *row[9:15],      # fx, fy, fz, mx, my, mz
-                                       row[8]))         # L0
-    return beam_line
+            beam_point.append(PointBeam(row[1], row[5],  # name, title, 
+                                        row[0], row[-1], # load_name, component_name
+                                        row[6],          # system,
+                                        #
+                                        *row[9:15],      # fx, fy, fz, mx, my, mz
+                                        row[8]))         # L0
+    return beam_point
 #
 #
 def push_FER(conn, node_load:list):

@@ -80,7 +80,7 @@ class AngleBasic(ShapeStressBasic):
     tw:float
     b:float
     r:float
-    type:str = 'Angle'
+    shape:str = 'Angle'
     #
     # -----------------------------------------------------
     #    
@@ -529,7 +529,7 @@ class AngleBasic(ShapeStressBasic):
         check_out = print_header()
 
         check_out.append("{:23s} {:>19} {:1.4E} {:1.4E} {:1.4E} {:1.4E}\n"
-                         .format(self.type, "", self.d, self.tw, self.b, self.tw))
+                         .format(self.shape, "", self.d, self.tw, self.b, self.tw))
 
         check_out.extend(print_properties(self))
 
@@ -544,6 +544,11 @@ class AngleBasic(ShapeStressBasic):
     def _dimension(self) -> str:
         """ Print section dimensions"""
         return ("{:23s} {:>19} {:1.4E} {:1.4E} {:1.4E} {:1.4E}\n"
-                .format(self.type, "", self.d, self.tw, self.b, self.tw))
+                .format(self.shape, "", self.d, self.tw, self.b, self.tw))
 
-    #    
+    #
+    #
+    @property
+    def Dh(self):
+        """Hydrodynamic diametre"""
+        return math.hypot(self.d, self.b)

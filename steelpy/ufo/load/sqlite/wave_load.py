@@ -19,22 +19,21 @@ from math import dist
 from operator import sub, add
 
 # package imports
-from steelpy.ufo.load.process.wave_load import WaveData, MetoceanLoad
-from steelpy.ufo.load.sqlite.utils import get_load_data
-from steelpy.ufo.load.process.beam.beam import LineBeam
-from steelpy.ufo.mesh.sqlite.beam import BeamItemSQL, BeamSQL
+from steelpy.ufo.load.process.wave_load import MetoceanLoad # WaveData, 
+#from steelpy.ufo.load.sqlite.utils import get_load_data
+#from steelpy.ufo.load.process.beam.beam import LineBeam
+from steelpy.ufo.mesh.sqlite.beam import BeamSQL # BeamItemSQL, 
 from steelpy.ufo.mesh.sqlite.utils import (get_connectivity,
-                                           get_element_data,
-                                           check_element)
+                                           get_element_data) # check_element)
 from steelpy.sections.sqlite.utils import get_section
 from steelpy.ufo.mesh.sqlite.nodes import pull_node
 #
 from steelpy.utils.sqlite.utils import create_connection, create_table
-from steelpy.utils.math.operations import linspace, trnsload
+#from steelpy.utils.math.operations import linspace, trnsload
 #
 #
-import pandas as pd
-from steelpy.utils.dataframe.main import DBframework
+#import pandas as pd
+#from steelpy.utils.dataframe.main import DBframework
 #
 #
 #

@@ -177,22 +177,31 @@ class KinematicResults:
     #
     @property
     def ux(self):
-        """ [Wave surface x coord, time,  Water depth] """
+        """
+        velocity horizontal
+        
+        Return:
+        [Wave surface horizoltal coord, time,  Water depth]
+        """
         return self.get_data('u', 'ux')
     #
     @property
     def uz(self):
-        """ """
+        """ velocity verical
+        
+        Return:
+        [Wave surface verical coord, time,  Water depth]
+        """
         return self.get_data('v', 'uz')
     #
     @property
     def ax(self):
-        """ """
+        """ acceleration horizontal"""
         return self.get_data('ut', 'ax')
     #
     @property
     def az(self):
-        """ """
+        """ acceleration verical """
         return self.get_data('vt', 'az')
     #
     @property

@@ -145,6 +145,11 @@ class TrapezoidBasic(ShapeStressBasic):
     @property
     def d(self):
         return self.depth
+    #
+    @property
+    def Dh(self):
+        """Hydrodynamic diametre"""
+        return math.hypot(self.d, self.width)
 #
 #
 @dataclass
@@ -196,7 +201,7 @@ d   |     |   Z
     #name: str | int
     depth:float
     width:float
-    type: str
+    shape: str
     #  
     #
     @property
@@ -450,9 +455,9 @@ d   |     |   Z
     def _dimension(self) -> str:
         """ """
         return  ("{:32s}{:1.4E} {:1.4E} {:1.4E}\n"
-                 .format(self.type, self.depth, self.width, self.width))
+                 .format(self.shape, self.depth, self.width, self.width))
     #
-    #
+    #   
     #
 #
 #
@@ -499,7 +504,7 @@ class TrapeziodSolid(TrapezoidBasic):
     width:float
     a:float
     c:float
-    type: str = 'trapezoid'
+    shape: str = 'trapezoid'
     #
     #
     def _properties(self, poisson: float):
@@ -853,7 +858,7 @@ class CircleSolid(ShapeStressBasic):
     """
     #name: str | int
     d:float
-    type: str = 'Circular'
+    shape: str = 'Circular'
     #
     # --------------------------------------------
     #
@@ -1096,6 +1101,10 @@ class CircleSolid(ShapeStressBasic):
                  .format(self.type, self.d))
     #
     #
+    @property
+    def Dh(self):
+        """Hydrodynamic diametre"""
+        return self.d     
     #
     #
 #

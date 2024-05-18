@@ -82,7 +82,7 @@ class BoxBasic(ShapeStressBasic):
     tw: float
     b: float
     tb: float
-    type:str = 'box'
+    shape:str = 'box'
     #
     # --------------------------------------------
     #      
@@ -376,8 +376,12 @@ class BoxBasic(ShapeStressBasic):
     def _dimension(self) -> str:
         """ Print section dimensions"""
         out = "{:<32s}{:1.4e} {:1.4e} {:1.4e}\n" \
-            .format(self.type, self.d, self.b, self.b)
+            .format(self.shape, self.d, self.b, self.b)
         out += "{:<48s}{:1.4e} {:1.4e} {:1.4e}\n" \
             .format("", self.tw, self.tb, self.tb)
         return out
-    #    
+    #
+    @property
+    def Dh(self):
+        """Hydrodynamic diametre"""
+        return math.hypot(self.d, self.b)

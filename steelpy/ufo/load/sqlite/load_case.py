@@ -101,6 +101,8 @@ class BasicLoadSQL(LoadCaseBasic):
     #
     def _create_table(self, conn):
         """ """
+        # -------------------------------------
+        # Main
         table = "CREATE TABLE IF NOT EXISTS Load(\
                 number INTEGER PRIMARY KEY NOT NULL,\
                 name NOT NULL,\
@@ -108,6 +110,105 @@ class BasicLoadSQL(LoadCaseBasic):
                 level TEXT NOT NULL,\
                 title TEXT );"
         create_table(conn, table)
+        # -------------------------------------
+        # Node Load
+        table = "CREATE TABLE IF NOT EXISTS LoadNode(\
+                number INTEGER PRIMARY KEY NOT NULL,\
+                load_id INTEGER NOT NULL REFERENCES Load(number),\
+                node_id INTEGER NOT NULL REFERENCES Node(number),\
+                title TEXT,\
+                system TEXT NOT NULL,\
+                type TEXT NOT NULL,\
+                fx DECIMAL,\
+                fy DECIMAL,\
+                fz DECIMAL,\
+                mx DECIMAL,\
+                my DECIMAL,\
+                mz DECIMAL,\
+                x DECIMAL,\
+                y DECIMAL,\
+                z DECIMAL,\
+                rx DECIMAL,\
+                ry DECIMAL,\
+                rz DECIMAL,\
+                psi DECIMAL,\
+                B DECIMAL,\
+                Tw DECIMAL);"
+        create_table(conn, table)
+        # -------------------------------------
+        # line 
+        table = "CREATE TABLE IF NOT EXISTS LoadBeamLine(\
+                number INTEGER PRIMARY KEY NOT NULL,\
+                load_id INTEGER NOT NULL REFERENCES Load(number),\
+                element_id INTEGER NOT NULL REFERENCES Element(number),\
+                title TEXT,\
+                system INTEGER NOT NULL,\
+                type TEXT NOT NULL,\
+                L0 DECIMAL,\
+                qx0 DECIMAL,\
+                qy0 DECIMAL,\
+                qz0 DECIMAL,\
+                qt0 DECIMAL,\
+                L1 DECIMAL,\
+                qx1 DECIMAL,\
+                qy1 DECIMAL,\
+                qz1 DECIMAL,\
+                qt1 DECIMAL,\
+                BS DECIMAL,\
+                OTM DECIMAL,\
+                x DECIMAL,\
+                y DECIMAL,\
+                z DECIMAL);"
+        create_table(conn, table)
+        # -------------------------------------
+        # point
+        table = "CREATE TABLE IF NOT EXISTS LoadBeamPoint(\
+                number INTEGER PRIMARY KEY NOT NULL,\
+                load_id INTEGER NOT NULL REFERENCES Load(number),\
+                element_id INTEGER NOT NULL REFERENCES Element(number),\
+                title TEXT,\
+                system INTEGER NOT NULL,\
+                type TEXT NOT NULL,\
+                L0 DECIMAL,\
+                fx DECIMAL,\
+                fy DECIMAL,\
+                fz DECIMAL,\
+                mx DECIMAL,\
+                my DECIMAL,\
+                mz DECIMAL,\
+                x DECIMAL,\
+                y DECIMAL,\
+                z DECIMAL,\
+                rx DECIMAL,\
+                ry DECIMAL,\
+                rz DECIMAL);"
+        create_table(conn, table)
+        # -------------------------------------
+        # FER
+        table = "CREATE TABLE IF NOT EXISTS LoadBeamFER(\
+                number INTEGER PRIMARY KEY NOT NULL,\
+                load_id INTEGER NOT NULL REFERENCES Load(number),\
+                element_id INTEGER REFERENCES Element(number),\
+                node_id INTEGER NOT NULL REFERENCES Node(number),\
+                title TEXT,\
+                system TEXT NOT NULL,\
+                type TEXT NOT NULL,\
+                fx DECIMAL,\
+                fy DECIMAL,\
+                fz DECIMAL,\
+                mx DECIMAL,\
+                my DECIMAL,\
+                mz DECIMAL,\
+                x DECIMAL,\
+                y DECIMAL,\
+                z DECIMAL,\
+                rx DECIMAL,\
+                ry DECIMAL,\
+                rz DECIMAL,\
+                Psi DECIMAL,\
+                B DECIMAL,\
+                Tw DECIMAL);"
+        create_table(conn, table)        
     #
     # -----------------------------------------------
     #

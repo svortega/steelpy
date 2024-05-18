@@ -181,7 +181,7 @@ class BSOTM:
         #beams = mesh.elements().beams()
         #current = self.current.current
         #
-        # process
+        # TODO: Maybe separate beam hydro module
         Bwave = BeamMorisonWave(beam=beam, rho=self.rho_w)
         #
         #beam = beams[12]
@@ -236,13 +236,14 @@ class BSOTM:
         #dz = np.diff(Elev)
         # locating the middle point of each element
         #Z = Elev[:-1] + dz
-        Z = Bwave.Z(nelev=nelev)
+        #Z = Bwave.Z(nelev=nelev)
+        Elev = Bwave.elevations(nelev=nelev)
         #
         # -----------------------------------------
         # Hydro diametre & area
         marine_growth = self.properties.marine_growth
         #mg = marine_growth.MG(Z)
-        mg = marine_growth.get_profile(Z)
+        mg = marine_growth.get_profile(Elev)
         #
         #Dh, At = self.Dh(D, Z)
         #Dh, At = beamhydro.Dh(mg=mg)
@@ -251,20 +252,20 @@ class BSOTM:
         # Cd & Cm
         cdcm = self.properties.CdCm
         #cd, cm = cdcm.getCdCm(Z, crestmax, condition=self.condition)
-        cd, cm = cdcm.get_profile(Z)
+        cd, cm = cdcm.get_profile(Elev)
         #
         # -----------------------------------------
         # Current
         current = self.current.current
         current.seastate(d=d, z=z, eta=eta)
         #Vc = current.Vc(d, eta, Z)
-        Vc = current.get_profile(eta, Z)
-        #Vc = 0
+        Vc = current.get_profile(eta, Elev)
+        #Vc *= 0
         #
         # -----------------------------------------
         # Kinematis
         #
-        kin = self.kinematics.get_kin(Z)
+        kin = self.kinematics.get_kin(Elev)
         #
         #print('')
         #print('--> local Member')

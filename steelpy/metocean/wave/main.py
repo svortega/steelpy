@@ -13,15 +13,15 @@ import re
 # package imports
 from steelpy.metocean.wave.utils.main import WaveBasic
 from steelpy.metocean.wave.regular.main import RegularWaves
-from steelpy.utils.sqlite.utils import create_table # create_connection, 
+from steelpy.utils.sqlite.utils import create_table, create_connection
 
 #
 #
 @dataclass
 class Wave(WaveBasic):
     __slots__ = ['_regular', '_iregular', '_spectrum',
-                 '_rho_w', '_labels','_type', '_db_file',
-                 '_criteria']
+                 '_rho_w',  '_db_file', '_criteria']
+    # '_labels','_type',
     
     def __init__(self, criteria: str, rho_w:float, db_file: str):
         """
@@ -32,8 +32,8 @@ class Wave(WaveBasic):
         self._rho_w: float = rho_w  # kg / m^3
         #self._db_file = db_file
         #
-        self._labels: list[str|int] = []
-        self._type: list = []
+        #self._labels: list[str|int] = []
+        #self._type: list = []
         #
         self._regular = RegularWaves(criteria=self._criteria, 
                                      db_file=self.db_file)
@@ -41,6 +41,21 @@ class Wave(WaveBasic):
         # self._spectrum = Sprectrum()
         #
     #
+    @property
+    def _labels(self):
+        """ """
+        project = (self._criteria, )
+        table = "SELECT * FROM Wave \
+                 WHERE criteria_id = ?"
+        
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table, project)
+            rows = cur.fetchall()
+        #
+        labels = set([item[1] for item in rows])
+        return list(labels)        
     #
     def __setitem__(self, name: int|str,
                     wave_data: list|tuple|dict) -> None:
@@ -51,8 +66,8 @@ class Wave(WaveBasic):
         except ValueError:
             wave_type = wave_data[0]
             #properties = get_sect_properties(properties[1:])
-            self._labels.append(name)
-            self._type.append(wave_type)
+            #self._labels.append(name)
+            #self._type.append(wave_type)
             #conn = create_connection(self.db_file)
             #with conn:
             #    # name, type, title, criteria_id, 
@@ -76,7 +91,7 @@ class Wave(WaveBasic):
         """
         try:
             index = self._labels.index(name)
-            wave_type = self._type[index]
+            wave_type = self._pull_type(name)
         except ValueError:
             raise KeyError(f'   *** Wave {name} does not exist')
         #
@@ -155,6 +170,20 @@ class Wave(WaveBasic):
     #    cur.execute(table, wave_data)
     #    wave_id = cur.lastrowid
     #    print('--')
+    #
+    #
+    def _pull_type(self, name: str|int):
+        """ """
+        project = (self._criteria, name)
+        table = "SELECT * FROM Wave \
+                 WHERE criteria_id = ? \
+                 AND name = ?"
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table, project)
+            rows = cur.fetchone()
+        return rows[2]
     #
     # -----------------------------------
     # Operations

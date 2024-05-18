@@ -321,7 +321,7 @@ class PropertyBasic(NamedTuple):
     #
     marine_growth: tuple
     CdCm: tuple
-    flooding: tuple | None = None
+    #flooding: tuple | None = None
     conductor_shielding: tuple | None = None
     element_refinament: tuple | None = None
     #
@@ -414,19 +414,18 @@ class CombTypes:
         """
         """
         cond = self.condition
-        #
         conn = create_connection(self._db_file)
-        # Wave data
         with conn:
+            # Wave data
             project = (cond.wave_id, self._criteria)
             table = 'SELECT * FROM Wave \
                      WHERE number = ? AND criteria_id = ?'
             cur = conn.cursor()
             cur.execute(table, project)      
             wdata = cur.fetchone()            
-        #
-        # Wave kinemactis factor
-        with conn:
+            #
+            # Wave kinemactis factor
+            #with conn:
             project = (cond.wave_kfnumber,)
             table = 'SELECT * FROM WaveKinFactor WHERE number = ?'
             cur = conn.cursor()
@@ -435,22 +434,23 @@ class CombTypes:
             wkf = WKFitem(name=wkfdata[1], db_file=self._db_file)
         #
         # Regular wave
-        if wdata[2].lower() == 'regular':
+        if wdata[2].lower() in ['regular']:
             # get wave data
-            project = (wdata[0],)
-            table = 'SELECT * FROM WaveRegular WHERE wave_id = ?'
-            cur = conn.cursor()
-            cur.execute(table, project)
-            wregdata = cur.fetchone()
+            with conn:
+                project = (wdata[0],)
+                table = 'SELECT * FROM WaveRegular WHERE wave_id = ?'
+                cur = conn.cursor()
+                cur.execute(table, project)
+                wregdata = cur.fetchone()
             #
             wave = RegWaveItem(number=wdata[0], name=wdata[1],
                                Hw=wregdata[2], Tw=wregdata[3], d=wregdata[4], 
                                theory=wregdata[5], db_file=self._db_file)
             #
             return WaveBasic(wave=wave, 
-                            direction = cond.wave_direction, 
-                            kinematic_factor=wkf, 
-                            crest_elevation=wregdata[9])
+                             direction = cond.wave_direction, 
+                             kinematic_factor=wkf, 
+                             crest_elevation=wregdata[9])
         else:
             raise NotImplementedError(f'wave type {wave[2]} not yet implemented')
     
@@ -682,8 +682,8 @@ class CombTypes:
                              title=propitem[2],
                              rho_w=rho, 
                              marine_growth=mg, 
-                             CdCm=cdcm,
-                             flooding=self._properties.flooding)
+                             CdCm=cdcm)
+                             #flooding=self._properties.flooding)
     
     @properties.setter
     def properties(self, values: list|tuple|dict):
@@ -1014,14 +1014,10 @@ class CombTypes:
         # ------------------------------------------
         #
         for beam in beams.values():
-        #for name in labels:
-            # get beam 
-            #beam = BeamItemSQL(name,
-            #                   plane=self._plane,
-            #                   db_file=self.db_file)
             # solve beam forces
             Fwave = wload.Fwave(beam=beam)
-            dftemp.extend(Fwave.solve())
+            solution = Fwave.solve()
+            dftemp.extend(solution)
             #
             #print('-->')
         #
@@ -1078,6 +1074,7 @@ class CombTypes:
         #
         df_bload['load_id'] = self.number
         df_bload['title'] = f'MET_{self.name}'
+        # FIXME : global or local? 
         df_bload['system'] = 'local'
         #df_bload.rename(columns={'load_type': 'type'}, inplace=True)
         df_bload =  df_bload[header]            

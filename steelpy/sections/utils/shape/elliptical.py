@@ -276,7 +276,7 @@ class EllipticalSegment(SectionBasic):
         self.theta = float(thetaG)
         self.p = 0
         self.q = 0
-        self.type = 'Elliptical Segment'
+        self.shape = 'Elliptical Segment'
     
     def _property(self):
         """ """
@@ -331,7 +331,7 @@ class EllipticalSegment(SectionBasic):
         check_out = print_header_ellipse()       
 
         check_out.append("{:23s} {:1.4E}  {:1.4E}  {:1.4E}"
-                         .format(self.type, self.a, self.b, self.theta))
+                         .format(self.shape, self.a, self.b, self.theta))
 
         check_out.extend(print_properties(self))
 
@@ -389,7 +389,7 @@ class EllipticalSector(SectionBasic):
         self.theta = float(thetaG)
         self.p = 0
         self.q = 0
-        self.type = 'Elliptical Sector'
+        self.shape = 'Elliptical Sector'
     #
     def _property(self):
         """
@@ -440,7 +440,7 @@ class EllipticalSector(SectionBasic):
         check_out = print_header_ellipse()       
 
         check_out.append("{:23s} {:1.4E}  {:1.4E}  {:1.4E}"
-                         .format(self.type, self.a, self.b, self.theta))
+                         .format(self.shape, self.a, self.b, self.theta))
 
         check_out.extend(print_properties(self))
 
@@ -500,7 +500,7 @@ class SuperEllipse(SectionBasic):
         self.theta = 90
         self.p = float(p)
         self.q = float(q)
-        self.type = 'Super Ellipse'
+        self.shape = 'Super Ellipse'
     #
     def _property(self):
         """
@@ -563,7 +563,7 @@ class SuperEllipse(SectionBasic):
         check_out = print_header_ellipse()       
 
         check_out.append("{:23s} {:1.4E}  {:1.4E}  {:1.4E}       {:1.4E}  {:1.4E}"
-                         .format(self.type, self.a, self.b, self.theta, self.p, self.q))
+                         .format(self.shape, self.a, self.b, self.theta, self.p, self.q))
 
         check_out.extend(print_properties(self))
 
