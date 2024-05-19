@@ -160,8 +160,7 @@ class BeamMorisonWave:
         return KinAcc(Anx, Anz, Any, self.rho)
     #
     def dF(self, Dh, At, Cd, Cm,
-           kinvel, kinacc,
-           Elev, dz):
+           kinvel, kinacc, Elev, dz):
         """Components of the force per unit of cilinder length acting in
         the x, y and z dir are given by the generalized Morisson equation
         
@@ -213,7 +212,7 @@ class BeamMorisonWave:
     #    return None
     #
     def Fwave(self, Vc, MG, Cd, Cm,
-              kinematics, nelev:int=10):
+              kinematics, elev):
         """
         Wave force on a slender cilindrical element
         
@@ -221,12 +220,14 @@ class BeamMorisonWave:
         MG : Marine Growth
         Cd : Drag Coefficient
         Cm : Inertia Coefficient
+        WKF : Wave Kinematic Factor
         kinematics : Kinematic class
         nelev : number of elevations
         """
-        Elev = self.elevations(nelev=nelev)
+        #Elev = self.elevations(nelev=nelev)
         Dh, At = self.Dh(mg=MG)
-        dz = self.dz(nelev=nelev)
+        #dz = self.dz(nelev=nelev)
+        dz = np.diff(elev)
         #
         shape = kinematics['ax'].shape
         Vc = permute1(Vc, order=shape[0])
@@ -237,7 +238,7 @@ class BeamMorisonWave:
         #
         return self.dF(Dh, At, Cd, Cm,
                        kinvel, kinacc,
-                       Elev, dz)
+                       elev, dz)
         #return udl
     #
 

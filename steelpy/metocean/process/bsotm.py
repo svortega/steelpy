@@ -42,20 +42,23 @@ class BSOTM:
     bs  : Base shear
     otm : Overturning moment
     """
-    __slots__ = ['kinematics', 'current', 'properties',
-                 'condition', 'rho_w']
-    def __init__(self, kinematics:list,
+    __slots__ = ['wave', 'current', 'properties',
+                 'condition', 'rho_w', 'up']
+    def __init__(self, #kinematics:list,
+                 wave: tuple, 
                  current:tuple,
                  properties:tuple,
                  rho_w:float,
-                 condition:int=1): # 
+                 condition:int=1):
         """
         """
-        self.kinematics = kinematics
+        self.wave = wave
+        #self.kinematics = kinematics
         self.current = current
         self.properties = properties
         self.condition = condition
         self.rho_w = rho_w
+        self.up: str = 'y'
     #
     #
     #
@@ -174,15 +177,15 @@ class BSOTM:
     # -----------------------------------------------
     #
     #
-    def Fwave(self, beam, nelev=5):
+    def Fwave(self, beam):
         """Calculation of wave forces on beam elements"""
         #
-        #1 / 0
-        #beams = mesh.elements().beams()
-        #current = self.current.current
+        wip = self.properties.WIP
+        nelev = wip.nelev(beam, self.up)
         #
         # TODO: Maybe separate beam hydro module
-        Bwave = BeamMorisonWave(beam=beam, rho=self.rho_w)
+        Bwave = BeamMorisonWave(beam=beam, rho=self.rho_w,
+                                up=self.up)
         #
         #beam = beams[12]
         #uvector = np.array(beam.unit_vector)
@@ -198,9 +201,11 @@ class BSOTM:
         #
         # -----------------------------------------
         #
-        d = self.kinematics.d
-        z = self.kinematics.z
-        eta = self.kinematics.surface.eta
+        kinematics = self.wave.kinematics()
+        #
+        d = kinematics.d
+        z = kinematics.z
+        eta = kinematics.surface.eta
         #
         #ux =  self.kinematics.ux
         #uz =  self.kinematics.uz
@@ -259,13 +264,18 @@ class BSOTM:
         current = self.current.current
         current.seastate(d=d, z=z, eta=eta)
         #Vc = current.Vc(d, eta, Z)
-        Vc = current.get_profile(eta, Elev)
+        cbf = self.current.blockage_factor
+        cbf = cbf.get_profile(Elev)
+        Vc = current.get_profile(eta, Elev, cbf)
         #Vc *= 0
         #
         # -----------------------------------------
         # Kinematis
         #
-        kin = self.kinematics.get_kin(Elev)
+        wkf = self.wave.kinematic_factor
+        wkf = wkf.get_profile(Elev)
+        #
+        kin = kinematics.get_kin(Elev, wkf)
         #
         #print('')
         #print('--> local Member')
@@ -329,7 +339,7 @@ class BSOTM:
         #return lineload
         #return udl
         return Bwave.Fwave(Vc=Vc, MG=mg, Cd=cd, Cm=cm,
-                           kinematics=kin, nelev=nelev)        
+                           kinematics=kin, elev=Elev)        
     #
     #
 #

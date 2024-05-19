@@ -5,11 +5,12 @@
 from __future__ import annotations
 from dataclasses import dataclass
 #from operator import itemgetter
+import re
 
 #
 # package imports
 from steelpy.utils.sqlite.utils import create_connection, create_table
-from steelpy.metocean.hydrodynamic.utils.main import HydroItem, HydroBasic
+from steelpy.metocean.hydrodynamic.utils import HydroItem, HydroBasic
 
 
 class CurrentBlockFactor(HydroBasic):
@@ -49,14 +50,13 @@ class CurrentBlockFactor(HydroBasic):
         table = "CREATE TABLE IF NOT EXISTS CurrentBlockageFactor (\
                         number INTEGER PRIMARY KEY NOT NULL,\
                         name NOT NULL,\
-                        title TEXT NOT NULL, \
                         type TEXT, \
-                        factor DECIMAL);"
+                        title TEXT);"
         create_table(conn, table)
         # Profile
         table = "CREATE TABLE IF NOT EXISTS CurrentBlockFactorProfile (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        wkf_id NOT NULL REFERENCES CurrentBlockageFactor(number),\
+                        cbf_id NOT NULL REFERENCES CurrentBlockageFactor(number),\
                         elevation DECIMAL NOT NULL,\
                         factor DECIMAL NOT NULL);"
         create_table(conn, table)
@@ -66,7 +66,7 @@ class CurrentBlockFactor(HydroBasic):
         Create a new project into the projects table
         """
         cur = conn.cursor()
-        table = 'INSERT INTO CurrentBlockageFactor(name, title, type) \
+        table = 'INSERT INTO CurrentBlockageFactor(name, type, title) \
                  VALUES(?,?,?)'
         # push
         cur = conn.cursor()
@@ -147,10 +147,38 @@ class CBFitem(HydroItem):
         #
         profile = tuple((values[0], *item, ) for item in profile_data)
         cur = conn.cursor()
-        table = 'INSERT INTO CurrentBlockFactorProfile(wkf_id, \
-                                                elevation, factor) \
+        table = 'INSERT INTO CurrentBlockFactorProfile(cbf_id, \
+                                                       elevation, factor) \
                                                 VALUES(?,?,?)'
         # push
         cur = conn.cursor()
         cur.executemany(table, profile)
     #
+    #
+    def _pull_item(self, conn):
+        """ """
+        item_name = (self.name, )
+        table = 'SELECT * FROM CurrentBlockageFactor WHERE name = ?'
+        cur = conn.cursor()
+        cur.execute(table, item_name)
+        item = cur.fetchone()
+        return item
+    #
+    #
+    def _pull_profile(self, conn):
+        """get profile data"""
+        wkf = self._pull_item(conn)
+        #
+        if re.match(r"\b(profile)\b", wkf[2], re.IGNORECASE):
+            wkf_name = (wkf[0], )
+            cur = conn.cursor()
+            table = 'SELECT * FROM CurrentBlockFactorProfile \
+                     WHERE cbf_id = ?'
+            cur.execute(table, wkf_name)
+            wkf_profile = cur.fetchall()
+            wkf_profile = [item[2:] for item in wkf_profile]
+        else:
+            1 / 0
+        #
+        #print('-->')
+        return wkf_profile

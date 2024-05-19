@@ -32,7 +32,7 @@ class HydroDesign:
         #
         table = "CREATE TABLE IF NOT EXISTS Parameter (\
                     number INTEGER PRIMARY KEY NOT NULL,\
-                    condition_number INTEGER NOT NULL REFERENCES Condition(number),\
+                    condition_id INTEGER NOT NULL REFERENCES Condition(number),\
                     design_load TEXT, \
                     buoyancy TEXT,\
                     criterion TEXT, \

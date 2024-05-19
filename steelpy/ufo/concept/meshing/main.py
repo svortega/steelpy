@@ -175,9 +175,9 @@ class MeshingConcept:
                             new_node = self._get_node_name(coord)
                             # set boundary
                             #support = cboundary[boundary].support
-                            #support = csupports[boundary]
+                            support = csupports[boundary].points
                             #if support:
-                            msupports[new_node] = point.boundary
+                            msupports[new_node] = support[:6] # point.boundary
                             print(f"Boundary: {boundary} on Beam: {key} @ Node: {new_node}")
                             #
                             # existing element

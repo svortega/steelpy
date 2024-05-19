@@ -325,8 +325,11 @@ class KinematicResults:
         return dfkin
     #
     #
-    def get_kin(self, elev: list):
-        """ """
+    def get_kin(self, elev: list, krf: list):
+        """
+        elev : Elevations
+        krf : Kinematic reduction factor of horizontal velocity and acceleration
+        """
         rows =  np.array([0.0])
         xx =  self.surface.x
         #items = self._data.groupby(['x'])[['z', 'u', 'ut']]
@@ -337,6 +340,9 @@ class KinematicResults:
         for i, name in enumerate(items):
             item = self._data.groupby(['x'])[['z', name]]
             data = self.kindf(item, xx, elev)
+            # krf on horizontal vel and acc
+            if name in ['u', 'ut']:
+                data *= krf     
             data = np.transpose(data)
             # insert x axis to simulate a 3d wave [x, z, lenght]
             data = np.expand_dims(data, axis=0)

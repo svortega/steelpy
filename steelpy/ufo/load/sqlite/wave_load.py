@@ -5,7 +5,7 @@
 # Python stdlib imports
 from __future__ import annotations
 #from array import array
-from collections.abc import Mapping
+#from collections.abc import Mapping
 from concurrent.futures import ProcessPoolExecutor
 #from multiprocessing import Pool
 #from collections import defaultdict
@@ -28,7 +28,7 @@ from steelpy.ufo.mesh.sqlite.utils import (get_connectivity,
 from steelpy.sections.sqlite.utils import get_section
 from steelpy.ufo.mesh.sqlite.nodes import pull_node
 #
-from steelpy.utils.sqlite.utils import create_connection, create_table
+from steelpy.utils.sqlite.utils import create_connection #, create_table
 #from steelpy.utils.math.operations import linspace, trnsload
 #
 #
@@ -116,11 +116,6 @@ class MetoceanLoadSQL(MetoceanLoad):
             # ------------------------------------------
             conn = create_connection(self.db_file)
             for item in self._condition:
-                #sname =  f'MET_{key}'
-                #sload = item.load()
-                #self.get_beam_load(wnumber=item.number,
-                #                   title=sname,
-                #                   wload=sload)
                 #
                 df_bload = item.get_beam_load(beams)
                 #

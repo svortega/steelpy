@@ -7,8 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 # package imports
-#from steelpy.utils.sqlite.main import ClassBasicSQL
-from steelpy.metocean.hydrodynamic.utils.main import HydroBasic
+from steelpy.metocean.hydrodynamic.utils import HydroBasic
 from steelpy.utils.sqlite.utils import create_connection #, create_table
 
 

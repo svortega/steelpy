@@ -21,6 +21,7 @@ from steelpy.metocean.current.main import CurrentItem
 from steelpy.metocean.hydrodynamic.cbf import CBFitem
 from steelpy.metocean.hydrodynamic.marine_growth import MGitem
 from steelpy.metocean.hydrodynamic.morison import CdCmitem
+from steelpy.metocean.hydrodynamic.element_segment import WIPitem
 #
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #
@@ -155,15 +156,15 @@ class HydroCondition(Mapping):
                     criteria_id INTEGER NOT NULL REFERENCES Criteria(number),\
                     wave_id INTEGER NOT NULL REFERENCES Wave(number),\
                     wave_direction  DECIMAL NOT NULL,\
-                    wave_kfnumber INTEGER REFERENCES WaveKinFactor(number),\
+                    wave_kf_id INTEGER REFERENCES WaveKinFactor(number),\
                     buoyancy TEXT NOT NULL,\
                     current_id INTEGER REFERENCES Current(number),\
                     current_direction DECIMAL,\
-                    current_bfnumber INTEGER REFERENCES CurrentBlockageFactor(number),\
+                    current_bf_id INTEGER REFERENCES CurrentBlockageFactor(number),\
                     stretching TEXT,\
-                    wind_number INTEGER REFERENCES Wind(number),\
+                    wind_id INTEGER REFERENCES Wind(number),\
                     wind_direction DECIMAL,\
-                    wind_area_number INTEGER REFERENCES WindArea(number));"
+                    wind_area_id INTEGER REFERENCES WindArea(number));"
         create_table(conn, table)
     #
     #
@@ -180,9 +181,9 @@ class HydroCondition(Mapping):
         #
         cur = conn.cursor()
         table = 'INSERT INTO Condition(name, title, criteria_id, \
-                                            wave_id, wave_direction, wave_kfnumber, buoyancy, \
-                                            current_id, current_direction, current_bfnumber, stretching, \
-                                            wind_number, wind_direction, wind_area_number) \
+                                            wave_id, wave_direction, wave_kf_id, buoyancy, \
+                                            current_id, current_direction, current_bf_id, stretching, \
+                                            wind_id, wind_direction, wind_area_id) \
                                             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
         # push
         cur = conn.cursor()
@@ -321,10 +322,10 @@ class PropertyBasic(NamedTuple):
     #
     marine_growth: tuple
     CdCm: tuple
-    #flooding: tuple | None = None
-    conductor_shielding: tuple | None = None
-    element_refinament: tuple | None = None
-    #
+    #WKF: tuple
+    #conductor_shielding: tuple | None = None
+    WIP: tuple
+#
 #
 #
 @dataclass
@@ -460,7 +461,6 @@ class CombTypes:
         [wave_name, Direction(deg), Kinematics, title]
         """
         values = self._get_wvalues(values)
-        #try:
         conn = create_connection(self._db_file)
         with conn:
             wave = self._pull_wave(conn, wave_name=values[0])
@@ -477,28 +477,13 @@ class CombTypes:
             table = f"UPDATE Condition \
                      SET wave_id = {wave[0]}, \
                      wave_direction= {values[1]}, \
-                     wave_kfnumber = {wkf[0]}, \
+                     wave_kf_id = {wkf[0]}, \
                      buoyancy = '{values[3]}' \
                      WHERE name = ? \
                      AND criteria_id = ?"
             #
             cur = conn.cursor()
-            cur.execute(table, query)                 
-            #wave = self._cls._wave[values[0]]
-        #except KeyError:
-        #    raise IOError(f'wave {values[0]} not found')
-        #
-        #with conn:
-        #    table = f"UPDATE Combination \
-        #             SET wave_id = {wave[0]}, \
-        #             wave_direction= {values[1]}, \
-        #             kinematic_factor = {values[2]}, \
-        #             buoyancy = '{values[3]}' \
-        #             WHERE name = {self.name}"
-        #    #
-        #    cur = conn.cursor()
-        #    cur.execute(table) 
-        #
+            cur.execute(table, query)
         #print('-->')
     #
     def _pull_wave(self, conn, wave_name: int|str,
@@ -520,7 +505,8 @@ class CombTypes:
                   item: str = '*'):
         """ """
         project = (name,)
-        table = 'SELECT {:} FROM WaveKinFactor WHERE name = ?'.format(item)
+        table = f'SELECT {item} FROM WaveKinFactor \
+                  WHERE name = ?'
         cur = conn.cursor()
         cur.execute(table, project)      
         items = cur.fetchone()
@@ -585,7 +571,7 @@ class CombTypes:
             table = f"UPDATE Condition \
                      SET current_id = {current[0]}, \
                      current_direction= {values[1]}, \
-                     current_bfnumber = {cbf[0]}, \
+                     current_bf_id = {cbf[0]}, \
                      stretching = '{values[3]}' \
                      WHERE name = ? \
                      AND criteria_id = ?"
@@ -614,7 +600,8 @@ class CombTypes:
                   item: str = '*'):
         """ Current Blockage Factor"""
         project = (name,)
-        table = 'SELECT {:} FROM CurrentBlockageFactor WHERE name = ?'.format(item)
+        table = f'SELECT {item} FROM CurrentBlockageFactor \
+                 WHERE name = ?'
         cur = conn.cursor()
         cur.execute(table, project)      
         items = cur.fetchone()
@@ -676,13 +663,22 @@ class CombTypes:
             cur.execute(table, project)      
             cdcmdata = cur.fetchone()        
             cdcm = CdCmitem(name=cdcmdata[1], db_file=self._db_file)
+            #
+            # element segmentation
+            project = (propitem[5],)
+            table = 'SELECT * FROM ElementSegment WHERE number = ?'
+            cur = conn.cursor()
+            cur.execute(table, project)      
+            wipdata = cur.fetchone()
+            wip = WIPitem(name=wipdata[1], db_file=self._db_file)
         #
         return PropertyBasic(number=propitem[0], 
                              name=propitem[1],
                              title=propitem[2],
                              rho_w=rho, 
                              marine_growth=mg, 
-                             CdCm=cdcm)
+                             CdCm=cdcm,
+                             WIP=wip)
                              #flooding=self._properties.flooding)
     
     @properties.setter
@@ -708,13 +704,15 @@ class CombTypes:
         #
         CdCm = self._pull_cdcm(conn, name=data[1])
         #
+        WIP = self._pull_wip(conn, name=data[2])
         #
-        profile = (condition[0], MG[0], CdCm[0], *data[2:])
+        profile = (condition[0], MG[0], CdCm[0], WIP[0], *data[3:])
         cur = conn.cursor()
-        table = 'INSERT INTO Property(condition_number, \
+        table = 'INSERT INTO Property(condition_id, \
                                       mg_id, cdcm_id, \
+                                      element_segment_id, \
                                       flooding_id, cshielding_id, \
-                                      element_refinament, title) \
+                                      title) \
                                       VALUES(?,?,?,?,?,?,?)'
         #
         # push
@@ -729,34 +727,18 @@ class CombTypes:
         #
         project = (cond.number,)
         table = f'SELECT {item} FROM Property \
-                  WHERE condition_number = ?'
+                  WHERE condition_id = ?'
         cur = conn.cursor()
         cur.execute(table, project)      
         prop = cur.fetchone()
-        #
-        # MG
-        #project = (prop[2],)
-        #table = 'SELECT * FROM MarineGrowth WHERE number = ?'
-        #cur = conn.cursor()
-        #cur.execute(table, project)      
-        #mg = cur.fetchone()
-        #
-        # CdCm
-        #project = (prop[3],)
-        #table = 'SELECT * FROM CdCm WHERE number = ?'
-        #cur = conn.cursor()
-        #cur.execute(table, project)      
-        #cdcm = cur.fetchone()
-        #
-        #1 / 0
-        return [*cond[:3], *prop[2:-1]]        
+        return [*cond[:3], *prop[2:-1]]
     #
     #
     def _pull_cdcm(self, conn, name: int|str,
                    item: str = '*'):
         """ """
         project = (name,)
-        table = 'SELECT {:} FROM CdCm WHERE name = ?'.format(item)
+        table = f'SELECT {item} FROM CdCm WHERE name = ?'
         cur = conn.cursor()
         cur.execute(table, project)      
         items = cur.fetchone()
@@ -766,12 +748,21 @@ class CombTypes:
                  item: str = '*'):
         """ """
         project = (name,)
-        table = 'SELECT {:} FROM MarineGrowth WHERE name = ?'.format(item)
+        table = f'SELECT {item} FROM MarineGrowth WHERE name = ?'
         cur = conn.cursor()
         cur.execute(table, project)      
         items = cur.fetchone()
         return items
     #
+    def _pull_wip(self, conn, name: int|str,
+                 item: str = '*'):
+        """ """
+        project = (name,)
+        table = f'SELECT {item} FROM ElementSegment WHERE name = ?'
+        cur = conn.cursor()
+        cur.execute(table, project)      
+        items = cur.fetchone()
+        return items
     #
     # -----------------------------
     # Seastate parameters
@@ -805,10 +796,10 @@ class CombTypes:
         #
         profile = (condition[0], *data)
         cur = conn.cursor()
-        table = 'INSERT INTO Parameter(condition_number, \
-                                           design_load, buoyancy, \
-                                           criterion, \
-                                           scaling_factor, title) \
+        table = 'INSERT INTO Parameter(condition_id, \
+                                        design_load, buoyancy, \
+                                        criterion, \
+                                        scaling_factor, title) \
                  VALUES(?,?,?,?,?,?)'
         # push
         cur = conn.cursor()
@@ -820,7 +811,7 @@ class CombTypes:
         cond = self.condition
         #
         project = (cond.number,)
-        table = 'SELECT {:} FROM Parameter WHERE condition_number = ?'.format(item)
+        table = 'SELECT {:} FROM Parameter WHERE condition_id = ?'.format(item)
         cur = conn.cursor()
         cur.execute(table, project)      
         prop = cur.fetchone()
@@ -907,7 +898,7 @@ class CombTypes:
         return values        
     #
     def _get_pdata(self, values):
-        """ [marine_growth, CdCm, Flooding, conductor_shielding, element_refinament, title]"""
+        """ [marine_growth, CdCm, element_refinament, Flooding, conductor_shielding, title]"""
         #
         output = [None] * 6
         #
@@ -949,11 +940,12 @@ class CombTypes:
         current = self.current
         hydro = self.properties
         rho_w = self.properties.rho_w
-        kinematics = wave.kinematics()
+        #kinematics = wave.kinematics()
         #
         #1 / 0
         #
-        res = BSOTM(kinematics=kinematics,
+        res = BSOTM(#kinematics=kinematics,
+                    wave=wave, 
                     current=current,
                     properties=hydro,
                     rho_w=rho_w, 
@@ -1018,7 +1010,6 @@ class CombTypes:
             Fwave = wload.Fwave(beam=beam)
             solution = Fwave.solve()
             dftemp.extend(solution)
-            #
             #print('-->')
         #
         # ------------------------------------------

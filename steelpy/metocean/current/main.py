@@ -12,7 +12,7 @@ import re
 
 # package imports
 from steelpy.metocean.current.utils.main import CurrentBasic
-from steelpy.metocean.hydrodynamic.utils.main import HydroItem
+from steelpy.metocean.hydrodynamic.utils import HydroItem
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #
 import numpy as np
@@ -329,9 +329,14 @@ class CurrentItem(HydroItem):
         return vc
     #
     #
-    def get_profile(self, eta: list, zdepth: list):
-        """Current Velocity"""
-        #Vct = self.tvelocity
+    def get_profile(self, eta: list, zdepth: list, cbf: list):
+        """Current Velocity
+        
+        eta : surface elevation
+        zdepth : 
+        cbf : Currrent blockage Factor
+        """
+        # TODO: must be better ways to do this
         profile = self.profile
         elev = list(reversed([item[0] for item in profile]))
         value = list(reversed([item[1] for item in profile]))
@@ -340,8 +345,11 @@ class CurrentItem(HydroItem):
         #vc[:, :] = Vct
         for i, item in enumerate(eta):
             for j, point in enumerate(zdepth):
-                vc[i,j] = np.interp(point, elev, value)
-                                    #right=self.tvelocity)
+                if point > item:
+                    vc[i,j] = 0.0
+                else:
+                    vc[i,j] = np.interp(point, elev, value) * cbf[j]
+                                        #right=self.tvelocity)
         return vc    
     #
     #

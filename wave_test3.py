@@ -139,6 +139,15 @@ cbf['cbf1'] = [[ 10 * units.m, 0.85],
                [-50 * units.m, 0.85],
                [-100 * units.m, 0.85]]
 #
+# element_segmentation/wave_integration_points
+# WIP = [elevation, element number of wave integration points]
+# 
+wip = proph.WIP()
+wip['wip_1'] = [[ 10 * units.m, 10],
+               [ 00 * units.m, 10],
+               [-10 * units.m, 10],
+               [-50 * units.m, 5],
+               [-100 * units.m, 5]]
 #
 # ----------------------------------------------------
 # Current
@@ -237,8 +246,8 @@ metcond[10].current = ['curr_1', 20.0, 'cbf1', True]
 # wind [wind_id, Direction(deg)]
 #metload[1].wind = [1, 30.0]
 #
-# [ marine_growth, CdCm, Flooding, conductor_shielding, element_refinament, airCdCm]
-metcond[10].properties = ['MG_1', 'cdcm_1']
+# [ marine_growth, CdCm, element_refinament, Flooding, conductor_shielding,  airCdCm]
+metcond[10].properties = ['MG_1', 'cdcm_1', 'wip_1']
 #
 # [Design load, Buoyancy(False/True), 
 #  Criterion (local/global), Scale factor, title]

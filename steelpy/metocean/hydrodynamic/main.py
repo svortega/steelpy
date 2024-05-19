@@ -6,13 +6,12 @@ from __future__ import annotations
 
 #
 # package imports
-from .hydro_diametre import HydroDiametre
-from .flooding import Flooding
 #
 from steelpy.metocean.hydrodynamic.marine_growth import MarineGrowth
 from steelpy.metocean.hydrodynamic.morison import CdCmCoefficients
 from steelpy.metocean.hydrodynamic.wkf import WaveKinFactor
 from steelpy.metocean.hydrodynamic.cbf import CurrentBlockFactor
+from steelpy.metocean.hydrodynamic.element_segment import ElementSegmentation
 #
 from steelpy.utils.sqlite.utils import create_connection, create_table
 
@@ -22,13 +21,12 @@ class HydroProperty:
     """
     """
     __slots__ = ['conductor_shielding',
-                 'element_refining',
+                 '_wip',
                  #'_buoyancy_area',
                  '_cdcm', '_wkf', '_cbf', 
                  #'_air_drag',
                  '_marine_growth',
                  # 'flooding', 
-                 #'_hydro_diametre',
                  #'_non_hydro',
                  'db_file'] # 'rho_w', 
     
@@ -52,6 +50,7 @@ class HydroProperty:
         self._cdcm = CdCmCoefficients(db_file=self.db_file)
         self._wkf = WaveKinFactor(db_file=self.db_file)
         self._cbf = CurrentBlockFactor(db_file=self.db_file)
+        self._wip = ElementSegmentation(db_file=self.db_file)
         #
         # create table
         conn = create_connection(self.db_file)
@@ -67,12 +66,12 @@ class HydroProperty:
         #
         table = "CREATE TABLE IF NOT EXISTS Property (\
                     number INTEGER PRIMARY KEY NOT NULL,\
-                    condition_number INTEGER NOT NULL REFERENCES Condition(number),\
+                    condition_id INTEGER NOT NULL REFERENCES Condition(number),\
                     mg_id INTEGER REFERENCES MarineGrowth(number),\
                     cdcm_id INTEGER REFERENCES CdCm(number), \
+                    element_segment_id INTEGER REFERENCES ElementSegmentation(number), \
                     flooding_id INTEGER, \
-                    cshielding_id INTEGER, \
-                    element_refinament INTEGER, \
+                    cshielding_id INTEGER REFERENCES ConductorShielding(number), \
                     title TEXT);"
         create_table(conn, table)    
     #
@@ -148,12 +147,11 @@ class HydroProperty:
         else:
             try:
                 df.columns            
-                #self._cbf.df(df)
+                self._wip.df(df)
             except AttributeError:
                 pass
         #
-        #return self._cbf
-        1 / 0
+        return self._wip
     #
     # ---------------------------------------
     #
@@ -169,11 +167,7 @@ class HydroProperty:
     #    """
     #    return self._cdcm
     #
-    #@property
-    #def flooded(self):
-    #    """
-    #    """
-    #    return self.flooding
+    #
     #
     #@property
     #def marine_growth(self):

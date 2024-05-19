@@ -13,8 +13,8 @@ import re
 # package imports
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #from steelpy.utils.units.main import Units #Number, 
-from steelpy.metocean.hydrodynamic.utils.main import (BasicProperty, HydroBasic,
-                                                      get_list, HydroItem)
+from steelpy.metocean.hydrodynamic.utils import (BasicProperty, HydroBasic,
+                                                 get_list, HydroItem)
 import numpy as np
 
 

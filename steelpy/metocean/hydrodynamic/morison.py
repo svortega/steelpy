@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
@@ -13,8 +13,9 @@ from dataclasses import dataclass
 
 
 # package imports
-from steelpy.metocean.hydrodynamic.utils.main import (BasicProperty, HydroBasic,
-                                                      get_list, HydroItem)
+from steelpy.metocean.hydrodynamic.utils import (BasicProperty,
+                                                 HydroBasic,
+                                                 HydroItem)
 from steelpy.utils.sqlite.utils import create_connection, create_table
 import numpy as np
 
@@ -67,8 +68,6 @@ class CdCmCoefficients(HydroBasic):
         super().__init__(db_file)
     #
     #
-    
-    
     def __getitem__(self, name: str|int):
         """
         """
@@ -129,86 +128,6 @@ class CdCmCoefficients(HydroBasic):
         return data
     #
 #
-#
-class CdCmCoefficientsXX(Mapping):
-    """
-    """
-    __slots__ =  ['_cdcm']
-    
-    def __init__(self):
-        """
-        """
-        self._cdcm: dict = {}
-    
-    def __getitem__(self, cdcm_name):
-        """
-        """
-        return self._cdcm[cdcm_name]
-    
-    def __setitem__(self, name, values:list|tuple|dict|str) -> None:
-        """
-        rule
-        specified
-        diametre
-        """
-        cdcm_type = values.pop(0)
-        #values = self._get_value(values)
-        if re.match(r"\b((rule(\_)?)(api|iso))\b", cdcm_type, re.IGNORECASE):
-            self._cdcm[name] = DiametreFunction()
-            self._cdcm[cdcm_name].rule = cdcm_type
-        elif re.match(r"\b(specified|coefficients)\b", cdcm_type, re.IGNORECASE):
-            self._cdcm[name] = SpecifiedFunction()
-            self._cdcm[name].set_cdcm(cdcm=values)
-        elif re.match(r"\b(diamet(re|re))\b", cdcm_type, re.IGNORECASE):
-            self._cdcm[name] = DiametreFunction()
-        elif re.match(r"\b(depth(\_)?profile)\b", cdcm_type, re.IGNORECASE):
-            self._cdcm[name] = DepthProfileFunction()
-        else:
-            raise IOError("CdCm type {:} not implemented".format(cdcm_type))         
-    #
-    def _get_value(self, value:list|tuple|dict|str):
-        """ """
-        if isinstance(value, (list, tuple)):
-            # [name, cdx, cdy, cdz, cmx, cmy, cmz]
-            value = get_list(value, steps)
-        elif isinstance(value, dict):
-            value = get_dic(value)
-        else:
-            raise Exception('   *** input format not recognized')
-        return value
-
-    #
-    #
-    def __len__(self) -> float:
-        return len(self._cdcm)
-
-    def __iter__(self) -> Iterator[Tuple]:
-        return iter(self._cdcm)
-    
-    def __contains__(self, value) -> bool:
-        return value in self._cdcm
-    #
-    #
-    #
-    def getCdCm(self, Z, HTs: float, condition:int):
-        """ """
-        cm = np.zeros((Z.shape))
-        cm += 1.2
-        cm[Z > HTs] = 1.6
-        #cm[Z <= 2] = 1.2
-        #
-        cd = np.zeros((Z.shape))
-        # switch condition
-        if condition == 1:
-            cd += 1.15
-        else:
-            #elif condition == 2:
-            cd += 1.05
-            cd[Z > HTs] = 0.65
-            #cd[Z <= 2] = 1.05
-        #
-        return cd, cm
-    #
 #
 #
 @dataclass
@@ -305,7 +224,7 @@ class CdCmitem(HydroItem):
         prof = self.profile
         elev = list(reversed([item[0] for item in prof]))
         cdprof = list(reversed([item[1] for item in prof]))
-        cmprof = list(reversed([item[1] for item in prof]))
+        cmprof = list(reversed([item[2] for item in prof]))
         #
         cd = np.zeros((Z.shape))
         cm = np.zeros((Z.shape))
