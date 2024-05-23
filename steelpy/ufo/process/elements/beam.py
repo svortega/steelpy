@@ -7,6 +7,7 @@ from array import array
 from dataclasses import dataclass
 from collections.abc import Mapping
 #from typing import NamedTuple
+import math
 
 # package imports
 from steelpy.ufo.mesh.process.bstiffness import beam3D_B3D2, B3D2_Ke, Tmatrix
@@ -85,7 +86,7 @@ class BeamItemBasic:
         self._releases: list[bool] = [False] * 12
         self.type: str = "beam"
     #
-    #
+    # ------------------------------------------------
     # Transformation
     #
     @property
@@ -107,6 +108,7 @@ class BeamItemBasic:
         unitvec = np.array(self.unit_vector)
         return Tmatrix(dirCos=unitvec)
     #
+    # ------------------------------------------------
     # Stiffness
     #
     @property
@@ -165,6 +167,7 @@ class BeamItemBasic:
         #1 / 0
         return k_cond   
     #
+    # ------------------------------------------------
     # Geometry
     #
     def Kg(self, Un: list):
@@ -226,6 +229,7 @@ class BeamItemBasic:
         k_cond = self._k_unc(kg)
         return k_cond
     #
+    # ------------------------------------------------
     # Tangent
     #
     def Kt(self, Un: list):
@@ -278,6 +282,7 @@ class BeamItemBasic:
         k_cond = self._k_unc(kg)
         return k_cond
     #
+    # ------------------------------------------------
     # Mass
     #
     @property
@@ -320,6 +325,7 @@ class BeamItemBasic:
         k_cond = self._k_unc(em)
         return k_cond        
     #
+    # ------------------------------------------------
     # Matrix operations
     #
     def _partition(self, unp_matrix):
@@ -382,6 +388,7 @@ class BeamItemBasic:
             ka = remove_column_row(ka, i, i)
         return ka
     #
+    # ------------------------------------------------
     # Operations
     #
     def intersect_point(self, point:list):
@@ -389,4 +396,41 @@ class BeamItemBasic:
         p1, p2 = self.nodes
         point_line = DistancePointLine3D(p1[:3], p2[:3])
         return point_line.is_on_segment(point[:3])
+    #
+    #
+    def find_coordinate(self, node_distance:float, node_end:int=0) -> tuple:
+        """
+        """
+        node = self.nodes
+        nodeNo3 = [0, 0, 0]
+        #
+        if math.isclose(node_distance, 0, rel_tol=0.01):
+            nodeNo3[0] = node[node_end].x
+            nodeNo3[1] = node[node_end].y
+            nodeNo3[2] = node[node_end].z
+        else:
+            if node_end == 1:
+                v1 = (node[0].x - node[1].x)
+                v2 = (node[0].y - node[1].y)
+                v3 = (node[0].z - node[1].z)
+            else:
+                v1 = (node[1].x - node[0].x)
+                v2 = (node[1].y - node[0].y)
+                v3 = (node[1].z - node[0].z)
+            #
+            norm = (v1**2 + v2**2 + v3**2)**0.50
+            v1 /= norm
+            v2 /= norm
+            v3 /= norm
+            #
+            #L = math.dist(nodei[:3], nodej[:3])
+            #uv = list(map(sub, nodej[:3], nodei[:3]))
+            #l, m, n = [item / L for item in uv]
+            #
+            nodeNo3[0] = (node[node_end].x + v1 * node_distance)
+            nodeNo3[1] = (node[node_end].y + v2 * node_distance)
+            nodeNo3[2] = (node[node_end].z + v3 * node_distance)
+        #
+        return nodeNo3    
+    #
     #

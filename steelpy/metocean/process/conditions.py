@@ -954,8 +954,10 @@ class CombTypes:
         #calc
     #
     #
-    def get_beam_load(self, beams):
-        """ """
+    def beam_load(self, beams):
+        """
+        Generate beam loading 
+        """
         # get load
         wload = self.load()
         # get parameters

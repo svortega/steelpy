@@ -117,7 +117,7 @@ class MetoceanLoadSQL(MetoceanLoad):
             conn = create_connection(self.db_file)
             for item in self._condition:
                 #
-                df_bload = item.get_beam_load(beams)
+                df_bload = item.beam_load(beams)
                 #
                 # ------------------------------------------
                 # push data in database

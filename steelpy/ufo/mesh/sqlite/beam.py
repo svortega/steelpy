@@ -319,24 +319,29 @@ class BeamItemSQL(BeamItemBasic):
         self._component = component
         #print('--')
     #
-    @property
-    def number(self) -> int:
+    def __str__(self) -> str:
         """ """
+        beam_name = self.name
         conn = create_connection(self.db_file)
         with conn:
-            data = get_element_data(conn, self.name,
+            data = get_element_data(conn, beam_name,
                                     element_type='beam', 
                                     component=self._component)
-        return data[1]
-    
-    #@number.setter
-    #def number(self, value:int) -> None:
-    #    """"""
-    #    1/0
-    #    conn = create_connection(self.db_file)
-    #    item = "number"
-    #    with conn:
-    #        update_element_item(conn, self.name, item, value)
+        #title =  data[-1]
+        if (title := data[-1]) == None:
+            title = ""
+        #
+        #return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f} {:>6.3f} {:>12s}\n"\
+        #       .format(self.name, *self.connectivity,
+        #               self.material, self.section, self.beta,
+        #               self.length, title)
+        node1, node2 = self.connectivity
+        return "{:>8s} {:>8s} {:>8s} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}\n"\
+               .format(str(beam_name), str(node1), str(node2),
+                       str(self.material.name), str(self.section.name),
+                       self.beta, self.L, title)
+    #    
+    # ------------------------------------------------
     #
     @property
     def connectivity(self) -> list:
@@ -365,17 +370,6 @@ class BeamItemSQL(BeamItemBasic):
             update_connectivity(conn, data[1], nnodes)
         #self._connectivity[self.index] = nodes
     #
-    @property
-    def nodes(self) -> list:
-        """
-        """
-        nodes = []
-        conn = create_connection(self.db_file)
-        with conn:
-            for node in self.connectivity:
-                nodes.append(pull_node(conn, node_name=node,
-                                       component=self._component))
-        return nodes
     #
     @property
     def material(self) -> list:
@@ -472,30 +466,30 @@ class BeamItemSQL(BeamItemBasic):
             update_element_item(conn, self.name, item, roll_angle)
     #
     #
-    def __str__(self) -> str:
-        """ """
-        beam_name = self.name
-        conn = create_connection(self.db_file)
-        with conn:
-            data = get_element_data(conn, beam_name,
-                                    element_type='beam', 
-                                    component=self._component)
-        #title =  data[-1]
-        if (title := data[-1]) == None:
-            title = ""
-        #
-        #return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f} {:>6.3f} {:>12s}\n"\
-        #       .format(self.name, *self.connectivity,
-        #               self.material, self.section, self.beta,
-        #               self.length, title)
-        node1, node2 = self.connectivity
-        return "{:>8s} {:>8s} {:>8s} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}\n"\
-               .format(str(beam_name), str(node1), str(node2),
-                       str(self.material.name), str(self.section.name),
-                       self.beta, self.L, title)
-    #
     # ------------------------------------------------
     #
+    @property
+    def number(self) -> int:
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:
+            data = get_element_data(conn, self.name,
+                                    element_type='beam', 
+                                    component=self._component)
+        return data[1]
+    #
+    @property
+    def nodes(self) -> list:
+        """
+        """
+        nodes = []
+        conn = create_connection(self.db_file)
+        with conn:
+            for node in self.connectivity:
+                nodes.append(pull_node(conn, node_name=node,
+                                       component=self._component))
+        return nodes
+    #    
     @property
     def DoF(self) -> list[ int ]:
         """
@@ -523,7 +517,6 @@ class BeamItemSQL(BeamItemBasic):
                              component=self._component)
         return dist(node1[:3], node2[:3])
         #return dist(node1[3:6], node2[3:6])
-    #
     #
     @property
     def unit_vector(self) -> list[ float ]:
@@ -561,6 +554,9 @@ class BeamItemSQL(BeamItemBasic):
     #    unitvec = np.array(self.unit_vector)
     #    return Tmatrix(dirCos=unitvec)
     #    #return Tr
+    #
+    # ------------------------------------------------
+    #    
 #
 #
 

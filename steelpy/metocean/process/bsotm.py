@@ -275,6 +275,10 @@ class BSOTM:
         wkf = self.wave.kinematic_factor
         wkf = wkf.get_profile(Elev)
         #
+        #kin2 = kinematics.get_kin2(beam, nelev)
+        #Bwave.Fwave2(Vc=Vc, MG=mg, Cd=cd, Cm=cm,
+        #             kinematics=kin2, elev=Elev)
+        #
         kin = kinematics.get_kin(Elev, wkf)
         #
         #print('')

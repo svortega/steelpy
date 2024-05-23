@@ -5,10 +5,12 @@
 from __future__ import annotations
 from array import array
 from dataclasses import dataclass
-from typing import NamedTuple
+#from typing import NamedTuple
 #import math
 
 # package imports
+from steelpy.utils.math.operations import linstep
+#
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.matlib import repmat
@@ -308,23 +310,6 @@ class KinematicResults:
     #
     # -------------------------------------------------------
     #
-    def kindf(self, items, xx, zdepth):
-        """ """
-        dfkin = np.zeros((xx.size, zdepth.size))
-        for i, step in enumerate(xx):
-            #new = []
-            item = items.get_group(name=(step, ))
-            for j, point in enumerate(zdepth):
-                dfkin[i, j] = np.interp(point,
-                                        item.iloc[:, 0],
-                                        item.iloc[:, 1],
-                                        right=0)
-            #
-            #dfkin.append(new)
-        #
-        return dfkin
-    #
-    #
     def get_kin(self, elev: list, krf: list):
         """
         elev : Elevations
@@ -355,9 +340,22 @@ class KinematicResults:
         #print('-->')
         return kdf
     #
-    # -------------------------------------------------------
+    def kindf(self, items, xx, zdepth):
+        """ """
+        dfkin = np.zeros((xx.size, zdepth.size))
+        for i, step in enumerate(xx):
+            #new = []
+            item = items.get_group(name=(step, ))
+            for j, point in enumerate(zdepth):
+                dfkin[i, j] = np.interp(point,
+                                        item.iloc[:, 0],
+                                        item.iloc[:, 1],
+                                        right=0)
+            #
+            #dfkin.append(new)
+        #
+        return dfkin
     #    
-    #
     def to_xarray(self, rows, cols, length, data, name: str):
         """ """
         #row_meshgrid, col_meshgrid = np.meshgrid(rows, cols, indexing='ij')
@@ -373,6 +371,50 @@ class KinematicResults:
                             name=name)
         #return ds
     #
+    # -------------------------------------------------------
+    #     
+    #
+    def get_kin2(self, beam, nelev: int):
+        """ """
+        xx =  self.surface.x
+        #
+        n1, n2 = beam.nodes
+        sect = beam.section.geometry
+        steps = linstep(d=sect.Dh, L=beam.L, steps=nelev)
+        coord = [n1[:3]]
+        for step in steps[1:]:
+            coord.append(beam.find_coordinate(node_distance=step))
+        #
+        coord = list(map(list, zip(*coord)))
+        #
+        df_mulidx = self._data[['phase', 'x', 'z', 'u', 'ut', 'v', 'vt']].copy()
+        df_mulidx.insert(1, 'y', float(0.0))
+        #df_mulidx.loc[:, 'y'] = float(0.0)
+        df_mulidx.rename(columns={'u': 'ux', 'ut': 'ax',
+                                  'v': 'uz', 'vt': 'az'},
+                         inplace=True)
+        #
+        dataset = {}
+        dfgrp = df_mulidx.groupby('phase') #,'y','z'
+        for key, item in dfgrp:
+            #print(key)
+            data = item.drop(columns=['phase'])
+            data.set_index(['x', 'y', 'z'], inplace=True)
+            #dataset[key] = data.to_xarray()
+            data = data.to_xarray()
+        #
+        #for key, item in dataset.items():
+            #print(f'phase : {key}')
+            # TODO: coord in beam local system
+            dataset[key] = data.interp(x=xr.DataArray(coord[0], dims="coordinates"),
+                                       y=xr.DataArray(coord[2], dims="coordinates"),
+                                       z=xr.DataArray(coord[1], dims="coordinates"),
+                                       method="linear",
+                                       kwargs={"fill_value": 0})
+            #print(dataset[key])
+        #
+        #1 / 0
+        return dataset
     #
     #
 #

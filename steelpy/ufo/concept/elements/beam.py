@@ -614,43 +614,40 @@ class BeamItemConcept(ElementConcept):
     def L(self) -> Units:
         """
         """
-        _nodes = self.nodes
-        length = math.dist([_nodes[0].x, _nodes[0].y, _nodes[0].z], 
-                           [_nodes[1].x, _nodes[1].y, _nodes[1].z])
-        return length #* self._cls.f2u_units.m
+        node1, node2 = self.nodes
+        return math.dist(node1[:3], node2[:3])
+        
     #
     def find_coordinate(self, node_distance:float, node_end:int=0) -> tuple:
         """
         """
-        _node = self.nodes
-        _nodeNo3 = [0, 0, 0]
+        node = self.nodes
+        nodeNo3 = [0, 0, 0]
         #
         if math.isclose(node_distance, 0, rel_tol=0.01):
-        #if distance <= 0.0001:
-            _nodeNo3[0] = _node[node_end].x
-            _nodeNo3[1] = _node[node_end].y
-            _nodeNo3[2] = _node[node_end].z
+            nodeNo3[0] = node[node_end].x
+            nodeNo3[1] = node[node_end].y
+            nodeNo3[2] = node[node_end].z
         else:
             if node_end == 1:
-                _v1 = (_node[0].x - _node[1].x)
-                _v2 = (_node[0].y - _node[1].y)
-                _v3 = (_node[0].z - _node[1].z)
+                v1 = (node[0].x - node[1].x)
+                v2 = (node[0].y - node[1].y)
+                v3 = (node[0].z - node[1].z)
             else:
-                _v1 = (_node[1].x - _node[0].x)
-                _v2 = (_node[1].y - _node[0].y)
-                _v3 = (_node[1].z - _node[0].z)
+                v1 = (node[1].x - node[0].x)
+                v2 = (node[1].y - node[0].y)
+                v3 = (node[1].z - node[0].z)
             #
-            _norm = (_v1**2 + _v2**2 + _v3**2)**0.50
-            _v1 /= _norm
-            _v2 /= _norm
-            _v3 /= _norm
-            _nodeNo3[0] = (_node[node_end].x + _v1 * node_distance)
-            _nodeNo3[1] = (_node[node_end].y + _v2 * node_distance)
-            _nodeNo3[2] = (_node[node_end].z + _v3 * node_distance)
+            norm = (v1**2 + v2**2 + v3**2)**0.50
+            v1 /= norm
+            v2 /= norm
+            v3 /= norm
+            #
+            nodeNo3[0] = (node[node_end].x + v1 * node_distance)
+            nodeNo3[1] = (node[node_end].y + v2 * node_distance)
+            nodeNo3[2] = (node[node_end].z + v3 * node_distance)
         #
-        #Coordinates = get_coordinate_system(_node[0].system)
-        #return Coordinates(*_nodeNo3)
-        return _nodeNo3
+        return nodeNo3  
     #
     #
     @property
@@ -658,18 +655,7 @@ class BeamItemConcept(ElementConcept):
         """
         """
         node1, node2 = self.nodes
-        #dx = _node2.x.value - _node1.x.value
-        #dy = _node2.y.value - _node1.y.value
-        #dz = _node2.z.value - _node1.z.value
-        # direction cosines
-        #L = math.dist([_node1.x.value, _node1.y.value, _node1.z.value], 
-        #              [_node2.x.value, _node2.y.value, _node2.z.value])
-        #l = dx / L
-        #m = dy / L
-        #n = dz / L
-        #return [l, m, n]
         L = math.dist(node1[:3], node2[:3])
-        #
         uv = list(map(sub, node2[:3], node1[:3]))
         return [item / L for item in uv]
     #

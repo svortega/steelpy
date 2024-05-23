@@ -241,7 +241,39 @@ class BeamMorisonWave:
                        elev, dz)
         #return udl
     #
-
+    #
+    def Fwave2(self, Vc, MG, Cd, Cm,
+               kinematics, elev):
+        """
+        Wave force on a slender cilindrical element
+        
+        Vc : Current velocity
+        MG : Marine Growth
+        Cd : Drag Coefficient
+        Cm : Inertia Coefficient
+        WKF : Wave Kinematic Factor
+        kinematics : Kinematic class
+        nelev : number of elevations
+        """
+        #Elev = self.elevations(nelev=nelev)
+        Dh, At = self.Dh(mg=MG)
+        #dz = self.dz(nelev=nelev)
+        dz = np.diff(elev)
+        #
+        i = 0
+        for key, item in kinematics.items():
+            print(f'{key}')
+            #shape = item['ax'].shape
+            #Vc = permute1(Vc, order=shape[0])
+            kinacc = self.An(item)
+            kinvel = self.Un(item, Vc[i])
+            bforce = self.dF(Dh, At, Cd, Cm,
+                             kinvel, kinacc,
+                             elev, dz)
+            bforce
+            i += 1
+        #
+        1 / 0
 #
 #
 class BeamUnitForce(NamedTuple):

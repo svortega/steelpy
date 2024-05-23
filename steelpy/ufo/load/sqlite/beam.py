@@ -1294,7 +1294,7 @@ def get_line_load(conn, beam_name:int|str,
                                   #
                                   *row[9:13],        # q_inplane [qx, qy, qz, qt]
                                   *row[14:18],       # q_outplane [qx, qy, qz, qt]
-                                  row[8], row[12]))  # L0, L1
+                                  row[8], row[13]))  # L0, L1
     return beam_line
 #
 #

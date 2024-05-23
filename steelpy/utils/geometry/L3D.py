@@ -87,7 +87,6 @@ class LineLineIntersect3D:
         self.p2 = Point(*p2, name="p2", number=2)
         self.p3 = Point(*p3, name="p2", number=3)
         self.p4 = Point(*p4, name="p3", number=4)
-
     #
     def cross_product(self, p1, p2):
         return Point(p1.y * p2.z - p1.z * p2.y,
@@ -111,7 +110,6 @@ class LineLineIntersect3D:
 
     def ptFactor(p, f):
         return Point(p.x * f, p.y * f, p.z * f, name="factored", number=9)
-
     #
     def _process(self):
         """ """
@@ -208,9 +206,7 @@ class LineLineIntersect3D:
             return True
         else:
             return False
-        #
-
-
+#
 #
 @dataclass
 class DistancePointLine3D:
@@ -340,6 +336,5 @@ class DistancePointLine3D:
             return True
         except ZeroDivisionError:
             return False
-
 #
 #
