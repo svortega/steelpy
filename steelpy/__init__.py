@@ -16,10 +16,11 @@ from steelpy.utils.units.main import Units
 
 from steelpy.utils.spreadsheet.main import Spreadsheet
 #from steelpy.vibration.main import Vibration
+#from steelpy.time_history.main import TimeHistory
 
 # constants
 __major__ = 0.  # for major interface/format changes
-__minor__ = 7  # for minor interface/format changes
+__minor__ = 8  # for minor interface/format changes
 __release__ = 0  # for tweaks, bug-fixes, or development
 
 __version__ = '%d.%d.%d' % (__major__, __minor__, __release__)

@@ -68,17 +68,6 @@ class BasicLoadConcept(BasicLoadMain):
         except KeyError:
             raise IOError("load case not defined")
     #
-    #def __contains__(self, value) -> bool:
-    #    return value in self._labels
-
-    #def __len__(self) -> float:
-    #    return len(self._labels)
-
-    #def __iter__(self):
-    #    """
-    #    """
-    #    items = list(set(self._labels))
-    #    return iter(items)
     #
     def __delitem__(self, load_name: str|int):
         """
@@ -134,10 +123,6 @@ class LoadTypesConcept:
         self._selfweight[self.name] = [*values, self.title]
     #
     #
-    #@property
-    #def points(self):
-    #    """ return all points"""
-    #    return self._node
     #
     @property
     def point(self):
@@ -164,10 +149,6 @@ class LoadTypesConcept:
     #    """ """
     #    1 / 0
     #
-    #@property
-    #def beams(self):
-    #    """ return all beam"""
-    #    return self._beam
     #
     @property
     def beam(self):
@@ -177,19 +158,12 @@ class LoadTypesConcept:
     @beam.setter
     def beam(self, values):
         """ """
-        #if isinstance(values[0], list):
-        #    for value in values:
-        #        self._beam[value[ 0 ] ] = value[ 1: ]
-        #else:
-        #    self._beam[ values[ 0 ] ] = values[ 1: ]
-        if isinstance(values, str):
+        if isinstance(values, (str, int)):
             try:
                 self.f2u_beams[values]
                 self._beam_id = values
             except IndexError:
-                1 / 0
                 raise IOError(f'Beam {values} not found')
-            
         else:
             self._beam_id = values.name
     #

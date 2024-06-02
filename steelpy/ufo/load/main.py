@@ -21,8 +21,8 @@ from steelpy.ufo.load.concept.wave_load import MetoceanLoadIM
 from steelpy.ufo.plot.main import PlotLoad
 # 
 #
-
-
+from steelpy.utils.sqlite.utils import create_connection, create_table
+#
 #
 #
 class MeshLoad:
@@ -30,7 +30,8 @@ class MeshLoad:
     """
     __slots__ = ['_df_nodal', '_plane', '_component', 
                  '_hydro', '_basic', '_combination',
-                 '_elements', '_nodes', '_boundaries']
+                 '_elements', '_nodes', '_boundaries',
+                 '_db_file']
 
     def __init__(self, #nodes, elements, boundaries, 
                  plane: NamedTuple, 
@@ -41,6 +42,7 @@ class MeshLoad:
         """
         self._plane = plane
         self._component = component
+        self._db_file = db_file
         #
         # mesh 
         self._nodes = NodeSQL(db_system=mesh_type,
@@ -65,6 +67,11 @@ class MeshLoad:
         self._hydro = MetoceanLoadSQL(db_file=db_file,
                                       component=component,
                                       plane=self._plane)
+        #
+        #
+        conn = create_connection(self._db_file)
+        with conn: 
+            self._create_table(conn)        
     #
     #
     def __str__(self) -> str:
@@ -73,6 +80,23 @@ class MeshLoad:
         output += self._basic.__str__()
         output += self._combination.__str__()
         return output
+    #
+    # ----------------------------
+    #
+    def _create_table(self, conn):
+        """ """
+        # -------------------------------------
+        # Main
+        table = "CREATE TABLE IF NOT EXISTS Load(\
+                number INTEGER PRIMARY KEY NOT NULL,\
+                name NOT NULL,\
+                component_id INTEGER NOT NULL REFERENCES Component(number), \
+                level TEXT NOT NULL,\
+                title TEXT,\
+                input_type TEXT, \
+                input_file TEXT);"
+        create_table(conn, table)
+    #
     #
     # ----------------------------
     #

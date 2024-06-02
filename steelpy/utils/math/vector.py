@@ -1,4 +1,4 @@
-# Copyright (c) 2022 steelpy
+# Copyright (c) 2009 steelpy
 # -----------------------------------------------------------------------
 # vector.py
 # -----------------------------------------------------------------------
@@ -41,7 +41,7 @@ class Vector:
         """Construct a new Vector object with numeric Cartesian coordinates
            given in array a."""
         # Make a defensive copy to ensure immutability.
-        self._coords: ClassVar = array('f', a[:])   # Cartesian coordinates
+        self._coords: array = array('f', a[:])   # Cartesian coordinates
         # self._n:ClassVar = len(a) # Dimension.
 
     def __getitem__(self, i) -> float:

@@ -84,21 +84,21 @@ class LoadCombSQL(LoadCombinationBasic):
     def _create_table(self, conn):
         """ """
         table = "CREATE TABLE IF NOT EXISTS LoadCombination(\
-                number INTEGER PRIMARY KEY NOT NULL,\
-                load_id INTEGER NOT NULL REFERENCES Load(number),\
-                bl_number INTEGER REFERENCES Load(number),\
-                lc_number INTEGER REFERENCES Load(number),\
-                factor DECIMAL NOT NULL);"
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    load_id INTEGER NOT NULL REFERENCES Load(number),\
+                    bl_number INTEGER REFERENCES Load(number),\
+                    lc_number INTEGER REFERENCES Load(number),\
+                    factor DECIMAL NOT NULL);"
         create_table(conn, table)
     #
     def _push_combination(self, conn, name:int|str,
                           component:int, level:str, title:str):
         """
         """
-        project = (name, component, level, title)
+        project = (name, component, level, title, 'ufo')
         sql = 'INSERT INTO Load(\
-               name, component_id, level, title)\
-               VALUES(?,?,?,?)'
+               name, component_id, level, title, input_type)\
+               VALUES(?,?,?,?,?)'
         #
         cur = conn.cursor()
         cur.execute(sql, project)
@@ -274,9 +274,14 @@ class LoadCombSQL(LoadCombinationBasic):
         # basic loading
         values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                   'Psi', 'B', 'Tw']
-        dfnew = self.update_combination(ENLbasic,
-                                        grpcomb.get_group(cols),
-                                        values=values)
+        dfnew = []
+        for item in cols:
+            dfnew.append(self.update_combination(ENLbasic,
+                                                 grpcomb.get_group((item, )),
+                                                 values=values))
+        #
+        db = DBframework()
+        dfnew = db.concat(dfnew, ignore_index=True)
         #
         colgrp = ['load_name', 'load_id', 
                   'load_level', 'load_title',
@@ -313,7 +318,7 @@ class LoadCombSQL(LoadCombinationBasic):
         #
         dftemp = db.concat(dftemp, ignore_index=True)
         return dftemp
-    #
+#
 #     
 #
 class CombTypeSQL:
@@ -436,7 +441,7 @@ class BasicCombSQL(Mapping):
             #
             self._push_combination(conn, load_id, bl_number,
                                    lc_number, factor)
-            
+        #print('--?')
     #
     def __getitem__(self, load_name:int|str):
         """

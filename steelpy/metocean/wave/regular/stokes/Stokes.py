@@ -6,12 +6,12 @@ from __future__ import annotations
 #from array import array
 from dataclasses import dataclass
 #import math
-#from typing import NamedTuple, Tuple, Union, List, Dict
+#from typing import NamedTuple
 
 # package imports
 from steelpy.metocean.wave.regular.stokes.subroutines import F, CDE, AB
 from steelpy.metocean.wave.regular.process.inout import title_block, output
-from steelpy.metocean.wave.regular.process.waveops import WaveItem #, get_wave_data,WaveRegModule, 
+from steelpy.metocean.wave.regular.process.waveops import WaveItem 
 import numpy as np
 #
 #
@@ -27,6 +27,7 @@ class WaveStokes(WaveItem):
                  niter:int=40, accuracy:float=1e-6) -> None:
         """
         """
+        #
         super().__init__(H=H, Tw=T, d=d, title=title,
                          order=order, nstep=nstep, niter=niter,
                          accuracy=accuracy, 

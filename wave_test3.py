@@ -96,9 +96,7 @@ meto = Metocean(name="metocean_1")
 proph = meto.property()
 #
 cdcm = proph.CdCm()
-# ['coefficients', Cd, Cm]
-#cdcm['cdcm_1'] = ['cdcm_default', 0.70, 2.0]
-#cdcm['cdcm_1'].elements = [12, 23]
+# profile [elevation, Cd, Cm]
 cdcm['cdcm_1'] = [[ 10 * units.m, 0.70, 2.0],
                   [ 00 * units.m, 0.70, 2.0],
                   [-10 * units.m, 0.70, 2.0],
@@ -108,8 +106,6 @@ cdcm['cdcm_1'] = [[ 10 * units.m, 0.70, 2.0],
 #
 #
 mg = proph.MG()
-#       [title, density, thickness]
-#mg['MG_1'] = ['MG_1' , meto.rho_w * 1.35]
 # profile [elevation, thickness]
 mg['MG_1'] = [[ 10 * units.m, 60 * units.mm],
               [ 00 * units.m, 60 * units.mm],
@@ -120,8 +116,7 @@ mg['MG_1'].rho = meto.rho_w * 1.35
 #
 # Wave kinematics factor
 wkrf = proph.WKF()
-#  [text, type (constant/profile), factor]
-#wkrf['wkf1'] = [ 'wkf1', 0.95]
+# profile [elevation, factor]
 wkrf['wkf1'] = [[ 10 * units.m, 0.95],
                 [ 00 * units.m, 0.95],
                 [-10 * units.m, 0.95],
@@ -131,8 +126,7 @@ wkrf['wkf1'] = [[ 10 * units.m, 0.95],
 #
 #
 cbf = proph.CBF()
-#  [text, type (constant/profile), factor]
-#cbf['cbf1'] = [ 'cbf1', 0.85]
+# profile [elevation, factor]
 cbf['cbf1'] = [[ 10 * units.m, 0.85],
                [ 00 * units.m, 0.85],
                [-10 * units.m, 0.85],
@@ -206,7 +200,7 @@ regwave = wave.regular()
 # [H, T, d]
 #wave['100yrs'] = {'Hw':15.0 * units.m, 'Tw':12.0 * units.sec, 'd':100*units.m}
 # 
-# [Hw, Tw, d, wave_type(Fourier/Stokes)]
+# [Hw, Tw, d, wave_type(Fourier/Stokes), title, crest_elevation, Lw]
 regwave['100yrs_1'] = [15*units.m, 12.0*units.sec, 100*units.m, 'Stokes']
 #Ls = regwave['100yrs'].L
 #print(f'Wave length = {Ls: 1.4e} m')
@@ -214,7 +208,7 @@ regwave['100yrs_1'] = [15*units.m, 12.0*units.sec, 100*units.m, 'Stokes']
 #surface.plot(phase=True)
 #print(surface)
 #
-regwave['100yrs_2'] = [15*units.m, 12.0*units.sec, 100*units.m]
+regwave['100yrs_2'] = [15*units.m, 12.0*units.sec, 100*units.m, 'Fourier']
 #regwave['100yrs_3'] = [0.30 * units.m, 6.4 * units.sec, 1*units.m, 'Cnoidal']
 #regwave['100yrs_4'] = [0.30 * units.m, 6.4 * units.sec, 1*units.m]
 #
@@ -238,8 +232,8 @@ regwave['100yrs_2'] = [15*units.m, 12.0*units.sec, 100*units.m]
 #
 metcond = MetCriteria[1].condition()
 # [title]
-metcond[10] = 'storm_0deg'    #['storm_0deg', 'MG_1', False, 0.85]
-# wave =[wave_id, Direction(deg), Kinematics, crest_elevation]
+metcond[10] = 'storm_stokes'
+# wave = [wave_id, Direction(deg), Kinematics]
 metcond[10].wave = ['100yrs_1', 10.0, 'wkf1']
 # current [current_id,  Direction(deg), Blockage, Stretching]
 metcond[10].current = ['curr_1', 20.0, 'cbf1', True]
@@ -253,6 +247,12 @@ metcond[10].properties = ['MG_1', 'cdcm_1', 'wip_1']
 #  Criterion (local/global), Scale factor, title]
 metcond[10].parameters = ['max_BS', None, 'local']
 #
+#
+metcond[20] = 'storm_fourier'
+metcond[20].wave = ['100yrs_2', 0.0, 'wkf1']
+metcond[20].current = ['curr_1', 0.0, 'cbf1', True]
+metcond[20].properties = ['MG_1', 'cdcm_1', 'wip_1']
+metcond[20].parameters = ['max_BS', None, 'local']
 #
 # ----------------------------------------------------
 #

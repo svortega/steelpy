@@ -50,14 +50,18 @@ class BasicLoadSQL(LoadCaseBasic):
     def _labels(self):
         """ """
         query = ('basic', self._component, )
-        table = "SELECT Load.name FROM Load \
-                  WHERE level = ? AND component_id = ?;"
+        table = "SELECT Load.name \
+                  FROM Load, LoadBasic \
+                  WHERE Load.level = ? \
+                  AND LoadBasic.load_id = Load.number\
+                  AND Load.component_id = ? ;"
         conn = create_connection(self.db_file)
         with conn:        
             cur = conn.cursor()
             cur.execute(table, query)
             items = cur.fetchall()
-        return [item[0] for item in items]
+        items = set([item[0] for item in items])
+        return list(items)
     #
     #
     # -----------------------------------------------
@@ -90,31 +94,37 @@ class BasicLoadSQL(LoadCaseBasic):
     #
     def _push_load(self, conn, load_name:int|str, load_title:str):
         """ """
-        #load_name = str(load_name)
-        project = (load_name,  self._component, "basic", load_title)
-        table = 'INSERT INTO Load(name, component_id, level, title) \
-                 VALUES(?,?,?,?)'
+        query = (load_name,  self._component, "basic", load_title, 'ufo', None)
+        table = 'INSERT INTO Load(name, component_id, level, title, \
+                 input_type, input_file) \
+                 VALUES(?,?,?,?,?,?)'
         cur = conn.cursor()
-        cur.execute(table, project)
+        cur.execute(table, query)
+        idx = cur.lastrowid
         #return cur.lastrowid
+        query = (idx, None)
+        table = 'INSERT INTO LoadBasic(load_id, step_type) \
+                 VALUES(?,?)'
+        cur = conn.cursor()
+        cur.execute(table, query)        
     #
     #
     def _create_table(self, conn):
         """ """
         # -------------------------------------
         # Main
-        table = "CREATE TABLE IF NOT EXISTS Load(\
-                number INTEGER PRIMARY KEY NOT NULL,\
-                name NOT NULL,\
-                component_id INTEGER NOT NULL REFERENCES Component(number), \
-                level TEXT NOT NULL,\
-                title TEXT );"
+        table = "CREATE TABLE IF NOT EXISTS LoadBasic(\
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    load_id INTEGER NOT NULL REFERENCES Load(number),\
+                    step_type TEXT, \
+                    design_load TEXT);"
+        # UNIQUE(load_id, load_type, step)
         create_table(conn, table)
         # -------------------------------------
         # Node Load
         table = "CREATE TABLE IF NOT EXISTS LoadNode(\
                 number INTEGER PRIMARY KEY NOT NULL,\
-                load_id INTEGER NOT NULL REFERENCES Load(number),\
+                basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
                 node_id INTEGER NOT NULL REFERENCES Node(number),\
                 title TEXT,\
                 system TEXT NOT NULL,\
@@ -133,13 +143,14 @@ class BasicLoadSQL(LoadCaseBasic):
                 rz DECIMAL,\
                 psi DECIMAL,\
                 B DECIMAL,\
-                Tw DECIMAL);"
+                Tw DECIMAL,\
+                step DECIMAL);"
         create_table(conn, table)
         # -------------------------------------
         # line 
         table = "CREATE TABLE IF NOT EXISTS LoadBeamLine(\
                 number INTEGER PRIMARY KEY NOT NULL,\
-                load_id INTEGER NOT NULL REFERENCES Load(number),\
+                basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
                 element_id INTEGER NOT NULL REFERENCES Element(number),\
                 title TEXT,\
                 system INTEGER NOT NULL,\
@@ -154,17 +165,13 @@ class BasicLoadSQL(LoadCaseBasic):
                 qy1 DECIMAL,\
                 qz1 DECIMAL,\
                 qt1 DECIMAL,\
-                BS DECIMAL,\
-                OTM DECIMAL,\
-                x DECIMAL,\
-                y DECIMAL,\
-                z DECIMAL);"
+                step DECIMAL);"
         create_table(conn, table)
         # -------------------------------------
         # point
         table = "CREATE TABLE IF NOT EXISTS LoadBeamPoint(\
                 number INTEGER PRIMARY KEY NOT NULL,\
-                load_id INTEGER NOT NULL REFERENCES Load(number),\
+                basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
                 element_id INTEGER NOT NULL REFERENCES Element(number),\
                 title TEXT,\
                 system INTEGER NOT NULL,\
@@ -181,13 +188,14 @@ class BasicLoadSQL(LoadCaseBasic):
                 z DECIMAL,\
                 rx DECIMAL,\
                 ry DECIMAL,\
-                rz DECIMAL);"
+                rz DECIMAL, \
+                step DECIMAL);"
         create_table(conn, table)
         # -------------------------------------
         # FER
         table = "CREATE TABLE IF NOT EXISTS LoadBeamFER(\
                 number INTEGER PRIMARY KEY NOT NULL,\
-                load_id INTEGER NOT NULL REFERENCES Load(number),\
+                basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
                 element_id INTEGER REFERENCES Element(number),\
                 node_id INTEGER NOT NULL REFERENCES Node(number),\
                 title TEXT,\
@@ -207,7 +215,8 @@ class BasicLoadSQL(LoadCaseBasic):
                 rz DECIMAL,\
                 Psi DECIMAL,\
                 B DECIMAL,\
-                Tw DECIMAL);"
+                Tw DECIMAL, \
+                step DECIMAL);"
         create_table(conn, table)        
     #
     # -----------------------------------------------
@@ -288,6 +297,7 @@ class BasicLoadSQL(LoadCaseBasic):
         """
         Global matrix consisting of summation of force & displacement 
         """
+        # FIXME: step neds to be sorted
         columns = [*self._plane.hforce, *self._plane.hdisp]
         headgrp = ['load_name', 'component_name',
                    'load_id', 'load_level',
@@ -321,7 +331,6 @@ class BasicLoadSQL(LoadCaseBasic):
 def pull_ENL_df(conn, component: int):
     """ Equivalent Nodal Loads """
     df = pull_FER_data(conn, component)
-    #
     df = df[['load_name', 'component_name', 
              'load_title', 'load_level',
              'load_id', 'load_system', 'load_comment',
@@ -329,8 +338,7 @@ def pull_ENL_df(conn, component: int):
              'node_name', 'node_index', 
              'load_type',
              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-             #'x', 'y', 'z', 'rx', 'ry', 'rz',
-             'Psi', 'B', 'Tw']]
+             'Psi', 'B', 'Tw', 'step']]
     return df
 #
 #
@@ -346,7 +354,6 @@ def pull_FER_df(conn, component: int):
              'load_type',
              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
              'x', 'y', 'z', 'rx', 'ry', 'rz']]
-             #'Psi', 'B', 'Tw']]
 #
 #
 def pull_FER_data(conn, component: int):
@@ -359,8 +366,9 @@ def pull_FER_data(conn, component: int):
                     Node.mesh_idx as node_index, \
                     Element.name as element_name, \
                     LoadBeamFER.* \
-            FROM Load, Node, Element, LoadBeamFER, Component \
-            WHERE LoadBeamFER.load_id = Load.number \
+            FROM Load, Node, Element, LoadBasic, LoadBeamFER, Component \
+            WHERE LoadBeamFER.basic_id = LoadBasic.number \
+            AND LoadBasic.load_id = Load.number \
             AND LoadBeamFER.node_id = Node.number \
             AND LoadBeamFER.element_id =  Element.number \
             AND Load.component_id = Component.number \
@@ -380,7 +388,7 @@ def pull_FER_data(conn, component: int):
             'load_comment', 'load_system','load_type',
             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
             'x', 'y', 'z', 'rx', 'ry', 'rz',
-            'Psi', 'B', 'Tw']
+            'Psi', 'B', 'Tw', 'step']
     #
     # dataframe
     db = DBframework()
@@ -427,7 +435,9 @@ class LoadTypeSQL(LoadTypeBasic):
         """ """
         query = (self._component, )
         table = 'SELECT Load.name \
-                 FROM Load WHERE component_id = ?;'
+                 FROM Load, LoadBasic\
+                 WHERE LoadBasic.load_id = Load.number \
+                 AND component_id = ?;'
         conn = create_connection(self._db_file)
         with conn:        
             cur = conn.cursor()
@@ -439,8 +449,9 @@ class LoadTypeSQL(LoadTypeBasic):
         """ """
         query = (load_name, self._component)
         table = 'SELECT Load.number, Load.title\
-                 FROM Load \
+                 FROM Load, LoadBasic \
                  WHERE Load.name = ? \
+                 AND LoadBasic.load_id = Load.number \
                  AND component_id = ?;'
         #
         conn = create_connection(self._db_file)

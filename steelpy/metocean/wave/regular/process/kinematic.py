@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
@@ -338,7 +338,8 @@ class KinematicResults:
                                           data=data,
                                           name=newname)
         #print('-->')
-        return kdf
+        #return kdf
+        return xr.Dataset(data_vars=kdf)
     #
     def kindf(self, items, xx, zdepth):
         """ """
@@ -416,13 +417,150 @@ class KinematicResults:
         #1 / 0
         return dataset
     #
+    def get_kin3(self, elev: list, krf: list):
+        """ """
+        #df_mulidx = self._data[['phase', 'x', 'z', 'u', 'ut', 'v', 'vt']].copy()
+        #
+        items =  ['u', 'ut', 'v', 'vt']
+        title = ['ux', 'ax', 'uz', 'az']
+        #
+        rows = np.array([0.0])
+        #cols = self._data['x']
+        #
+        kdf = dict()
+        for i, name in enumerate(items):
+            dgroup = self._data.groupby('x')[['z', name]]
+            data = []
+            cols = list(dgroup.groups.keys())
+            for key, grp in dgroup:
+                data.append(np.interp(x=elev,
+                                      xp=grp['z'],
+                                      fp=grp[name],
+                                      right=0))
+                #cols.append(key)
+            #
+            # Expand wave
+            cols2 = [item * -1 for item in cols[1:]]
+            cols = np.hstack((list(reversed(cols2)), cols))
+            data = np.vstack((list(reversed(data[1:])), data))
+            #
+            #data = self._data[['x', 'z', name]].copy()
+            #data.insert(1, 'y', float(0.0))
+            #cols = self._data['y']
+            #
+            #data.set_index(['x', 'y', 'z'], inplace=True)
+            #data = data.to_xarray()
+            #
+            # krf on horizontal vel and acc
+            if name in ['u', 'ut']:
+                data *= krf
+            #
+            #data = np.transpose(data)
+            # insert x axis to simulate a 3d wave [x, y, z]
+            rows = np.array([cols[0], 0.0, cols[-1]])
+            data = np.array([data, data, data])
+            #data = np.expand_dims(data, axis=0)
+            #data2 = np.append(data, data, axis=0)
+            #cols = np.expand_dims(cols, axis=0)
+            #rows = np.zeros((cols.shape))
+            #
+            #
+            newname = title[i]
+            kdf[newname] = xr.DataArray(data=data,
+                                        coords=[rows, cols, elev],
+                                        #coords={'row': (["x","y"], rows),
+                                        #        'col': (["x","y"], cols),
+                                        #        'z' : elev},
+                                        dims=['y', 'x', 'z'],
+                                        name=name)
+        #
+        ds = xr.Dataset(data_vars=kdf)
+        #
+        1 / 0
     #
+    def get_kin4(self, elev: list, krf: list):
+        """
+        """
+        kdf = self._get_array(elev, krf)
+        # Partial
+        #dataset = {}
+        #for key, item in kdf.items():
+        #    key, item
+        #    print(key)
+        #    temp = []
+        #    for idx, x, in enumerate(coord[0]):
+        #        y, z = coord[1][idx], coord[2][idx]
+        #        #print(x, y, z)
+        #        xxx = item.interp(x=x, y=z, z=y, 
+        #                          method="linear",
+        #                          kwargs={"fill_value": 0})
+        #        print(x, y, z, xxx)
+        #        temp.append(xxx.to_numpy())
+        #    dataset[key] = temp
+        #
+        # Full
+        #dataset = {}
+        #for key, item in kdf.items():
+            #key, item
+            #print(item)
+            #dataset[key] = item.interp(x=np.array(coord[0]),
+            #                           y=np.array(coord[2]),
+            #                           z=np.array(coord[1]),
+            #                           method="linear",
+            #                           kwargs={"fill_value": 0})
+            #dataset[key]
+        #return xr.Dataset(data_vars=dataset)
+        #return dataset
+        return kdf
+    #
+    def _get_array(self, elev: list, krf: list):
+        """ """
+        items =  ['u', 'ut', 'v', 'vt']
+        title = ['ux', 'ax', 'uz', 'az']
+        kdf = dict()
+        for i, name in enumerate(items):
+            dgroup = self._data.groupby('length')[['elevation', name]]
+            data = []
+            cols = list(dgroup.groups.keys())
+            for key, grp in dgroup:
+                data.append(np.interp(x=elev,
+                                      xp=grp['elevation'],
+                                      fp=grp[name],
+                                      right=0))
+            #
+            # Expand wave
+            cols2 = [item * -1 for item in cols[1:]]
+            cols = np.hstack((list(reversed(cols2)), cols))
+            data = np.vstack((list(reversed(data[1:])), data))
+            #
+            # krf on horizontal vel and acc
+            if name in ['u', 'ut']:
+                data *= krf
+            #
+            #data = np.transpose(data)
+            # insert x axis to simulate a 3d wave [x, y, z]
+            rows = np.array([cols[0], 0.0, cols[-1]])
+            data = np.array([data, data, data])
+            #data = np.expand_dims(data, axis=0)
+            #data2 = np.append(data, data, axis=0)
+            #cols = np.expand_dims(cols, axis=0)
+            #rows = np.zeros((cols.shape))
+            #
+            #
+            newname = title[i]
+            kdf[newname] = xr.DataArray(data=data,
+                                        coords=[rows, cols, elev],
+                                        #coords={'row': (['y','x','z'], rows),
+                                        #        'col': (['y','x','z'], cols),
+                                        #        'z' : elev},
+                                        dims=['y', 'x', 'z'],
+                                        name=name)
+        return xr.Dataset(data_vars=kdf)
 #
 #
 #
 def get_kinematic(n: int, z: list, B: list, Tanh: list, d: float,
-                  surface: list,
-                  depth_points: int, #zdepth, 
+                  surface: list, depth_points: int, 
                   is_finite: bool, g: exec = 9.80665):
     """
     n : order - Number of Fourier components or order of Stokes or cnoidal theory
@@ -435,8 +573,6 @@ def get_kinematic(n: int, z: list, B: list, Tanh: list, d: float,
     is_finite:
     g : 
     """
-    #
-    #
     g = g  # m/s^2
     pi = np.pi
     kd = z[1]
@@ -445,9 +581,9 @@ def get_kinematic(n: int, z: list, B: list, Tanh: list, d: float,
     R = 1 + z[9] / z[1]
     #
     etas = surface['eta'].to_numpy()
-    xx = surface['x'].to_numpy()
+    xx = surface['length'].to_numpy()
     phase = surface['phase'].to_numpy()
-    #time = surface['t']
+    time = surface['time'].to_numpy()
     #
     #npt = len(etas)
     #X = xx * kd / d # reset to dimensionless units
@@ -521,7 +657,8 @@ def get_kinematic(n: int, z: list, B: list, Tanh: list, d: float,
     #
     # df data format
     dfkin = {'x': repmat(xx, depth_steps.size, 1).flatten('F'),
-             'phase': repmat(phase, depth_steps.size, 1).flatten('F')}
+             'phase': repmat(phase, depth_steps.size, 1).flatten('F'),
+             'time': repmat(time, depth_steps.size, 1).flatten('F')}
     #dfkin.update({item: output[x].flatten('F') * factors[x]
     #              for x, item in enumerate(header)})
     dfkin.update(output)

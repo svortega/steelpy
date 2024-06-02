@@ -16,7 +16,6 @@ from steelpy.metocean.wave.regular.process.inout import get_Height
 #
 from steelpy.metocean.wave.regular.process.surface import get_surface, SurfaceResults
 #
-#from steelpy.process.units.main import Units
 #from steelpy.process.dataframe.main import DBframework
 import numpy as np
 #
@@ -120,9 +119,19 @@ class WaveItem:
         #surface['wave_id'] = self.number
         surface['type'] = 'order_1'
         #
+        # TODO : check time
+        num = len(surface['length'])
+        endtime = self.Tw * 0.50
+        time = np.linspace(start=0, stop=endtime,
+                           num=num, endpoint=True)
+        surface['time'] = time
+        #time = np.linspace(start=0, stop=self.Tw,
+        #                   num=(2*num)-1, endpoint=True)
+        #surface['time'] = time[num-1:]
+        #
         self._surface = surface
         #
-        return surface[['type', 'x', 'eta', 'phase']]
+        return surface[['type', 'length', 'eta', 'phase', 'time']]
     #
     def surface(self, surface_points:int = 36):
         """ wave surface """
@@ -178,6 +187,12 @@ class WaveItem:
         """ wave_length [m]"""
         
         self._Lw = L / self.d
+    #
+    @property
+    def crest(self):
+        """Wave crest elevation"""
+        surface = self.surface()
+        return surface.eta.max()
 #
 #
 #
@@ -259,37 +274,87 @@ def get_wave_data(case_data):
         raise IOError('input data not valid')
     return data
 #
-def get_data_dic(data:dict)->list[float]:
-    """[case, load, theta, phi, rho, phase]"""
-    new_data = [0,0,0,0, "Fourier"]
+def get_data_dic(data:dict) -> list:
+    """
+    [Hw, Tw, d, wave_theory, title, crest_elevation, Lw]
+    """
+    new_data = [0, 0, 0, "Fourier", None, 0, 0]
     for key, item in data.items():
+        # wave basic
         if re.match(r"\b((wave(\_)?)?h(eight)?(w)?)\b", key, re.IGNORECASE):
-            new_data[0] = item.value
+            try:
+                new_data[0] = item.value
+            except AttributeError:
+                raise IOError(f'units missing for Hw: wave height')             
+        
         elif re.match(r"\b((wave(\_)?)?period|t(w)?|s)\b", key, re.IGNORECASE):
-        #elif re.match(r"\b(t(w)?|s)\b", key, re.IGNORECASE):
-            new_data[1] = item.value
+            try:
+                new_data[1] = item.value
+            except AttributeError:
+                raise IOError(f'units missing for Tw: water period')
+        
         elif re.match(r"\b((water(\_)?)?d(epth)?)\b", key, re.IGNORECASE):
-            new_data[2] = item.value
-        elif re.match(r"\b((wave(\_)?)?l(ength)?)\b", key, re.IGNORECASE):
-            new_data[3] = item.value
+            try:
+                new_data[2] = item.value
+            except AttributeError:
+                raise IOError(f'units missing for d: water depth')
+        
+        # wave type and title
         elif re.match(r"\b((wave(\_)?)?t(ype|heory))\b", key, re.IGNORECASE):
+            new_data[3] = item
+        
+        elif re.match(r"\b(title)\b", key, re.IGNORECASE):
             new_data[4] = item
-        #elif re.match(r"\b(phase)\b", key, re.IGNORECASE):
-        #    new_data[5] = item.value        
+        
+        # user data
+        elif re.match(r"\b((wave(\_)?)?l(ength)?)\b", key, re.IGNORECASE):
+            try:
+                new_data[5] = item.value
+            except AttributeError:
+                raise IOError(f'units missing for Lw: wave length')
+        
+        elif re.match(r"\b((wave(\_)?)?c(rest)?(\_)?e(levation)?)\b", key, re.IGNORECASE):
+            try:
+                new_data[6] = item.value
+            except AttributeError:
+                raise IOError(f'units missing for WCe: wave crest elevation')        
+        
+        #elif re.match(r"\b((wave(\_)?)?order)\b", key, re.IGNORECASE):
+        #    new_data[7] = item        
+      
     return new_data
 #
 #
-def get_data_list(data:list, steps:int=5)->list[float]:
+def get_data_list(data:list) -> list:
     """
-    [Hw, Tw, d, wave_theory, Lw]
+    [Hw, Tw, d, wave_theory, title, crest_elevation, Lw]
     """
-    new_data = [0] * steps
-    new_data[-1] = "Fourier"
-    for x, item in enumerate(data):
+    winput = ['Hw', 'Tw', 'd']
+    new_data = [0, 0, 0, "Fourier", None, 0, 0]
+    # Wave basic data
+    for x, item in enumerate(data[:3]):
         try:
             new_data[x] = item.value
         except AttributeError:
-            new_data[-1] = item
+            raise IOError(f'units missing for {winput[x]}')
+    #
+    uinput = ['WCe', 'Lw']
+    start = len(winput)
+    stop = start + len(uinput)
+    #
+    # Wave tytpe, title
+    for x, item in enumerate(data[start:stop]):
+        try:
+            new_data[x + start] = item.value
+        except AttributeError:
+            new_data[x + start] = item
+    #
+    # Wave basic data
+    for x, item in enumerate(data[stop:]):
+        try:
+            new_data[x + stop] = item.value
+        except AttributeError:
+            raise IOError(f'units missing for {uinput[x]}')    
     return new_data
 #
 #

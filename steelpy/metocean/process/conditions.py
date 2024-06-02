@@ -351,6 +351,7 @@ class CombTypes:
         condition = self.condition
         self.number = condition.number
     #
+    # -----------------------------
     #
     @property
     def condition(self):
@@ -377,7 +378,18 @@ class CombTypes:
             raise IOError(f'Condition {self.name} not valid')
         #
         return condition
-    #    
+    #
+    #
+    @property
+    def title(self):
+        """ """
+        conn = create_connection(self._db_file)
+        with conn:        
+            items = self._pull_condition(conn, 'title')
+        return items[0]
+    #
+    #
+    # -----------------------------
     #
     @property
     def setup(self):
@@ -443,15 +455,16 @@ class CombTypes:
                 cur = conn.cursor()
                 cur.execute(table, project)
                 wregdata = cur.fetchone()
-            #
+            # TODO : WCe tb included 
             wave = RegWaveItem(number=wdata[0], name=wdata[1],
                                Hw=wregdata[2], Tw=wregdata[3], d=wregdata[4], 
-                               theory=wregdata[5], db_file=self._db_file)
+                               theory=wregdata[5], order=wregdata[6], 
+                               Lw=wregdata[7], db_file=self._db_file)
             #
             return WaveBasic(wave=wave, 
                              direction = cond.wave_direction, 
                              kinematic_factor=wkf, 
-                             crest_elevation=wregdata[9])
+                             crest_elevation=wregdata[8])
         else:
             raise NotImplementedError(f'wave type {wave[2]} not yet implemented')
     
@@ -940,23 +953,19 @@ class CombTypes:
         current = self.current
         hydro = self.properties
         rho_w = self.properties.rho_w
-        #kinematics = wave.kinematics()
         #
-        #1 / 0
-        #
-        res = BSOTM(#kinematics=kinematics,
-                    wave=wave, 
+        res = BSOTM(wave=wave, 
                     current=current,
                     properties=hydro,
                     rho_w=rho_w, 
                     condition=2)
         return res
-        #calc
     #
     #
     def beam_load(self, beams):
         """
-        Generate beam loading 
+        Generate beam loading
+        beam : beam class
         """
         # get load
         wload = self.load()
@@ -1011,22 +1020,23 @@ class CombTypes:
             # solve beam forces
             Fwave = wload.Fwave(beam=beam)
             solution = Fwave.solve()
-            dftemp.extend(solution)
+            #dftemp.extend(solution)
+            dftemp.append(solution)
             #print('-->')
         #
         # ------------------------------------------
         # create database
         #
-        header = ['element_type', 'element_name', 'element_id', 
-                  'type',
-                  'qx0', 'qy0', 'qz0', 'qt0', 
-                  'qx1', 'qy1', 'qz1', 'qt1',
-                  'L0', 'L1', 'BS', 'OTM', 
-                  'x', 'y', 'z']        
+        #header = ['element_type', 'element_name', 'element_id', 
+        #          'type',
+        #          'qx0', 'qy0', 'qz0', 'qt0', 
+        #          'qx1', 'qy1', 'qz1', 'qt1',
+        #          'L0', 'L1', 'BS', 'OTM', 
+        #          'x', 'y', 'z']        
         #
         df = DBframework()
-        df_bload = df.DataFrame(data=dftemp, columns=header, index=None)        
-        #
+        #df_bload = df.DataFrame(data=dftemp, columns=header, index=None)
+        df_bload = df.concat(dftemp)
         #
         #
         # ------------------------------------------
@@ -1042,30 +1052,35 @@ class CombTypes:
             #for key, wload in blgrp:
             #    key, wload
             #
-            grpwave = df_bload.groupby(['element_name','y'])[['BS', 'OTM']].sum()
+            #
+            grpwave = df_bload.groupby(['element_name','time'])[['BS', 'OTM']].sum()
             #
             grpm = grpwave[load_type].abs().groupby('element_name')
             #
             if value_type.lower() == 'max':
                 idx = grpm.idxmax()
+                design = 'local_max'
             else:
                 1 / 0
             #
-            df_bload.set_index(['element_name','y'], inplace=True)
+            df_bload.set_index(['element_name','time'], inplace=True)
             df_bload = df_bload.loc[idx]
             df_bload.reset_index(inplace=True)
+        else:
+            raise NotImplementedError
         #
         #
         # ------------------------------------------
         # update database
         #
-        header = ['load_id', 'element_id',
+        header = ['element_id', 'design_load', 
                   'title', 'system', 'type',
                   'L0', 'qx0', 'qy0', 'qz0', 'qt0',
                   'L1', 'qx1', 'qy1', 'qz1', 'qt1',
-                  'BS', 'OTM', 'x', 'y', 'z']
+                  'BS', 'OTM', 'time'] # , 'x', 'y', 'z'
         #
-        df_bload['load_id'] = self.number
+        # FIXME : load_id
+        df_bload['design_load'] = design
         df_bload['title'] = f'MET_{self.name}'
         # FIXME : global or local? 
         df_bload['system'] = 'local'

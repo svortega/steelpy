@@ -100,7 +100,7 @@ class BeamLoadItemIM(BeamIMMaster):
 
     #
     def __setitem__(self, beam_name: int|str,
-                    beam_load: list) -> None:
+                    beam_load: list|tuple) -> None:
         """
         """
         #
@@ -254,7 +254,6 @@ class BeamDistributedIM(BeamLineBasic):
         """
         idx_list: list = [x for x, item in enumerate(self._labels)
                           if item == beam_name]
-        #1/0
         udl_list: list = []
         for index in idx_list:
             udl_list.append(LineBeam(self._labels[index], # name
@@ -267,7 +266,8 @@ class BeamDistributedIM(BeamLineBasic):
                                      self._qz0[index], self._qt0[index],  # qz0,qt0
                                      self._qx1[index], self._qy1[index],  # qx1,qy1
                                      self._qz1[index], self._qt1[index],  # qz1,qt1
-                                     self._L0[index], self._L1[index]))   # L0, L1
+                                     self._L0[index], self._L1[index],    # L0, L1
+                                     None))   # Load_step, load_complex, load_type
         return udl_list
     #
     def _get_line(self, line_load: list|dict):
@@ -402,7 +402,6 @@ class BeamPointIM(BeamPointBasic):
         """
         index_list: list = [x for x, item in enumerate(self._labels)
                             if item == beam_name]
-        #
         points: list = []
         for index in index_list: 
             points.append(PointBeam(self._labels[index], self._title[index],            # name,title
@@ -412,7 +411,7 @@ class BeamPointIM(BeamPointBasic):
                                     #
                                     self._fx[index], self._fy[index], self._fz[index],  # fx,fy,fz
                                     self._mx[index], self._my[index], self._mz[index],  # mx,my,mz
-                                    self._L0[index]))                                   # L0       
+                                    self._L0[index], None))                   # L0, Load_step
         return points
     #
     #

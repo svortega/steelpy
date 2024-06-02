@@ -229,13 +229,11 @@ class LoadCaseBasic(BasicLoadMain):
 
     #
     #
-    def beam(self, values:tuple|list|None=None,
+    def beam(self, values:tuple|list|dict|None=None,
              df=None):
         """ """
         if isinstance(values, (list, tuple)):
             if isinstance(values[0], (list, tuple, dict)):
-                #1 / 0
-                #if isinstance(values[0], (list, tuple)):
                 for item in values:
                     if isinstance(item, dict):
                         load_name = item['load']
@@ -259,7 +257,6 @@ class LoadCaseBasic(BasicLoadMain):
                     self.__setitem__(load_name, load_name)
                 except Warning:
                     pass
-                #
                 bload = self.__getitem__(load_name)
                 beamid = values[1]
                 bload._beam[beamid] = values[2:]
@@ -270,9 +267,7 @@ class LoadCaseBasic(BasicLoadMain):
                 self.__setitem__(load_name, load_name)
             except Warning:
                 pass
-            #
             bload = self.__getitem__(load_name)
-            #
             beamid = values['beam']
             if isinstance(beamid, (list, tuple)):
                 for item in beamid:
@@ -316,7 +311,6 @@ class LoadCaseBasic(BasicLoadMain):
             beam_load = df[header.keys()].copy()
             beam_load.rename(columns=header, inplace=True)
             #
-            #
             # Set basic load if doesn't exist
             basic = beam_load.groupby(['name'])
             for x, load_name in enumerate(basic.groups):
@@ -329,14 +323,12 @@ class LoadCaseBasic(BasicLoadMain):
                 bload = self.__getitem__(load_name)
                 loadx = basic.get_group(load_name).copy()
                 bload._beam.df = loadx
-                #
             #
             return 
         except AttributeError:
             pass
         #
         #print('beam load')
-        #1 / 0
         return self._beams
     #    
     #

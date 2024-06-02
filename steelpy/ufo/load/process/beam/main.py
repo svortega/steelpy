@@ -63,7 +63,7 @@ class BeamTypeBasic:
         return self._line[beam_name]
 
     @line.setter
-    def line(self, values: list):
+    def line(self, values: tuple|list|dict):
         """
         Linear Varying Load (lvl) - Non Uniformly Distributed Load
         
@@ -75,9 +75,7 @@ class BeamTypeBasic:
         |                          |
         +  L0  +        +    L1    +
         """
-        #beam_name = self._beam.name
         beam_name = self._beam_id
-        #
         #
         if isinstance(values, dict):
             values.update({'type':'line', })
@@ -101,7 +99,7 @@ class BeamTypeBasic:
         return self._point[beam_name]
 
     @point.setter
-    def point(self, values: list):
+    def point(self, values: tuple|list|dict):
         """
         Concentrated force
         """
@@ -329,7 +327,11 @@ class BeamLineBasic(BeamLoadBasic):
         #
         load_type = udl.pop(0)
         title = udl.pop()
+        #system = [1 for item in load_type]
         #
+        #udl2 = list(zip(*udl))
+        #for item in udl2:
+        #    print(item)
         # get system local = 1
         try:
             1 / self._system_flag

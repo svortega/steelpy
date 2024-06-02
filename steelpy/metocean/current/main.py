@@ -336,6 +336,7 @@ class CurrentItem(HydroItem):
         zdepth : 
         cbf : Currrent blockage Factor
         """
+        #
         # TODO: must be better ways to do this
         profile = self.profile
         elev = list(reversed([item[0] for item in profile]))

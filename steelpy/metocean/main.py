@@ -62,7 +62,7 @@ class Metocean(ClassMainSQL):
             self._rho_w: float = 1032.0  # kg/m^3
         else:
             self._rho_w: float = 1032.0 # kg/m^3
-            print('--> existing')
+            #print('--> existing')
         #
         self._properties = HydroProperty(db_file=self.db_file)
         #

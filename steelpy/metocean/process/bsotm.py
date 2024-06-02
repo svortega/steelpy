@@ -185,7 +185,7 @@ class BSOTM:
         #
         # TODO: Maybe separate beam hydro module
         Bwave = BeamMorisonWave(beam=beam, rho=self.rho_w,
-                                up=self.up)
+                                nelev=nelev, up=self.up)
         #
         #beam = beams[12]
         #uvector = np.array(beam.unit_vector)
@@ -203,8 +203,8 @@ class BSOTM:
         #
         kinematics = self.wave.kinematics()
         #
-        d = kinematics.d
-        z = kinematics.z
+        #d = kinematics.d
+        #z = kinematics.z
         eta = kinematics.surface.eta
         #
         #ux =  self.kinematics.ux
@@ -219,7 +219,7 @@ class BSOTM:
         #print(f'Max vertical wave particle acceleration {max(np.max(az), np.min(az), key=abs): 1.4e}')        
         #
         #
-        crestmax = np.max(eta)
+        #crestmax = np.max(eta)
         #
         # -----------------------------------------
         #
@@ -242,7 +242,8 @@ class BSOTM:
         # locating the middle point of each element
         #Z = Elev[:-1] + dz
         #Z = Bwave.Z(nelev=nelev)
-        Elev = Bwave.elevations(nelev=nelev)
+        Elev = Bwave.elevations()
+        #coord = Bwave.coordinates()
         #
         # -----------------------------------------
         # Hydro diametre & area
@@ -261,12 +262,12 @@ class BSOTM:
         #
         # -----------------------------------------
         # Current
+        #eta = np.hstack((list(reversed(eta[1:])), eta))
         current = self.current.current
-        current.seastate(d=d, z=z, eta=eta)
-        #Vc = current.Vc(d, eta, Z)
         cbf = self.current.blockage_factor
         cbf = cbf.get_profile(Elev)
-        Vc = current.get_profile(eta, Elev, cbf)
+        eta2 = np.hstack((list(reversed(eta[1:])), eta))
+        Vc = current.get_profile(eta2, Elev, cbf)
         #Vc *= 0
         #
         # -----------------------------------------
@@ -279,7 +280,40 @@ class BSOTM:
         #Bwave.Fwave2(Vc=Vc, MG=mg, Cd=cd, Cm=cm,
         #             kinematics=kin2, elev=Elev)
         #
-        kin = kinematics.get_kin(Elev, wkf)
+        kin3 = kinematics.get_kin4(elev=Elev, krf=wkf)
+        #
+        #phase = kinematics.surface.phase
+        #size = kin3.sizes
+        #grpkin
+        #dataset = {}
+        #for step in range(size['x']):
+        #for step in range(len(eta)):
+            #print(f'----> step {step}, eta {eta[step]}, phase {phase[step]}')
+            #item = kin3.roll(x=step)
+            #print(item)
+            #dataset[step] = item.interp(x=np.array(coord[0]),
+            #                         y=np.array(coord[2]),
+            #                         z=np.array(coord[1]),
+            #                         method="linear",
+            #                         assume_sorted=True,
+            #                         kwargs={"fill_value": 0})
+            #dataset[step]
+            #
+            #temp = []
+            #for idx, x, in enumerate(coord[0]):
+            #    y, z = coord[1][idx], coord[2][idx]
+            #    print(x, y, z)
+            #    xxx = item.interp(x=x, y=z, z=y, 
+            #                      method='linear',
+            #                      assume_sorted=True, 
+            #                      kwargs={'fill_value': 0,
+            #                              'bounds_error': True})
+            #    #
+            #    print(xxx)
+            #    temp.append(xxx.to_array())
+            #dataset[step] = temp
+        #
+        #kin = kinematics.get_kin(Elev, wkf)
         #
         #print('')
         #print('--> local Member')
@@ -342,8 +376,10 @@ class BSOTM:
         #
         #return lineload
         #return udl
+        time = kinematics.surface.time
         return Bwave.Fwave(Vc=Vc, MG=mg, Cd=cd, Cm=cm,
-                           kinematics=kin, elev=Elev)        
+                           kinematics=kin3, eta=eta,
+                           time=time)
     #
     #
 #

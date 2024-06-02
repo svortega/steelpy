@@ -14,9 +14,12 @@ from steelpy.ufo.mesh.sqlite.nodes import pull_node, pull_node_number
 from steelpy.ufo.load.process.nodes import (get_nodal_load,
                                             PointNode,
                                             DispNode)
-from steelpy.ufo.load.sqlite.utils import  get_load_data
+
+from steelpy.ufo.load.sqlite.utils import get_load_data, pull_basic
+#
 from steelpy.utils.sqlite.main import ClassBasicSQL
 from steelpy.utils.sqlite.utils import create_connection, create_table
+#
 from steelpy.utils.dataframe.main import DBframework
 #
 #
@@ -59,11 +62,13 @@ class NodeLoadGlobalSQL(NodeMainSQL):
     @property
     def _labels(self):
         """ """
+        1 / 0
         query = (self._component, )
         table = "SELECT Node.name \
-                FROM Node, LoadNode, Load \
+                FROM Node, LoadNode, Load, LoadBasic \
                 WHERE LoadNode.node_id = Node.number \
-                AND Load.number = LoadNode.load_id \
+                AND LoadBasic.number = LoadNode.basic_id \
+                AND LoadBasic.load_id = Load.number \
                 AND Node.component_id = ? ;"
         #
         conn = create_connection(self._db_file)
@@ -133,7 +138,7 @@ class NodeLoadGlobalSQL(NodeMainSQL):
     @df.setter
     def df(self, df):
         """ """
-        1 / 0
+        1 / 0 # FIXME: basic load id
         conn = create_connection(self._db_file)
         with conn:
             query = (self._component, )
@@ -212,26 +217,21 @@ class NodeLoadItemSQL(ClassBasicSQL):
     def _labels(self):
         """ """
         query = (self._name, self._component, )
-        # FIXME : component
         table = "SELECT Node.name \
-                FROM Node, LoadNode, Load \
+                FROM Node, LoadNode, Load, LoadBasic \
                 WHERE LoadNode.node_id = Node.number \
-                AND Load.number = LoadNode.load_id \
+                AND LoadBasic.number = LoadNode.basic_id \
+                AND LoadBasic.load_id = Load.number \
                 AND Load.name = ? \
                 AND Load.component_id = ? ;"
-        #
-        #if isinstance(self._name, str):
-        #    table += f"AND Load.name = '{self._name}' "
-        #else:
-        #    table += f"AND Load.name = {self._name}"
         #
         conn = create_connection(self.db_file)
         with conn:
             cur = conn.cursor()
             cur.execute(table, query)
             rows = cur.fetchall()
-        labels = [item[0] for item in rows]
-        return labels       
+        labels = set([item[0] for item in rows])
+        return list(labels)       
     #
     # -----------------------------------------------
     #
@@ -350,7 +350,7 @@ class NodeLoadItemSQL(ClassBasicSQL):
         """ """
         table = "CREATE TABLE IF NOT EXISTS LoadNode(\
                 number INTEGER PRIMARY KEY NOT NULL,\
-                load_id INTEGER NOT NULL REFERENCES Load(number),\
+                basic_id INTEGER NOT NULL REFERENCES Load(number),\
                 node_id INTEGER NOT NULL REFERENCES Node(number),\
                 title TEXT,\
                 system TEXT NOT NULL,\
@@ -370,30 +370,6 @@ class NodeLoadItemSQL(ClassBasicSQL):
                 psi DECIMAL,\
                 B DECIMAL,\
                 Tw DECIMAL);"
-        #
-        #        table = "CREATE TABLE IF NOT EXISTS LoadNode(\
-        #        number INTEGER PRIMARY KEY NOT NULL,\
-        #        load_id INTEGER NOT NULL REFERENCES Load(number),\
-        #        element_id INTEGER REFERENCES Element(number),\
-        #        node_id INTEGER NOT NULL REFERENCES Node(number),\
-        #        title TEXT,\
-        #        system TEXT NOT NULL,\
-        #        type TEXT NOT NULL,\
-        #        fx DECIMAL,\
-        #        fy DECIMAL,\
-        #        fz DECIMAL,\
-        #        mx DECIMAL,\
-        #        my DECIMAL,\
-        #        mz DECIMAL,\
-        #        x DECIMAL,\
-        #        y DECIMAL,\
-        #        z DECIMAL,\
-        #        rx DECIMAL,\
-        #        ry DECIMAL,\
-        #        rz DECIMAL,\
-        #        psi DECIMAL,\
-        #        B DECIMAL,\
-        #        Tw DECIMAL);"
         #
         create_table(conn, table)
     #
@@ -421,6 +397,7 @@ class NodeLoadItemSQL(ClassBasicSQL):
     @df.setter
     def df(self, df):
         """ """
+        1 / 0 # FIXME : basic load id
         conn = create_connection(self._db_file)
         with conn:        
             cur = conn.cursor()
@@ -489,11 +466,13 @@ class NodeItemSQL:
     @property
     def _labels(self):
         """ """
+        1 / 0
         query = (self._component, )
         table = "SELECT Node.name \
-                FROM Node, LoadNode, Load \
+                FROM Node, LoadNode, Load, LoadBasic \
                 WHERE LoadNode.node_id = Node.number \
-                AND Load.number = LoadNode.load_id \
+                AND LoadBasic.number = LoadNode.basic_id \
+                AND LoadBasic.load_id = Load.number \
                 AND Node.component_id = ? ;"
         #
         conn = create_connection(self._db_file)
@@ -598,13 +577,13 @@ class NodeItemSQL:
         """ """
         # update load with header
         if isinstance(node_load, dict):
-            node_load.update({'type': 'load',})
+            node_load.update({'type': 'force',})
         
         elif isinstance(node_load[0], list):
-            node_load = [['load', *item] for item in node_load]
+            node_load = [['force', *item] for item in node_load]
         
         else:
-            node_load.insert(0, 'load')
+            node_load.insert(0, 'force')
         #
         #
         conn = create_connection(self._db_file)
@@ -684,7 +663,8 @@ class NodeItemSQL:
         #    raise IOError(f"Node {node_name} not found")
         # Node load
         cur = conn.cursor()
-        cur.execute("SELECT * FROM LoadNode \
+        cur.execute("SELECT * \
+                     FROM LoadNode, LoadBasic, Load \
                      WHERE load_id = {:} \
                      AND node_id = {:}; "
                     .format(load_id, node_id))
@@ -730,36 +710,43 @@ def push_node_load(conn, load_name: str|int,
                                       load_name,
                                       component=component)
     #
+    # TODO: load type
+    basic = pull_basic(conn, load_name=load_name)
+    try:
+        basic_id = basic[0]
+    except KeyError:
+        raise IOError(f'load {load_name} not found')
+    #
     # Load type check
     #
-    if re.match(r"\b(point|load|node)\b", load_type, re.IGNORECASE):
-        project = (load_id, node_id,                   # load_id,  node_id
-                   load_title, system, load_type,       # title, system, type, 
+    if re.match(r"\b(point|load|node|force)\b", load_type, re.IGNORECASE):
+        project = (basic_id, node_id,                   # basic_id,  node_id
+                   load_title, system, 'force',         # title, system, type, 
                    *point_load,                         # fx, fy, fz, mx, my, mz,
-                   None, None, None, None, None, None)
+                   None, None, None, None, None, None)  # x, y, z, rx, ry, rz
     # TODO: define mass
     elif re.match(r"\b(mass)\b", load_type, re.IGNORECASE):
-        project = (load_id, node_id,                    # load_id,  node_id
-                   load_title, system, load_type,       # title, system, type, 
-                   None, None, None, None, None, None,  # fx, fy, fz, mx, my, mz,
-                   *point_load)                         # x, y, z, rx, ry, rz
+        project = (basic_id, node_id,                    # basic_id,  node_id
+                   load_title, system, 'mass',           # title, system, type, 
+                   None, None, None, None, None, None,   # fx, fy, fz, mx, my, mz,
+                   *point_load)                          # x, y, z, rx, ry, rz
 
     elif re.match(r"\b(disp(lacement)?)\b", load_type, re.IGNORECASE):
-        project = (load_id, node_id,                   # load_id,  node_id
-                   load_title, system, load_type,      # title, system, type, 
-                   None, None, None, None, None, None, # fx, fy, fz, mx, my, mz,
-                   *point_load)                        # x, y, z, rx, ry, rz
+        project = (basic_id, node_id,                   # basic_id,  node_id
+                   load_title, system, 'displacement',  # title, system, type, 
+                   None, None, None, None, None, None,  # fx, fy, fz, mx, my, mz,
+                   *point_load)                         # x, y, z, rx, ry, rz
 
     else:
         raise IOError(f'node load type {load_type} not recognized')
     #
     # print('-->')
-    #
-    sql = 'INSERT INTO LoadNode(load_id, node_id, \
+    sql = 'INSERT INTO LoadNode(basic_id, node_id, \
                                     title, system, type, \
                                     fx, fy, fz, mx, my, mz,\
                                     x, y, z, rx, ry, rz)\
-                                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                                VALUES(?,?,?,?,?,?,?,?,?, \
+                                       ?,?,?,?,?,?,?,?)'
     cur = conn.cursor()
     cur.execute(sql, project)
     #print('-->')
@@ -789,17 +776,8 @@ def pull_load_specs(conn, node_name: str|int,
     except TypeError:
         raise IOError(f"Load {load_name} not found")
     #
+    #
     return node_id, load_id
-#
-#
-def pull_basic_load_id(conn, load_name:int|str):
-    """ """
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM Load\
-                 WHERE name = {:} \
-                 AND type = 'basic'".format(load_name))
-    loads = cur.fetchone()
-    return loads[0]
 #
 #
 # ---------------------------------
@@ -848,9 +826,9 @@ def pull_NodeLoad_SQLdata(conn, load_name: int|str,
                           load_type: str|None = None):
                           #beam_flag: bool = False):
     """ """
-    #
     table = ""
     items = []
+    #
     # load
     if load_name in ['*', None, '']:
         load_name = None
@@ -876,29 +854,23 @@ def pull_NodeLoad_SQLdata(conn, load_name: int|str,
     items.extend([component])
     #
     # Node load
-    #
     nodal_load = pull_NodeLoad(conn, items, table)
-    #nodal_load.extend(get_Node(conn, items, table))
-    #
-    #if beam_flag:
-    #    nodal_load.extend(pull_BeamNodeLoad(conn, items, table))
     #
     return nodal_load
 #
 def pull_NodeLoad(conn, items: list, utils: str):
     """ """
+    # TODO: check it
     table = "SELECT Load.name AS load_name, \
                     Component.name AS component_name, \
                     Load.title AS load_title, \
                     Node.name AS node_name, \
                     Node.mesh_idx as node_index, \
                     LoadNode.* \
-            FROM Load, Node, LoadNode, Component \
-            WHERE LoadNode.load_id = Load.number \
+            FROM Load, Node, LoadNode, LoadBasic, Component \
+            WHERE LoadNode.basic_id = LoadBasic.number \
+            AND LoadBasic.load_id = Load.number \
             AND LoadNode.node_id = Node.number  "
-    
-            #LoadNode.element_id as element_name, \
-            #AND LoadNode.element_id is NULL "
     #
     table += utils
     #
@@ -923,8 +895,9 @@ def pull_BeamNodeLoad(conn, items: list, utils: str):
                     Node.mesh_idx as node_index, \
                     Element.name as element_name, \
                     LoadNode.* \
-            FROM Load, Node, Element, LoadNode, Component \
-            WHERE LoadNode.load_id = Load.number \
+            FROM Load, Node, Element, LoadNode, LoadBasic, Component \
+            WHERE LoadNode.basic_id = LoadBasic.number \
+            AND LoadBasic.load_id = Load.number \
             AND LoadNode.node_id = Node.number \
             AND LoadNode.element_id is not NULL \
             AND LoadNode.element_id = Element.number "
@@ -948,8 +921,9 @@ def pull_NodeLoad_item(conn, load_name: int|str,
                        node_name: int|str):
     """ """
     table = "SELECT Node.name, LoadNode.* \
-            FROM Load, Node, LoadNode \
-            WHERE LoadNode.load_id = Load.number \
+            FROM Load, Node, LoadNode, LoadBasic \
+            WHERE LoadNode.basic_id = LoadBasic.number \
+            AND LoadBasic.load_id = Load.number \
             AND LoadNode.node_id = Node.number "
     #
     items = []
@@ -992,7 +966,7 @@ def pull_NodeLoad_item(conn, load_name: int|str,
         else:
             data = [*row[7:13],                      # [fx, fy, fz, mx, my, mz]
                     row[0], row[4], load_name,       # [name, title, load_name]
-                    0, 0, 'load']                    # [system, load_complex, load_type]
+                    0, 0, 'force']                    # [system, load_complex, load_type]
             #
             # [fx, fy, fz, mx, my, mz, name, title, load_name, system, load_complex, load_type]
             node_load.append(PointNode._make(data))
@@ -1005,7 +979,6 @@ def pull_NodeLoad_df(conn, load_name: int|str,
                      component: int):
                      #beam_flag: bool):
     """nodes in dataframe format"""
-    # FIXME : component
     ndata = pull_NodeLoad_SQLdata(conn,
                                   load_name=load_name,
                                   node_name=node_name,
@@ -1024,7 +997,7 @@ def pull_NodeLoad_df(conn, load_name: int|str,
             'load_comment', 'load_system','load_type',
             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
             'x', 'y', 'z', 'rx', 'ry', 'rz',
-            'psi', 'B', 'Tw']
+            'psi', 'B', 'Tw', 'step']
     #
     # dataframe
     db = DBframework()
@@ -1040,5 +1013,5 @@ def pull_NodeLoad_df(conn, load_name: int|str,
              'load_type',
              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
              'x', 'y', 'z', 'rx', 'ry', 'rz',
-             'psi', 'B', 'Tw']]
+             'psi', 'B', 'Tw', 'step']]
     return df

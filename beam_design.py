@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # set units
 units = Units()
 #
-Fx_factor = 0.0
+Fx_factor = 1.0
 #
 #
 # beam class
@@ -119,15 +119,15 @@ beam.P = {#'L1':4.5*units.m,
 #
 #
 # beam results
-Mx =  -90*units.kip*units.inch
-print(Mx.convert('newton*metre'))
+#Mx =  -90*units.kip*units.inch
+#print(Mx.convert('newton*metre'))
 #
-reactions = beam.reactions()
-print(reactions)
+#reactions = beam.reactions()
+#print(reactions)
 #
 #
-forces = beam.response()
-print(forces)
+#forces = beam.response()
+#print(forces)
 #
 #
 #force_grp = (forces.groupby(['load_name', 'component_name',
@@ -279,11 +279,11 @@ basic.beam({'load': 'AISC_C-C2.2',
             'type': 'line',
             'qy': -0.20 * units.kip / units.ft})
 #
-#basic.beam({'load': 'snow load',
-#            'beam': 5, 
-#            'type': 'point',
-#            'Fy': -75 * units.kN,
-#            'L0': 0.50 * units.m,})
+basic.beam({'load': 'snow load',
+            'beam': 5, 
+            'type': 'point',
+            'Fy': -75 * units.kN,
+            'L0': 0.50 * units.m,})
 #
 #basic.beam(
            #{'load':'snow load',
@@ -351,9 +351,9 @@ comb[100].basic['AISC_C-C2.3'] = 1.00
 #comb[200].basic[22] = 1.40
 #comb[200].basic[33] = 1.45
 #
-#comb[300] = 'factored comb 3'
-#comb[300].combination[100] = 1.50
-#comb[300].basic['snow load'] = 1.60
+comb[300] = 'factored comb 3'
+comb[300].combination[100] = 1.50
+comb[300].basic['snow load'] = 1.60
 #
 #
 # ----------------------------------------------------

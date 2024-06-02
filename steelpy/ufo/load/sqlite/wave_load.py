@@ -20,7 +20,7 @@ from operator import sub, add
 
 # package imports
 from steelpy.ufo.load.process.wave_load import MetoceanLoad # WaveData, 
-#from steelpy.ufo.load.sqlite.utils import get_load_data
+from steelpy.ufo.load.sqlite.utils import pull_basic, push_basic
 #from steelpy.ufo.load.process.beam.beam import LineBeam
 from steelpy.ufo.mesh.sqlite.beam import BeamSQL # BeamItemSQL, 
 from steelpy.ufo.mesh.sqlite.utils import (get_connectivity,
@@ -65,11 +65,13 @@ class MetoceanLoadSQL(MetoceanLoad):
             self._labels.append(name)
             self._condition.append(condition)
         #
-        cases= ((name, self._component, "basic", condition.name), )
         conn = create_connection(self.db_file)
         with conn:
-            self._push_basicload(conn, cases)
+            idx = self._push_load(conn, name, condition.title,
+                                  condition._db_file)
+            #self._push_basicload(conn, load_id=idx)
         #
+        #print('---')
     #
     def __getitem__(self, name:int|str) :
         """
@@ -89,14 +91,29 @@ class MetoceanLoadSQL(MetoceanLoad):
     #
     # -----------------------------------------------
     #
-    def _push_basicload(self, conn, cases: tuple):
+    def _push_load(self, conn, name: str|int,
+                   title: str|None, file: str|None):
         """ """
+        query = (name, self._component, "basic", title, 'metocean', file, )
         #project = (load_name, load_title, "basic", 'metocean')
-        table = 'INSERT INTO Load(name, component_id, level, title) \
-                 VALUES(?,?,?,?)'
+        table = 'INSERT INTO Load(name, component_id, level, title, \
+                                  input_type, input_file) \
+                 VALUES(?,?,?,?,?,?)'
         cur = conn.cursor()
-        cur.executemany(table, cases)
+        cur.execute(table, query)
+        idx = cur.lastrowid
+        return idx
     #
+    def _push_basicload(self, conn, load_id: int,
+                        step: int|float):
+        """ """
+        query = (load_id, step)
+        table = 'INSERT INTO LoadBasic(load_id, step_type) \
+                 VALUES(?,?)'
+        cur = conn.cursor()
+        cur.execute(table, query)
+        idx = cur.lastrowid
+        return idx
     #
     #
     # -----------------------------------------------
@@ -116,15 +133,26 @@ class MetoceanLoadSQL(MetoceanLoad):
             # ------------------------------------------
             conn = create_connection(self.db_file)
             for item in self._condition:
-                #
                 df_bload = item.beam_load(beams)
                 #
                 # ------------------------------------------
                 # push data in database
                 #
                 with conn:
-                    df_bload.to_sql('LoadBeamLine', conn,
-                                    if_exists='append', index=False)
+                    #load_id = pull_basic(conn,
+                    #                     load_name=item.name)
+                    #
+                    design =  df_bload['design_load'].tolist()[0]
+                    #
+                    basic_id = push_basic(conn,
+                                         load_name=item.name,
+                                         component=self._component, 
+                                         design_load=design, 
+                                         step_type='time')
+                    df_bload['basic_id'] = basic_id
+                    #df_bload.drop(columns=['design_load'], inplace=True)
+                    #
+                    self._push_wload(conn, df_bload)
                 #res.Fwave()
         #print('-->')
         #1 / 0
@@ -138,6 +166,25 @@ class MetoceanLoadSQL(MetoceanLoad):
     #    row = cur.fetchall()
     #    return row
     #
+    def _push_wload(self, conn, df):
+        """ """
+        dfgrp = df.groupby(['basic_id', 'title', 'time'])
+        for key, item in dfgrp:
+            #bidx = int(key[0])
+            #title = str(key[1])
+            #step = float(key[2])
+            #idx = pull_basic(conn, load_id=int(key[0]),
+            #                 load_type='metocean')
+            #
+            #bidx = self._push_basicload(conn, load_id=idx, step='time')
+            #
+            df_bload = item.drop(columns=['BS', 'OTM', 'design_load'])
+            df_bload.rename(columns={'time': 'step'}, inplace=True)
+            #df_bload['basic_id'] = bidx
+            df_bload.to_sql('LoadBeamLine', conn,
+                            if_exists='append',
+                            index=False)
+        print('--')
     #    
 #
 #

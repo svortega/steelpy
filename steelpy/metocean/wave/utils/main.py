@@ -7,7 +7,6 @@ from dataclasses import dataclass
 
 # package imports
 from steelpy.utils.sqlite.main import ClassBasicSQL
-#from steelpy.process.units.units import Units
 #from steelpy.utils.sqlite.utils import create_connection, create_table
 
 
@@ -24,34 +23,27 @@ class WaveBasic(ClassBasicSQL):
         super().__init__(db_file)
     #
     #
-    def _push_wave(self, conn, wave_data):
-        """ get wave data"""
-        #
-        project = (*wave_data, None, self._criteria)
+    def _push_wave(self, conn, wave_data: list) -> int:
+        """
+        wave_data: [name, type, title]
+        """
+        project = (*wave_data, self._criteria)
         table = 'INSERT INTO Wave(name, type, title, criteria_id) \
                  VALUES(?,?,?,?)'
         #
-        #push
         cur = conn.cursor()
         cur.execute(table, project)
         wave_id = cur.lastrowid
-        #
-        #project = (self._criteria, )
-        #table = "SELECT * FROM Wave \
-        #         WHERE name = ? AND type = 'regular'"
-        #cur = conn.cursor()
-        #cur.execute(table, project)
-        #wave = cur.fetchone()
-        #wave
-        #1 / 0
         return wave_id
     #
-    def _pull_wave(self, conn, wave_name):
+    def _pull_wave(self, conn, wave_name: str|int,
+                   wave_type: str) -> tuple:
         """ """
-        project = (wave_name, self._criteria)
+        project = (wave_name, wave_type, self._criteria)
         table = "SELECT * FROM Wave \
-                 WHERE name = ? AND criteria_id = ? \
-                 AND type = 'regular'"
+                 WHERE name = ? \
+                 AND type = ?\
+                 AND criteria_id = ?"
         cur = conn.cursor()
         cur.execute(table, project)
         wave = cur.fetchone()

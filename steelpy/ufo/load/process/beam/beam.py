@@ -40,7 +40,7 @@ import numpy as np
 class BeamLoadClass:
     """ """
     name: str | int
-    title: str
+    title: str | None
     load_name: str | int
     component_name: str | int
     system: int
@@ -179,6 +179,7 @@ class LineBeam(BeamLoadClass):
     L0: float
     L1: float
     #
+    load_step: float | None
     load_complex: int = 0
     load_type: str = "Line Load"
     #
@@ -353,6 +354,7 @@ class PointBeam(BeamLoadClass):
     #
     L0: float
     #
+    load_step: float | None
     load_complex: int = 0
     load_type: str = "Point Load"
     #

@@ -463,8 +463,8 @@ def get_BeamLine_dic(data: dict)->list:
                d1, d2,
                title]
     """
-    #loat_type = data['type']
-    new_data = [0,0,0,0, None,None,None,None, 0,0, None]
+    rows = 0
+    new_data = [0, 0, 0, 0, None,None,None,None, 0, 0, None]
     for key, item in data.items():
         #
         # End 1
@@ -482,26 +482,28 @@ def get_BeamLine_dic(data: dict)->list:
         #
         # End 2
         elif re.match(r"\b((qx|qa(xial)?)(_)?(2|end))\b", key, re.IGNORECASE):
-            new_data[4] = item.convert("newton/metre").value
+            new_data[4] = item.convert("newton/metre").value           
         
         elif re.match(r"\b((qy|in(_)?plane)(_)?(2|end))\b", key, re.IGNORECASE):
             new_data[5] = item.convert("newton/metre").value
         
         elif re.match(r"\b((qz|out(_)?plane)(_)?(2|end))\b", key, re.IGNORECASE):
-            new_data[6] = item.convert("newton/metre").value
+            new_data[6] = item.convert("newton/metre").value           
         
         elif re.match(r"\b(qt(orsion)?|mx(_)?(2|end)?)\b", key, re.IGNORECASE):
-            new_data[7] = item.convert("newton/metre").value
+            new_data[7] = item.convert("newton/metre").value            
         #
         # L0, L2
         elif re.match(r"\b((l|d(istance)?)(_)?(0|1|start)?)\b", key, re.IGNORECASE):
             new_data[8] = item.value
+        
         elif re.match(r"\b((l|d(istance)?)(_)?(2|end))\b", key, re.IGNORECASE):
             new_data[9] = item.value
         #
         # Comment
         elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
             new_data[10] = item
+    #
     #
     # for uniform load
     # qx2
@@ -513,12 +515,172 @@ def get_BeamLine_dic(data: dict)->list:
     # qz2
     if new_data[6] == None:
         new_data[6] = new_data[2]
-    # qt2
+    # qt2    
     if new_data[7] == None:
         new_data[7] = new_data[3]    
     #
+    #
     new_data.insert(0, 'line')
     #
+    return new_data
+#
+#
+def get_BeamLine_dicxx(data: dict, ntiems: int=11)->list:
+    """
+    new_data: [qx1, qy1, qz1, qt1,
+               qx2, qy2, qz2, qt2,
+               d1, d2,
+               title]
+    """
+    rows = 0
+    #new_data = [0, 0, 0, 0, None,None,None,None, 0, 0, None]
+    new_data = [None] * ntiems
+    qdata = [None] * 8
+    Ldata = [None] * 2
+    tdata = []
+    for key, item in data.items():
+        #
+        # End 1
+        if re.match(r"\b((qx|qa(xial)?)(_)?(0|1|start)?)\b", key, re.IGNORECASE):
+            #new_data[0] = item.convert("newton/metre").value
+            qdata[0] = get_dict_load(item, units='newton/metre')
+            rows = max(rows, len(qdata[0]))
+            
+        elif re.match(r"\b((qy|in(_)?plane)(_)?(0|1|start)?)\b", key, re.IGNORECASE):
+            #new_data[1] = item.convert("newton/metre").value
+            qdata[1] = get_dict_load(item, units='newton/metre')
+            rows = max(rows, len(qdata[1]))
+            
+        elif re.match(r"\b((qz|out(_)?plane)(_)?(0|1|start)?)\b", key, re.IGNORECASE):
+            #new_data[2] = item.convert("newton/metre").value
+            qdata[2] = get_dict_load(item, units='newton/metre')
+            rows = max(rows, len(qdata[2]))
+            
+        elif re.match(r"\b(qt(orsion)?|mx(_)?(0|1|start)?)\b", key, re.IGNORECASE):
+            #new_data[3] = item.convert("newton/metre").value
+            qdata[3] = get_dict_load(item, units='newton/metre')
+            rows = max(rows, len(qdata[3]))
+        #
+        # End 2
+        elif re.match(r"\b((qx|qa(xial)?)(_)?(2|end))\b", key, re.IGNORECASE):
+            #new_data[4] = item.convert("newton/metre").value
+            qdata[4] = get_dict_load(item, units='newton/metre')
+            rows = max(rows, len(qdata[4]))            
+        
+        elif re.match(r"\b((qy|in(_)?plane)(_)?(2|end))\b", key, re.IGNORECASE):
+            #new_data[5] = item.convert("newton/metre").value
+            qdata[5] = get_dict_load(item, units='newton/metre')
+            rows = max(rows, len(qdata[5]))
+        
+        elif re.match(r"\b((qz|out(_)?plane)(_)?(2|end))\b", key, re.IGNORECASE):
+            #new_data[6] = item.convert("newton/metre").value
+            qdata[6] = get_dict_load(item, units='newton/metre')
+            rows = max(rows, len(qdata[6]))            
+        
+        elif re.match(r"\b(qt(orsion)?|mx(_)?(2|end)?)\b", key, re.IGNORECASE):
+            #new_data[7] = item.convert("newton/metre").value
+            qdata[7] = get_dict_load(item, units='newton/metre')
+            rows = max(rows, len(qdata[7]))            
+        #
+        # L0, L2
+        elif re.match(r"\b((l|d(istance)?)(_)?(0|1|start)?)\b", key, re.IGNORECASE):
+            Ldata[0] = get_dict_load(item, units='metre')
+            #new_data[8] = item.value
+        
+        elif re.match(r"\b((l|d(istance)?)(_)?(2|end))\b", key, re.IGNORECASE):
+            Ldata[1] = get_dict_load(item, units='metre')
+            #new_data[9] = item.value
+        #
+        # Comment
+        elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
+            #new_data[10] = item
+            if isinstance(item, (list, tuple)):
+                tdata.append([x for x in item])
+            else:
+                tdata.append([item])
+    #
+    if not rows:
+        raise IOError('no line load found')
+    #
+    # do q1
+    #
+    new_data[:4] = get_items(data=qdata[:4],
+                             new_data=new_data[:4],
+                             rows=rows)
+    #
+    # do L
+    new_data[8:10] = get_items(data=Ldata,
+                               new_data=new_data[8:10],
+                               rows=rows)
+    #
+    # for uniform load
+    # qx2
+    new_data[4:5] = get_items(data=qdata[4:5],
+                              new_data=new_data[4:5],
+                              rows=rows, fill=new_data[0])
+    #if new_data[4] == None:
+    #    new_data[4] = new_data[0]
+    # qy2
+    new_data[5:6] = get_items(data=qdata[5:6],
+                              new_data=new_data[5:6],
+                              rows=rows, fill=new_data[1])
+    #if new_data[5] == None:
+    #    new_data[5] = new_data[1]
+    # qz2
+    new_data[6:7] = get_items(data=qdata[6:7],
+                              new_data=new_data[6:7],
+                              rows=rows, fill=new_data[2])
+    #if new_data[6] == None:
+    #    new_data[6] = new_data[2]
+    # qt2
+    new_data[7:8] = get_items(data=qdata[7:8],
+                              new_data=new_data[7:8],
+                              rows=rows, fill=new_data[3])    
+    #if new_data[7] == None:
+    #    new_data[7] = new_data[3]    
+    #
+    new_data[10:] = get_items(data=tdata,
+                              new_data=new_data[10:],
+                              rows=rows, fill=[None]*rows)
+    #
+    new_data.insert(0, ['line'] * rows)
+    #
+    return new_data
+#
+#
+def get_dict_load(items, units:str):
+    """ """
+    if isinstance(items, (list, tuple)):
+        udl = []
+        for item in items:
+            try:
+                udl.append(item.convert(units).value)
+            except AttributeError:
+                raise IOError(f'units missing')
+    else:
+        try:
+            udl = [items.convert(units).value]
+        except AttributeError:
+            raise IOError(f'units missing')
+    return udl
+#
+def get_items(data: list, new_data: list,
+              rows: int, fill: list|None = None):
+    """ """
+    if not fill:
+        fill = [0] * rows
+    
+    for x, item in enumerate(data):
+        if not item:
+            new_data[x] = fill
+        else:
+            new = []
+            for idx in range(rows):
+                try:
+                    new.append(item[idx])
+                except IndexError:
+                    new.append(item[idx-1])
+            new_data[x] = new
     return new_data
 #
 # ---------------------------------

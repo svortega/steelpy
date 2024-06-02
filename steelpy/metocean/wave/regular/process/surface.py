@@ -1,12 +1,12 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 # Python stdlib imports
 from __future__ import annotations
 from array import array
 #from dataclasses import dataclass
 from typing import NamedTuple
-#import math
+import math
 
 # package imports
 import matplotlib.pyplot as plt
@@ -84,10 +84,10 @@ class SurfaceResults(NamedTuple):
         """eta : Surface elevation [unit length]"""
         return self.surface['eta'].to_numpy()
     #
-    #@property
-    #def z(self):
-    #    """ """
-    #    return self.surface['zeta']
+    @property
+    def time(self):
+        """eta : Surface elevation [unit length]"""
+        return self.surface['time'].to_numpy()
     #
     @property
     def phase(self):
@@ -140,8 +140,6 @@ def get_surface(n: int, kd: float, Y, d:int,
     is_finite: 
     """
     pi = np.pi
-    #kd = z[1]
-    #
     npt = number_steps(nprofiles)
     x = np.arange(npt) * pi / nprofiles
     phase = x * 180 / pi
@@ -152,16 +150,14 @@ def get_surface(n: int, kd: float, Y, d:int,
         eta = eta / kd
         x = x / kd
     #
-    data = {'x': x * d,
+    data = {'length': x * d,
             'eta': eta * d,
             'phase': phase}
             #'z': [(1+item)*d for item in eta],
             #'time': 0 * x}
     #
-    #1 / 0
     df = DBframework()
     return df.DataFrame(data)
-    #return x, eta, phase
 #
 def repmat2(A, n, axis:int):
     """

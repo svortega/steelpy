@@ -1,13 +1,13 @@
 #
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 #
 # Python stdlib imports
 from array import array
-from dataclasses import dataclass
+#from dataclasses import dataclass
 #import math
-from typing import NamedTuple
+#from typing import NamedTuple
 
 # package imports
 import numpy as np

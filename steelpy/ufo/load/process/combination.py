@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
@@ -85,22 +85,26 @@ class LoadCombinationBasic(Mapping):
     #
     def to_basic(self):
         """ """
-        db = DBframework()
         # get combination of combination and convert them to basic loads
-        # TODO : check this loop works
+        comb = {}
         for key, item in self._combination.items():
+            cbasic = {}
+            # basic load
+            for comb_name, factor in item._basic.items():
+                cbasic[comb_name] = factor
+            # comb of comb
             for comb_name, factor in item._combination.items():
                 for precomb, prefactor in self._combination[comb_name]._basic.items():
                     try:
-                        item._basic[precomb] += prefactor * factor
+                        cbasic[precomb] += prefactor * factor
                     except KeyError:
-                        item._basic[precomb] = prefactor * factor
+                        cbasic[precomb] = prefactor * factor
+            comb[key] = cbasic
         #
-        # Organize basic load
-        # form combination formed by basic loads only
+        # Combination formed by basic loads only
         dftemp = []
         for key, item in self._combination.items():
-            for bl_name, factor in item._basic.items():
+            for bl_name, factor in comb[key].items():
                 dftemp.append([key, item.number, 'combination',
                                item.title, item._component_name,
                                bl_name, factor])
@@ -108,7 +112,7 @@ class LoadCombinationBasic(Mapping):
         header = ['load_name', 'load_id','load_type',
                   'load_title', 'component_name', 
                   'basic_load', 'factor']
+        db = DBframework()
         df_comb = db.DataFrame(data=dftemp, columns=header, index=None)
-        #
         return df_comb 
     #

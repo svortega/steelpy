@@ -11,7 +11,7 @@ from dataclasses import dataclass
 # package imports
 from steelpy.metocean.wave.regular.fourier.Subroutines import Newton, initial
 from steelpy.metocean.wave.regular.process.inout import title_block, output
-from steelpy.metocean.wave.regular.process.waveops import WaveItem #, get_wave_data, WaveRegModule, 
+from steelpy.metocean.wave.regular.process.waveops import WaveItem
 
 import numpy as np
 
