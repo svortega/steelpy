@@ -221,10 +221,10 @@ class KinematicResults:
     #
     def plot(self):
         """ """
-        new_data = self._data.groupby(['x'])
+        new_data = self._data.groupby(['length'])
         #xxx = self.kout
         try:
-            zlev = new_data['z'].agg(lambda x : x.tolist())
+            zlev = new_data['elevation'].agg(lambda x : x.tolist())
         except:
             zlev = new_data['kz'].agg(lambda x : x.tolist())
         #
@@ -263,9 +263,9 @@ class KinematicResults:
     def plot_vectorfield(self):
         """ """
         #
-        new_data = self._data.groupby(['x'])
+        new_data = self._data.groupby(['length'])
         try:
-            zlev = new_data['z'].agg(lambda x : x.tolist())
+            zlev = new_data['elevation'].agg(lambda x : x.tolist())
         except:
             zlev = new_data['kz'].agg(lambda x : x.tolist())
         #
