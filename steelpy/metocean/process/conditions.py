@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import NamedTuple
 #from math import prod
+import re
 
 # package imports
 from steelpy.utils.units.main import Units
@@ -473,7 +474,7 @@ class CombTypes:
         """
         [wave_name, Direction(deg), Kinematics, title]
         """
-        values = self._get_wvalues(values)
+        values = get_wave_data(values)
         conn = create_connection(self._db_file)
         with conn:
             wave = self._pull_wave(conn, wave_name=values[0])
@@ -566,8 +567,7 @@ class CombTypes:
     def current(self, values: list|dict):
         """
         """
-        values = self._get_cvalues(values)
-        #try:
+        values = get_current_data(values)
         conn = create_connection(self._db_file)
         with conn:            
             current = self._pull_current(conn, current_name=values[0])
@@ -697,15 +697,10 @@ class CombTypes:
     @properties.setter
     def properties(self, values: list|tuple|dict):
         """ cdcm input"""
-        
-        if isinstance(values, list|tuple|dict):
-            data = self._get_pdata(values)
-        else:
-            raise IOError('Input data not valid')
-        #
+        values = get_property_data(values)
         conn = create_connection(self._db_file)
         with conn:
-            self._push_property(conn, data)
+            self._push_property(conn, values)
     #
     def _push_property(self, conn, data: tuple,
                        item: str = "*"):
@@ -719,14 +714,12 @@ class CombTypes:
         #
         WIP = self._pull_wip(conn, name=data[2])
         #
-        profile = (condition[0], MG[0], CdCm[0], WIP[0], *data[3:])
+        profile = (condition[0], MG[0], CdCm[0], WIP[0],)
         cur = conn.cursor()
         table = 'INSERT INTO Property(condition_id, \
                                       mg_id, cdcm_id, \
-                                      element_segment_id, \
-                                      flooding_id, cshielding_id, \
-                                      title) \
-                                      VALUES(?,?,?,?,?,?,?)'
+                                      element_segment_id) \
+                                      VALUES(?,?,?,?)'
         #
         # push
         cur = conn.cursor()
@@ -793,27 +786,22 @@ class CombTypes:
     @parameters.setter
     def parameters(self, values: list|tuple|dict):
         """ """
-        if isinstance(values, list|tuple|dict):
-            data = self._get_ddata(values)
-        else:
-            raise IOError('Input data not valid')
-        #
+        values = get_parameter_data(values)
         conn = create_connection(self._db_file)
         with conn:
-            self._push_parameters(conn, data)
+            self._push_parameters(conn, values)
     #
     def _push_parameters(self, conn, data: tuple,
                        item: str = "*"):
         """ """
         condition = self._pull_condition(conn)
-        #
         profile = (condition[0], *data)
         cur = conn.cursor()
         table = 'INSERT INTO Parameter(condition_id, \
                                         design_load, buoyancy, \
                                         criterion, \
-                                        scaling_factor, title) \
-                 VALUES(?,?,?,?,?,?)'
+                                        scaling_factor) \
+                 VALUES(?,?,?,?,?)'
         # push
         cur = conn.cursor()
         cur.execute(table, profile)
@@ -833,116 +821,6 @@ class CombTypes:
     #
     # -----------------------------
     # operations
-    #
-    def _get_wvalues(self, values):
-        """ values : [wave_name, Direction(deg), Kinematics, Buoyancy(False/True)] """
-        # TODO : values need update
-        if isinstance(values, (list|tuple)):
-            #
-            # Direction
-            try:
-                values[1] = values[1].value
-            except (AttributeError, IndexError):
-                #values.append(False)
-                pass
-            #
-            # Kinematics
-            try:
-                values[2]
-            except IndexError:
-                values.append(1.0)
-            #
-            # Buoyancy(False/True)
-            try:
-                if values[3]:
-                    values[3] = 'on'
-                else:
-                    values[3] = 'off'
-            except IndexError:
-                values.append('off')
-            #
-            # crest_elevation
-            #try:
-            #    values[4] = values[4].value
-            #except (AttributeError, IndexError):
-            #    values.append(None)
-            
-        elif isinstance(values, dict):
-            1 / 0
-            
-        else:
-            raise IOError('Input data not valid')
-        #
-        return values
-    #
-    def _get_cvalues(self, values):
-        """ [current_name,  Direction(deg), Blockage, Stretching] """
-        if isinstance(values, (list|tuple)):
-            #
-            # Direction
-            try:
-                values[1] = values[1].value
-            except (AttributeError, IndexError):
-                #values.append(False)
-                pass
-            #
-            # Blockage
-            try:
-                values[2]
-            except IndexError:
-                values.append(1.0)
-            #
-            # Stretching
-            try:
-                if values[3]:
-                    values[3] = 'on'
-                else:
-                    values[3] = 'off'
-            except IndexError:
-                values.append('off')
-            #
-            
-        elif isinstance(values, dict):
-            1 / 0
-            
-        else:
-            raise IOError('Input data not valid')
-        #
-        return values        
-    #
-    def _get_pdata(self, values):
-        """ [marine_growth, CdCm, element_refinament, Flooding, conductor_shielding, title]"""
-        #
-        output = [None] * 6
-        #
-        if isinstance(values, (list|tuple)):
-            for x, item in enumerate(values):
-                output[x] = item
-        
-        elif isinstance(values, dict):
-            1 / 0
-        
-        else:
-            raise IOError('Input data not valid')
-        #
-        return output
-    #
-    def _get_ddata(self, values):
-        """ [design_load, buoyancy, criterion, scaling_factor, title]"""
-        #
-        output = ['max_bs', None, 'local', 1.0, None]
-        #
-        if isinstance(values, (list|tuple)):
-            for x, item in enumerate(values):
-                output[x] = item
-        
-        elif isinstance(values, dict):
-            1 / 0
-        
-        else:
-            raise IOError('Input data not valid')
-        #
-        return output
     #
     # -----------------------------
     # load process
@@ -1097,4 +975,225 @@ class CombTypes:
         #1 / 0
         return df_bload
     #    
+#
+#
+def get_wave_data(values: list|tuple|dict) -> list:
+    """ [name, Direction:float, Kinematics:str, Buoyancy:bool]"""
+    if isinstance(values, (list, tuple)):
+        data = get_data_list(values=values)
+    elif isinstance(values, dict):
+        data = get_wave_dic(values=values)
+    else:
+        raise IOError('input data not valid')
+    return data
+#
+def get_data_list(values: list) -> list:
+    """
+    [name, Direction:float, Kinematics:str, Buoyancy:bool]
+    """
+    new_data = [None, 0, None, 'off']
+    #
+    # wave|current name
+    try:
+        new_data[0] = values[0]
+    except IndexError:
+        raise IOError('name missing')
+    #
+    # Direction
+    try:
+        new_data[1] = values[1].value
+    except (AttributeError, IndexError):
+        raise IOError('units missing for direction')
+    #
+    # Kinematics|blockage
+    try:
+        new_data[2] = values[2]
+    except IndexError:
+        pass
+    #
+    # Buoyancy|stretching: (False/True)
+    try:
+        if values[3]:
+            new_data[3] = 'on'
+        else:
+            new_data[3] = 'off'
+    except IndexError:
+        pass
+    #
+    return new_data
+#
+def get_wave_dic(values: dict) -> list:
+    """
+    [name, Direction:float, Kinematics:str, Buoyancy:bool]
+    """
+    new_data = [None, 0, None, 'off']
+    for key, item in values.items():
+        # wave name
+        if re.match(r"\b(wave(\_|\s+)?(name|id)?)\b", key, re.IGNORECASE):
+            try:
+                new_data[0] = item.name
+            except AttributeError:
+                new_data[0] = item        
+        # wave Direction
+        elif re.match(r"\b((wave(\_|\s+)?)?dir(ection)?|angle)\b", key, re.IGNORECASE):
+            try:
+                new_data[1] = item.value
+            except AttributeError:
+                raise IOError('units missing for wave direction')
+        # Kinematics
+        elif re.match(r"\b((wave(\_|\s+)?)?kin(ematic(s)?)?)\b", key, re.IGNORECASE):
+            try:
+                new_data[2] = item.name
+            except AttributeError:
+                new_data[2] = item
+        # Buoyancy(False/True)
+        elif re.match(r"\b((wave(\_|\s+)?)?buoyancy)\b", key, re.IGNORECASE):
+            try:
+                if values[3]:
+                    new_data[3] = 'on'
+                else:
+                    new_data[3] = 'off'
+            except KeyError:
+                pass   
+    #
+    # wave name
+    if not new_data[0]:
+        raise IOError('name missing')
+    #
+    return new_data
+#
+#
+def get_current_data(values: list|tuple|dict) -> list:
+    """ ID, direction, blockage, stretching"""
+    if isinstance(values, (list, tuple)):
+        data = get_data_list(values=values)
+    elif isinstance(values, dict):
+        data = get_current_dic(values=values)
+    else:
+        raise IOError('input data not valid')
+    return data
+#
+def get_current_dic(values: dict) -> list:
+    """
+    [name, Direction:float, blockage:str, stretching:bool]
+    """
+    new_data = [None, 0, None, 'off']
+    for key, item in values.items():
+        # current name
+        if re.match(r"\b(current(\_|\s+)?(name|id)?)\b", key, re.IGNORECASE):
+            try:
+                new_data[0] = item.name
+            except AttributeError:
+                new_data[0] = item        
+        # current Direction
+        elif re.match(r"\b((current(\_|\s+)?)?dir(ection)?|angle)\b", key, re.IGNORECASE):
+            try:
+                new_data[1] = item.value
+            except AttributeError:
+                raise IOError('units missing for current direction')
+        # 
+        elif re.match(r"\b((current(\_|\s+)?)?blockage)\b", key, re.IGNORECASE):
+            try:
+                new_data[2] = item.name
+            except AttributeError:
+                new_data[2] = item
+        # stretching(False/True)
+        elif re.match(r"\b((current(\_|\s+)?)?stretching)\b", key, re.IGNORECASE):
+            try:
+                if values[3]:
+                    new_data[3] = 'on'
+                else:
+                    new_data[3] = 'off'
+            except KeyError:
+                pass
+    #
+    # wave name
+    if not new_data[0]:
+        raise IOError('name missing')
+    #
+    return new_data
+#
+#
+def get_property_data(values: list|tuple|dict) -> list:
+    """ ID, direction, blockage, stretching"""
+    if isinstance(values, (list, tuple)):
+        data = get_prop_list(values=values)
+    elif isinstance(values, dict):
+        data = get_prop_dic(values=values)
+    else:
+        raise IOError('input data not valid')
+    return data
+#
+def get_prop_list(values: list) -> list:
+    """
+    [marine_growth, CdCm, element_segmentation]
+    """
+    new_data = [None, None, None]
+    for x, item in enumerate(values):
+        try:
+            new_data[x] = item.name
+        except AttributeError:
+            new_data[x] = item
+    return new_data
+#
+def get_prop_dic(values: dict) -> list:
+    """ [marine_growth, CdCm, element_segmentation]"""
+    new_data = [None, None, None]
+    for key, item in values.items():
+        # marine_growth
+        if re.match(r"\b(m(arine)?(\_|\s+)?g(rowth)?)\b", key, re.IGNORECASE):
+            try:
+                new_data[0] = item.name
+            except AttributeError:
+                new_data[0] = item
+        # CdCm
+        elif re.match(r"\b(cd(\_|\s+)?cm)\b", key, re.IGNORECASE):
+            try:
+                new_data[1] = item.name
+            except AttributeError:
+                new_data[1] = item
+        # element_segmentation
+        elif re.match(r"\b(element(\_|\s+)?segmentation|(wave)?(\_|\s+)?integration(\_|\s+)?points)\b", key, re.IGNORECASE):
+            try:
+                new_data[2] = item.name
+            except AttributeError:
+                new_data[2] = item
+    return new_data
+#
+#
+def get_parameter_data(values: list|tuple|dict) -> list:
+    """ [Design load, Buoyancy(T/F), local/global, Scale factor]"""
+    if isinstance(values, (list, tuple)):
+        data = get_parm_list(values=values)
+    elif isinstance(values, dict):
+        data = get_parm_dic(values=values)
+    else:
+        raise IOError('input data not valid')
+    return data
+#
+def get_parm_list(values: list):
+    """[Design load, Buoyancy(T/F), local/global, Scale factor] """
+    new_data = [None, None, None, 1.0]
+    for x, item in enumerate(values):
+        new_data[x] = item
+    return new_data
+#
+def get_parm_dic(values: dict) -> list:
+    """ [Design load, Buoyancy(T/F), criterion, Scale factor]"""
+    new_data = [None, None, None, 1.0]
+    for key, item in values.items():
+        if re.match(r"\b(design(\_|\s+)?load)\b", key, re.IGNORECASE):
+            new_data[0] = item
+        
+        elif re.match(r"\b(buoyancy)\b", key, re.IGNORECASE):
+            new_data[1] = item        
+        
+        elif re.match(r"\b(criterion)\b", key, re.IGNORECASE):
+            new_data[2] = item
+    
+        elif re.match(r"\b(scale(\_|\s+)?factor)\b", key, re.IGNORECASE):
+            new_data[3] = item
+    #
+    return new_data
+#
 #

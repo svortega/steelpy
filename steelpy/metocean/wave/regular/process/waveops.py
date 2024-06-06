@@ -264,7 +264,7 @@ class WaveRegModule:
 #def to_matrix(l, n):
 #    return [l[i:i+n] for i in range(0, len(l), n)]
 #
-def get_wave_data(case_data):
+def get_wave_data(case_data: list|tuple|dict) -> list:
     """ """
     if isinstance(case_data, (list, tuple)):
         data = get_data_list(data=case_data)
@@ -285,7 +285,7 @@ def get_data_dic(data:dict) -> list:
             try:
                 new_data[0] = item.value
             except AttributeError:
-                raise IOError(f'units missing for Hw: wave height')             
+                raise IOError(f'units missing for Hw: wave height')
         
         elif re.match(r"\b((wave(\_)?)?period|t(w)?|s)\b", key, re.IGNORECASE):
             try:
@@ -321,7 +321,7 @@ def get_data_dic(data:dict) -> list:
         
         #elif re.match(r"\b((wave(\_)?)?order)\b", key, re.IGNORECASE):
         #    new_data[7] = item        
-      
+    
     return new_data
 #
 #

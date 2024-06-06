@@ -157,7 +157,7 @@ class ElementsSQL(ClassBasicSQL):
     #
     def _create_table(self, conn) -> None:
         """ """
-        _table_elements = "CREATE TABLE IF NOT EXISTS Element(\
+        elements = "CREATE TABLE IF NOT EXISTS Element(\
                             number INTEGER PRIMARY KEY NOT NULL,\
                             name NOT NULL,\
                             component_id INTEGER NOT NULL REFERENCES Component(number), \
@@ -168,13 +168,13 @@ class ElementsSQL(ClassBasicSQL):
                             title TEXT, \
                             concept_idx INTEGER);"
         #
-        _table_connectivity = "CREATE TABLE IF NOT EXISTS ElementConnectivity(\
+        connectivity = "CREATE TABLE IF NOT EXISTS ElementConnectivity(\
                                 number INTEGER PRIMARY KEY NOT NULL,\
                                 element_id INTEGER NOT NULL REFERENCES Element(number),\
                                 node_id INTEGER REFERENCES Node(number),\
                                 node_end INTEGER NOT NULL);"
         #
-        _table_univectors = "CREATE TABLE IF NOT EXISTS ElementDirectionCosine(\
+        univectors = "CREATE TABLE IF NOT EXISTS ElementDirectionCosine(\
                                 number INTEGER PRIMARY KEY NOT NULL,\
                                 element_id INTEGER NOT NULL REFERENCES Element(number),\
                                 x DECIMAL,\
@@ -182,7 +182,7 @@ class ElementsSQL(ClassBasicSQL):
                                 z DECIMAL,\
                                 axis INTEGER);"
         #
-        _table_offset = "CREATE TABLE IF NOT EXISTS ElementEccentricity(\
+        offset = "CREATE TABLE IF NOT EXISTS ElementEccentricity(\
                             number INTEGER PRIMARY KEY NOT NULL,\
                             element_id INTEGER NOT NULL REFERENCES Element(number),\
                             node_id INTEGER REFERENCES Node(number),\
@@ -193,10 +193,10 @@ class ElementsSQL(ClassBasicSQL):
                             z DECIMAL);"
         #
         #conn = create_connection(self.db_file)
-        create_table(conn, _table_elements)
-        create_table(conn, _table_connectivity)
-        create_table(conn, _table_offset)
-        create_table(conn, _table_univectors)
+        create_table(conn, elements)
+        create_table(conn, connectivity)
+        create_table(conn, offset)
+        create_table(conn, univectors)
     #
     #
     def _update_element(self, conn, number: int,

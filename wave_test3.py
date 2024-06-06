@@ -208,7 +208,8 @@ regwave['100yrs_1'] = [15*units.m, 12.0*units.sec, 100*units.m, 'Stokes']
 #surface.plot(phase=True)
 #print(surface)
 #
-regwave['100yrs_2'] = [15*units.m, 12.0*units.sec, 100*units.m, 'Fourier']
+regwave['100yrs_2'] = {'Hw': 15*units.m, 'Tw': 12.0*units.sec, 'd': 100*units.m,
+                       'wave_theory': 'Fourier'}
 #regwave['100yrs_3'] = [0.30 * units.m, 6.4 * units.sec, 1*units.m, 'Cnoidal']
 #regwave['100yrs_4'] = [0.30 * units.m, 6.4 * units.sec, 1*units.m]
 #
@@ -233,14 +234,14 @@ regwave['100yrs_2'] = [15*units.m, 12.0*units.sec, 100*units.m, 'Fourier']
 metcond = MetCriteria[1].condition()
 # [title]
 metcond[10] = 'storm_stokes'
-# wave = [wave_id, Direction(deg), Kinematics]
-metcond[10].wave = ['100yrs_1', 10.0, 'wkf1']
+# wave = [wave_id, Direction(deg), Kinematics, Buoyancy]
+metcond[10].wave = ['100yrs_1', 10.0*units.sec, 'wkf1']
 # current [current_id,  Direction(deg), Blockage, Stretching]
-metcond[10].current = ['curr_1', 20.0, 'cbf1', True]
+metcond[10].current = ['curr_1', 20.0*units.sec, 'cbf1', True]
 # wind [wind_id, Direction(deg)]
 #metload[1].wind = [1, 30.0]
 #
-# [ marine_growth, CdCm, element_refinament, Flooding, conductor_shielding,  airCdCm]
+# [ marine_growth, CdCm, element_refinament, Flooding, airCdCm]
 metcond[10].properties = ['MG_1', 'cdcm_1', 'wip_1']
 #
 # [Design load, Buoyancy(False/True), 
@@ -249,10 +250,23 @@ metcond[10].parameters = ['max_BS', None, 'local']
 #
 #
 metcond[20] = 'storm_fourier'
-metcond[20].wave = ['100yrs_2', 0.0, 'wkf1']
-metcond[20].current = ['curr_1', 0.0, 'cbf1', True]
-metcond[20].properties = ['MG_1', 'cdcm_1', 'wip_1']
-metcond[20].parameters = ['max_BS', None, 'local']
+metcond[20].wave = {'wave': regwave['100yrs_2'],
+                    'direction': 0*units.deg,
+                    'kinematics': wkrf['wkf1']}
+
+metcond[20].current = {'current': current['curr_1'],
+                       'direction': 0*units.deg,
+                       'blockage': cbf['cbf1'],
+                       'stretching': True}
+
+metcond[20].properties = {'marine_growth': mg['MG_1'],
+                          'CdCm': cdcm['cdcm_1'],
+                          'element_segmentation': wip['wip_1']}
+
+metcond[20].parameters = {'Design load': 'max_BS',
+                          'Buoyancy': None,
+                          'criterion': 'local',
+                          'factor': 1.0}
 #
 # ----------------------------------------------------
 #
