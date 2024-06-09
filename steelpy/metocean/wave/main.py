@@ -12,7 +12,7 @@ import re
 
 # package imports
 from steelpy.metocean.wave.utils.main import WaveBasic
-from steelpy.metocean.wave.regular.main import RegularWaves
+from steelpy.metocean.wave.regular.main import RegularWave
 from steelpy.utils.sqlite.utils import create_table, create_connection
 
 #
@@ -30,23 +30,20 @@ class Wave(WaveBasic):
         #
         self._criteria = criteria
         self._rho_w: float = rho_w  # kg / m^3
-        #self._db_file = db_file
         #
-        #self._labels: list[str|int] = []
-        #self._type: list = []
+        self._regular = RegularWave(criteria=self._criteria,
+                                    db_file=self.db_file)
         #
-        self._regular = RegularWaves(criteria=self._criteria, 
-                                     db_file=self.db_file)
         #self._iregular_wave = WaveIrregular()
         # self._spectrum = Sprectrum()
-        #
+    #
     #
     @property
     def _labels(self):
         """ """
         project = (self._criteria, )
-        table = "SELECT * FROM Wave \
-                 WHERE criteria_id = ?"
+        table = 'SELECT * FROM Wave \
+                 WHERE criteria_id = ?'
         
         conn = create_connection(self.db_file)
         with conn:        
@@ -83,7 +80,7 @@ class Wave(WaveBasic):
             #self._iregular[name] = wave_data
             raise NotImplementedError
         else:
-            raise ValueError("wave type invalid")
+            raise ValueError(f'wave type: {wave_type} not valid')
 
     def __getitem__(self, name: int|str):
         """

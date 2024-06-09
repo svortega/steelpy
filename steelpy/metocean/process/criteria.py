@@ -125,13 +125,13 @@ class HydroCriteria(ClassBasicSQL):
     # ------------------
     # Operations
     #
-    def solve(self, surface_points:int = 36,
-              depth_points:int = 100):
-        """ """
-        for name in self._labels:
-            item = self.__getitem__(name)
-            item.solve(surface_points, depth_points)
-        #print('---')
+    #def solve(self, surface_points:int = 36,
+    #          depth_points:int = 100):
+    #    """ """
+    #    for name in self._labels:
+    #        item = self.__getitem__(name)
+    #        item.solve(surface_points, depth_points)
+    #    #print('---')
 #
 #
 class CriteriaOut(NamedTuple):
@@ -252,18 +252,18 @@ class CriteriaItem:
     #
     # ------------------------------------------
     #
-    def solve(self, surface_points:int = 36,
-              depth_points:int = 100):
-        """ """
-        # wave
-        self._wave.solve(surface_points=surface_points,
-                         depth_points=depth_points)
-        #
-        # current
-        #
-        # wind
-        #print('-->')
-        #1 / 0
+    #def solve(self, surface_points:int = 36,
+    #          depth_points:int = 100):
+    #    """ """
+    #    # wave
+    #    self._wave.solve(surface_points=surface_points,
+    #                     depth_points=depth_points)
+    #    #
+    #    # current
+    #    #
+    #    # wind
+    #    #print('-->')
+    #    #1 / 0
     #    
 #
 #

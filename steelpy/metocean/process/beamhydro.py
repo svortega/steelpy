@@ -152,9 +152,7 @@ class BeamMorisonWave:
         
         Vc : current velocity
         """
-        # Absolute Water velocity normal to the cylinder axis
         uvector = self.uvector
-        #
         vn = Vc + np.sqrt(np.power(kin['ux'], 2) + np.power(kin['uz'], 2)
                           - np.power(uvector[0] * kin['ux'] + uvector[1] * kin['uz'], 2))
         return vn
@@ -165,7 +163,6 @@ class BeamMorisonWave:
         kin :
         Vc : current velocity
         """
-        #
         shape = kin['ax'].shape
         #Vc = permute1(Vc, order=shape[0])
         Vc = permute3(Vc, order=shape[0]) 
@@ -186,13 +183,10 @@ class BeamMorisonWave:
         
         kin : 
         """
-        # Components of acceleration local to the member
         uvector = self.uvector
-        #
         Anx = kin['ax'] - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
         Anz = kin['az'] - uvector[1] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
         Any = - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
-        #        
         return KinAcc(Anx, Anz, Any, self.rho)
     #
     def dF(self, Dh, At, Cd, Cm,
@@ -239,7 +233,7 @@ class BeamMorisonWave:
         Fi = xr.Dataset(data_vars={'fx': fx,'fy': fy,'fz': fz})
         #
         # print('')
-        # print('Components of the force per unit on cilinder lenght [N/m]')
+        # print('Components of the force per unit on cylinder length [N/m]')
         # print(f'qx ={np.max(fx): 1.4e}, qy={np.max(fy): 1.4e}, qz={np.max(fz): 1.4e}')
         # print(f'qx ={np.min(fx): 1.4e}, qy={np.min(fy): 1.4e}, qz={np.min(fz): 1.4e}')
         # print('========================================')

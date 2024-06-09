@@ -26,11 +26,13 @@ class KinematicResults:
     __slots__ = ['depth_points', 'surface',
                  '_data', '_type', '_stickup']
     
-    def __init__(self,surface, kindata, depth_points:int, stickup:float=1.0):
+    def __init__(self, surface, kindata,
+                 #depth_points:int,
+                 stickup:float=1.0):
         """
         """
         self.surface = surface
-        self.depth_points = depth_points
+        #self.depth_points = depth_points
         #
         self._data = kindata
         self._type = 'regular'
@@ -189,10 +191,10 @@ class KinematicResults:
     #
     @property
     def uz(self):
-        """ velocity verical
+        """ velocity vertical
         
         Return:
-        [Wave surface verical coord, time,  Water depth]
+        [Wave surface vertical coord, time,  Water depth]
         """
         return self.get_data('v', 'uz')
     #
@@ -203,7 +205,7 @@ class KinematicResults:
     #
     @property
     def az(self):
-        """ acceleration verical """
+        """ acceleration vertical """
         return self.get_data('vt', 'az')
     #
     @property
@@ -305,7 +307,8 @@ class KinematicResults:
     #
     def plot_particles(self):
         """ """
-        pass
+        1 / 0
+        
     #
     #
     # -------------------------------------------------------
@@ -515,7 +518,7 @@ class KinematicResults:
     #
     def _get_array(self, elev: list, krf: list):
         """ """
-        items =  ['u', 'ut', 'v', 'vt']
+        items = ['u', 'ut', 'v', 'vt']
         title = ['ux', 'ax', 'uz', 'az']
         kdf = dict()
         for i, name in enumerate(items):

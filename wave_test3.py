@@ -228,8 +228,7 @@ regwave['100yrs_2'] = {'Hw': 15*units.m, 'Tw': 12.0*units.sec, 'd': 100*units.m,
 #           xlabel='Wave length [m]', ylabel='BS [N]')
 #plt.show()
 #
-#meto.get_load(mesh=mesh, kinematic=kinematic,
-#              condition=2)
+#
 #
 metcond = MetCriteria[1].condition()
 # [title]
@@ -273,8 +272,8 @@ metcond[20].parameters = {'Design load': 'max_BS',
 #wave.solve(surface_points=36,
 #           depth_points=100)
 #
-MetCriteria.solve(surface_points=36,
-                  depth_points=100)
+#MetCriteria.solve(surface_points=36,
+#                  depth_points=100)
 #
 #
 # ----------------------------------------------------

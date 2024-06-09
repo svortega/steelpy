@@ -458,16 +458,18 @@ class CombTypes:
                 wregdata = cur.fetchone()
             # TODO : WCe tb included 
             wave = RegWaveItem(number=wdata[0], name=wdata[1],
-                               Hw=wregdata[2], Tw=wregdata[3], d=wregdata[4], 
-                               theory=wregdata[5], order=wregdata[6], 
-                               Lw=wregdata[7], db_file=self._db_file)
+                               db_file=self._db_file,
+                               infinite_depth=False) # TODO : fix this
+                               #Hw=wregdata[2], Tw=wregdata[3], d=wregdata[4],
+                               #theory=wregdata[5], order=wregdata[6],
+                               #Lw=wregdata[7], db_file=self._db_file)
             #
             return WaveBasic(wave=wave, 
-                             direction = cond.wave_direction, 
+                             direction=cond.wave_direction,
                              kinematic_factor=wkf, 
                              crest_elevation=wregdata[8])
         else:
-            raise NotImplementedError(f'wave type {wave[2]} not yet implemented')
+            raise NotImplementedError(f'wave type {wdata[2]} not yet implemented')
     
     @wave.setter
     def wave(self, values: list|dict):

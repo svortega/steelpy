@@ -11,30 +11,32 @@ import math
 
 # package imports
 from steelpy.metocean.current.main import MeanCurrent
-from steelpy.metocean.wave.regular.process.kinematic import  get_kinematic, KinematicResults
+from steelpy.metocean.wave.regular.process.kinematic import get_kinematic, KinematicResults
 from steelpy.metocean.wave.regular.process.inout import get_Height
 #
 from steelpy.metocean.wave.regular.process.surface import get_surface, SurfaceResults
 #
 #from steelpy.process.dataframe.main import DBframework
 import numpy as np
+
+
 #
 #
 #
 @dataclass
 class WaveItem:
-    __slots__ = ['H', 'Tw', 'd', 'title', '_Lw', '_surface', 
+    __slots__ = ['H', 'Tw', 'd', 'title', '_Lw', '_surface',
                  'order', 'nstep', 'niter', 'accuracy',
                  'c_vel', 'c_type', 'method', 'finite_depth',
                  '_wave_length', '_z', '_Y', '_B', '_Tanh', '_Highest']
-    
-    def __init__(self, H:float, d:float, title:str, 
-                 Tw:float|None=None,
-                 Lw:float|None=None, 
-                 infinite_depth:bool=False,
-                 current:float = 0.0, c_type:int = 1,
-                 order:int=5, nstep:int=2,
-                 niter:int=40, accuracy:float=1e-6):
+
+    def __init__(self, H: float, d: float, title: str,
+                 Tw: float | None = None,
+                 Lw: float | None = None,
+                 infinite_depth: bool = False,
+                 current: float = 0.0, c_type: int = 1,
+                 order: int = 5, nstep: int = 2,
+                 niter: int = 40, accuracy: float = 1e-6):
         """ """
         self.title = title
         self.H = H
@@ -47,7 +49,7 @@ class WaveItem:
             self._Lw = None
         # current 
         self.c_vel = current
-        self.c_type = c_type        
+        self.c_type = c_type
         #
         self.order = order
         self.nstep = nstep
@@ -60,6 +62,7 @@ class WaveItem:
         #
         #self.wave_length:float
         self._surface = None
+
     #
     #
     def current(self, c_type: int = 1, c_velocity: float = 0.0) -> None:
@@ -68,9 +71,10 @@ class WaveItem:
             c_velocity : Current magnitude"""
         self.c_vel = c_velocity
         self.c_type = c_type
+
     #
     #
-    def get_parameters(self, g:float = 9.80665):
+    def get_parameters(self, g: float = 9.80665):
         """ 
         g: gravity # m/s^2
         
@@ -88,7 +92,7 @@ class WaveItem:
         finite_depth : True/False
         """
         MaxH = self.H / self.d
-        current = self.c_vel / math.sqrt( g * self.d )
+        current = self.c_vel / math.sqrt(g * self.d)
         if self._Lw:
             case = "wavelength"
             L = self._Lw / self.d
@@ -96,20 +100,21 @@ class WaveItem:
             T = None
         else:
             case = 'period'
-            T = self.Tw * math.sqrt( g /  self.d )
+            T = self.Tw * math.sqrt(g / self.d)
             Height = get_Height(MaxH, case, self.finite_depth, T=T)
             L = None
         #
-        return [MaxH, case, T, L, self.c_type, current,  
+        return [MaxH, case, T, L, self.c_type, current,
                 self.order, self.nstep, self.niter, self.accuracy,
                 Height, self.finite_depth]
+
     #
-    def get_surface(self, surface_points:int = 36):
+    def get_surface(self, surface_points: int = 36):
         """ claculate wave surface """
         n = self.order
         kd = self._z[1]
         Y = self._Y
-        surface = get_surface(n, kd, Y, self.d, 
+        surface = get_surface(n, kd, Y, self.d,
                               surface_points, self.finite_depth)
         #
         if self.title:
@@ -132,8 +137,9 @@ class WaveItem:
         self._surface = surface
         #
         return surface[['type', 'length', 'eta', 'phase', 'time']]
+
     #
-    def surface(self, surface_points:int = 36):
+    def surface(self, surface_points: int = 36):
         """ wave surface """
         surface = self._surface
         if not surface:
@@ -142,14 +148,15 @@ class WaveItem:
         return SurfaceResults(surface=surface,
                               Hw=self.H, Tw=self.Tw, d=self.d,
                               finite_depth=self.finite_depth)
+
     #
-    def get_kinematics(self, depth_points:int = 100,
-                       surface_points:int|None = None):
+    def get_kinematics(self, depth_points: int = 100,
+                       surface_points: int | None = None):
         """get wave kinematics"""
         surface = self._surface
-        if surface_points: #or not surface
+        if surface_points:  #or not surface
             surface = self.get_surface(surface_points)
-            
+
         kpoints = depth_points
         kindf = get_kinematic(self.order, self._z, self._B, self._Tanh,
                               self.d, surface, kpoints,
@@ -166,33 +173,43 @@ class WaveItem:
         #kindf.drop(columns=['phase', 'x'], inplace=True, axis=1)        
         #
         return kindf
+
     #
-    def kinematics(self, depth_points:int = 100,
-                   surface_points:int|None = None):
+    def kinematics(self, depth_points: int = 100,
+                   surface_points: int | None = None):
         """wave kinematics"""
         kin = self.get_kinematics(depth_points, surface_points)
         return KinematicResults(surface=self._surface,
                                 kindata=kin,
                                 depth_points=depth_points)
+
     #
     @property
     def Lw(self):
         """ wave_length [m]"""
         if not self._Lw:
-            self.__call__()
+            self.solve()
         return self._Lw * self.d
-    
+
     @Lw.setter
-    def Lw(self, L:float):
+    def Lw(self, L: float):
         """ wave_length [m]"""
-        
+
         self._Lw = L / self.d
+
+    #
+    @property
+    def Hw(self):
+        """Wave height"""
+        return self.H
     #
     @property
     def crest(self):
         """Wave crest elevation"""
         surface = self.surface()
         return surface.eta.max()
+
+
 #
 #
 #
@@ -201,7 +218,7 @@ def surfacePoints(d: float, points: int, eta: list,
                   stickup: float = 1.0):
     """get surface points"""
     crestmax = np.ceil(eta.max()) + stickup
-    crestmin = np.floor(eta.min())    
+    crestmin = np.floor(eta.min())
     step1 = int(np.ceil(points / 2))
     step2 = int(points - step1)
 
@@ -209,62 +226,13 @@ def surfacePoints(d: float, points: int, eta: list,
                       np.linspace(crestmin, 0, step2, endpoint=False),
                       np.linspace(0, crestmax, step2)])
 
-#
-#
-#
-class WaveRegModule:
-    __slots__ = [ 'order', 'nsteps', 'max_iter', 'accuracy',
-                  '_labels', '_cases', '_current', # 'c_type', 
-                  'infinite_depth']
 
-    def __init__(self, n:int=5, nstep:int=2,
-                 number:int=40, accuracy:float=1e-6):
-        """
-        n      : Stokes order (5)
-        nstep  : Number of height steps to reach H/d (2)
-        number : Maximum number of iterations for each step (20)
-        accuracy   : Criterion for convergence
-        """
-        self.order = n
-        self.nsteps = nstep
-        self.max_iter = number
-        self.accuracy = accuracy
-        #
-        self.infinite_depth = False
-        #
-        self._labels: list = [ ]
-        self._cases: list = [ ]
-        self._current = MeanCurrent()
-    #
-    def __getitem__(self, case_name: int|str) -> tuple:
-        """
-        case_name : Wave name
-        """
-        try:
-            index = self._labels.index(case_name)
-            return self._cases[index]
-        except ValueError:
-            raise IndexError('   *** wave {:} does not exist'.format(case_name))
-    #
-    #
-    @property
-    def infinite_water_depth(self):
-        """ Water of infinite depth"""
-        self.infinite_depth = True
-    #
-    @property
-    def mean_current(self):
-        """ """
-        return self._current
 #
 #
 #
 #
 #
-#def to_matrix(l, n):
-#    return [l[i:i+n] for i in range(0, len(l), n)]
-#
-def get_wave_data(case_data: list|tuple|dict) -> list:
+def get_wave_data(case_data: list | tuple | dict) -> list:
     """ """
     if isinstance(case_data, (list, tuple)):
         data = get_data_list(data=case_data)
@@ -273,59 +241,62 @@ def get_wave_data(case_data: list|tuple|dict) -> list:
     else:
         raise IOError('input data not valid')
     return data
+
+
 #
-def get_data_dic(data:dict) -> list:
+def get_data_dic(data: dict) -> list:
     """
     [Hw, Tw, d, wave_theory, title, crest_elevation, Lw]
     """
     new_data = [0, 0, 0, "Fourier", None, 0, 0]
     for key, item in data.items():
         # wave basic
-        if re.match(r"\b((wave(\_)?)?h(eight)?(w)?)\b", key, re.IGNORECASE):
+        if re.match(r"\b((wave(\_|\s)?)?h(eight)?(w)?)\b", key, re.IGNORECASE):
             try:
                 new_data[0] = item.value
             except AttributeError:
                 raise IOError(f'units missing for Hw: wave height')
-        
-        elif re.match(r"\b((wave(\_)?)?period|t(w)?|s)\b", key, re.IGNORECASE):
+
+        elif re.match(r"\b((wave(\_|\s)?)?period|t(w)?|s)\b", key, re.IGNORECASE):
             try:
                 new_data[1] = item.value
             except AttributeError:
                 raise IOError(f'units missing for Tw: water period')
-        
-        elif re.match(r"\b((water(\_)?)?d(epth)?)\b", key, re.IGNORECASE):
+
+        elif re.match(r"\b((water(\_|\s)?)?d(epth)?)\b", key, re.IGNORECASE):
             try:
                 new_data[2] = item.value
             except AttributeError:
                 raise IOError(f'units missing for d: water depth')
-        
+
         # wave type and title
-        elif re.match(r"\b((wave(\_)?)?t(ype|heory))\b", key, re.IGNORECASE):
+        elif re.match(r"\b((wave(\_|\s)?)?t(ype|heory))\b", key, re.IGNORECASE):
             new_data[3] = item
-        
+
         elif re.match(r"\b(title)\b", key, re.IGNORECASE):
             new_data[4] = item
-        
+
         # user data
-        elif re.match(r"\b((wave(\_)?)?l(ength)?)\b", key, re.IGNORECASE):
+        elif re.match(r"\b((wave(\_|\s)?)?l(ength)?)\b", key, re.IGNORECASE):
             try:
                 new_data[5] = item.value
             except AttributeError:
                 raise IOError(f'units missing for Lw: wave length')
-        
-        elif re.match(r"\b((wave(\_)?)?c(rest)?(\_)?e(levation)?)\b", key, re.IGNORECASE):
+
+        elif re.match(r"\b((wave(\_|\s)?)?c(rest)?(\_|\s)?e(levation)?)\b", key, re.IGNORECASE):
             try:
                 new_data[6] = item.value
             except AttributeError:
-                raise IOError(f'units missing for WCe: wave crest elevation')        
-        
-        #elif re.match(r"\b((wave(\_)?)?order)\b", key, re.IGNORECASE):
-        #    new_data[7] = item        
-    
+                raise IOError(f'units missing for WCe: wave crest elevation')
+
+                #elif re.match(r"\b((wave(\_)?)?order)\b", key, re.IGNORECASE):
+        #    new_data[7] = item
     return new_data
+
+
 #
 #
-def get_data_list(data:list) -> list:
+def get_data_list(data: list) -> list:
     """
     [Hw, Tw, d, wave_theory, title, crest_elevation, Lw]
     """
@@ -354,7 +325,7 @@ def get_data_list(data:list) -> list:
         try:
             new_data[x + stop] = item.value
         except AttributeError:
-            raise IOError(f'units missing for {uinput[x]}')    
+            raise IOError(f'units missing for {uinput[x]}')
     return new_data
 #
 #
