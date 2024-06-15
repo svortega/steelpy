@@ -23,20 +23,23 @@ from steelpy.utils.dataframe.main import DBframework
 #
 @dataclass
 class KinematicResults:
-    __slots__ = ['depth_points', 'surface',
+    __slots__ = ['depth_points', 'surface', #'_theta',
                  '_data', '_type', '_stickup']
     
-    def __init__(self, surface, kindata,
+    def __init__(self, surface, kindata, 
                  #depth_points:int,
-                 stickup:float=1.0):
+                 #theta:float,
+                 stickup:float=0.10):
         """
+        theta : wave angle in degrees
         """
         self.surface = surface
         #self.depth_points = depth_points
         #
         self._data = kindata
         self._type = 'regular'
-        self._stickup = stickup
+        self._stickup = stickup # percentage
+        #self._theta = theta
     #
     #
     def get_data(self, name: str, title: str):
@@ -48,7 +51,7 @@ class KinematicResults:
         #
         #etas = self.surface.eta
         xx =  self.surface.x
-        item = self._data.groupby(['x'])[['z', name]]
+        item = self._data.groupby(['length'])[['elevation', name]]
         data = self.kindf(item, xx, zdepth=cols)
         #
         #
@@ -156,19 +159,17 @@ class KinematicResults:
         z  : finite water depth
         kz : infinite water depth
         """
-        #try:
-        #    zlev = self._data['z']
-        #except:
-        #    zlev = self._data['kz']
-        # #return self._data['z']
-        #return zlev.iloc[:self.depth_points].values
-        #return self.depth
+        #
+        grpz = self._data.groupby('length')
+        gb_groups = grpz.groups
+        key_list = list(gb_groups.keys())
+        points = len(gb_groups[key_list[0]])
         #
         eta = self.surface.eta
-        points = self.depth_points
+        #points = self.depth_points
         stickup = self._stickup
         #
-        crestmax = np.ceil(eta.max()) + stickup
+        crestmax = np.ceil(eta.max()) * (1 + stickup)
         crestmin = np.floor(eta.min())    
         step1 = int(np.ceil(points / 2))
         step2 = int(points - step1)
@@ -305,9 +306,54 @@ class KinematicResults:
         #print('---')
     #
     #
-    def plot_particles(self):
+    def plot_contour(self):
         """ """
-        1 / 0
+        #from matplotlib import rcParams
+        #new_data = self._data.groupby(['length'])
+        #try:
+        #    zlev = new_data['elevation'].agg(lambda x : x.tolist())
+        #except:
+        #    zlev = new_data['kz'].agg(lambda x : x.tolist())
+        #
+        #lenght = new_data['length'].agg(lambda x : x.tolist())
+        #velh = new_data['u'].agg(lambda x : x.tolist())
+        #velv = new_data['v'].agg(lambda x : x.tolist())
+        #
+        #
+        #contour_data =  self._data[['length', 'v', 'elevation']]
+        #contour_data = contour_data.rename(columns={'length': 'x', 'v': 'y', 'elevation': 'z'})
+        #Z = contour_data.pivot_table(index='x', columns='y', values='z').T.values
+        #
+        #X_unique = np.sort(contour_data.x.unique())
+        #Y_unique = np.sort(contour_data.y.unique())
+        #X, Y = np.meshgrid(X_unique, Y_unique)
+        #
+        #fig, ax = plt.subplots(1, 1)
+        #
+        # plots filled contour plot 
+        #ax.contourf(lenght.iloc[0], velh.iloc[0], zlev.iloc[0])
+        #ax.contourf(self._data['length'], self._data['v'], self._data['elevation'])
+        #ax.contour(X, Y, Z)
+        #
+        #ax.set_title('Filled Contour Plot') 
+        #ax.set_xlabel('feature_x') 
+        #ax.set_ylabel('feature_y')
+        #
+        #
+        vx = self.ux
+        #vx.plot.contour()
+        #
+        # Initialize plot objects
+        #rcParams['figure.figsize'] = 5, 5 # sets plot size
+        #fig = plt.figure()
+        #ax = fig.add_subplot(111)
+        
+        # Generate a contour plot
+        #cp = ax.contour(X, Y, Z)        
+        vx.plot()
+        plt.show()         
+        #
+        #1 / 0
         
     #
     #
@@ -484,40 +530,17 @@ class KinematicResults:
     def get_kin4(self, elev: list, krf: list):
         """
         """
-        kdf = self._get_array(elev, krf)
-        # Partial
-        #dataset = {}
-        #for key, item in kdf.items():
-        #    key, item
-        #    print(key)
-        #    temp = []
-        #    for idx, x, in enumerate(coord[0]):
-        #        y, z = coord[1][idx], coord[2][idx]
-        #        #print(x, y, z)
-        #        xxx = item.interp(x=x, y=z, z=y, 
-        #                          method="linear",
-        #                          kwargs={"fill_value": 0})
-        #        print(x, y, z, xxx)
-        #        temp.append(xxx.to_numpy())
-        #    dataset[key] = temp
-        #
-        # Full
-        #dataset = {}
-        #for key, item in kdf.items():
-            #key, item
-            #print(item)
-            #dataset[key] = item.interp(x=np.array(coord[0]),
-            #                           y=np.array(coord[2]),
-            #                           z=np.array(coord[1]),
-            #                           method="linear",
-            #                           kwargs={"fill_value": 0})
-            #dataset[key]
-        #return xr.Dataset(data_vars=dataset)
-        #return dataset
+        kdf = self._get_xarray(elev, krf)
+        # FIXME : rotate data according to wave direction
+        #theta = self._theta
         return kdf
     #
-    def _get_array(self, elev: list, krf: list):
+    def _get_xarray(self, elev: list, krf: list):
         """ """
+        #theta = self._theta
+        #ctheta = np.cos(theta)
+        #stheta = np.sin(theta)
+        #
         items = ['u', 'ut', 'v', 'vt']
         title = ['ux', 'ax', 'uz', 'az']
         kdf = dict()
@@ -539,6 +562,12 @@ class KinematicResults:
             # krf on horizontal vel and acc
             if name in ['u', 'ut']:
                 data *= krf
+                # rotation according to theta angle (clockwise direction)
+                #data = np.array([(ctheta + stheta) * data, # x' =  x*cos(theta) + y*sin(theta)
+                #                 (ctheta - stheta) * data, # y' = -x*sin(theta) + y*cos(theta)
+                #                 data])
+            #else:
+            #    data = np.array([data, data, data])
             #
             #data = np.transpose(data)
             # insert x axis to simulate a 3d wave [x, y, z]
@@ -711,32 +740,33 @@ def pointkin(d, x, Y, kd, Tanh, B, n, ce, c, R, z, Is_finite,
         sinhdelta = np.sinh(Yj)
         Tanh = permute2(Tanh, order=(sinhdelta.shape[1],
                                      sinhdelta.shape[2]))
-        C = coshdelta + sinhdelta * Tanh
-        S = sinhdelta + coshdelta * Tanh       
+        CH = coshdelta + sinhdelta * Tanh
+        SH = sinhdelta + coshdelta * Tanh
     else:
-        C = np.exp(Yj)
-        S = np.exp(Yj)
+        CH = np.exp(Yj)
+        SH = np.exp(Yj)
     #
     yy = 1.0 + (Y / kd).T
     #Cos  =  np.cos(Xj)
-    Cos =  repmat2(np.cos(Xj), C.shape[1], 0)
-    Sin  = repmat2(np.sin(Xj), C.shape[1], 0)
+    Cos = repmat2(np.cos(Xj), CH.shape[1], axis=0)
+    Sin = repmat2(np.sin(Xj), CH.shape[1], axis=0)
     #
-    B = permute2(B, (C.shape[1], C.shape[2]))
-    npnt = permute2(npoints, (C.shape[1],C.shape[2]))
+    B = permute2(B, order=(CH.shape[1], CH.shape[2]))
+    npnt = permute2(npoints, order=(CH.shape[1], CH.shape[2]))
     #
-    phi = np.sum(B * C * Sin, axis=0)
-    psi = np.sum(B * S * Cos, axis=0)    
+    phi = np.sum(B * CH * Sin, axis=0)
+    psi = np.sum(B * SH * Cos, axis=0)
     #
-    u = np.sum(npnt * B * C * Cos, axis=0)
-    v = np.sum(npnt * B * S * Sin, axis=0)
+    u = np.sum(npnt * B * CH * Cos, axis=0)
+    v = np.sum(npnt * B * SH * Sin, axis=0)
     #
-    ux = np.sum(- npnt * npnt * B * C * Sin, axis=0)
-    vx = np.sum(npnt * npnt * B * S * Cos, axis=0)
+    ux = np.sum(- npnt * npnt * B * CH * Sin, axis=0)
+    vx = np.sum(npnt * npnt * B * SH * Cos, axis=0)
     #
     if Is_finite:
         header = ['z', 'u', 'v', 'dphidt', 'ut', 'vt', 'ux', 'uz', 'pressure', 'Bernoulli_check']
-        factors = np.array([d, (g * d)**0.5, (g * d)**0.5, g * d, g, g, (g / d)**0.5, (g / d)**0.5, g * d, 1])
+        factors = np.array([d, np.sqrt(g * d), np.sqrt(g * d), g * d, g, g,
+                            np.sqrt(g / d), np.sqrt(g / d), g * d, 1])
         #
         # All PHI, PSI, u, v, ux and vx are dimensionless w.r.t. g & k.
         #Now convert to dimensionless w.r.t. d.
@@ -766,8 +796,8 @@ def pointkin(d, x, Y, kd, Tanh, B, n, ce, c, R, z, Is_finite,
     
     else:
         header = ['kz', 'u', 'v', 'dphidt', 'ut', 'vt', 'ux', 'uz', 'pressure', 'Bernoulli_check']
-        factors = np.array([1 / kd, (g / kd)**0.5, (g / kd)**0.5, g / kd, g, g,
-                            (g * kd)**0.5, (g * kd)**0.5, g / kd, 1])
+        factors = np.array([1 / kd, np.sqrt(g / kd), np.sqrt(g / kd), g / kd, g, g,
+                            np.sqrt(g * kd), np.sqrt(g * kd), g / kd, 1])
         #
         u = z[5] + u
         phi = z[5] * X + phi
@@ -778,7 +808,7 @@ def pointkin(d, x, Y, kd, Tanh, B, n, ce, c, R, z, Is_finite,
         vy = -ux
         dudt = ut + u*ux + v*uy
         dvdt = vt + u*vx + v*vy
-        Pressure = (z[9] - Y.T )- 0.5 * ((u - z[4]) * (u - z[4]) + v*v)
+        Pressure = (z[9] - Y.T) - 0.5 * ((u - z[4]) * (u - z[4]) + v*v)
         Bernoulli_check = dphidt + Pressure + Y.T + 0.5*(u*u + v*v) - (z[9] - 0.5*z[4]*z[4])    
     #
     kinout = [yy, u, v, dphidt, ut, vt, ux, uy, Pressure, Bernoulli_check]

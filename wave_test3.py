@@ -234,9 +234,9 @@ metcond = MetCriteria[1].condition()
 # [title]
 metcond[10] = 'storm_stokes'
 # wave = [wave_id, Direction(deg), Kinematics, Buoyancy]
-metcond[10].wave = ['100yrs_1', 10.0*units.sec, 'wkf1']
+metcond[10].wave = ['100yrs_1', 45.0*units.deg, 'wkf1']
 # current [current_id,  Direction(deg), Blockage, Stretching]
-metcond[10].current = ['curr_1', 20.0*units.sec, 'cbf1', True]
+metcond[10].current = ['curr_1', 45.0*units.deg, 'cbf1', True]
 # wind [wind_id, Direction(deg)]
 #metload[1].wind = [1, 30.0]
 #

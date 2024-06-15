@@ -20,6 +20,7 @@ import xarray as xr
 #import matplotlib.pyplot as plt
 #
 #
+
 #
 @dataclass
 class BeamMorisonWave:
@@ -34,8 +35,11 @@ class BeamMorisonWave:
         self.rho = rho
         self.nelev = nelev
         self._up = up
-        #
-        self.uvector = self._beam.dircosines
+        # TODO : fix dircos
+        dircos = self._beam.dircosines
+        if up in ['y']:
+            dircos = [dircos[0], dircos[2], dircos[1]]
+        self.uvector = UnitVector(*dircos)
     #
     def coordinates(self):
         """get coordinates along beam"""
@@ -154,7 +158,7 @@ class BeamMorisonWave:
         """
         uvector = self.uvector
         vn = Vc + np.sqrt(np.power(kin['ux'], 2) + np.power(kin['uz'], 2)
-                          - np.power(uvector[0] * kin['ux'] + uvector[1] * kin['uz'], 2))
+                          - np.power(uvector.x * kin['ux'] + uvector.z * kin['uz'], 2))
         return vn
     #
     def Un(self, kin, Vc):
@@ -163,17 +167,21 @@ class BeamMorisonWave:
         kin :
         Vc : current velocity
         """
-        shape = kin['ax'].shape
-        #Vc = permute1(Vc, order=shape[0])
-        Vc = permute3(Vc, order=shape[0]) 
-        #
-        # Components of velocity local to the member
         uvector = self.uvector
         #
-        Un = Vc + kin['ux'] - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
-        Vn = kin['uz'] - uvector[1] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
-        Wn = - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        shape = kin['ax'].shape
+        #Vc = permute1(Vc, order=shape[0])
+        Vc = permute3(Vc, order=shape[0])
         #
+        # Components of velocity local to the member
+        comp0 = uvector.x * (Vc + kin['ux']) + uvector.z * kin['uz']
+        #Un = Vc + kin['ux'] - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        Un = Vc + kin['ux'] - uvector.x * comp0    # x
+        #Wn = - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        Wn = - uvector.y * comp0   # y        
+        #Vn = kin['uz'] - uvector[1] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        Vn = kin['uz'] - uvector.z * comp0 # z
+        # Water velocity normal to the cylinder axis
         vn = self.vn(kin, Vc)
         #
         return KinVel(Un, Vn, Wn, vn, self.rho)
@@ -184,9 +192,14 @@ class BeamMorisonWave:
         kin : 
         """
         uvector = self.uvector
-        Anx = kin['ax'] - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
-        Anz = kin['az'] - uvector[1] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
-        Any = - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
+        comp0 = (uvector.x * kin['ax'] + uvector.z * kin['az'])
+        # components of acceleration normal to the member in the x,y and z directions     
+        #Anx = kin['ax'] - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
+        Anx = kin['ax'] - uvector.x * comp0
+        #Anz = - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
+        Any = - uvector.y * comp0        
+        #Any = kin['az'] - uvector[1] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
+        Anz = kin['az'] - uvector.z * comp0
         return KinAcc(Anx, Anz, Any, self.rho)
     #
     def dF(self, Dh, At, Cd, Cm,
@@ -338,6 +351,13 @@ class BeamMorisonWave:
         1 / 0
 #
 #
+class UnitVector(NamedTuple):
+    """Unit vector """
+    x: float
+    y: float
+    z: float
+#
+#
 class BeamUnitForce(NamedTuple):
     """Components of the force per unit of cilinder lenght"""
     Fi: list
@@ -446,23 +466,22 @@ class BeamUnitForce(NamedTuple):
     def solve(self):
         """ """
         elev = self.elevation
+        # TODO : beam direction
         coord = self.coordinates
+        if self.up in ['y']:
+            coord = [coord[0], coord[2], coord[1]]
+        coord = UnitVector(*coord)        
         idx = [x for x in range(len(coord[0]))]
+        bsteps = np.abs(np.concatenate(([0], np.diff(coord.z))))       
         #
-        bsteps = np.abs(np.concatenate(([0], np.diff(coord[1]))))
-        #
-        df = DBframework()        
-        #
-        #coord = self.coordinates()
         dftemp = []
         for step in range(len(self.eta)):
             #phase = self.wave_phase[step]
             #print(f'----> step {step}, eta {self.eta[step]}, phase {phase}')
             item = self.Fi.roll(x=step)
-            #
-            Fstep = item.interp(x=np.array(coord[0]),
-                                y=np.array(coord[2]),
-                                z=np.array(coord[1]),
+            Fstep = item.interp(x=np.array(coord.x),
+                                y=np.array(coord.y),
+                                z=np.array(coord.z),
                                 method="linear",
                                 assume_sorted=True,
                                 kwargs={"fill_value": 0})
@@ -501,7 +520,7 @@ class BeamUnitForce(NamedTuple):
             #    #               #float(Fx[x, hstep, idx].values),
             #    #               #float(OTM[x, hstep, idx].values), 
             #    #               #row, wstep, cols[hstep]])
-        #
+        #        
         #
         # distance along beam 
         #LbeamX = np.array(coord[1])
@@ -514,6 +533,8 @@ class BeamUnitForce(NamedTuple):
         if n1 != elev[0]:
             Lbeam = Lbeam[::-1]
         #
+        #
+        df = DBframework()
         qload = []
         for idx, step in enumerate(dftemp):
             q = step.T
@@ -666,13 +687,12 @@ class BeamUnitForce(NamedTuple):
         return Fx, Fz, OTM
 #
 #
-#
 class KinVel(NamedTuple):
     """
 
-    Un : Kinematic components of velocity
-    Vn : Kinematic components of velocity
-    Wn : Kinematic components of velocity
+    Un : Kinematic components of velocity x
+    Vn : Kinematic components of velocity y
+    Wn : Kinematic components of velocity z
     vn : Fluid velocity normal to the cylinder axis
     rho : Sea water density (1025)
     """
@@ -691,10 +711,6 @@ class KinVel(NamedTuple):
         """
         # drag load per unit length
         Fdn = 0.5 * self.rho * cd * D * UX * vn
-        #return pdrag * dz
-        #bdrag = np.sum(ddrag, axis=2)
-        #bdrag = ddrag.sum(dim='z')
-        #return ddrag
         return Fdn
     #
     def FDn(self, Dt:float, Cd:float):
@@ -740,17 +756,6 @@ class KinAcc(NamedTuple):
         """
         # inertia load per unit length
         Fin = self.rho * cm * at * An
-        # figure(4)
-        # hold all
-        # plot(pinertia(:),Z(:),'.-','LineWidth',1)
-
-        # figure(5)
-        # hold all
-        # plot(pdrag(:),Z(:),'.-','LineWidth',1)
-
-        # dinertia = pinertia * dz
-        # binertia = dinertia.sum(dim='z')
-        # return dinertia
         return Fin
     #
     def FIn(self, At:float, Cm:float):

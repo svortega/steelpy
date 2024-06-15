@@ -97,7 +97,7 @@ class SurfaceResults(NamedTuple):
     @property
     def x(self):
         """Surface of wave coordinates : trough-crest-trough [unit length]"""
-        return self.surface['x'].to_numpy()
+        return self.surface['length'].to_numpy()
     #
     #
     #
@@ -109,7 +109,7 @@ class SurfaceResults(NamedTuple):
             x_label = r'$\theta$ (deg)'
             y_label = r'$\eta$ ($\theta$)'
         else:
-            x = [-1*item for item in reversed(self.surface['x'].iloc[::-1])]
+            x = [-1*item for item in reversed(self.surface['length'].iloc[::-1])]
             x.extend(self.surface['x'].iloc[1::])
             x_label = r'$\lambda$ (m)'
             y_label = r'$\eta$ (m)'
@@ -172,6 +172,11 @@ def repmat2(A, n, axis:int):
 #  Surface elevation
 def surface(x, Y, n):
     """
+    x :
+    Y : Fourier components or Stokes/Cnoidal theory
+    n : order - Number of Fourier components or order of Stokes or cnoidal theory
+
+    Return:
     Surface elevation
     """
     #kEta = 0
@@ -181,7 +186,15 @@ def surface(x, Y, n):
     return kEta
 #
 def surfacenp(x, Y, n, npt):
-    """ Surface elevation np solution"""
+    """ Surface elevation np solution
+
+    x :
+    Y : Fourier components or Stokes/Cnoidal theory
+    n : order - Number of Fourier components or order of Stokes or cnoidal theory
+
+    Return:
+    Surface elevation
+    """
     ncomp = np.arange(1, n)
     ncomp2 = repmat2(ncomp, n=npt, axis=1)
     Y2 = repmat2(Y[ncomp], n=npt, axis=1)

@@ -92,7 +92,7 @@ class RegularWave(WaveBasic):
         #print('--')
 
     #
-    def __getitem__(self, name: int | str) -> classmethod:
+    def __getitem__(self, name: int | str) -> tuple:
         """
         case_name : Wave name
         """
@@ -145,6 +145,7 @@ class RegularWave(WaveBasic):
         #
         wave = wdata.wave(current=current, c_type=c_type,
                           infinite_depth=infinite_depth)
+        #return wave
         wave.solve()
         #print('--')
         #
@@ -178,6 +179,7 @@ class RegularWave(WaveBasic):
                            index_label=['wave_id', 'type', 'length',
                                         'eta', 'phase', 'time'],
                            if_exists='append', index=False)
+            #
             # get surface data from sql
             surface = pull_surface(conn,number=wdata.number)
         #
@@ -189,6 +191,7 @@ class RegularWave(WaveBasic):
         depth_steps = np.arange(self._vpoints + 1) / self._vpoints
         kindf['surface_id'] = repmat(surface['number'].to_numpy(),
                                      depth_steps.size, 1).flatten('F')
+        #
         kindf.drop(columns=['phase', 'x', 'time'], inplace=True, axis=1)
         kindf.rename(columns={'z': 'elevation'}, inplace=True)
         #
@@ -198,7 +201,7 @@ class RegularWave(WaveBasic):
                          index_label=['wave_id', 'surface_id', 'type',
                                       'elevation', 'u', 'v', 'dphidt',
                                       'ut', 'vt', 'ux', 'uz',
-                                      'pressure', 'Bernoulli_check'],
+                                      'pressure', 'Benoulli_check'],
                          if_exists='append', index=False)
         #
         print('---> here')
@@ -261,10 +264,10 @@ class RegularWave(WaveBasic):
         Create a new project into the projects table
         """
         table = 'INSERT INTO WaveRegular(wave_id, \
-                                         height, period, water_depth,  \
-                                         wave_theory, wave_order, \
-                                         wave_length, wave_crest) \
-                                         VALUES(?,?,?,?,?,?,?,?)'
+                                        height, period, water_depth,  \
+                                        wave_theory, wave_order, \
+                                        wave_length, wave_crest) \
+                                        VALUES(?,?,?,?,?,?,?,?)'
         # push
         cur = conn.cursor()
         cur.execute(table, wave_data)

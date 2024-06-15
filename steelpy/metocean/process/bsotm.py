@@ -178,7 +178,11 @@ class BSOTM:
     #
     #
     def Fwave(self, beam):
-        """Calculation of wave forces on beam elements"""
+        """Calculation of wave forces on beam elements
+
+        beam: Beam elements
+        wave_angle: Wave angle
+        """
         #
         wip = self.properties.WIP
         nelev = wip.nelev(beam, self.up)
@@ -187,36 +191,13 @@ class BSOTM:
         Bwave = BeamMorisonWave(beam=beam, rho=self.rho_w,
                                 nelev=nelev, up=self.up)
         #
-        #beam = beams[12]
-        #uvector = np.array(beam.unit_vector)
-        #print(f'Unit Vector [{uvector[0]}, {uvector[1]}, {uvector[2]}]')
-        #print('')
-        #Duv = uvector / 100
-        #Lm = beam.L
-        #
-        #n1, n2 = beam.nodes
-        #x = n1.x - Duv[0] * 0.5
-        #y = n1.y - Duv[1] * 0.5
-        #z = n1.z - Duv[2] * 0.5
         #
         # -----------------------------------------
-        #
+        # TODO: wtheta
+        wtheta = self.wave.direction
         kinematics = self.wave.kinematics()
         #
-        #d = kinematics.d
-        #z = kinematics.z
         eta = kinematics.surface.eta
-        #
-        #ux =  self.kinematics.ux
-        #uz =  self.kinematics.uz
-        #print(f'Max horizontal wave particle velocity {max(np.max(ux), np.min(ux), key=abs): 1.4e}')
-        #print(f'Max vertical wave particle velocity {max(np.max(uz), np.min(uz), key=abs): 1.4e}')        
-        #
-        #ax =  self.kinematics.ax
-        #az =  self.kinematics.az
-        #print('')
-        #print(f'Max horizontal wave particle acceleration {max(np.max(ax), np.min(ax), key=abs): 1.4e}')
-        #print(f'Max vertical wave particle acceleration {max(np.max(az), np.min(az), key=abs): 1.4e}')        
         #
         #
         #crestmax = np.max(eta)
@@ -225,16 +206,6 @@ class BSOTM:
         #
         #section = beam.section
         #D = section.diameter
-        #
-        #zmax = np.maximum(n1.y, n2.y)
-        #zmin = np.minimum(n1.y, n2.y)
-        #Elev = np.linspace(zmin, zmax, nelev)
-        #Elev = beamhydro.elevations(nelev=nelev)
-        #
-        #b_range = np.abs(n2.y - n1.y)
-        #
-        #bzidx = (z > zmin) & (z < zmax)
-        #
         #
         # -----------------------------------------
         #
@@ -262,7 +233,9 @@ class BSOTM:
         #
         # -----------------------------------------
         # Current
+        # TODO : ctheta
         #eta = np.hstack((list(reversed(eta[1:])), eta))
+        ctheta = self.current.direction
         current = self.current.current
         cbf = self.current.blockage_factor
         cbf = cbf.get_profile(Elev)
@@ -280,105 +253,11 @@ class BSOTM:
         #Bwave.Fwave2(Vc=Vc, MG=mg, Cd=cd, Cm=cm,
         #             kinematics=kin2, elev=Elev)
         #
-        kin3 = kinematics.get_kin4(elev=Elev, krf=wkf)
+        kin = kinematics.get_kin4(elev=Elev, krf=wkf)
         #
-        #phase = kinematics.surface.phase
-        #size = kin3.sizes
-        #grpkin
-        #dataset = {}
-        #for step in range(size['x']):
-        #for step in range(len(eta)):
-            #print(f'----> step {step}, eta {eta[step]}, phase {phase[step]}')
-            #item = kin3.roll(x=step)
-            #print(item)
-            #dataset[step] = item.interp(x=np.array(coord[0]),
-            #                         y=np.array(coord[2]),
-            #                         z=np.array(coord[1]),
-            #                         method="linear",
-            #                         assume_sorted=True,
-            #                         kwargs={"fill_value": 0})
-            #dataset[step]
-            #
-            #temp = []
-            #for idx, x, in enumerate(coord[0]):
-            #    y, z = coord[1][idx], coord[2][idx]
-            #    print(x, y, z)
-            #    xxx = item.interp(x=x, y=z, z=y, 
-            #                      method='linear',
-            #                      assume_sorted=True, 
-            #                      kwargs={'fill_value': 0,
-            #                              'bounds_error': True})
-            #    #
-            #    print(xxx)
-            #    temp.append(xxx.to_array())
-            #dataset[step] = temp
-        #
-        #kin = kinematics.get_kin(Elev, wkf)
-        #
-        #print('')
-        #print('--> local Member')
-        #print(f"Max horizontal wave particle velocity {max(np.max(kin['ux']), np.min(kin['ux']), key=abs): 1.4e} m/s")
-        #print(f"Max vertical wave particle velocity {max(np.max(kin['uz']), np.min(kin['uz']), key=abs): 1.4e} m/s")
-        #print('')
-        #print(f"Max horizontal wave particle acceleration {max(np.max(kin['ax']), np.min(kin['ax']), key=abs): 1.4e} m/s2")
-        #print(f"Max vertical wave particle acceleration {max(np.max(kin['az']), np.min(kin['az']), key=abs): 1.4e} m/s2")
-        #print('--> local Member')
-        #print('')
-        #
-        #
-        # ---------------------------------------
-        #
-        #kinvel, kinacc  = self.local_kin(beam, kin, Vc)
-        #kinvel, kinacc = beamhydro.local_kin(kin, Vc)
-        #
-        # ---------------------------------------
-        #
-        #At = permute2(At, (vn.shape[0], vn.shape[2]), 1)
-        #
-        #cm = permute2(cm, (vn.shape[0], vn.shape[2]), 1)
-        #
-        #cd = permute2(cd, (vn.shape[0], vn.shape[2]), 1)
-        #
-        #Dh = permute2(Dh, (vn.shape[0], vn.shape[2]), 1)
-        #
-        #dz = permute2(dz, (vn.shape[0], vn.shape[2]), 1)
-        #
-        #Z = permute2(Z, (vn.shape[0], vn.shape[2]), 1)
-        #
-        # ---------------------------------------
-        #
-        # Components of the force per unit of cylinder length acting in
-        # the x, y and z dir are given by the generalized Morison equation
-        #        
-        #udl = beamhydro.local_uforce(Dh, At, cd, cm,
-        #                             kinvel, kinacc,
-        #                             Elev, dz)
-        #
-        #udl = Bwave.Fwave(Vc=Vc, MG=mg, Cd=cd, Cm=cm,
-        #                  kinematics=kin, nelev=nelev)
-        #lineload = udl.line()
-        #
-        # ---------------------------------------
-        # Calculate wave loading on exposed span
-        #
-        #Fx, Fy = self.span_loading(udl.qx, udl.qy, dz)
-        #Fx, Fy, OTM = udl.span_loading()
-        #indmax = Fx.argmax(dim='length').values
-        #vmax = Fx.idxmax(dim='length').values
-        #
-        #print('')
-        #print('Total combined force [kN-m]')
-        #print(f'Fx ={np.max(Fx) / 1000: 1.3e}, Fy={np.max(Fy) / 1000: 1.3e}, OTM={np.max(OTM)/1000: 1.3e}')
-        #print('---')
-        #
-        #Fx.sel(x=0).plot.line(hue='z')
-        #plt.show()
-        #
-        #return lineload
-        #return udl
         time = kinematics.surface.time
         return Bwave.Fwave(Vc=Vc, MG=mg, Cd=cd, Cm=cm,
-                           kinematics=kin3, eta=eta,
+                           kinematics=kin, eta=eta,
                            time=time)
     #
     #
