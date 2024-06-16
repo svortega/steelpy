@@ -130,10 +130,10 @@ class SurfaceResults(NamedTuple):
 #
 #
 def get_surface(n: int, kd: float, Y, d:int,
-                nprofiles: int, is_finite: bool):
+                nprofiles: int, is_finite: bool) -> DBframework:
     """
     n : order - Number of Fourier components or order of Stokes or cnoidal theory
-    kd:
+    kd: wave number
     Y : Fourier components or Stokes/Cnoidal theory
     d : water depth
     nprofiles : Number of points on free surface
@@ -141,6 +141,7 @@ def get_surface(n: int, kd: float, Y, d:int,
     """
     pi = np.pi
     npt = number_steps(nprofiles)
+    # position of the horizontal axis (theta : 0-pi)
     x = np.arange(npt) * pi / nprofiles
     phase = x * 180 / pi
     #eta = np.array([surface(item, Y, n) for item in x])
@@ -172,7 +173,8 @@ def repmat2(A, n, axis:int):
 #  Surface elevation
 def surface(x, Y, n):
     """
-    x :
+    Free surface wave profile function
+    x : position of the horizontal axis (theta : 0-pi)
     Y : Fourier components or Stokes/Cnoidal theory
     n : order - Number of Fourier components or order of Stokes or cnoidal theory
 
@@ -186,9 +188,10 @@ def surface(x, Y, n):
     return kEta
 #
 def surfacenp(x, Y, n, npt):
-    """ Surface elevation np solution
+    """
+    Free surface wave profile function np solution
 
-    x :
+    x : position of the horizontal axis (theta : 0-pi)
     Y : Fourier components or Stokes/Cnoidal theory
     n : order - Number of Fourier components or order of Stokes or cnoidal theory
 
@@ -202,7 +205,7 @@ def surfacenp(x, Y, n, npt):
     Keta += 0.5 * Y[n] * np.cos(n * x)
     return Keta
 #
-def number_steps(StpLgth: int):
+def number_steps(StpLgth: int) -> int:
     """
     """
     npt = max(StpLgth, 2)

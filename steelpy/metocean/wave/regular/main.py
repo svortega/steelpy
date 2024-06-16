@@ -311,19 +311,6 @@ class RegularWave(WaveBasic):
         #print('--')
 
     #
-    # ------------------------------
-    #
-    #def solve(self, surface_points: int = 36,
-    #          depth_points: int = 100):
-    #    """ """
-    #    #print('-->')
-    #    for name in self._label:
-    #        wave = self.__getitem__(name)
-    #        wave(surface_points=surface_points,
-    #             depth_points=depth_points)
-    #    #print('-->')
-    #    #1 / 0
-    #
     #
     # ------------------------------
     #
@@ -418,127 +405,17 @@ class RegWaveBasic:
 #
 #
 @dataclass
-class RegWaveItem:  # (WaveItem)
-
+class RegWaveItem:
     __slots__ = ['number', 'name', 'db_file', '_wave',
                  'finite_depth', '_hpoints', '_vpoints',]
 
     def __init__(self, number: int, name: str | int,
                  db_file: str, infinite_depth: bool) -> None:
-                 #depth_points: int,
-                 #surface_points: int,                 
-                 #infinite_depth: bool) -> None:
-        #Hw: float, Tw: float, d: float,
-        #Lw: float | None = None, theory: str = 'fourier',
-        #infinite_depth: bool = False,
-        #current: float = 0.0, c_type: int = 1,
-        #order: int = 5, nstep: int = 2,
-        #niter: int = 40, accuracy: float = 1e-6) -> None:
         """
         """
-        #super().__init__(H=Hw, Tw=Tw, d=d, title=name,
-        #                 order=order, nstep=nstep, niter=niter,
-        #                 accuracy=accuracy, 
-        #                 current=current, c_type=c_type,
-        #                 infinite_depth=infinite_depth)
-        #
         self.number = number
         self.name = name
         self.db_file = db_file
-        #self._hpoints = surface_points
-        #self._vpoints = depth_points        
-        #self.finite_depth = infinite_depth
-        #
-        ## default 5
-        #if not order:
-        #    order = 5
-        #    #
-        #if theory.lower() == 'stokes':
-        #    self._wave = WaveStokes(Hw=Hw, Tw=Tw, Lw=Lw, d=d, title=name,
-        #                            order=order, nstep=nstep, niter=niter,
-        #                            accuracy=accuracy,
-        #                            current=current, c_type=c_type,
-        #                            infinite_depth=infinite_depth)
-        ##elif theory.lower() == 'cnoidal':
-        ##    WaveCnoidal.__init__(self)
-        #else:
-        #    self._wave = WaveFourier(Hw=Hw, Tw=Tw, Lw=Lw, d=d, title=name,
-        #                             order=order, nstep=nstep, niter=niter,
-        #                             accuracy=accuracy,
-        #                             current=current, c_type=c_type,
-        #                             infinite_depth=infinite_depth)
-        ##
-        #self.finite_depth = True
-        #if infinite_depth:
-        #    self.finite_depth = False
-        ##
-
-    #
-    #def __call__(self, surface_points: int,
-    #             depth_points: int):
-    #    """ Solver """
-    #    self._wave()
-    #    #wave_length = (tau / self._z[ 1 ]) * self.d
-    #    #
-    #    # Calculate Surface
-    #    surface = self._wave.get_surface(surface_points)
-    #    #surface['wave_name'] = self.name
-    #    surface['wave_id'] = self.number
-    #    #        
-    #    # Update wave lenght
-    #    conn = create_connection(self.db_file)
-    #    with conn:
-    #        items = (self.number,)
-    #        table = f"UPDATE WaveRegular \
-    #                 SET \
-    #                 wave_length = {self._wave.Lw}, \
-    #                 wave_order = {self._wave.order}, \
-    #                 wave_crest = {surface.eta.max()}, \
-    #                 wave_trough = {surface.eta.min()}, \
-    #                 wave_skewness = {surface.eta.max() / self._wave.H} \
-    #                 WHERE wave_id = ?"
-    #        cur = conn.cursor()
-    #        cur.execute(table, items)
-    #    #
-    #    # update wave surface
-    #    conn = create_connection(self.db_file)
-    #    with conn:
-    #        # push surface data
-    #        surface.to_sql('WaveSurface', conn,
-    #                       index_label=['wave_id', 'type', 'length', 'eta', 'phase', 'time'],
-    #                       if_exists='append', index=False)
-    #        #
-    #        # get surface data from sql 
-    #        surface = pull_surface(conn, number=self.number)
-    #    #
-    #    #
-    #    kindf = self._wave.get_kinematics(depth_points=depth_points)
-    #    #
-    #    #kpoints = depth_points
-    #    #kindf = get_kinematic(self.order, self._z, self._B, self._Tanh,
-    #    #                      self.d, surface, kpoints,
-    #    #                      self.finite_depth)
-    #    #
-    #    kindf['wave_id'] = self.number
-    #    #kindf['type'] = 'order_1'
-    #    #
-    #    depth_steps = depth_steps = np.arange(depth_points + 1) / depth_points
-    #    kindf['surface_id'] = repmat(surface['number'].to_numpy(),
-    #                                 depth_steps.size, 1).flatten('F')
-    #    #
-    #    kindf.drop(columns=['phase', 'x', 'time'], inplace=True, axis=1)
-    #    kindf.rename(columns={'z': 'elevation'}, inplace=True)
-    #    #
-    #    conn = create_connection(self.db_file)
-    #    with conn:
-    #        kindf.to_sql('WaveKinematic', conn,
-    #                     index_label=['wave_id', 'surface_id', 'type',
-    #                                  'elevation', 'u', 'v', 'dphidt',
-    #                                  'ut', 'vt', 'ux', 'uz',
-    #                                  'pressure', 'Benoulli_check'],
-    #                     if_exists='append', index=False)
-    #    #
-    #    #print('---> here')
     #
     #
     @property
@@ -548,23 +425,6 @@ class RegWaveItem:  # (WaveItem)
         with conn:
             data = pull_wave(conn, wave_name=self.name)
             wave_length = data[9]
-        #
-        #if not wave_length:
-        #    #self.solver()
-        #    #wave_length = (tau / self._z[ 1 ]) * self.d
-        #    #conn = create_connection(self.db_file)
-        #    # Update wave lenght
-        #    #with conn:
-        #    #    items = (self.name, )
-        #    #    table = f"UPDATE Wave \
-        #    #             SET wave_length = {wave_length} \
-        #    #             WHERE name = ?"
-        #    #    cur = conn.cursor()
-        #    #    cur.execute(table, items)            
-        #    self.__call__()
-        #    data = self._pull_wave(conn)
-        #    wave_length = data[9]
-        #    #
         return wave_length
 
     #
@@ -589,69 +449,11 @@ class RegWaveItem:  # (WaveItem)
         Free surface (wave) profile
         """
         conn = create_connection(self.db_file)
-        #
-        #df = DBframework()
-        #header = ['wave_name', 'number', 'wave_id', 'type', 'x', 'eta', 'phase']
-        #surface = df.DataFrame(data=data, columns=header)
-        #surface = surface[['wave_name', 'type', 'x', 'eta', 'phase']]
-        #
-        #try:
         with conn:
             #(number, name, wave_type,
             # Hw, Tw, d, theory, order, Lw, WCe, WCtrough, Wskewness)            
             wdata = pull_wave(conn, wave_name=self.name)
             surface = pull_surface(conn, number=self.number)
-        #surface.columns
-        #except AttributeError:
-        #    #surface = self.get_surface(surface_points)
-        #    #surface =  surface[['wave_id', 'type', 'x', 'eta', 'phase']]
-        #    #
-        #    #conn = create_connection(self.db_file)
-        #    #with conn:
-        #    #    surface.to_sql('WaveSurface', conn,
-        #    #                 index_label=['wave_id', 'type', 'x', 'eta', 'phase'], 
-        #    #                 if_exists='append', index=False)
-        #    #    surface['wave_name'] = self.name
-        #    #
-        #    self.__call__(surface_points=surface_points)
-        #    with conn:
-        #        surface = self._pull_surface(conn)
-        #        #
-        #if sdata:
-        #    print('df here')
-        #    1 / 0
-        #    surface 
-        #else:
-        #n = self.order
-        #try:
-        #    kd = self._z[1]
-        #except :
-        #    self.__call__()
-        #    kd = self._z[1]
-        #
-        #surface = get_surface(n, kd, self._Y, self.d, 
-        #                      surface_points, self.finite_depth)
-        #
-        #surface['wave_id'] = self.number
-        #surface['type'] = 'order_1'
-        #
-        #conn = create_connection(self.db_file)
-        #with conn:
-        #    surface.to_sql('WaveSurface', conn,
-        #                 index_label=['wave_id', 'type', 'x', 'eta', 'phase'], 
-        #                 if_exists='append', index=False)
-        #
-        #surface['wave_name'] = self.name
-        #return surface[['wave_name', 'type', 'x', 'eta', 'phase']]
-        #
-        #return SurfaceResults(surface, self.H, self.Tw, self.d, self.finite_depth)
-        #
-        #
-        #with conn:        
-        #    data = self._pull_wave(conn)
-        #    data
-        #    1 / 0
-        #wave = self.wave
         #
         return SurfaceResults(surface=surface,
                               Hw=wdata[3], Tw=wdata[4], d=wdata[5], 
@@ -662,50 +464,16 @@ class RegWaveItem:  # (WaveItem)
         """ Get wave kinematics """
         #
         conn = create_connection(self.db_file)
-        #
-        #self.__call__()
-        #try:
         with conn:
             kindf = pull_kinematics(conn, number=self.number)
         kindf.columns
-        #except AttributeError:
-        #    #surface = self.surface(surface_points)
-        #    #
-        #    #n = self.order
-        #    #kd = self._z[1]
-        #    #
-        #    #crest = surface.eta
-        #    #
-        #    #depth = np.arange(depth_points + 1) / depth_points
-        #    #
-        #    #zdepth =  crestmax * depth  # --> fix sign
-        #    #zdepth = surfacePoints(d=self.d, points=depth_points, eta=crest)
-        #    #
-        #    #get_kinematicX(n, self._z, self._Y, self._B, self._Tanh,
-        #    #               surface_points, depth_points, self.finite_depth)
-        #    #
-        #    #1 / 0
-        #    #kpoints = depth_points
-        #    #kindf = get_kinematic(self.order, self._z, self._B, self._Tanh,
-        #    #                      self.d, surface, kpoints,
-        #    #                      self.finite_depth)
-        #    #
-        #    self.__call__(surface_points=surface_points,
-        #                  depth_points=depth_points)
-        #    with conn:
-        #        kindf = self._pull_kinematics(conn)
-        #        #
-        #with conn:
         surface = self.surface()
-        #
         #return KinematicResults(surface, kindf, depth_points+1)
         return KinematicResults(surface=surface,
                                 kindata=kindf)
                                 #depth_points=self._vpoints)
-        #
-        #return dataframe
-
-
+#
+#
 #
 def pull_surface(conn, number) -> list | None:
     """get wave surface"""

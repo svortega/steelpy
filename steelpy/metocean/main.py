@@ -15,7 +15,7 @@ import re
 from steelpy.utils.units.main import Units
 from steelpy.utils.sqlite.main import ClassMainSQL
 #
-from steelpy.metocean.wave.regular.process.bsotm import BSOTM
+#from steelpy.metocean.wave.regular.process.bsotm import BSOTM
 from steelpy.metocean.hydrodynamic.main import HydroProperty
 from steelpy.metocean.process.criteria import HydroCriteria
 
@@ -99,7 +99,7 @@ class Metocean(ClassMainSQL):
     #
     # ------------------------------------------
     #
-    def get_load(self, mesh, kinematic,
+    def get_loadXX(self, mesh, kinematic,
                  condition:int|None = None,
                  rho:float = 1025):
         """
@@ -114,7 +114,7 @@ class Metocean(ClassMainSQL):
         #print('-->')
     #
     #
-    def pile_response(self, D:float|Units,
+    def pile_responseXX(self, D:float|Units,
                       L:float|Units,
                       kinematic,
                       condition: int = 1,

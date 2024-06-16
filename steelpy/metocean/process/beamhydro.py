@@ -162,7 +162,9 @@ class BeamMorisonWave:
         return vn
     #
     def Un(self, kin, Vc):
-        """ Instantaneous undisturbed velocity resolved normal to the member including both wave and current
+        """
+        Instantaneous undisturbed velocity resolved normal
+        to the member including both wave and current
         
         kin :
         Vc : current velocity
@@ -175,30 +177,27 @@ class BeamMorisonWave:
         #
         # Components of velocity local to the member
         comp0 = uvector.x * (Vc + kin['ux']) + uvector.z * kin['uz']
-        #Un = Vc + kin['ux'] - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
+        #
         Un = Vc + kin['ux'] - uvector.x * comp0    # x
-        #Wn = - uvector[0] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
-        Wn = - uvector.y * comp0   # y        
-        #Vn = kin['uz'] - uvector[1] * (uvector[0] * (Vc + kin['ux']) + uvector[1] * kin['uz'])
-        Vn = kin['uz'] - uvector.z * comp0 # z
+        Wn = - uvector.y * comp0                   # y
+        Vn = kin['uz'] - uvector.z * comp0         # z
         # Water velocity normal to the cylinder axis
         vn = self.vn(kin, Vc)
         #
         return KinVel(Un, Vn, Wn, vn, self.rho)
     #
     def An(self, kin):
-        """ Instantaneous undisturbed acceleration resolved normal to the member
+        """
+        Instantaneous undisturbed acceleration resolved normal
+        to the member
         
         kin : 
         """
         uvector = self.uvector
         comp0 = (uvector.x * kin['ax'] + uvector.z * kin['az'])
-        # components of acceleration normal to the member in the x,y and z directions     
-        #Anx = kin['ax'] - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
+        # components of acceleration normal to the member in the x,y and z directions
         Anx = kin['ax'] - uvector.x * comp0
-        #Anz = - uvector[0] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
-        Any = - uvector.y * comp0        
-        #Any = kin['az'] - uvector[1] * (uvector[0] * kin['ax'] + uvector[1] * kin['az'])
+        Any = - uvector.y * comp0
         Anz = kin['az'] - uvector.z * comp0
         return KinAcc(Anx, Anz, Any, self.rho)
     #
@@ -217,42 +216,16 @@ class BeamMorisonWave:
         
         """
         #
-        #elev = self.elevations()
-        #
         dmx, dmy, dmz = kinacc.FIn(At, Cm)
-        # dmx = self.mass(At, cm, kinacc.Anx)
-        # dmy = self.mass(At, cm, kinacc.Any)
-        # dmz = self.mass(At, cm, kinacc.Anz)
-        # print('')
-        # print('Components of mass per unit on cilinder lenght [N/m]')
-        # print(f'dmx ={np.max(dmx): 1.4e}, dmy={np.max(dmy): 1.4e}, dmz={np.max(dmz): 1.4e}')
-        # print(f'dmx ={np.min(dmx): 1.4e}, dmy={np.min(dmy): 1.4e}, dmz={np.min(dmz): 1.4e}')
         #
         ddx, ddy, ddz = kinvel.FDn(Dh, Cd)
-        # ddx = self.drag(Dh, cd, kinvel.Un, vn)
-        # ddy = self.drag(Dh, cd, kinvel.Vn, vn)
-        # ddz = self.drag(Dh, cd, kinvel.Wn, vn)
-        # print('')
-        # print('Components of drag per unit on cilinder lenght [N/m]')
-        # print(f'ddx ={np.max(ddx): 1.4e}, ddy={np.max(ddy): 1.4e}, ddz={np.max(ddz): 1.4e}')
-        # print(f'ddx ={np.min(ddx): 1.4e}, ddy={np.min(ddy): 1.4e}, ddz={np.min(ddz): 1.4e}')
-        #
         #
         fx = dmx + ddx
         fy = dmy + ddy
         fz = dmz + ddz
         #
-        #
         Fi = xr.Dataset(data_vars={'fx': fx,'fy': fy,'fz': fz})
         #
-        # print('')
-        # print('Components of the force per unit on cylinder length [N/m]')
-        # print(f'qx ={np.max(fx): 1.4e}, qy={np.max(fy): 1.4e}, qz={np.max(fz): 1.4e}')
-        # print(f'qx ={np.min(fx): 1.4e}, qy={np.min(fy): 1.4e}, qz={np.min(fz): 1.4e}')
-        # print('========================================')
-        #
-        #return BeamUnitForce(fx, fy, fz, coord,
-        #                     self._beam, self._up)
         #
         elev = self.elevations()
         coord = self.coordinates()
@@ -261,9 +234,6 @@ class BeamMorisonWave:
                              coord, steps, elev, 
                              self._beam, self._up)        
     #
-    #def ft(self):
-    #    """ Component along the axis of the cylinder (a tangential component)"""
-    #    return None
     #
     def Fwave(self, Vc, MG, Cd, Cm,
               kinematics, eta: list, 
@@ -317,38 +287,6 @@ class BeamMorisonWave:
         #return udl
     #
     #
-    def Fwave2(self, Vc, MG, Cd, Cm,
-               kinematics, elev):
-        """
-        Wave force on a slender cilindrical element
-        
-        Vc : Current velocity
-        MG : Marine Growth
-        Cd : Drag Coefficient
-        Cm : Inertia Coefficient
-        WKF : Wave Kinematic Factor
-        kinematics : Kinematic class
-        nelev : number of elevations
-        """
-        #Elev = self.elevations(nelev=nelev)
-        Dh, At = self.Dh(mg=MG)
-        #dz = self.dz(nelev=nelev)
-        dz = np.diff(elev)
-        #
-        i = 0
-        for key, item in kinematics.items():
-            print(f'{key}')
-            #shape = item['ax'].shape
-            #Vc = permute1(Vc, order=shape[0])
-            kinacc = self.An(item)
-            kinvel = self.Un(item, Vc[i])
-            bforce = self.dF(Dh, At, Cd, Cm,
-                             kinvel, kinacc,
-                             elev, dz)
-            bforce
-            i += 1
-        #
-        1 / 0
 #
 #
 class UnitVector(NamedTuple):

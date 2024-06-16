@@ -30,7 +30,7 @@ class WaveStokes(WaveItem):
                  niter: int = 40, accuracy: float = 1e-6) -> None:
         """
         """
-        super().__init__(H=Hw, Tw=Tw, Lw=Lw, d=d, title=title,
+        super().__init__(Hw=Hw, Tw=Tw, Lw=Lw, d=d, title=title,
                          order=order, nstep=nstep, niter=niter,
                          accuracy=accuracy,
                          current=current, c_type=c_type,

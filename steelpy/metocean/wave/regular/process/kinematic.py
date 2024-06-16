@@ -591,29 +591,26 @@ class KinematicResults:
 #
 #
 #
-def get_kinematic(n: int, z: list, B: list, Tanh: list, d: float,
-                  surface: list, depth_points: int, 
-                  is_finite: bool, g: exec = 9.80665):
+def get_kinematic(n: int, z: list, B: list, Tanh: list,
+                  d: float, surface: list, depth_points: int, 
+                  is_finite: bool, g: exec = 9.80665) -> DBframework:
     """
     n : order - Number of Fourier components or order of Stokes or cnoidal theory
     z : Solution vector
-    B : Fourier coefficients
+    B : Surface elevation coefficients
     TanH :
-    d : water depth
-    surface x :
+    d : mean water depth
+    surface : df 
     depth_points z :
     is_finite:
     g : 
     """
     g = g  # m/s^2
     pi = np.pi
-    kd = z[1]
-    c = z[4] / np.sqrt(z[1])
-    ce = z[5] / np.sqrt(z[1])
-    R = 1 + z[9] / z[1]
+    kd = z[1]  # wave number
     #
     etas = surface['eta'].to_numpy()
-    xx = surface['length'].to_numpy()
+    X = surface['length'].to_numpy()
     phase = surface['phase'].to_numpy()
     time = surface['time'].to_numpy()
     #
@@ -643,63 +640,49 @@ def get_kinematic(n: int, z: list, B: list, Tanh: list, d: float,
     #
     if is_finite:
         # y = i * (1 + eta[j] / kd) / points
-        #y = [[i / points * (1 + eta / d) for i in range(points + 1)]
-        #     for eta in etas]
+        # y = [[i / points * (1 + eta / d) for i in range(points + 1)]
+        #       for eta in etas]
         #
+        # Vertical coordinate in frame fixed to bed
         y = np.array([[point * (1 + eta / d) for point in depth_steps]
                       for eta in etas])
         #
-        #output = [[Point(X[j], kd*((i*y[j])-1), kd, Tanh,B, n, ce, c, R, z, is_finite)
-        #          for i in range(points)] for j in range(npt)]
         #
-        #
+        # Vertical coordinate in frame moving with wave crest.
         Y =  kd * (y - 1)
-        output = pointkin(d, xx, Y, kd, Tanh, B, n, ce, c, R, z, is_finite, g)
-        #
-        #output = [Point(X[j], kd * (y[j][i] - 1), kd, Tanh, B, n, ce, c, R, z, is_finite)
-        #          for j in range(npt) for i in range(points + 1)]
+        #output = pointkin(d, X, Y, Tanh, B, n, z, is_finite, g)
+
     else:
         # y = -pi + i / points * (eta[j] + pi)
         #
-        #y = [[- pi + i / points * (etas / d + pi) for i in range(points + 1)]
-        #      for eta in etas]
+        # y = [[- pi + i / points * (etas / d + pi) for i in range(points + 1)]
+        #       for eta in etas]
         #
+        # Vertical coordinate in frame fixed to bed.
         y = np.array([[- pi + point * (eta / d + pi) for point in depth_steps]
                       for eta in etas])
         #
+        # Vertical coordinate in frame moving with wave crest.
+        Y = y
         #
-        output = pointkin(d, xx, y, kd, Tanh, B, n, ce, c, R, z, is_finite, g)
-        #
-        #output = [Point(X[j], y[j][i], kd, Tanh, B, n, ce, c, R, z, is_finite)
-        #          for j in range(npt) for i in range(points + 1)]
+        #output = pointkin(d, X, y, Tanh, B, n, z, is_finite, g)
+    #
+    #
+    output = pointkin(d, X, Y, Tanh, B, n, z, is_finite, g)
     #
     # -----------------------------------------------------------
     # Dataframe setup
     #
-    # [[xx[j], phase[j], time[j]]
-    #outeq = [[xx[j], phase[j]]
-    #         for j in range(npt) for i in range(points + 1)]
-    #outeq = list(zip(*outeq))
-    #dfkin = {'x': outeq[0], 'phase': outeq[1]} #'t': outeq[2]
-    #
-    #output = list(zip(*output))
-    #output = [[row * factors[x] for row in col]
-    #          for x, col in enumerate(output)]
-    #dfkin.update({item: output[x] for x, item in enumerate(header)})
-    #
     # df data format
-    dfkin = {'x': repmat(xx, depth_steps.size, 1).flatten('F'),
+    dfkin = {'x': repmat(X, depth_steps.size, 1).flatten('F'),
              'phase': repmat(phase, depth_steps.size, 1).flatten('F'),
              'time': repmat(time, depth_steps.size, 1).flatten('F')}
     #dfkin.update({item: output[x].flatten('F') * factors[x]
     #              for x, item in enumerate(header)})
     dfkin.update(output)
     #
-    #kindf(kin=dfkin, etas=etas, xx=xx, zdepth=zdepth)
-    #
     df = DBframework()
     return df.DataFrame(dfkin)
-    #return dfkin
 #
 #
 def repmat2(A, n, axis:int):
@@ -725,13 +708,27 @@ def permute(A, order, axis:int=1):
     return np.transpose(repmat(A, order, axis))
 #
 #
-def pointkin(d, x, Y, kd, Tanh, B, n, ce, c, R, z, Is_finite,
-             g: float = 9.80665):
-    """ """
-    #
-    X = x * kd / d # reset to dimensionless units
-    #
+def pointkin(d: float, X: list[float],
+             Y: list[list], Tanh: list,
+             B: list, n: int,
+             #ce: float, c: float, R: float, kd: float,
+             z: list[float],
+             Is_finite: bool, g: float = 9.80665):
+    """
+    d : Mean water depth
+    X : Horizontal coordinate in frame moving with wave crest.
+    Y : Vertical coordinate in frame moving with wave crest.
+    Tanh :
+    B : Surface elevation coefficients
+    n : order - Number of Fourier components or order of Stokes or cnoidal theory
+    z : 
+    Is_finite : bool
+    g : gravity
+    """
+    kd = z[1]    # wave number
     npoints = np.arange(n + 1)
+    # reset Horizontal coordinate to dimensionless units
+    X *= kd / d 
     Xj = np.multiply.outer(X, npoints).T
     Yj = np.multiply.outer(Y, npoints).T
     #
@@ -768,8 +765,12 @@ def pointkin(d, x, Y, kd, Tanh, B, n, ce, c, R, z, Is_finite,
         factors = np.array([d, np.sqrt(g * d), np.sqrt(g * d), g * d, g, g,
                             np.sqrt(g / d), np.sqrt(g / d), g * d, 1])
         #
+        c = z[4] / np.sqrt(z[1])  # wave speed
+        ce = z[5] / np.sqrt(z[1]) # 
+        R = 1 + z[9] / z[1]       # Bernoulli constant        
+        #
         # All PHI, PSI, u, v, ux and vx are dimensionless w.r.t. g & k.
-        #Now convert to dimensionless w.r.t. d.
+        # Now convert to dimensionless w.r.t. d.
         #
         phi /= np.power(kd, 1.5)
         psi /= np.power(kd, 1.5)

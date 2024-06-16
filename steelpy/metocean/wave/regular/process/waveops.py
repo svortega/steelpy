@@ -16,7 +16,7 @@ from steelpy.metocean.wave.regular.process.inout import get_Height
 #
 from steelpy.metocean.wave.regular.process.surface import get_surface, SurfaceResults
 #
-#from steelpy.process.dataframe.main import DBframework
+from steelpy.utils.dataframe.main import DBframework
 import numpy as np
 
 
@@ -30,16 +30,26 @@ class WaveItem:
                  'c_vel', 'c_type', 'method', 'finite_depth',
                  '_wave_length', '_z', '_Y', '_B', '_Tanh', '_Highest']
 
-    def __init__(self, H: float, d: float, title: str,
+    def __init__(self, Hw: float, d: float, title: str,
                  Tw: float | None = None,
                  Lw: float | None = None,
                  infinite_depth: bool = False,
                  current: float = 0.0, c_type: int = 1,
                  order: int = 5, nstep: int = 2,
                  niter: int = 40, accuracy: float = 1e-6):
-        """ """
+        """
+        Hw : Wave height
+        Tw : Wave period
+        Lw : Wave length (optional)
+        d : Water depth
+        
+        order:  Number of Fourier components or order of Stokes or cnoidal theory
+        nstep :
+        niter : maximum iteration
+        accuracy: 
+        """
         self.title = title
-        self.H = H
+        self.H = Hw
         self.d = d
         if Lw:
             self._Lw = Lw / self.d
@@ -109,11 +119,11 @@ class WaveItem:
                 Height, self.finite_depth]
 
     #
-    def get_surface(self, surface_points: int = 36):
+    def get_surface(self, surface_points: int = 36) -> DBframework:
         """ claculate wave surface """
-        n = self.order
-        kd = self._z[1]
-        Y = self._Y
+        n = self.order  # Number of Fourier components or order of Stokes/cnoidal theory
+        kd = self._z[1] # wave number
+        Y = self._Y     # Fourier components or Stokes/Cnoidal theory
         surface = get_surface(n, kd, Y, self.d,
                               surface_points, self.finite_depth)
         #
@@ -130,10 +140,6 @@ class WaveItem:
         time = np.linspace(start=0, stop=endtime,
                            num=num, endpoint=True)
         surface['time'] = time
-        #time = np.linspace(start=0, stop=self.Tw,
-        #                   num=(2*num)-1, endpoint=True)
-        #surface['time'] = time[num-1:]
-        #
         self._surface = surface
         #
         return surface[['type', 'length', 'eta', 'phase', 'time']]
@@ -151,32 +157,25 @@ class WaveItem:
 
     #
     def get_kinematics(self, depth_points: int = 100,
-                       surface_points: int | None = None):
+                       surface_points: int = 36):
         """get wave kinematics"""
         surface = self._surface
-        if surface_points:  #or not surface
+        if not list(surface.columns):
             surface = self.get_surface(surface_points)
-
-        kpoints = depth_points
-        kindf = get_kinematic(self.order, self._z, self._B, self._Tanh,
-                              self.d, surface, kpoints,
-                              self.finite_depth)
         #
-        #surface['wave_name'] = self.name
-        #kindf['wave_id'] = self.number
+        #kpoints = depth_points
+        kindf = get_kinematic(n=self.order, z=self._z,
+                              B=self._B, Tanh=self._Tanh,
+                              d=self.d, surface=surface,
+                              depth_points=depth_points,
+                              is_finite=self.finite_depth)
+        #
         kindf['type'] = 'order_1'
-        #
-        #depth_steps = np.arange(depth_points + 1) / depth_points
-        #kindf['surface_id'] = repmat(surface['number'].to_numpy(),
-        #                                 depth_steps.size, 1).flatten('F')
-        #
-        #kindf.drop(columns=['phase', 'x'], inplace=True, axis=1)        
-        #
         return kindf
 
     #
     def kinematics(self, depth_points: int = 100,
-                   surface_points: int | None = None):
+                   surface_points: int = 36):
         """wave kinematics"""
         kin = self.get_kinematics(depth_points, surface_points)
         return KinematicResults(surface=self._surface,

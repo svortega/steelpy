@@ -29,7 +29,7 @@ class WaveFourier(WaveItem):
                  niter: int = 40, accuracy: float = 1e-6) -> None:
         """
         """
-        super().__init__(H=Hw, Tw=Tw, Lw=Lw, d=d, title=title,
+        super().__init__(Hw=Hw, Tw=Tw, Lw=Lw, d=d, title=title,
                          order=order, nstep=nstep, niter=niter,
                          accuracy=accuracy,
                          current=current, c_type=c_type,
@@ -47,6 +47,7 @@ class WaveFourier(WaveItem):
             self._Y = Y
             self._B = B
             self._Tanh = Tanh
+            # Lw = 2pi/kd
             self._Lw = 2 * np.pi / z[1]
         #self._Highest = Highest
         #return z, Y, B, Tanh

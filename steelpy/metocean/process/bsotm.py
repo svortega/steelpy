@@ -61,15 +61,6 @@ class BSOTM:
         self.up: str = 'y'
     #
     #
-    #
-    #
-    #def base_shear(self, dinertia, ddrag):
-    #    """ """
-    #    #bdrag = ddrag.sum(dim='z')
-    #    #binertia = dinertia.sum(dim='z')
-    #    bs = dinertia + ddrag
-    #    return bs
-    #
     def OTM(self, dinertia, ddrag, Z, d):
         """ """
         oinertia = dinertia * (Z + d)
@@ -176,7 +167,6 @@ class BSOTM:
     #
     # -----------------------------------------------
     #
-    #
     def Fwave(self, beam):
         """Calculation of wave forces on beam elements
 
@@ -266,28 +256,4 @@ class BSOTM:
 def permute(A, order):
     """ """
     return np.tile(np.expand_dims(A, axis=(0, 1)), order)
-#
-#def repmat2(A, n, axis:int=1):
-#    """
-#    """
-#    A1 = repmat(A, 1, 1)
-#    A1 = np.transpose(A1)
-#    A1 = np.expand_dims(A1, 0)
-#    A1 = np.transpose(A1)
-#    A1 = np.tile(A1, n)
-#    return A1
-#
-#def permute2(A, order, axis:int=1):
-#    """ """
-#    A1 = repmat(A, order[1], axis)
-#    A1 = np.transpose(A1)
-#    A1 = np.expand_dims(A1, axis=0)
-#    A1 = np.transpose(A1)
-#    A1 = np.tile(A1, order[0])
-#    return np.transpose(A1)   
-#
-#def permute1(A, order, axis:int=1):
-#    """ """
-#    return np.transpose(repmat(A, order, axis))
-#
 #
