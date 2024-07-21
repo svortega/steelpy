@@ -67,13 +67,15 @@ def CDE(kd: float):
         t.append(t[i - 1] * (1.0 - S))
     #
     C = np.zeros(5)
-    D = np.zeros(5)
-    E = np.zeros(5)
     C[0] = np.sqrt(tkd)
     C[2] = np.sqrt(tkd) * (2 + 7 * ss[2]) / (4 * t[2])
     C[4] = np.sqrt(tkd) * (4 + 32 * ss[1] - 116 * ss[2] - 400 * ss[3] - 71 * ss[4] + 146 * ss[5]) / (32 * t[5])
+    #
+    D = np.zeros(5)
     D[2] = -np.sqrt(ckd) / 2
     D[4] = np.sqrt(ckd) * (2 + 4 * ss[1] + ss[2] + 2 * ss[3]) / (8 * t[3])
+    #
+    E = np.zeros(5)
     E[2] = tkd * (2 + 2 * ss[1] + 5 * ss[2]) / (4 * t[2])
     E[4] = tkd * (8 + 12 * ss[1] - 152 * ss[2] - 308 * ss[3] - 42 * ss[4] + 77 * ss[5]) / (32 * t[5])
     return ckd, skd, ss, t, C, D, E
@@ -103,10 +105,7 @@ def AB(skd: float, ss: list, t: list, n: int,
 
     B = np.zeros(n + 1)
     for i in range(1, n + 1):
-        #z[n + 10 + i] = 0.0
         jj = ((i + 1) % 2) + 1
-        #for j in range(jj, n, 2):
-        #    z[n + 10 + i] += A[j][i] * e[j]
         #
         z[n + 10 + i] = np.sum([A[j][i] * e[j]
                                 for j in range(jj, n+1, 2)])
@@ -135,14 +134,9 @@ def AB(skd: float, ss: list, t: list, n: int,
     # Discrete Fourier transform of the surface elevations.
     Y = np.zeros(n + 1)
     for i in range(1, n + 1):
-        #Y[i] = 0.0
         j = ((i + 1) % 2) + 1
         Y[i] = np.sum([BB[jj][i] * e[jj]
                        for jj in range(j, n+1, 2)])
-        #
-        #while j <= n:
-        #    Y[i] += BB[j][i] * e[j]
-        #    j += 2
     #
     return Y, z, A, B
 #

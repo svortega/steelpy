@@ -87,13 +87,10 @@ def FourierMain(MaxH: float, case: str,
     B : Fourier coefficients
     Tanh : 
     """
-    #current=0.31
-    crit = accuracy
-    #pi = np.pi
-    #g = 9.80665  # m/s^2
     #
     print("# Solution by {:}-term Fourier series".format(norder))
     method = ("Fourier method with {:} terms in series".format(norder))
+    crit = accuracy
     num = 2 * norder + 10
     dhe = Height / nstep
     dho = MaxH / nstep

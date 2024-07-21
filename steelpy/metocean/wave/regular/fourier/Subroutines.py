@@ -9,7 +9,7 @@ from array import array
 #import math
 
 # package imports
-from steelpy.metocean.wave.regular.fourier.solve import solver
+#from steelpy.metocean.wave.regular.fourier.solve import solver
 import numpy as np
 
 #
@@ -52,7 +52,6 @@ def initial(height: float, Hoverd: float,
         z[2] = z[1] * Hoverd
         z[4] = np.sqrt(np.tanh(z[1]))
         z[3] = 2. * pi / z[4]
-
     else:  # Is_deep
         z[1] = 1.
         if case == "period":
@@ -145,7 +144,6 @@ def eqns(height: float, Hoverd: float,
                 v += j * coeff[j] * (s + c * Tanh[j]) * sina[nm]
             rhs[m + 9] = psi - z[8] - z[7] * z[m + 10]
             rhs[n + m + 10] = 0.5 * (np.power((-z[7] + u), 2.) + v * v) + z[m + 10] - z[9]
-    
     else: # Is_deep
         if case == "period":
             rhs[6] = z[current_criterion + 4] - current * z[3]
@@ -166,8 +164,8 @@ def eqns(height: float, Hoverd: float,
             rhs[m + 9] = psi - z[8] - z[7] * z[m + 10]
             rhs[n + m + 10] = 0.5 * (np.power((-z[7] + u), 2.) + v * v) + z[m + 10] - z[9]
     #
-    s = np.sum(rhs[1: num + 1] * rhs[1: num + 1])
-    return s, rhs, Tanh
+    #s = np.sum(rhs[1: num + 1] * rhs[1: num + 1])
+    return rhs[1:], Tanh
 #
 #
 # **************************************************
@@ -180,31 +178,39 @@ def Newton(height, Hoverd, z, cosa, sina, num, n, current,
     SET UP JACOBIAN MATRIX AND SOLVE MATRIX EQUATION
     """
     case = case.lower()
-    s, rhs1, Tanh = eqns(height, Hoverd, z, cosa, sina, num, n, current,
-                         current_criterion, is_finite, case)
+    rhs1, Tanh = eqns(height, Hoverd, z, cosa, sina, num, n, current,
+                      current_criterion, is_finite, case)
 
-    rhs = np.zeros(num + 1)
-    a = np.zeros((num + 1, num + 1))
-
-    for i in range(1, num + 1):
-        h = 0.01 * z[i]
-        if np.abs(z[i]) < 1.e-4:
+    #rhs = np.zeros(num + 1)
+    #a = np.zeros((num + 1, num + 1))
+    #
+    #rhss = np.zeros(num)
+    a = np.zeros((num, num))
+    for i in range(num):
+        h = 0.01 * z[i+1]
+        if np.abs(z[i+1]) < 1.e-4:
             h = 1.e-5
-        z[i] += h
+        z[i+1] += h
         # Eqns(rhs2)
-        s, rhs2, Tanh = eqns(height, Hoverd, z, cosa, sina, num, n, current,
-                             current_criterion, is_finite, case)
-        z[i] -= h
-        rhs[i] -= rhs1[i]
-        a[1: num + 1, i] = (rhs2[1: num + 1] - rhs1[1: num + 1]) / h
+        rhs2, Tanh = eqns(height, Hoverd, z, cosa, sina, num, n, current,
+                          current_criterion, is_finite, case)
+        z[i+1] -= h
+        #rhs[i] -= rhs1[i]
+        #rhss[i] -= rhs1[i]
+        #a[1: num + 1, i] = (rhs2[1: num + 1] - rhs1[1: num + 1]) / h
+        a[:,i] = (rhs2 - rhs1) / h
     #
     #
     # **************************************************
     # SOLVE MATRIX EQUATION
     # **************************************************
     #
-    x, a = solver(a, rhs, num, num, num)
-    z[1: num + 1] += x[1: num + 1]
-    sumt = np.sum(np.abs(x[10: n + 10 + 1]))/n
+    #x, a = solver(a, rhs, num, num, num)
+    rhs = -1 * rhs1 
+    x = np.linalg.solve(a, rhs)
+    #z[1: num + 1] += x[1: num + 1]
+    #sumt = np.sum(np.abs(x[10: n + 10 + 1]))/n
+    z[1: num + 1] += x[:num]
+    sumt = np.sum(np.abs(x[9: n + 10]))/n
     return z, sumt, Tanh
 #
