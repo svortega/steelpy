@@ -12,7 +12,8 @@ from array import array
 import numpy as np
 
 
-def dsvdcmp(a: array, m: int, n: int, NP: int):
+def dsvdcmp(a: array, m: int, n: int,
+            NP: int, niter: int = 30):
     """
     decomposition
     """
@@ -118,7 +119,7 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
         a[i][i] += 1
     # Loop
     for k in range(n, 0, -1):
-        for its in range(1, 30 + 1):
+        for its in range(niter + 1):
             flag = 1
             for l in range(k, 0, -1):
                 nm = l - 1
@@ -157,8 +158,8 @@ def dsvdcmp(a: array, m: int, n: int, NP: int):
                     v[1: n + 1, k] = -1 * v[1: n + 1, k]
                 break
             #
-            if its == 50:
-                print("no convergence in 30 dsvdcmp iterations")
+            if its > niter:
+                raise RuntimeError(f"no convergence in {niter} Dsvdcmp iterations")
             x = w[l]
             nm = k - 1
             y = w[nm]

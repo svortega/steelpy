@@ -23,7 +23,7 @@ from steelpy.utils.dataframe.main import DBframework
 #
 @dataclass
 class KinematicResults:
-    __slots__ = ['depth_points', 'surface', #'_theta',
+    __slots__ = ['depth_points', 'surface', '_theta',
                  '_data', '_type', '_stickup']
     
     def __init__(self, surface, kindata, 
@@ -40,6 +40,10 @@ class KinematicResults:
         self._type = 'regular'
         self._stickup = stickup # percentage
         #self._theta = theta
+        grpz = self._data.groupby('length')
+        gb_groups = grpz.groups
+        self._theta = list(gb_groups.keys())
+        self.depth_points = len(gb_groups[self._theta[0]])      
     #
     #
     def get_data(self, name: str, title: str):
@@ -146,10 +150,10 @@ class KinematicResults:
         return output    
     #
     #
-    #@property
-    #def eta(self):
-    #    """surface"""
-    #    return self.surface
+    @property
+    def theta(self):
+        """wave length"""
+        return np.array(self._theta)
     #
     # -------------------------------------------------------
     #
@@ -160,13 +164,13 @@ class KinematicResults:
         kz : infinite water depth
         """
         #
-        grpz = self._data.groupby('length')
-        gb_groups = grpz.groups
-        key_list = list(gb_groups.keys())
-        points = len(gb_groups[key_list[0]])
+        #grpz = self._data.groupby('length')
+        #gb_groups = grpz.groups
+        #key_list = list(gb_groups.keys())
+        #points = len(gb_groups[key_list[0]])
         #
         eta = self.surface.eta
-        #points = self.depth_points
+        points = self.depth_points
         stickup = self._stickup
         #
         crestmax = np.ceil(eta.max()) * (1 + stickup)
@@ -178,7 +182,28 @@ class KinematicResults:
                           np.linspace(crestmin, 0, step2, endpoint=False),
                           np.linspace(0, crestmax, step2, endpoint=False),
                           np.linspace(crestmax, 2*crestmax, step2)])        
-    #    
+    #
+    def ZElev(self, Hlat:float):
+        """Elevation function"""
+        d =  self.d
+        #
+        #grpz = self._data.groupby('length')
+        #gb_groups = grpz.groups
+        #key_list = list(gb_groups.keys())
+        #points = len(gb_groups[key_list[0]])
+        #
+        points = self.depth_points
+        eta = self.surface.eta
+        crest = eta.max()
+        trough = eta.min()
+        #
+        steps = int(np.ceil(points / 4))
+        d4 = - d // 4
+        return np.hstack([np.linspace(-d, 3*d4, steps, endpoint=False),
+                          np.linspace(3*d4, trough, steps, endpoint=False),
+                          np.linspace(trough, Hlat, steps, endpoint=False),
+                          np.linspace(Hlat, crest, steps, endpoint=False),
+                          np.linspace(crest, 2*crest, steps)])    
     #
     @property
     def ux(self):
@@ -535,6 +560,40 @@ class KinematicResults:
         #theta = self._theta
         return kdf
     #
+    def get_kin5(self, krf: list, Zelev: list):
+        """
+        """
+        kdf = self._get_xarray2(Zelev, krf)
+        #print('-->')
+        return kdf
+    #
+    def _get_xarray2(self, elev, krf:float=1.0):
+        """ """
+        #items = ['u', 'ut', 'v', 'vt']
+        kin_factor = {'u': krf, 'ut': krf, 'v': 1.0, 'vt': 1.0}
+        title = ['ux', 'ax', 'uz', 'az']
+        #
+        kdf = dict()
+        for i, (name, kfactor) in enumerate(kin_factor.items()):
+            dgroup = self._data.groupby('length')[['elevation', name]]
+            data = np.fromiter([np.interp(x=elev,
+                                          xp=grp['elevation'],
+                                          fp=grp[name],
+                                          right=0) * kfactor
+                                for key, grp in dgroup],
+                               dtype=np.dtype((float, elev.shape)))
+            # rearrange
+            newname = title[i]
+            cols = list(dgroup.groups.keys())
+            rows = np.array([cols[0], 0.0, cols[-1]])
+            data = np.array([data, data, data])
+            kdf[newname] = xr.DataArray(data=data,
+                                        coords=[rows, cols, elev],
+                                        dims=['y', 'x', 'z'],
+                                        name=newname)
+        #
+        return kdf
+    #
     def _get_xarray(self, elev: list, krf: list):
         """ """
         #theta = self._theta
@@ -590,8 +649,68 @@ class KinematicResults:
         return xr.Dataset(data_vars=kdf)
 #
 #
-#
 def get_kinematic(n: int, z: list, B: list, Tanh: list,
+                  d: float, surface: list, depth_points: int, 
+                  is_finite: bool, g: exec = 9.80665) -> DBframework:
+    """
+    n : order - Number of Fourier components or order of Stokes or cnoidal theory
+    z : Solution vector
+    B : Surface elevation coefficients
+    TanH :
+    d : mean water depth
+    surface : df 
+    depth_points z :
+    is_finite:
+    g : 
+    """
+    g = g  # m/s^2
+    pi = np.pi
+    kd = z[1]  # wave number
+    #    
+    etas = surface['eta'].to_numpy()
+    X = surface['theta'].to_numpy()
+    # reset Horizontal coordinate to dimensionless units
+    #X *= kd / d # 2*pi
+    #
+    #depth_steps = np.arange(depth_points + 1) / depth_points
+    depth_steps = np.arange(depth_points) / depth_points
+    #
+    if is_finite:
+        # Vertical coordinate in frame fixed to bed
+        #y = np.array([[point * (1 + eta / d) for point in depth_steps]
+        #              for eta in etas])
+        # Vertical coordinate in frame moving with wave crest.
+        #Y =  kd * (y - 1)        
+        Y = np.array([np.linspace(-d, lev, depth_points, endpoint=True)
+                       for lev in etas])
+        Y *= kd / d
+    
+    else:
+        # y = -pi + i / points * (eta[j] + pi)
+        #
+        # y = [[- pi + i / points * (etas / d + pi) for i in range(points + 1)]
+        #       for eta in etas]
+        #
+        # Vertical coordinate in frame fixed to bed.
+        y = np.array([[- pi + point * (eta / d + pi) for point in depth_steps]
+                      for eta in etas])
+        #
+        # Vertical coordinate in frame moving with wave crest.
+        Y = y
+        #
+        #output = pointkin(d, X, y, Tanh, B, n, z, is_finite, g)
+    #   
+    #
+    dfkin = pointkin(d, X, Y, Tanh, B, n, z, is_finite, g)
+    #
+    # -----------------------------------------------------------
+    # Dataframe setup
+    # df data format
+    df = DBframework()
+    return df.DataFrame(dfkin)    
+#
+#
+def get_kinematicX(n: int, z: list, B: list, Tanh: list,
                   d: float, surface: list, depth_points: int, 
                   is_finite: bool, g: exec = 9.80665) -> DBframework:
     """
@@ -615,7 +734,8 @@ def get_kinematic(n: int, z: list, B: list, Tanh: list,
     time = surface['time'].to_numpy()
     #
     #npt = len(etas)
-    #X = xx * kd / d # reset to dimensionless units
+    #X = Lw * kd / d # reset to dimensionless units
+    #X = Lw * d / kd # reset to dimensionless units
     #eta = [etas[j] * kd for j in range(npt)]
     #npoints = np.arange(points + 1) / points
     #npoints2 = repmat(npoints, m=npt, n=1)
@@ -682,6 +802,7 @@ def get_kinematic(n: int, z: list, B: list, Tanh: list,
     dfkin.update(output)
     #
     df = DBframework()
+    1 / 0
     return df.DataFrame(dfkin)
 #
 #
@@ -710,8 +831,7 @@ def permute(A, order, axis:int=1):
 #
 def pointkin(d: float, X: list[float],
              Y: list[list], Tanh: list,
-             B: list, n: int,
-             #ce: float, c: float, R: float, kd: float,
+             Bj: list, n: int,
              z: list[float],
              Is_finite: bool, g: float = 9.80665):
     """
@@ -719,37 +839,37 @@ def pointkin(d: float, X: list[float],
     X : Horizontal coordinate in frame moving with wave crest.
     Y : Vertical coordinate in frame moving with wave crest.
     Tanh :
-    B : Surface elevation coefficients
+    Bj : Surface elevation coefficients
     n : order - Number of Fourier components or order of Stokes or cnoidal theory
     z : 
     Is_finite : bool
     g : gravity
     """
     kd = z[1]    # wave number
-    npoints = np.arange(n + 1)
+    worder = np.arange(1, n + 1)
     # reset Horizontal coordinate to dimensionless units
-    X *= kd / d 
-    Xj = np.multiply.outer(X, npoints).T
-    Yj = np.multiply.outer(Y, npoints).T
+    X *= kd / d # 2*pi
+    Xj = np.multiply.outer(X, worder).T
+    Yj = np.multiply.outer(Y, worder).T
     #
     if Is_finite:
         coshdelta = np.cosh(Yj)
         sinhdelta = np.sinh(Yj)
-        Tanh = permute2(Tanh, order=(sinhdelta.shape[1],
-                                     sinhdelta.shape[2]))
-        CH = coshdelta + sinhdelta * Tanh
-        SH = sinhdelta + coshdelta * Tanh
+        tanh = permute2(Tanh[1:], order=(sinhdelta.shape[1],
+                                         sinhdelta.shape[2]))
+        CH = coshdelta + sinhdelta * tanh
+        SH = sinhdelta + coshdelta * tanh
     else:
         CH = np.exp(Yj)
         SH = np.exp(Yj)
     #
     yy = 1.0 + (Y / kd).T
-    #Cos  =  np.cos(Xj)
+    #
     Cos = repmat2(np.cos(Xj), CH.shape[1], axis=0)
     Sin = repmat2(np.sin(Xj), CH.shape[1], axis=0)
     #
-    B = permute2(B, order=(CH.shape[1], CH.shape[2]))
-    npnt = permute2(npoints, order=(CH.shape[1], CH.shape[2]))
+    B = permute2(Bj[1:], order=(CH.shape[1], CH.shape[2]))
+    npnt = permute2(worder, order=(CH.shape[1], CH.shape[2]))
     #
     phi = np.sum(B * CH * Sin, axis=0)
     psi = np.sum(B * SH * Cos, axis=0)
@@ -761,9 +881,11 @@ def pointkin(d: float, X: list[float],
     vx = np.sum(npnt * npnt * B * SH * Cos, axis=0)
     #
     if Is_finite:
-        header = ['z', 'u', 'v', 'dphidt', 'ut', 'vt', 'ux', 'uz', 'pressure', 'Bernoulli_check']
-        factors = np.array([d, np.sqrt(g * d), np.sqrt(g * d), g * d, g, g,
-                            np.sqrt(g / d), np.sqrt(g / d), g * d, 1])
+        header = {'z': d, 'u': np.sqrt(g * d), 'v': np.sqrt(g * d),
+                  'dphidt': g * d, 'ut': g, 'vt': g,
+                  'ux': np.sqrt(g / d), 'uz': np.sqrt(g / d),
+                  'dudt': g, 'dvdt': g,
+                  'pressure': g * d, 'Bernoulli_check': 1.0}
         #
         c = z[4] / np.sqrt(z[1])  # wave speed
         ce = z[5] / np.sqrt(z[1]) # 
@@ -775,10 +897,10 @@ def pointkin(d: float, X: list[float],
         phi /= np.power(kd, 1.5)
         psi /= np.power(kd, 1.5)
         #
-        u /= np.power(kd, 0.5)
-        v /= np.power(kd, 0.5)
-        ux *= np.power(kd, 0.5)
-        vx *= np.power(kd, 0.5)
+        u /= np.sqrt(kd)
+        v /= np.sqrt(kd)
+        ux *= np.sqrt(kd)
+        vx *= np.sqrt(kd)
         #
         u = ce + u
         phi = ce * X + phi
@@ -796,9 +918,11 @@ def pointkin(d: float, X: list[float],
         Bernoulli_check = dphidt + Pressure + yy + 0.5*(u*u + v*v) - (R - 0.5*c*c)
     
     else:
-        header = ['kz', 'u', 'v', 'dphidt', 'ut', 'vt', 'ux', 'uz', 'pressure', 'Bernoulli_check']
-        factors = np.array([1 / kd, np.sqrt(g / kd), np.sqrt(g / kd), g / kd, g, g,
-                            np.sqrt(g * kd), np.sqrt(g * kd), g / kd, 1])
+        header = {'kz': 1 / kd, 'u': np.sqrt(g / kd), 'v': np.sqrt(g / kd),
+                  'dphidt': g / kd, 'ut': g, 'vt': g,
+                  'ux': np.sqrt(g * kd), 'uz': np.sqrt(g * kd),
+                  'dudt': g, 'dvdt': g,
+                  'pressure': g / kd, 'Bernoulli_check': 1.0}
         #
         u = z[5] + u
         phi = z[5] * X + phi
@@ -812,13 +936,21 @@ def pointkin(d: float, X: list[float],
         Pressure = (z[9] - Y.T) - 0.5 * ((u - z[4]) * (u - z[4]) + v*v)
         Bernoulli_check = dphidt + Pressure + Y.T + 0.5*(u*u + v*v) - (z[9] - 0.5*z[4]*z[4])    
     #
-    kinout = [yy, u, v, dphidt, ut, vt, ux, uy, Pressure, Bernoulli_check]
-    kinout = np.array([item * factors[x] for x, item in enumerate(kinout)])
+    #yyy = yy - d
+    #kinout = np.array([yy - d, u, v, dphidt, ut, vt, ux, uy, dudt, dvdt, 
+    #                   Pressure, Bernoulli_check]).reshape([len(header), -1])
+    # name variables
+    #kinout = {key: kinout[x] * factor
+    #          for x, (key, factor) in enumerate(header.items())}
+    #
+    kinout = [yy, u, v, dphidt, ut, vt, ux, uy, dudt, dvdt, Pressure, Bernoulli_check]
+    kinout = np.array([kinout[x] * factor
+                       for x, factor in enumerate(header.values())])
     # adjust water column coordinates
     kinout[0] -= d
     # name variables
-    kinout = {item: kinout[x].flatten('F')
-              for x, item in enumerate(header)}
+    kinout = {key: kinout[x].flatten('F')
+              for x, (key, factor) in enumerate(header.items())}    
     #print('-->')
     return kinout
 #

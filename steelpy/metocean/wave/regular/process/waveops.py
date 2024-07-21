@@ -124,7 +124,7 @@ class WaveItem:
         n = self.order  # Number of Fourier components or order of Stokes/cnoidal theory
         kd = self._z[1] # wave number
         Y = self._Y     # Fourier components or Stokes/Cnoidal theory
-        surface = get_surface(n, kd, Y, self.d,
+        surface = get_surface(n, kd, Y, self.d, self.Tw, self.Lw, 
                               surface_points, self.finite_depth)
         #
         if self.title:
@@ -134,15 +134,9 @@ class WaveItem:
         #surface['wave_id'] = self.number
         surface['type'] = 'order_1'
         #
-        # TODO : check time
-        num = len(surface['length'])
-        endtime = self.Tw * 0.50
-        time = np.linspace(start=0, stop=endtime,
-                           num=num, endpoint=True)
-        surface['time'] = time
         self._surface = surface
         #
-        return surface[['type', 'length', 'eta', 'phase', 'time']]
+        return surface[['type', 'theta', 'eta', 'phase', 'time']]
 
     #
     def surface(self, surface_points: int = 36):

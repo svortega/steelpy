@@ -59,11 +59,6 @@ class WaveStokes(WaveItem):
 # 
 # Main program
 #
-#
-#def StokesMain(h:float, t:Union[float,None], d:float, 
-#               Lw:Union[float,None], is_finite:bool,
-#               current:float, c_type:int=1,
-#               n:int=5, nstep:int=2, number:int=40, accuracy:float=1e-6):
 def StokesMain(MaxH: float, case: str,
                T: float | None,
                L: float | None,
@@ -97,7 +92,6 @@ def StokesMain(MaxH: float, case: str,
     """
     # inital values
     g = 9.80665  # m/s^2
-    z = np.zeros(2 * norder + 10 + 1)
     e = np.zeros(norder + 1)
     H = MaxH
     pi = np.pi
@@ -115,7 +109,7 @@ def StokesMain(MaxH: float, case: str,
             raise IOError("Stokes theory should not be applied")
         #
         kd = 2.0 * pi / L
-        kH = kd * H
+        #kH = kd * H
         ckd, skd, ss, t, C, D, E = CDE(kd)
     else:  # Period
         if T > 10:
@@ -127,33 +121,36 @@ def StokesMain(MaxH: float, case: str,
         # I found that in an extreme case (large current) the bracketting
         # of the solution was not correct, and the program failed,
         # without printing out a proper error message.
-        print("# Period has been specified. Now solving for L/d _iteratively,")
+        print("# Period has been specified. Now solving for L/d iteratively,")
         print("# Printing to check convergence:")
         omega = 2 * pi / T
         # Fenton & McKee for initial estimate
-        kFM = (omega * omega
-               * np.power(1.0 / np.tanh(np.power(omega, 1.5)), 2.0 / 3.0))
+        kFM = (omega**2
+               * np.power(1.0 / np.tanh(np.power(omega, 1.5)), 2/3))
         kd1 = kFM
         kd2 = kFM * 1.01
         ckd, skd, ss, t, C, D, E = CDE(kd2)
         F2 = F(kd2, H, T, current, c_type, C, norder, D)
-        for _iter in range(1, niter + 1):
+        for _iter in range(niter + 1):
             ckd, skd, ss, t, C, D, E = CDE(kd1)
             F1 = F(kd1, H, T, current, c_type, C, norder, D)
             Fd = (F2 - F1) / (kd2 - kd1)
             delta = F1 / Fd
             kd2 = kd1
-            kd1 = kd1 - delta
+            kd1 -= delta
             print("{: 8.4f}".format(2 * pi / kd1))
             if abs(delta / kd1) < accuracy:
                 break
             F2 = F1
-            if _iter >= niter:
+            if _iter > niter:
                 raise RuntimeError("Secant for solution of wavenumber has not converged")
                 # print("Contact John Fenton johndfenton@gmail.com")
         kd = kd1
-        kH = kd * H
+        #kH = kd * H
     #
+    kH = kd * H
+    #
+    z = np.zeros(2 * norder + 10 + 1)
     z[1] = kd
     z[2] = kH
     SU = 0.5 * kH / np.power(kd, 3)

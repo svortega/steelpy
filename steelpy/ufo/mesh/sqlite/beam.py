@@ -33,7 +33,7 @@ from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            update_element_item,
                                            check_element)
 from steelpy.ufo.process.elements.beam import BeamBasic, BeamItemBasic
-from steelpy.ufo.mesh.process.bstiffness import unitvec_0 #, Rmatrix
+from steelpy.ufo.mesh.process.brotation import unitvec_0, unitvec_1
 from steelpy.utils.sqlite.utils import create_connection
 #
 #import numpy as np
@@ -135,8 +135,8 @@ class BeamSQL(BeamBasic):
         uvec = unitvec_0(nodei=coord[0], nodej=coord[1],
                          beta=roll_angle)
         
-        #uvec2 = Rmatrix(nodei=coord[0], nodej=coord[1],
-        #                 beta=roll_angle)
+        #uvec2 = unitvec_1(nodei=coord[0], nodej=coord[1],
+        #                  beta=roll_angle)
         
         self._push_unitvec(conn, element_id=beam_number,
                            unitvac=uvec)

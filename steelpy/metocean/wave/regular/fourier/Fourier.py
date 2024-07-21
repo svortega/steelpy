@@ -57,11 +57,6 @@ class WaveFourier(WaveItem):
 # 
 # Main program
 #
-#
-#def FourierMain(h:float, t:Union[float,None], d:float, 
-#                Lw:Union[float,None], is_finite:bool,
-#                current:float, c_type:int=1,
-#                n:int=20, nstep:int=2, number:int=40, accuracy:float=1e-5):
 def FourierMain(MaxH: float, case: str,
                 T: float | None,
                 L: float | None,
@@ -121,8 +116,8 @@ def FourierMain(MaxH: float, case: str,
             z = [2.0 * sol[i][2] - sol[i][1] for i in range(num + 1)]
         #
         # Commence iterative solution
-        for itr in range(1, niter + 1):
-            print("# Iteration {:}:".format(itr))
+        for itr in range(niter + 1):
+            print(f"# Iteration {itr + 1}:")
             # Calculate right sides of equations and differentiate numerically
             # to obtain Jacobian matrix, : solve matrix equation
             z, error, Tanh = Newton(height, hoverd, z, cosa, sina,
@@ -138,8 +133,8 @@ def FourierMain(MaxH: float, case: str,
             if error < criter * abs(z[1]) and itr > 1:
                 break  # Exit for
             #
-            if itr == niter:
-                print("# Note that the program still had not converged to the degree specified")
+            if itr >= niter:
+                raise RuntimeError("# Note that the program still had not converged to the degree specified")
             # Operations for extrapolations if more than one height step used
             if ns == 1:
                 sol[1: num + 1, 2] = z[1: num + 1]

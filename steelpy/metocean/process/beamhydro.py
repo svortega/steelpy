@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 # Python stdlib imports
@@ -17,7 +17,7 @@ from steelpy.utils.math.operations import linstep #, linspace, trnsload
 from steelpy.utils.dataframe.main import DBframework
 #
 import xarray as xr
-#import matplotlib.pyplot as plt
+import pandas as pd
 #
 #
 
@@ -52,7 +52,7 @@ class BeamMorisonWave:
         for step in steps[1:]:
             coord.append(self._beam.find_coordinate(node_distance=step))
         coord = list(map(list, zip(*coord)))
-        return coord
+        return UnitVector(*coord)
     #
     def steps(self):
         """beam steps"""
@@ -203,7 +203,7 @@ class BeamMorisonWave:
     #
     def dF(self, Dh, At, Cd, Cm,
            kinvel, kinacc,
-           time, eta):
+           time, eta, theta):
         """Components of the force per unit of cilinder length acting in
         the x, y and z dir are given by the generalized Morisson equation
         
@@ -224,20 +224,26 @@ class BeamMorisonWave:
         fy = dmy + ddy
         fz = dmz + ddz
         #
+        #
+        print('----------------------------')
+        print(f'fx = {fx.max()}')
+        print(f'fy = {fy.max()}')
+        print(f'fz = {fz.max()}')        
+        #
         Fi = xr.Dataset(data_vars={'fx': fx,'fy': fy,'fz': fz})
         #
         #
         elev = self.elevations()
         coord = self.coordinates()
         steps = self.steps()        
-        return BeamUnitForce(Fi, time, eta,
+        return BeamUnitForce(Fi, time, eta, theta, 
                              coord, steps, elev, 
                              self._beam, self._up)        
     #
     #
     def Fwave(self, Vc, MG, Cd, Cm,
               kinematics, eta: list, 
-              time: list):
+              theta: list, time: list):
         """
         Wave force on a slender cilindrical element
         
@@ -283,7 +289,7 @@ class BeamMorisonWave:
         #
         return self.dF(Dh, At, Cd, Cm,
                        kinvel, kinacc,
-                       time=time, eta=eta)
+                       time=time, eta=eta, theta=theta)
         #return udl
     #
     #
@@ -301,6 +307,7 @@ class BeamUnitForce(NamedTuple):
     Fi: list
     time: list
     eta: list
+    theta: list
     coordinates: list
     steps: list
     elevation: list
@@ -401,7 +408,7 @@ class BeamUnitForce(NamedTuple):
                                    row, wstep, cols[hstep]])
         return dftemp
     #
-    def solve(self):
+    def solve3(self):
         """ """
         elev = self.elevation
         # TODO : beam direction
@@ -503,6 +510,65 @@ class BeamUnitForce(NamedTuple):
                    inplace=True)
         #
         return qload
+    #
+    def solve(self):
+        """ """
+        # --------------------------------
+        # TODO : beam direction
+        Tm = np.array(self.beam.unit_vector)
+        #
+        # --------------------------------
+        #
+        coord = self.coordinates
+        #coordg = Tm.T @ coord @ Tm
+        #
+        bsteps = self.steps
+        Lstep = np.diff(bsteps)
+        Lstep = np.concatenate(([0], Lstep))        
+        idx = [x for x in range(len(coord[0]))]
+        x = self.theta
+        #
+        dftemp = []
+        for step, crest in enumerate(self.eta):
+            #print(f'step:{step}, crest:{crest}')
+            item = self.Fi.roll(x=step)
+            Fstep = item.interp(x=coord.x,
+                                y=coord.z,
+                                z=coord.y,
+                                method="linear",
+                                assume_sorted=True,
+                                kwargs={"fill_value": 0})
+            #print(Fstep)
+            fx = Fstep['fx'].data[idx, idx, idx] * Lstep
+            fy = Fstep['fy'].data[idx, idx, idx] * Lstep
+            fz = Fstep['fz'].data[idx, idx, idx] * Lstep
+            #
+            Fb = Tm @ np.array([fx, fy, fz])
+            #Fb = np.array([fx, fy, fz])
+            #
+            length_step = [x[step] for _ in range(len(fy))]
+            #
+            #temp = [length_step, bsteps, fx, fy, fz]
+            temp = [length_step, bsteps, Fb[0], Fb[1], Fb[2]]
+            temp = tuple(zip(*temp))
+            dftemp.extend(temp) # , ft, BS, OTM
+        #
+        df = pd.DataFrame(dftemp,
+                          columns=['Lw', 'Lb', 'fx', 'fy', 'fz'])
+        #
+        # --------------------------------
+        #
+        Fx = df.groupby('Lw')['fx'].sum()
+        Fy = df.groupby('Lw')['fy'].sum()
+        Fz = df.groupby('Lw')['fz'].sum()
+        #
+        print('----------------------------')
+        print('Beam Local System')
+        print(f'Fx max: {Fx.max()}')
+        print(f'Fy max: {Fy.max()}')
+        print(f'Fz max: {Fz.max()}')
+        #
+        1 / 0
     #
     def _get_line2(self, qname: str, qitem):
         """ """
@@ -661,12 +727,12 @@ class KinVel(NamedTuple):
         Return:
         FDn [x,y,z]
         """
-        Dh = permute5(Dt, (self.Un.shape[0], self.Un.shape[1]), 1)
-        cd = permute5(Cd, (self.Un.shape[0], self.Un.shape[1]), 1)
+        #Dh = permute5(Dt, (self.Un.shape[0], self.Un.shape[1]), 1)
+        #cd = permute5(Cd, (self.Un.shape[0], self.Un.shape[1]), 1)
         #
-        FDnx = self.fdn(Dh, cd, self.Un, self.vn)
-        FDny = self.fdn(Dh, cd, self.Vn, self.vn)
-        FDnz = self.fdn(Dh, cd, self.Wn, self.vn)
+        FDnx = self.fdn(Dt, Cd, self.Un, self.vn)
+        FDny = self.fdn(Dt, Cd, self.Vn, self.vn)
+        FDnz = self.fdn(Dt, Cd, self.Wn, self.vn)
         #
         return FDnx, FDny, FDnz
 #
@@ -706,12 +772,12 @@ class KinAcc(NamedTuple):
         Returns
         FIn [x,y,z]
         """
-        at = permute5(At, (self.Anx.shape[0], self.Anx.shape[1]), 1)
-        cm = permute5(Cm, (self.Anx.shape[0], self.Anx.shape[1]), 1)
+        #at = permute5(At, (self.Anx.shape[0], self.Anx.shape[1]), 1)
+        #cm = permute5(Cm, (self.Anx.shape[0], self.Anx.shape[1]), 1)
         #
-        FInx = self.fin(at, cm, self.Anx)
-        FIny = self.fin(at, cm, self.Any)
-        FInz = self.fin(at, cm, self.Anz)
+        FInx = self.fin(At, Cm, self.Anx)
+        FIny = self.fin(At, Cm, self.Any)
+        FInz = self.fin(At, Cm, self.Anz)
         return FInx, FIny, FInz
 #
 #

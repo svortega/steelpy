@@ -898,10 +898,10 @@ class CombTypes:
         #
         for beam in beams.values():
             # solve beam forces
-            Fwave = wload.Fwave(beam=beam)
-            solution = Fwave.solve()
+            qload = wload.Fwave(beam=beam)
+            #solution = Fwave.solve()
             #dftemp.extend(solution)
-            dftemp.append(solution)
+            dftemp.append(qload)
             #print('-->')
         #
         # ------------------------------------------

@@ -7,7 +7,7 @@ from __future__ import annotations
 #from array import array
 from dataclasses import dataclass
 #from operator import itemgetter
-#from typing import NamedTuple
+from typing import NamedTuple
 import re
 
 # package imports
@@ -175,7 +175,7 @@ class Current(CurrentBasic):
 @dataclass
 class CurrentItem(HydroItem):
     __slots__ = ['name', '_db_file', '_criteria', 
-                 '_depth', '_eta', 'zd']
+                 '_depth', '_eta', '_grid', '_cbf']
     
     def __init__(self, name:int|str, criteria: str|int,
                  db_file: str):
@@ -186,15 +186,6 @@ class CurrentItem(HydroItem):
     #
     #
     # -------------------------------------------
-    #
-    #def _pull_itemX(self, conn):
-    #    """ """
-    #    item_name = (self.name, )
-    #    cur = conn.cursor()
-    #    table = 'SELECT * FROM Current WHERE name = ?'
-    #    cur.execute(table, item_name)
-    #    item = cur.fetchone() 
-    #    return item    
     #
     #
     def _pull_profile(self, conn):
@@ -276,15 +267,16 @@ class CurrentItem(HydroItem):
     #
     # -------------------------------------------
     #
-    def seastate(self, d:float, z:list, eta:list):
+    def seastate(self, grid:list, eta:list, cbf: list):
         """ """
         #try:
         #    1/ self._depth
         #except ZeroDivisionError:
-        self._depth = d
+        #self._depth = d
         #
         self._eta = eta
-        self.zd = z
+        self._grid = grid
+        self._cbf = cbf
         #print('-->')
     #
     def Vc2(self, Vct: float, d: float, Z):
@@ -314,7 +306,7 @@ class CurrentItem(HydroItem):
         vc[zebool] = vcr[zebool]
         return vc
     #
-    def Vc(self, d: float, eta: list, zdepth: list):
+    def Vc4(self, d: float, eta: list, zdepth: list):
         """Current Velocity"""
         Vct = self.tvelocity
         elev = list(reversed([item[0] for item in self.profile]))
@@ -354,6 +346,61 @@ class CurrentItem(HydroItem):
         return vc    
     #
     #
+    def Vc(self, uvector: tuple):
+        """
+        global system 
+        """
+        cbf = self._cbf.get_profile(self._grid)
+        #cbf *= 0
+        vn = self.get_profile(self._eta, self._grid, cbf)
+        #
+        Vn = uvector.x * vn
+        Vnx = vn - uvector.x * Vn
+        Vny = - uvector.y * Vn
+        Vnz = - uvector.z * Vn
+        return CurrVel(Vnx, Vny, Vnz, vn)
+#
+#
+#
+class CurrVel(NamedTuple):
+    """
+
+    Un : Current components of velocity x
+    Vn : Current components of velocity y
+    Wn : Current components of velocity z
+    vn : Current velocity normal to the cylinder axis
+    """
+    Un: list
+    Vn: list
+    Wn: list
+    vn : list
+    #rho: float
+    #
+    #def fdn(self, D, cd, UX, vn, rho: float):
+    #    """
+    #    D  : Member diametre
+    #    cd : Drag coefficient
+    #    Ux : Instantaneus velocity resolved normal to the member
+    #    Vn : Fluid velocity normal to the cylinder axis
+    #    """
+    #    # drag load per unit length
+    #    Fdn = 0.5 * rho * cd * D * UX * vn
+    #    return Fdn
+    #
+    #def FDn(self, Dt:float, Cd:float, rho: float):
+    #    """
+    #    Component of drag force per unit of cylinder length
+    #
+    #    Dt : Diametre tubular
+    #    Cd : Drag coefficient
+    #    
+    #    Return:
+    #    FDn [x,y,z]
+    #    """
+    #    FDnx = self.fdn(Dt, Cd, self.Un, self.vn, rho)
+    #    FDny = self.fdn(Dt, Cd, self.Vn, self.vn, rho)
+    #    FDnz = self.fdn(Dt, Cd, self.Wn, self.vn, rho)
+    #    return FDnx, FDny, FDnz    
 #
 #
 #

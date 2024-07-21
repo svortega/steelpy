@@ -117,7 +117,7 @@ class WIPitem(HydroItem):
         section = beam.section.geometry
         bmax = int(beam.L // section.Dh)
         #
-        return min(nelev, bmax)
+        return max(nelev, bmax)
     #
     def _push_profile(self, conn, profile_data):
         """ """

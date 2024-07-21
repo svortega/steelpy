@@ -10,7 +10,7 @@ import re
 from operator import sub, add
 
 # package imports
-from steelpy.ufo.mesh.process.bstiffness import Rmatrix2
+from steelpy.ufo.mesh.process.brotation import Rmatrix2
 from steelpy.utils.units.main import Units
 #
 #

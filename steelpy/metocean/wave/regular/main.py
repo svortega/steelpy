@@ -22,7 +22,7 @@ from steelpy.metocean.wave.regular.process.kinematic import KinematicResults
 from steelpy.utils.dataframe.main import DBframework
 
 from numpy.matlib import repmat
-import numpy as np
+#import numpy as np
 
 
 #
@@ -174,9 +174,10 @@ class RegularWave(WaveBasic):
         # update wave surface
         conn = create_connection(self.db_file)
         with conn:
+            #surface.rename(columns={'theta': 'length'}, inplace=True)
             # push surface data
             surface.to_sql('WaveSurface', conn,
-                           index_label=['wave_id', 'type', 'length',
+                           index_label=['wave_id', 'type', 'theta',
                                         'eta', 'phase', 'time'],
                            if_exists='append', index=False)
             #
@@ -188,11 +189,11 @@ class RegularWave(WaveBasic):
         kindf['wave_id'] = wdata.number
         #kindf['type'] = 'order_1'
         #
-        depth_steps = np.arange(self._vpoints + 1) / self._vpoints
+        #depth_steps = np.arange(self._vpoints + 1) / self._vpoints
         kindf['surface_id'] = repmat(surface['number'].to_numpy(),
-                                     depth_steps.size, 1).flatten('F')
+                                     self._vpoints, 1).flatten('F')
         #
-        kindf.drop(columns=['phase', 'x', 'time'], inplace=True, axis=1)
+        #kindf.drop(columns=['phase', 'length', 'time', 'theta'], inplace=True, axis=1)
         kindf.rename(columns={'z': 'elevation'}, inplace=True)
         #
         conn = create_connection(self.db_file)
@@ -201,6 +202,7 @@ class RegularWave(WaveBasic):
                          index_label=['wave_id', 'surface_id', 'type',
                                       'elevation', 'u', 'v', 'dphidt',
                                       'ut', 'vt', 'ux', 'uz',
+                                      'dudt', 'dvdt', 
                                       'pressure', 'Benoulli_check'],
                          if_exists='append', index=False)
         #
@@ -232,10 +234,10 @@ class RegularWave(WaveBasic):
                     number INTEGER PRIMARY KEY NOT NULL,\
                     wave_id INTEGER NOT NULL REFERENCES Wave(number), \
                     type TEXT NOT NULL, \
-                    length DECIMAL NOT NULL, \
-                    eta INTEGER NOT NULL, \
-                    phase INTEGER, \
-                    time INTEGER NOT NULL);"
+                    theta DECIMAL NOT NULL, \
+                    eta DECIMAL NOT NULL, \
+                    phase DECIMAL, \
+                    time DECIMAL NOT NULL);"
         create_table(conn, table)
         #
         # Wave Kinematics
@@ -244,16 +246,18 @@ class RegularWave(WaveBasic):
                     wave_id INTEGER NOT NULL REFERENCES Wave(number), \
                     surface_id INTEGER NOT NULL REFERENCES WaveSurface(number), \
                     type TEXT NOT NULL, \
-                    elevation INTEGER NOT NULL, \
-                    u INTEGER NOT NULL, \
-                    v INTEGER NOT NULL, \
-                    dphidt INTEGER NOT NULL, \
-                    ut INTEGER NOT NULL, \
-                    vt INTEGER NOT NULL, \
-                    ux INTEGER NOT NULL, \
-                    uz INTEGER NOT NULL, \
-                    pressure INTEGER NOT NULL, \
-                    Bernoulli_check INTEGER NOT NULL);"
+                    elevation DECIMAL NOT NULL, \
+                    u DECIMAL NOT NULL, \
+                    v DECIMAL NOT NULL, \
+                    dphidt DECIMAL NOT NULL, \
+                    ut DECIMAL NOT NULL, \
+                    vt DECIMAL NOT NULL, \
+                    ux DECIMAL NOT NULL, \
+                    uz DECIMAL NOT NULL, \
+                    dudt DECIMAL NOT NULL, \
+                    dvdt DECIMAL NOT NULL, \
+                    pressure DECIMAL NOT NULL, \
+                    Bernoulli_check DECIMAL NOT NULL);"
         create_table(conn, table)
         #
 
@@ -519,7 +523,7 @@ def pull_wave(conn, wave_name:str|int,
 def pull_kinematics(conn, number:int):
     """read kin from sql"""
     items = (number,)
-    table = 'SELECT Wave.name, WaveSurface.length, WaveSurface.phase, \
+    table = 'SELECT Wave.name, WaveSurface.theta, WaveSurface.phase, \
              WaveKinematic.* \
              FROM Wave, WaveSurface, WaveKinematic \
              WHERE WaveSurface.wave_id = ? \
@@ -535,6 +539,7 @@ def pull_kinematics(conn, number:int):
               'wave_id', 'surface_id', 'type',
               'elevation', 'u', 'v', 'dphidt',
               'ut', 'vt', 'ux', 'uz',
+              'dudt', 'dvdt', 
               'pressure', 'Benoulli_check']
     surface = df.DataFrame(data=data, columns=header)
     #

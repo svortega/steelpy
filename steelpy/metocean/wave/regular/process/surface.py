@@ -129,46 +129,58 @@ class SurfaceResults(NamedTuple):
 #
 #
 #
-def get_surface(n: int, kd: float, Y, d:int,
+def get_surface(n: int, kd: float, Y: list, d:int, Tw: float, Lw: float, 
                 nprofiles: int, is_finite: bool) -> DBframework:
     """
     n : order - Number of Fourier components or order of Stokes or cnoidal theory
     kd: wave number
     Y : Fourier components or Stokes/Cnoidal theory
     d : water depth
+    Tw : Wave period
+    Lw : wave length
     nprofiles : Number of points on free surface
     is_finite: 
     """
     pi = np.pi
     npt = number_steps(nprofiles)
     # position of the horizontal axis (theta : 0-pi)
-    x = np.arange(npt) * pi / nprofiles
-    phase = x * 180 / pi
+    #xx = np.arange(npt) * pi / nprofiles
+    #phase2 = xx * 180 / pi
+    #
+    t = Tw / 2.0 # sec
+    omega = 2 * pi / Tw
+    x = np.linspace(0, Lw, npt, endpoint=True)
+    Theta =  kd / d * x - omega * t
+    phase = np.round(Theta * 180 / pi,  decimals=1)
+    #
     #eta = np.array([surface(item, Y, n) for item in x])
-    eta =  surfacenp(x, Y, n, npt)
+    Keta =  surfacenp(Theta, Y, n)
     #
     if is_finite:
-        eta = eta / kd
-        x = x / kd
+        Keta /= kd
+        #xx /= kd
+        Theta /= kd
     #
-    data = {'length': x * d,
-            'eta': eta * d,
-            'phase': phase}
-            #'z': [(1+item)*d for item in eta],
-            #'time': 0 * x}
+    #xx = d * xx / kd
+    #
+    data = {'theta': Theta * d,
+            'eta': Keta * d,
+            'phase': phase,
+            #'length': x,
+            'time': np.linspace(0, Tw, npt, endpoint=True)}
     #
     df = DBframework()
     return df.DataFrame(data)
 #
-def repmat2(A, n, axis:int):
-    """
-    """
-    A1 = np.expand_dims(A, axis)
-    #A1 = np.transpose(A1)
-    A1 = np.tile(A1, n)
-    #A1 = np.transpose(A1)
-    #return np.moveaxis(A1, 0, 1)
-    return A1
+#def repmat2(A, n, axis:int):
+#    """
+#    """
+#    A1 = np.expand_dims(A, axis)
+#    #A1 = np.transpose(A1)
+#    A1 = np.tile(A1, n)
+#    #A1 = np.transpose(A1)
+#    #return np.moveaxis(A1, 0, 1)
+#    return A1
 #
 #  Surface elevation
 def surface(x, Y, n):
@@ -187,22 +199,21 @@ def surface(x, Y, n):
     kEta += 0.5 * Y[n] * np.cos(n * x)
     return kEta
 #
-def surfacenp(x, Y, n, npt):
+def surfacenp(x: list, Y: list, n: int):
     """
-    Free surface wave profile function np solution
+    Free surface elevation is calculated from the interpolating
+    Fourier series.
 
-    x : position of the horizontal axis (theta : 0-pi)
+    x : position of the horizontal axis (theta : -pi..0..+pi)
     Y : Fourier components or Stokes/Cnoidal theory
     n : order - Number of Fourier components or order of Stokes or cnoidal theory
 
     Return:
-    Surface elevation
+    Keta : Surface elevation
     """
-    ncomp = np.arange(1, n)
-    ncomp2 = repmat2(ncomp, n=npt, axis=1)
-    Y2 = repmat2(Y[ncomp], n=npt, axis=1)
-    Keta = np.sum(Y2 * np.cos(ncomp2 * x), axis=0)
-    Keta += 0.5 * Y[n] * np.cos(n * x)
+    cs = np.array([np.cos((j + 1) * x) for j in range(n)]) 
+    Keta = np.sum(Y[1:n] * cs[:n-1, ].T, axis=1)
+    Keta += 0.50 * Y[n] * cs[n-1]
     return Keta
 #
 def number_steps(StpLgth: int) -> int:

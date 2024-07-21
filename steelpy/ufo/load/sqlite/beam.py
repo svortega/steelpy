@@ -284,8 +284,9 @@ class BeamLoadItemSQL(BeamSQLMaster):
                         [basic_id, gnload[3], gnload[6],
                          gnload[1], load_system, 'load', *gnload[7], gnload[8]]])            
         #
-        if res:
-            with conn:  
+        #
+        if res:          
+            with conn:
                 push_FER(conn, node_load=res)
     #
     # -----------------------------------------------

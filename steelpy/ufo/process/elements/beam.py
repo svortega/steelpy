@@ -10,12 +10,12 @@ from collections.abc import Mapping
 import math
 
 # package imports
-from steelpy.ufo.mesh.process.bstiffness import beam3D_B3D2, B3D2_Ke, Tmatrix
+from steelpy.ufo.mesh.process.bstiffness import beam3D_B3D2, B3D2_Ke
+from steelpy.ufo.mesh.process.brotation import Tmatrix
 from steelpy.ufo.mesh.process.bgeometry import B3D2_Kt, beam_KG
 from steelpy.ufo.mesh.process.bmass import beam_mass
 from steelpy.utils.geometry.L3D import DistancePointLine3D #, LineLineIntersect3D
 from steelpy.utils.math.operations import remove_column_row
-#from steelpy.ufo.mesh.process.StfBeamTimoshenko import TangStfBeamTimoshenko, GeoStfBeamTimoshenko
 #
 import numpy as np
 from numpy.linalg import inv

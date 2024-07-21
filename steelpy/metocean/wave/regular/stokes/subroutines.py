@@ -28,6 +28,7 @@ def F(kd: float, H: float, T: float,
     CC[0] = C[0]
     CC[2] = 0.0
     CC[1] = CC[2]
+    
     if n >= 3:
         CC[1] = e2 * C[2]
     #
@@ -43,7 +44,7 @@ def F(kd: float, H: float, T: float,
     #
     CC[1] = CC[0] + CC[1]
     CC[2] = CC[1] + CC[2]
-    # return rhs+CC[2]; // Should this be current criterion rather than 2?
+    #
     return rhs + CC[Current_criterion]
 
 
@@ -68,11 +69,11 @@ def CDE(kd: float):
     C = np.zeros(5)
     D = np.zeros(5)
     E = np.zeros(5)
-    C[0] = np.power(tkd, 0.5)
-    C[2] = np.power(tkd, 0.5) * (2 + 7 * ss[2]) / (4 * t[2])
-    C[4] = np.power(tkd, 0.5) * (4 + 32 * ss[1] - 116 * ss[2] - 400 * ss[3] - 71 * ss[4] + 146 * ss[5]) / (32 * t[5])
-    D[2] = -np.power(ckd, 0.5) / 2
-    D[4] = np.power(ckd, 0.5) * (2 + 4 * ss[1] + ss[2] + 2 * ss[3]) / (8 * t[3])
+    C[0] = np.sqrt(tkd)
+    C[2] = np.sqrt(tkd) * (2 + 7 * ss[2]) / (4 * t[2])
+    C[4] = np.sqrt(tkd) * (4 + 32 * ss[1] - 116 * ss[2] - 400 * ss[3] - 71 * ss[4] + 146 * ss[5]) / (32 * t[5])
+    D[2] = -np.sqrt(ckd) / 2
+    D[4] = np.sqrt(ckd) * (2 + 4 * ss[1] + ss[2] + 2 * ss[3]) / (8 * t[3])
     E[2] = tkd * (2 + 2 * ss[1] + 5 * ss[2]) / (4 * t[2])
     E[4] = tkd * (8 + 12 * ss[1] - 152 * ss[2] - 308 * ss[3] - 42 * ss[4] + 77 * ss[5]) / (32 * t[5])
     return ckd, skd, ss, t, C, D, E
@@ -85,11 +86,7 @@ def AB(skd: float, ss: list, t: list, n: int,
     """
     Calculate coefficient arrays A[] and B[] and Fourier coefficients
     """
-    BB = np.zeros((n + 1, n + 1))
     A = np.zeros((n + 1, n + 1))
-    B = np.zeros(n + 1)
-    Y = np.zeros(n + 1)
-    #
     A[1][1] = 1 / skd
     A[2][2] = 3 * ss[2] / (2 * t[2])
     A[3][1] = (-4 - 20 * ss[1] + 10 * ss[2] - 13 * ss[3]) / (8 * skd * t[3])
@@ -104,16 +101,21 @@ def AB(skd: float, ss: list, t: list, n: int,
     A[5][5] = ((-6 * ss[3] + 272 * ss[4] - 1552 * ss[5] + 852 * ss[6] + 2029 * ss[7] + 430 * ss[8])
                / (64 * skd * (3 + 2 * ss[1]) * (4 + ss[1]) * t[6]))
 
+    B = np.zeros(n + 1)
     for i in range(1, n + 1):
-        z[n + 10 + i] = 0.0
+        #z[n + 10 + i] = 0.0
         jj = ((i + 1) % 2) + 1
-        for j in range(jj, n, 2):
-            z[n + 10 + i] += A[j][i] * e[j]
+        #for j in range(jj, n, 2):
+        #    z[n + 10 + i] += A[j][i] * e[j]
+        #
+        z[n + 10 + i] = np.sum([A[j][i] * e[j]
+                                for j in range(jj, n+1, 2)])
         #
         z[n + 10 + i] *= C[0] * np.cosh(i * kd)
         # Fourier coefficients
         B[i] = z[n + 10 + i]
     #
+    BB = np.zeros((n + 1, n + 1))
     BB[1][1] = 1.0
     BB[2][2] = ckd * (1 + 2 * ss[1]) / (2 * t[1])
     BB[3][1] = -3 * (1 + 3 * ss[1] + 3 * ss[2] + 2 * ss[3]) / (8 * t[3])
@@ -129,13 +131,18 @@ def AB(skd: float, ss: list, t: list, n: int,
                      + 675 * ss[5] + 1326 * ss[6] + 827 * ss[7] + 130 * ss[8])
                 / (384 * (3 + 2 * ss[1]) * (4 + ss[1]) * t[6]))
     BB[5][1] = -(BB[5][3] + BB[5][5])
+    #
     # Discrete Fourier transform of the surface elevations.
+    Y = np.zeros(n + 1)
     for i in range(1, n + 1):
-        Y[i] = 0.0
+        #Y[i] = 0.0
         j = ((i + 1) % 2) + 1
-        while j <= n:
-            Y[i] += BB[j][i] * e[j]
-            j += 2
+        Y[i] = np.sum([BB[jj][i] * e[jj]
+                       for jj in range(j, n+1, 2)])
+        #
+        #while j <= n:
+        #    Y[i] += BB[j][i] * e[j]
+        #    j += 2
     #
     return Y, z, A, B
 #
