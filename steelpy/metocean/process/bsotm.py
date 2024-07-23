@@ -57,7 +57,7 @@ class BSOTM:
                  condition:int=1):
         """
         """
-        self.wave = wave
+        #self.wave = wave
         #self.current = current
         self.properties = properties
         self.condition = condition
@@ -67,7 +67,7 @@ class BSOTM:
         # -----------------------------------------
         # Wave Kinematics
         #
-        kinematics = self.wave.kinematics()
+        kinematics = wave.kinematics()
         d = kinematics.d
         eta = kinematics.surface.eta
         depth_points = kinematics.depth_points
@@ -79,19 +79,21 @@ class BSOTM:
         #
         # -----------------------------------------
         #
-        wkf = self.wave.kinematic_factor
+        wkf = wave.kinematic_factor
         krf = wkf.get_profile(self.Zelev)        
         kin = kinematics.get_kin5(krf=krf, Zelev=self.Zelev)
+        wdir = wave.direction
         #
-        self.morison = BeamMorison(kin)
+        self.morison = BeamMorison(kin, wdir)
         #
         # -----------------------------------------
         # Current
         #
         self.current = current.current
         cbf = current.blockage_factor
-        #crf = cbf.get_profile(self.Zelev)
-        self.current.seastate(grid=self.Zelev, eta=eta, cbf=cbf)
+        cdir = current.direction
+        self.current.seastate(grid=self.Zelev, eta=eta,
+                              cbf=cbf, direction=cdir)
         #
         self._eta = eta
         self._x = kinematics.surface.x
@@ -276,7 +278,7 @@ class BSOTM:
         #
         # -----------------------------------------
         # TODO: wtheta
-        wtheta = self.wave.direction
+        #wtheta = self.wave.direction
         #kinematics = self.wave.kinematics()
         #
         #d = kinematics.d
@@ -383,15 +385,15 @@ class BSOTM:
         #
         # --------------------------------
         # Global System
-        vnn = Kv.vn + Vc.vn
+        vn = Kv.vn + Vc.vn
         
-        Fdx = (0.5 * self.rho * Cd * Dh * (Kv.Un + Vc.Un) * vnn
+        Fdx = (0.5 * self.rho * Cd * Dh * (Kv.Un + Vc.Un) * vn
                + self.rho * Cm * At * Ka.Anx)
         
-        Fdy = (0.5 * self.rho * Cd * Dh * (Kv.Vn + Vc.Vn) * vnn
+        Fdy = (0.5 * self.rho * Cd * Dh * (Kv.Vn + Vc.Vn) * vn
                + self.rho * Cm * At * Ka.Any)
         
-        Fdz = (0.5 * self.rho * Cd * Dh * (Kv.Wn + Vc.Wn) * vnn
+        Fdz = (0.5 * self.rho * Cd * Dh * (Kv.Wn + Vc.Wn) * vn
                + self.rho * Cm * At * Ka.Anz)
         #
         #print('----------------------------')
@@ -409,8 +411,9 @@ class BSOTM:
         #print(f'fy = {Fb[1].max()}')
         #print(f'fz = {Fb[2].max()}')         
         #
-        Fi = xr.Dataset(data_vars={'fx': Fdx, 'fy': Fdy, 'fz': Fdz})
-        #
+        #Fi = xr.Dataset(data_vars={'fx': Fdx, 'fy': Fdy, 'fz': Fdz})
+        # member local system 
+        Fi = xr.Dataset(data_vars={'fx': Fdz, 'fy': Fdx, 'fz': Fdy})
         #      
         #
         df =  self.solve(Fi, beam, nelev)
@@ -459,8 +462,8 @@ class BSOTM:
             fy = Fstep['fy'].data[idx, idx, idx] * Lstep
             fz = Fstep['fz'].data[idx, idx, idx] * Lstep
             #
-            Fb = Tm @ np.array([fx, fy, fz])
-            #Fb = np.array([fx, fz, fy])
+            #Fb = Tm @ np.array([fx, fy, fz])
+            Fb = np.array([fx, fy, fz])
             #
             # TODO : fix torsion
             ft = fz * 0
@@ -493,9 +496,9 @@ class BSOTM:
         #
         # --------------------------------
         #
-        #Fx = df.groupby('Lw')['fx'].sum()
-        #Fy = df.groupby('Lw')['fy'].sum()
-        #Fz = df.groupby('Lw')['fz'].sum()
+        Fx = df.groupby('Lw')['fx'].sum()
+        Fy = df.groupby('Lw')['fy'].sum()
+        Fz = df.groupby('Lw')['fz'].sum()
         #
         #print('----------------------------')
         #print('Beam Local System')
@@ -585,28 +588,39 @@ class BSOTM:
 class BeamMorison(NamedTuple):
     """ """
     kin: list
+    direction: float
     #
     def Un(self, uvector):
         """Components of velocity Global system"""
-        comp0 = uvector.x *  self.kin['ux'] + uvector.z * self.kin['uz']
+        #comp0 = uvector.x *  self.kin['ux'] + uvector.z * self.kin['uz']
         #
-        Un = self.kin['ux'] - uvector.x * comp0    # x
-        Wn = - uvector.y * comp0                   # y
-        Vn = self.kin['uz'] - uvector.z * comp0    # z
+        Ux = self.kin['ux'] * np.cos(self.direction)
+        Uy = self.kin['ux'] * np.sin(self.direction)
+        #
+        Uv = uvector.x * Ux + uvector.y * Uy + uvector.z * self.kin['uz']
+        #
+        Un = Ux - uvector.x * Uv                # x
+        Vn = Uy - uvector.y * Uv                # y
+        Wn = self.kin['uz'] - uvector.z * Uv    # z
         # Water velocity normal to the cylinder axis
-        vn = self.vn(self.kin, uvector)
+        vn = self.vn(Ux, Uy, uvector)
         #
         return KinVel(Un, Vn, Wn, vn)
     #
-    def vn(self, kin, uvector):
+    def vn(self, Ux, Uy, uvector):
         """ Absolute Water velocity normal to the cylinder axis
         
         Vc : current velocity
         """
-        vn = np.sqrt(np.power(self.kin['ux'], 2)
+        vn = np.sqrt(np.power(Ux, 2) + np.power(Uy, 2)
                      + np.power(self.kin['uz'], 2)
-                     - np.power(uvector.x * self.kin['ux']
+                     - np.power(uvector.x * Ux + uvector.y * Uy
                                 + uvector.z * self.kin['uz'], 2))
+        #
+        #vn = np.sqrt(np.power(self.kin['ux'], 2)
+        #             + np.power(self.kin['uz'], 2)
+        #             - np.power(uvector.x * self.kin['ux']
+        #                        + uvector.z * self.kin['uz'], 2))
         return vn    
     #
     def An(self, uvector):
@@ -617,13 +631,18 @@ class BeamMorison(NamedTuple):
         kin : 
         """
         #
-        comp0 = (uvector.x * self.kin['ax'] + uvector.z * self.kin['az'])
+        #An = (uvector.x * self.kin['ax'] + uvector.z * self.kin['az'])
+        #
+        Ax = self.kin['ax'] * np.cos(self.direction)
+        Ay = self.kin['ax'] * np.sin(self.direction)
+        #
+        An = uvector.x * Ax + uvector.y * Ay + uvector.z * self.kin['az']
         # components of acceleration normal to the member 
         # in the x,y and z gloabl directions
-        Anx = self.kin['ax'] - uvector.x * comp0
-        Any = - uvector.y * comp0
-        Anz = self.kin['az'] - uvector.z * comp0
-        return KinAcc(Anx, Anz, Any)
+        Anx = Ax - uvector.x * An
+        Any = Ay - uvector.y * An
+        Anz = self.kin['az'] - uvector.z * An
+        return KinAcc(Anx, Any, Anz)
     
 #
 class KinVel(NamedTuple):

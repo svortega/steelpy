@@ -58,22 +58,24 @@ def CDE(kd: float):
     ckd = 1.0 / np.tanh(kd)
     tkd = np.tanh(kd)
     S = 1.0 / np.cosh(2.0 * kd)
-    ss = [0, S]
+    ss = [0.0, S]
     for i in range(2, 8 + 1):
         ss.append(ss[i - 1] * S)
     #
-    t = [0, 1.0 - S]
+    t = [0.0, 1.0 - S]
     for i in range(2, 8 + 1):
         t.append(t[i - 1] * (1.0 - S))
     #
+    stkd = np.sqrt(tkd)
     C = np.zeros(5)
-    C[0] = np.sqrt(tkd)
-    C[2] = np.sqrt(tkd) * (2 + 7 * ss[2]) / (4 * t[2])
-    C[4] = np.sqrt(tkd) * (4 + 32 * ss[1] - 116 * ss[2] - 400 * ss[3] - 71 * ss[4] + 146 * ss[5]) / (32 * t[5])
+    C[0] = stkd
+    C[2] = stkd * (2 + 7 * ss[2]) / (4 * t[2])
+    C[4] = stkd * (4 + 32 * ss[1] - 116 * ss[2] - 400 * ss[3] - 71 * ss[4] + 146 * ss[5]) / (32 * t[5])
     #
+    sckd = np.sqrt(ckd)
     D = np.zeros(5)
-    D[2] = -np.sqrt(ckd) / 2
-    D[4] = np.sqrt(ckd) * (2 + 4 * ss[1] + ss[2] + 2 * ss[3]) / (8 * t[3])
+    D[2] = -sckd / 2
+    D[4] = sckd * (2 + 4 * ss[1] + ss[2] + 2 * ss[3]) / (8 * t[3])
     #
     E = np.zeros(5)
     E[2] = tkd * (2 + 2 * ss[1] + 5 * ss[2]) / (4 * t[2])

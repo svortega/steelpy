@@ -13,7 +13,7 @@ from steelpy.metocean.wave.regular.stokes.subroutines import F, CDE, AB
 from steelpy.metocean.wave.regular.process.inout import title_block, output
 from steelpy.metocean.wave.regular.process.waveops import WaveItem
 import numpy as np
-
+from scipy.optimize import fsolve
 
 #
 #
@@ -91,16 +91,13 @@ def StokesMain(MaxH: float, case: str,
     Tanh : 
     """
     # inital values
-    g = 9.80665  # m/s^2
+    #g = 9.80665  # m/s^2
     e = np.zeros(norder + 1)
     H = MaxH
     pi = np.pi
     #
-    if norder > 5:
-        norder = 5
-        print("# A value of N > 5 has been specified for the Stokes theory.")
-        print("# The program has set N = 5")
-    print(f"# Solution by {norder}-order Stokes theory")
+    norder = min(norder, 5)
+    print(f"# Solution set by {norder}-order Stokes theory")
     #
     #if Lw:
     if case == 'wavelength':
@@ -115,6 +112,18 @@ def StokesMain(MaxH: float, case: str,
         if T > 10:
             print(f'The dimensionless period [{T:1.2f}] is greater than 10')
             raise IOError("Stokes theory should not be applied")
+        #
+        #def SK5func(*args: list):
+        #    """ Stokes 5th Equations"""
+        #    kd1, kd2, F22, C2, D2 = args
+        #    ckd, skd, ss, t, C, D, E = CDE(kd1)
+        #    F1 = F(kd1, H, T, current, c_type, C2, norder, D2)
+        #    Fd = (F22 - F1) / (kd2 - kd1)
+        #    delta = F1 / Fd
+        #    #kd22 = kd1
+        #    kd11 = kd1 - delta
+        #    #F22 = F11
+        #    return kd11, kd1, F22, C, D
         #
         # if period is specified, solve dispersion relation using secant method
         # Until February 2015 the bisection method was used for this.
@@ -131,6 +140,11 @@ def StokesMain(MaxH: float, case: str,
         kd2 = kFM * 1.01
         ckd, skd, ss, t, C, D, E = CDE(kd2)
         F2 = F(kd2, H, T, current, c_type, C, norder, D)
+        #
+        #iguess = [kd1, kd2, F2, C, D]
+        # System Solution
+        #kd12, kd22, F22, C2, D2 = fsolve(SK5func, iguess)
+        #
         for _iter in range(niter + 1):
             ckd, skd, ss, t, C, D, E = CDE(kd1)
             F1 = F(kd1, H, T, current, c_type, C, norder, D)
@@ -184,7 +198,8 @@ def StokesMain(MaxH: float, case: str,
         z[3] = T * np.sqrt(kd)
     #
     #  Highest wave - eqn (32) of Fenton (1990)
-    Tanh = np.array([np.tanh(i * z[1]) for i in range(norder + 1)])
+    Tanh = np.array([np.tanh(i * z[1])
+                     for i in range(norder + 1)])
     #
     title_block(is_finite, c_type, current, z)
     output(norder, z, Y, B, Tanh, is_finite)

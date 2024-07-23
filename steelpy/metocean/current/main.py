@@ -175,7 +175,8 @@ class Current(CurrentBasic):
 @dataclass
 class CurrentItem(HydroItem):
     __slots__ = ['name', '_db_file', '_criteria', 
-                 '_depth', '_eta', '_grid', '_cbf']
+                 '_depth', '_eta', '_grid', '_cbf',
+                 '_direction']
     
     def __init__(self, name:int|str, criteria: str|int,
                  db_file: str):
@@ -267,16 +268,13 @@ class CurrentItem(HydroItem):
     #
     # -------------------------------------------
     #
-    def seastate(self, grid:list, eta:list, cbf: list):
+    def seastate(self, grid:list, eta:list,
+                 cbf: list, direction: float):
         """ """
-        #try:
-        #    1/ self._depth
-        #except ZeroDivisionError:
-        #self._depth = d
-        #
         self._eta = eta
         self._grid = grid
         self._cbf = cbf
+        self._direction = direction
         #print('-->')
     #
     def Vc2(self, Vct: float, d: float, Z):
@@ -354,9 +352,12 @@ class CurrentItem(HydroItem):
         #cbf *= 0
         vn = self.get_profile(self._eta, self._grid, cbf)
         #
-        Vn = uvector.x * vn
-        Vnx = vn - uvector.x * Vn
-        Vny = - uvector.y * Vn
+        Vcx = vn * np.cos(self._direction)
+        Vcy = vn * np.sin(self._direction)        
+        #
+        Vn = uvector.x * Vcx + uvector.y * Vcy
+        Vnx = Vcx - uvector.x * Vn
+        Vny = Vcy - uvector.y * Vn
         Vnz = - uvector.z * Vn
         return CurrVel(Vnx, Vny, Vnz, vn)
 #
