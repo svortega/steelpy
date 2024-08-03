@@ -46,12 +46,12 @@ class MeshLoad:
         #
         # mesh 
         self._nodes = NodeSQL(db_system=mesh_type,
-                              plane=self._plane,
+                              #plane=self._plane,
                               component=component, 
                               db_file=db_file)
         #
-        self._elements = ElementsSQL(plane=self._plane,
-                                     db_system=mesh_type,
+        self._elements = ElementsSQL(db_system=mesh_type,
+                                     #plane=self._plane,
                                      component=component,
                                      db_file=db_file)
         #

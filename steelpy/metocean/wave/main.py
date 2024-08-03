@@ -143,7 +143,7 @@ class Wave(WaveBasic):
     # -----------------------------------
     # SQL ops
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         # Wave main
         table = "CREATE TABLE IF NOT EXISTS Wave (\

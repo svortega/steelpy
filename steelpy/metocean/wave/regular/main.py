@@ -203,7 +203,7 @@ class RegularWave(WaveBasic):
                                       'elevation', 'u', 'v', 'dphidt',
                                       'ut', 'vt', 'ux', 'uz',
                                       'dudt', 'dvdt', 
-                                      'pressure', 'Benoulli_check'],
+                                      'pressure', 'Bernoulli_check'],
                          if_exists='append', index=False)
         #
         print('---> here')
@@ -212,7 +212,7 @@ class RegularWave(WaveBasic):
     # ------------------------------
     # SQL ops
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         # Wave main
         table = "CREATE TABLE IF NOT EXISTS WaveRegular (\

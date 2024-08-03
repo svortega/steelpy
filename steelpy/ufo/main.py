@@ -53,65 +53,13 @@ class UFOmodel:
         print("-- module : ufo Version 6.00dev")
         print('{:}'.format(52*'-'))
         #
-        #if not component:
-        #    component = "f2u_model"
         self._name = name
-        #self.type: str = 'substructure'
-        #self.mesh_type:str = 'sqlite'
-        #
-        # set main components
-        #
-        #self._mesh:dict = {}
-        #self._mesh = Mesh(db_name=self._name,
-        #                  sql_file=sql_file)
-        #
         self._properties = Properties()
-        #
         self._concept = Concept(name=self._name,
                                 properties=self._properties)
-        #self._concept_flag = False
     #
     # -------------------
     #
-    #def materials(self, values:None|list=None,
-    #              df=None):
-    #    """
-    #    """
-    #    if isinstance(values, list):
-    #        if isinstance(values[0], list):
-    #            for item in values:
-    #                self._materials[item[0]] = item[1:]
-    #        else:
-    #            self._materials[values[0]] = values[1:]
-    #    #
-    #    try:
-    #        df.columns
-    #        self._materials.df = df
-    #    except AttributeError:
-    #        pass
-    #    #
-    #    return self._materials   
-    #
-    #def sections(self, values:None|list=None,
-    #             df=None):
-    #    """
-    #    """
-    #    #if values:
-    #    if isinstance(values, list):
-    #        if isinstance(values[0], list):
-    #            for item in values:
-    #                self._sections[item[0]] = item[1:]
-    #        else:
-    #            self._sections[values[0]] = values[1:]
-    #    #
-    #    # dataframe input
-    #    try:
-    #        df.columns   
-    #        self._sections.df = df
-    #    except AttributeError:
-    #        pass            
-    #    #
-    #    return self._sections
     #
     def properties(self):
         """
@@ -124,13 +72,6 @@ class UFOmodel:
     def concept(self):
         """
         """
-        #if not name:
-        #    name = self.component
-        #
-        #self._concept = Concepts(name=name, 
-        #                         #materials=self._materials,
-        #                         #sections=self._sections,
-        #                         properties= self._properties)
         return self._concept
     #
     # -------------------

@@ -22,7 +22,8 @@ class PostProcess: # (ClassMainSQL)
     __slots__ = ['_mesh', '_process', '_Un',
                  'db_file', '_name']
     
-    def __init__(self, mesh, name:str|None) -> None:
+    def __init__(self, mesh,
+                 name:str|None) -> None:
         """
         """
         self._mesh = mesh

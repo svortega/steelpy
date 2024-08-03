@@ -346,7 +346,7 @@ class NodeLoadItemSQL(ClassBasicSQL):
     # -----------------------------------------------
     #
     #
-    def _create_table(self, conn):
+    def _new_table(self, conn):
         """ """
         table = "CREATE TABLE IF NOT EXISTS LoadNode(\
                 number INTEGER PRIMARY KEY NOT NULL,\

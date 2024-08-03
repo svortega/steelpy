@@ -411,6 +411,7 @@ class MainProcess:
         #hload = ['node_name', *self._plane.hload]
         hload = ['axial', 'torsion', 'VM_inplane', 'VM_outplane']
         #
+        plane2d = self._plane.plane2D
         dftemp: list = []
         mif_data: list = []
         for key, noded in ndgrp:
@@ -419,7 +420,7 @@ class MainProcess:
             #
             for mname, element in elements.items():
                 nodes = element.connectivity
-                Tb = element.T
+                Tb = element.T(plane2d)
                 #
                 material = element.material
                 section = element.section.properties(poisson=material.poisson)
@@ -449,7 +450,7 @@ class MainProcess:
                 #
                 # convert beam end-node disp to force [F = Kd] in global system
                 #FUan = element.Ke_local @ nd_local
-                kt_local = element.Kt_local(nd_global)
+                kt_local = element.Kt_local(plane2d, nd_global)
                 FUtn = kt_local @ nd_local
                 #
                 #TODO: confirm change reactions sign
@@ -532,7 +533,7 @@ class MainProcess:
                 # ---------------------------------------------
                 # convert beam end-node disp to force [F = Kd] in global system
                 #
-                gnforce = element.Ke_global @ nd_global
+                gnforce = element.Ke_global(plane2d) @ nd_global
                 #
                 # ---------------------------------------------
                 #

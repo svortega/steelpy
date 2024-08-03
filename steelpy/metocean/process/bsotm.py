@@ -57,8 +57,9 @@ class BSOTM:
                  condition:int=1):
         """
         """
-        #self.wave = wave
-        #self.current = current
+        #
+        # -----------------------------------------
+        #
         self.properties = properties
         self.condition = condition
         self.rho = rho_w
@@ -94,6 +95,8 @@ class BSOTM:
         cdir = current.direction
         self.current.seastate(grid=self.Zelev, eta=eta,
                               cbf=cbf, direction=cdir)
+        #
+        # -----------------------------------------
         #
         self._eta = eta
         self._x = kinematics.surface.x
@@ -267,31 +270,13 @@ class BSOTM:
         wave_angle: Wave angle
         """
         #
+        # -----------------------------------------        
+        #
         wip = self.properties.WIP
         nelev = wip.nelev(beam, self.up)
         #
         #
-        # TODO: Maybe separate beam hydro module
-        #Bwave = BeamMorisonWave(beam=beam, rho=self.rho_w,
-        #                        nelev=nelev, up=self.up)
-        #
-        #
         # -----------------------------------------
-        # TODO: wtheta
-        #wtheta = self.wave.direction
-        #kinematics = self.wave.kinematics()
-        #
-        #d = kinematics.d
-        #eta = kinematics.surface.eta
-        #depth_points = kinematics.depth_points
-        #
-        #Zelev = self.ZElev(d=d, Hlat=0, eta=eta,
-        #                   points=depth_points)
-        #
-        # -----------------------------------------
-        #
-        #section = beam.section
-        #D = section.diameter
         #
         # TODO : fix dircos
         dircos = beam.dircosines
@@ -300,40 +285,17 @@ class BSOTM:
         uvector = UnitVector(*dircos)        
         #
         # -----------------------------------------
-        #
-        #dz = np.diff(Elev)
-        # locating the middle point of each element
-        #Z = Elev[:-1] + dz
-        #Z = Bwave.Z(nelev=nelev)
-        #Elev = Bwave.elevations()
-        #coord = Bwave.coordinates()
-        #
-        # -----------------------------------------
         # Hydro diametre & area
         marine_growth = self.properties.marine_growth
-        #mg = marine_growth.MG(Z)
         mg = marine_growth.get_profile(self.Zelev)
-        #
-        #Dh, At = self.Dh(D, Z)
-        #Dh, At = beamhydro.Dh(mg=mg)
         #
         # -----------------------------------------
         # Cd & Cm
         cdcm = self.properties.CdCm
-        #cd, cm = cdcm.getCdCm(Z, crestmax, condition=self.condition)
         Cd, Cm = cdcm.get_profile(self.Zelev)
         #
         # -----------------------------------------
         # Current
-        # TODO : ctheta
-        #eta = np.hstack((list(reversed(eta[1:])), eta))
-        #ctheta = self.current.direction
-        #current = self.current.current
-        #cbf = self.current.blockage_factor
-        #cbf = cbf.get_profile(self.Zelev)
-        #eta2 = np.hstack((list(reversed(eta[1:])), eta))
-        #Vcp = current.get_profile(eta, Zelev, cbf)
-        #Vc = current.Vc(cbf, uvector)
         Vc = self.current.Vc(uvector)
         #Vc *= 0
         #
@@ -342,33 +304,14 @@ class BSOTM:
         #print(f'max Vny = {Vc.Vn.max()}')
         #print(f'max Vnz = {Vc.Wn.max()}')        
         #
-        # -----------------------------------------
-        # Kinematis
-        #
-        #wkf = self.wave.kinematic_factor
-        #wkf = wkf.get_profile(self.Zelev)
-        #
-        #kin = kinematics.get_kin5(krf=wkf, Zelev=self.Zelev)
-        #kin = kinematics.get_kin4(elev=Elev, krf=wkf)
-        #
-        #
-        #print('----------------------------')
-        #print(f'max vel_x = {kin["ux"].max()}')
-        #print(f'max vel_z = {kin["uz"].max()}')
-        #
-        #print(f'max acc_x = {kin["ax"].max()}')
-        #print(f'max acc_z = {kin["az"].max()}')
-        #        
-        #
-        #time = kinematics.surface.time
-        #theta = kinematics.theta
         #
         # -----------------------------------------
         #
         Dh, At = self.Dh(mg=mg, beam=beam)
         #
-        #Ka = self.An(kin, uvector)
-        #Kv = self.Un(kin, uvector)
+        # -----------------------------------------
+        # Kinematis
+        #
         Ka = self.morison.An(uvector)
         #print('----------------------------')
         #print(f'max Anx = {Ka.Anx.max()}')
@@ -402,28 +345,19 @@ class BSOTM:
         #print(f'fz = {Fdz.max()}')
         #
         # --------------------------------
-        # member Local System        
-        #
-        #Tm = beam.unit_vector
-        #Fb = Tm @ np.array([Fdx, Fdy, Fdz])
-        #print('----------------------------')
-        #print(f'fx = {Fb[0].max()}')
-        #print(f'fy = {Fb[1].max()}')
-        #print(f'fz = {Fb[2].max()}')         
+        # member Local System
         #
         #Fi = xr.Dataset(data_vars={'fx': Fdx, 'fy': Fdy, 'fz': Fdz})
         # member local system 
         Fi = xr.Dataset(data_vars={'fx': Fdz, 'fy': Fdx, 'fz': Fdy})
-        #      
+        #
+        # --------------------------------
         #
         df =  self.solve(Fi, beam, nelev)
         #
+        # --------------------------------
         #
         qload = self.bload(beam, df, nelev)
-        #
-        #
-        #print('--')
-        #1 / 0
         #
         #
         return qload
@@ -435,7 +369,7 @@ class BSOTM:
         """ """
         bsteps = self.steps(beam, nelev)
         coord = self.coordinates(beam, bsteps)
-        Tm = beam.unit_vector
+        #Tm = beam.unit_vector
         # Fix vertical axis
         dz = np.diff(bsteps) 
         dz = np.array([np.average(dz), *dz]) * 0.50
@@ -496,9 +430,9 @@ class BSOTM:
         #
         # --------------------------------
         #
-        Fx = df.groupby('Lw')['fx'].sum()
-        Fy = df.groupby('Lw')['fy'].sum()
-        Fz = df.groupby('Lw')['fz'].sum()
+        #Fx = df.groupby('Lw')['fx'].sum()
+        #Fy = df.groupby('Lw')['fy'].sum()
+        #Fz = df.groupby('Lw')['fz'].sum()
         #
         #print('----------------------------')
         #print('Beam Local System')
@@ -560,29 +494,6 @@ class BSOTM:
                    inplace=True)        
         #
         return qload
-#
-# TODO : remove permutes
-#def permute00(A, order):
-#    """ """
-#    return np.tile(np.expand_dims(A, axis=(0, 1)), order)
-# 
-#def permute33(A, order):
-#    """ """
-#    A1 = np.expand_dims(A, axis=0)
-#    A1 = np.transpose(A1)
-#    A1 = np.tile(A1, order)
-#    A1 = np.transpose(A1)
-#    return A1
-#
-#def permute5(A, order, axis:int=1):
-#    """ """
-#    A1 = np.transpose(A)
-#    A1 = repmat(A1, order[1], axis)
-#    A1 = np.expand_dims(A1, axis=0)
-#    A1 = np.transpose(A1)
-#    A1 = np.tile(A1, order[0])
-#    A1 = np.transpose(A1)
-#    return A1
 #
 #
 class BeamMorison(NamedTuple):

@@ -251,10 +251,6 @@ class ufoBasicModel:
         """
         """
         #
-        #self._load = Load(plane=self._plane,
-        #                  mesh_type=self.data_type,
-        #                  db_file=self.db_file)
-        #
         if isinstance(values, (list, tuple)):
             if isinstance(values[0], (list,tuple)):
                 for item in values:

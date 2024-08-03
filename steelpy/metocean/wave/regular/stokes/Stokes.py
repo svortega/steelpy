@@ -13,7 +13,7 @@ from steelpy.metocean.wave.regular.stokes.subroutines import F, CDE, AB
 from steelpy.metocean.wave.regular.process.inout import title_block, output
 from steelpy.metocean.wave.regular.process.waveops import WaveItem
 import numpy as np
-from scipy.optimize import fsolve
+#from scipy.optimize import fsolve
 
 #
 #

@@ -127,8 +127,8 @@ class MetoceanLoadSQL(MetoceanLoad):
             # ------------------------------------------
             #
             beams = BeamSQL(db_file=self.db_file,
-                            component=self._component,
-                            plane=self._plane)
+                            component=self._component)
+                            #plane=self._plane)
             #
             # ------------------------------------------
             conn = create_connection(self.db_file)

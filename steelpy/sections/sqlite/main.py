@@ -64,7 +64,7 @@ class SectionSQL(SectionMainSQL):
         #
         conn = create_connection(self.db_file)
         with conn:         
-            self._create_table()
+            self._new_table()
     #
     #
     # def push_sections(self):
@@ -102,7 +102,7 @@ class SectionSQL(SectionMainSQL):
     #    cur.execute(sql, project)
     #    return cur.lastrowid
     #
-    def _create_table(self) -> None:
+    def _new_table(self) -> None:
         """ """
         conn = create_connection(self.db_file)
         #

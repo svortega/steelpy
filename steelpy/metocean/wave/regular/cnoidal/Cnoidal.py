@@ -4,14 +4,15 @@
 from __future__ import annotations
 #
 # Python stdlib imports
-from array import array
+#from array import array
 from dataclasses import dataclass
 #import math
 #from typing import NamedTuple
 
 # package imports
 from steelpy.metocean.wave.regular.process.waveops import WaveItem
-from steelpy.metocean.wave.regular.cnoidal.Solution import (Solve, hoverd, Ubar_h, eta_h, u_h, v_h,
+from steelpy.metocean.wave.regular.cnoidal.Solution import (Solve, hoverd,
+                                                            Ubar_h, eta_h, u_h, v_h,
                                                             Alpha, Q_h, lambda_d, R_h)
 
 
@@ -24,8 +25,8 @@ from numpy.matlib import repmat
 @dataclass
 class WaveCnoidal(WaveItem):
 
-    def __init__(self, H: float, d: float,
-                 T: float|None = None, Lw: float|None = None,
+    def __init__(self, Hw: float, d: float,
+                 Tw: float|None = None, Lw: float|None = None,
                  title:str|None = None,
                  infinite_depth: bool = False,
                  current: float = 0.0, c_type: int = 1,
@@ -33,7 +34,7 @@ class WaveCnoidal(WaveItem):
                  niter: int = 40, accuracy: float = 1e-6) -> None:
         """
         """
-        super().__init__(H=H, Tw=T, Lw=Lw, d=d, title=title,
+        super().__init__(Hw=Hw, Tw=Tw, Lw=Lw, d=d, title=title,
                          order=order, nstep=nstep, niter=niter,
                          accuracy=accuracy,
                          current=current, c_type=c_type,
@@ -51,11 +52,12 @@ class WaveCnoidal(WaveItem):
         try:
             self._z
         except AttributeError:
-            self.order = 5
-            self.method = "Cnoidal method order {:}".format(self.order)
+            #self.order = 5
+            #self.method = f"Cnoidal method order {self.order}"
             #
             data = self.get_parameters()
-            Lw, h, alpha, delta, K, Kd, q1, m1_limit, m1, m, mm, c = CnoidalMain(*data)
+            (Lw, h, alpha, delta, K, Kd, q1,
+             m1_limit, m1, m, mm, c) = CnoidalMain(*data)
             #
             self._Lw = Lw
             self.h = h
@@ -71,54 +73,99 @@ class WaveCnoidal(WaveItem):
             self.mm = mm
             self.c = c
         # return z, Y, B, Tanh, L, Highest
-        print('------')
+        #print('------')
     #
     def get_surface(self, surface_points:int = 36):
         """ claculate wave surface """
-        x, etas, phase = get_surface(L=self._Lw, h=self.h, alpha=self.alpha, epsilon=self.epsilon ,
-                                     m=self.m, mm=self.mm,
-                                     m1=self.m1, m1_limit=self.m1_limit,
-                                     q1=self.q1, K=self.K, Kd=self.Kd,
-                                     norder=self.order, nprofiles=surface_points)
+        # wave number
+        #k = 2 * np.pi / self._Lw
         #
-        data = {'x': x ,
-                'eta': etas ,
-                'phase': phase}
-                #'z': [(1+item)*d for item in eta],
-                #'time': 0 * x}
+        surface = get_surface(Lw=self._Lw, Tw=self.Tw, d=self.d, h=self.h, 
+                              alpha=self.alpha, epsilon=self.epsilon ,
+                              m=self.m, mm=self.mm,
+                              m1=self.m1, m1_limit=self.m1_limit,
+                              q1=self.q1, K=self.K, Kd=self.Kd,
+                              norder=self.order, nprofiles=surface_points)
         #
-        df = DBframework()
-        surface = df.DataFrame(data)        
+        #data = {'x': x ,
+        #        'eta': etas ,
+        #        'phase': phase}
+        #        #'z': [(1+item)*d for item in eta],
+        #        #'time': 0 * x}
+        #
+        #npt = len(x)
+        #Theta =  k * x - np.pi
+        #phase = np.round(Theta * 180 / np.pi, decimals=1)        
+        #
+        #data = {'theta': Theta * self.d,
+        #        'eta': etas,
+        #        'phase': phase,
+        #        'time': np.linspace(0, self.Tw, npt, endpoint=True)}
+        #
+        #df = DBframework()
+        #surface = df.DataFrame(data)        
+        #
+        #if self.title:
+        #    surface['title'] = self.title
+        #else:
+        #    surface['title'] = None
+        #
+        #surface['type'] = 'order_1'
+        #self._surface = surface
+        #return surface[['type', 'x', 'eta', 'phase']]
+        #
+        #df = DBframework()
+        #return df.DataFrame(data)
         #
         if self.title:
             surface['title'] = self.title
         else:
             surface['title'] = None
-        #
+        #surface['wave_id'] = self.number
         surface['type'] = 'order_1'
+        #
         self._surface = surface
-        return surface[['type', 'x', 'eta', 'phase']]
+        #
+        return surface[['type', 'theta', 'eta', 'phase', 'time']]        
     #
     #
     def get_kinematics(self, depth_points:int = 100,
-                       surface_points:int|None = None):
+                       surface_points: int = 36):
         """get wave kinematics"""
         surface = self._surface
-        if surface_points: #or not surface
+        if not list(surface.columns):
             surface = self.get_surface(surface_points)
         #
+        etah = surface['eta'].to_numpy() + self.d
+        phase = surface['phase'].to_numpy()
+        npt = len(etah) // 2
+        x = np.array([self.Lw * 0.5 * (i / npt)
+                      for i in range(npt+1)])
         #
-        dfkin = get_kinematic(L=self._Lw, h=self.h,
+        dfkin = get_kinematic(Lw=self._Lw, h=self.h, x=x, 
+                              etas=etah[npt:], phase=phase[npt:], 
                               alpha=self.alpha, delta=self.delta,
                               m=self.m, mm=self.mm,
                               m1=self.m1, m1_limit=self.m1_limit,
                               q1=self.q1, K=self.K, Kd=self.Kd,
-                              c=self.c, surface=surface, 
+                              c=self.c, #surface=surface, 
                               norder=self.order, nprofiles=depth_points)         
+        #
         #
         df = DBframework()
         dfkin = df.DataFrame(dfkin)
         dfkin['type'] = 'order_1'
+        #dfkin['eta'] = repmat(etas, depth_points, 1).flatten('F')
+        #dfkin['phase'] = repmat(phase, depth_points, 1).flatten('F')
+        dfkin['dphidt'] = dfkin['u'] * 0
+        dfkin['ut'] = dfkin['u'] * 0
+        dfkin['vt'] = dfkin['u'] * 0
+        dfkin['ux'] = dfkin['u'] * 0
+        dfkin['uz'] = dfkin['u'] * 0
+        dfkin['dudt'] = dfkin['u'] * 0
+        dfkin['dvdt'] = dfkin['u'] * 0
+        dfkin['pressure'] = dfkin['u'] * 0
+        dfkin['Bernoulli_check'] = dfkin['u'] * 0
         return dfkin    
 #
 #
@@ -163,62 +210,49 @@ def CnoidalMain(MaxH: float, case: str,
     B : Fourier coefficients
     Tanh : 
     """
-    # current=0.31
+    # --------------------------------------------------
     # inital values
     pi = np.pi
-    g = 9.80665  # m/s^2
     H = MaxH
-    #
-    # This is the limiting value for m1:
     m1_limit = 1.e-8
-    # If m is c1oser to 1 than this, a dif erent procedure is used,
-    # whereby m is set to 1 and K is calculated iteratively from the data
-
-    # Read data
     #
-    if case == "wavelength":
-        if L < 10.:
-            print("The dimensionless wavelength is less than 10")
-            raise Warning("Cnoidal theory should probably not be applied")
-        #
-        m1 = 16. * np.exp(-1*np.sqrt(0.75 * H * L * L))
-        m = 1. - m1
-    else:
-        # Period
-        if T < 10.:
-            print("The dimensionless period is less than 10.")
-            raise Warning("Cnoidal theory should probably not be applied")
-        m1 = 16. * np.exp(-1*np.sqrt(0.75 * H * T * T))
-        m = 1. - m1
-    #
+    # --------------------------------------------------
     norder = min(norder, 6)
     if norder < 6:
-        print(f"# Solution by {norder:}-order Cnoidal theory")
+        print(f"# Solution by {norder}th-order Cnoidal theory")
     else:
-        print("# Solution by 5th order Cnoidal theory with Aitken convergence enhancement")
+        print("# Solution by 5th-order Cnoidal theory with Aitken convergence enhancement")
     #
+    # --------------------------------------------------
     if c_type == 1:
         Currentname = "Euler"
         ce = current
     else:
         # if (Case==2):
         Currentname = "Stokes"
-        cs = current
+        cs = current    
     #
-    # Input_Title_block(monitor)
-    # Solving for parameter m or K iteratively
-    # Initial estimate
-    # if Case == 'Period':
-    #    m1 = 16. * math.exp(-math.sqrt(0.75 * H * T * T))
-    #    m = 1. - m1
-    # else:
-    #    # if Wavelength:
-    #    m1 = 16. * math.exp(-math.sqrt(0.75 * H * L * L))
-    #    m = 1. - m1
+    # --------------------------------------------------
+    if case == "wavelength":
+        if L < 10.:
+            print("The dimensionless wavelength is less than 10")
+            raise Warning("Cnoidal theory should probably not be applied")
+        m1 = 16.0 * np.exp(-1 * np.sqrt(0.75 * H * L * L))
+    else:
+        # Period
+        if T < 10.:
+            print("The dimensionless period is less than 10.")
+            raise Warning("Cnoidal theory should probably not be applied")
+        m1 = 16.0 * np.exp(-1 * np.sqrt(0.75 * H * T * T))
+    #
+    # --------------------------------------------------
+    # If m is closer to 1 than this, a dif erent procedure is used,
+    # whereby m is set to 1 and K is calculated iteratively from the data    
+    m = 1.0 - m1
     #
     # Use direct iteration to solve for m, or K in the case of very long waves
-    #
-    L, T, K, Kd, e, ee, m, mm, q1 = Solve(T, H, norder, current, c_type, case,
+    L, T, K, Kd, e, ee, m, mm, q1 = Solve(T, H, norder,
+                                          current, c_type, case,
                                           m, m1, m1_limit)
     #
     # Highest wave - eqn (32) of Fenton (1990)
@@ -294,28 +328,58 @@ def get_etas(L, h, alpha, delta, epsilon, m, mm, m1, m1_limit,
 
 
 #
-def get_surface(L, h, alpha, epsilon, m, mm, m1, m1_limit,
-                q1, K, Kd, norder, nprofiles):
+def get_surface(Lw: float, Tw: float, d: float, h: float, 
+                alpha: float, epsilon: float,
+                m: float, mm: list, m1: float, m1_limit: float,
+                q1: float, K: float, Kd: float,
+                norder: int, nprofiles: int):
     """ """
     #
+    # wave number
+    k = 2 * np.pi / Lw    
     #pi = np.pi
-    npt = number_steps(nprofiles)
-    x = np.zeros(npt) #np.array([0.0 for i in range(npt)])
+    #npt = number_steps(nprofiles)
+    npt = nprofiles // 2
+    x = [Lw * 0.5 * (i / npt)
+         for i in range(npt + 1)]
+    #x = np.zeros(npt) #np.array([0.0 for i in range(npt)])
     # xx =  array('f', [0 for i in range(npt)])
-    eta = np.zeros(npt) # np.array([0.0 for i in range(npt)])
-    phase = np.zeros(npt)
-    print("")
-    for ii in range(npt):
+    #eta = np.zeros(npt) # np.array([0.0 for i in range(npt)])
+    eta = np.array([eta_h(i / h, alpha, epsilon,
+                          m, mm, m1, m1_limit,
+                          q1, K, Kd, norder)
+                    for i in x])
+    #phase = np.zeros(npt)
+    eta2 = np.concat((np.flip(eta[1:]), eta))
+    x2 = np.array([Lw * (i / nprofiles)
+                   for i in range(nprofiles + 1)])
+    #phase = x / L * 360
+    #print("")
+    #for i, item in enumerate(eta2):
         # xx[ii] = (pi * (ii / nprofiles) / h)
-        x[ii] = L * 0.5 * (ii / nprofiles)
-        phase[ii] = x[ii] / L * 360
-        eta[ii] = eta_h(x[ii] / h, alpha, epsilon, m, mm, m1, m1_limit, q1, K, Kd, norder)
-        eta_d = eta[ii] * h
-        print("# x/d ={: 8.4f}, Phase ={: 6.1f} theta/d ={: 8.4f}"
-              .format(x[ii], phase[ii], eta_d - 1))
+        #x[ii] = L * 0.5 * (ii / nprofiles)
+        #phase[ii] = x[ii] / L * 360
+        #eta[ii] = eta_h(x[ii] / h, alpha, epsilon,
+        #                m, mm, m1, m1_limit,
+        #                q1, K, Kd, norder)
+        #eta_d = eta[i] * h
+    #    print("# x/d ={: 8.4f}, Phase ={: 6.1f} theta/d ={: 8.4f}"
+    #          .format(x[i], phase[i], item*h - 1))
         # print("# x/d = {:8.4f}, Phase = {:6.1f}".format(x[ii], x[ii] * 180 / pi, eta[ii]))
     #print('---')
-    return x, eta, phase
+    #return x2, eta2 #, phase
+    #   
+    npt = len(x2)
+    Theta =  k * x2 - np.pi
+    phase = np.round(Theta * 180 / np.pi, decimals=1)        
+    #
+    data = {'theta': np.concat((-1 * np.flip(x[1:]), x)),
+            'eta': eta2 * h - d,
+            'phase': phase,
+            'time': np.linspace(0, Tw, npt, endpoint=True)}
+    #
+    df = DBframework()
+    return df.DataFrame(data)
 
 
 #
@@ -351,31 +415,37 @@ def summary(L, h, alpha, delta, epsilon, m, mm, m1, m1_limit,
 
 #
 #
-def get_kinematic(L, h, alpha, delta, m, mm, m1, m1_limit,
-                  q1, K, Kd, c,
-                  surface,
-                  norder, nprofiles):
+def get_kinematic(Lw: float, h: float, x: list, 
+                  etas: list, phase: list, 
+                  alpha: float, delta: float,
+                  m: float, mm: list, m1: float, m1_limit: float,
+                  q1: float, K: float, Kd: float, c: float,
+                  norder: int, nprofiles: int):
     """ """
-    etas = surface['eta'].to_numpy()
-    xx = surface['x'].to_numpy()
-    phase = surface['phase'].to_numpy()
+    #etas = surface['eta'].to_numpy()
+    #xx = surface['x'].to_numpy()
+    #phase = surface['phase'].to_numpy()
     #
-    depth_steps = np.arange(nprofiles + 1) / nprofiles
+    npt = len(etas)
+    #x = [Lw * 0.5 * (i / (npt - 1))
+    #     for i in range(npt)] #/ h
+    #
+    #depth_steps = np.arange(nprofiles + 1) / nprofiles
     #
     #pi = np.pi
-    npt = len(etas)
-    x = [xx[j] / h for j in range(npt)]
+    
+    #x = [xx[j] / h for j in range(npt)]
     # eta = [etas[j]  for j in range(npt)]
-    z = [[(i / nprofiles) * etas[j] for i in range(nprofiles + 1)]
-         for j in range(npt)]
+    z = np.array([[(i / (nprofiles - 1)) * etas[j] for i in range(nprofiles)]
+                  for j in range(npt)])
     #
-    u = [[u_h(x[ii], z[ii][i], alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, norder)
-          * np.sqrt(h) + c
-          for ii in range(npt)] for i in range(nprofiles + 1)]
+    u = np.array([[u_h(x[j], z[j][i], alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, norder)
+                   * np.sqrt(h) + c
+                   for j in range(npt)] for i in range(nprofiles)]).T
     #
-    v = [[v_h(x[ii], z[ii][i], alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, norder)
-          * np.sqrt(h)
-          for ii in range(npt)] for i in range(nprofiles + 1)]
+    v = np.array([[v_h(x[j], z[j][i], alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, norder)
+                   * np.sqrt(h)
+                   for j in range(npt)] for i in range(nprofiles)]).T
     #
     # for ii, eta in enumerate(etas):
     #    print("# x/d = {:8.4f}, Phase = {:6.1f}".format(x[ii]*h, h*x[ii] / L * 360))
@@ -385,19 +455,26 @@ def get_kinematic(L, h, alpha, delta, m, mm, m1, m1_limit,
     #        v = v_h(x[ii], y[ii][i], alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, norder) * math.sqrt(h)
     #        print("{:7.4f} {:7.4f} {:7.4f}".format(y[ii][i] * h, u, v))
     #
-    for ii in range(npt):
-        print("# X/d = {: 8.4f}, Phase = {: 6.1f}".format(x[ii] * h, h * x[ii] / L * 360))
-        # print("# X/d = {: 8.4f}, Phase = {: 6.1f}".format(x[ii]*h, h*x[ii] * 180 / pi))
-        for i in range(nprofiles + 1):
-            print(f'{z[ii][i] * h: 7.4f} {u[i][ii]: 7.4f} {v[i][ii]: 7.4f}')
+    #for j in range(npt):
+    #    print("# X/d = {: 8.4f}, Phase = {: 6.1f}".format(x[j] * h, phase[j]))
+    #    # print("# X/d = {: 8.4f}, Phase = {: 6.1f}".format(x[ii]*h, h*x[ii] * 180 / pi))
+    #    for i in range(nprofiles + 1):
+    #        print(f'{z[j][i] * h: 7.4f} {u[j][i]: 7.4f} {v[j][i]: 7.4f}')
     #
     #header = ['z', 'u', 'v']
+    #uu = u.T
+    u = np.concat((np.flip(u[1:]), u))
+    v = np.concat((np.flip(v[1:]), v))
+    z = np.concat((np.flip(z[1:]), z))
     #
-    dfkin = {'x': repmat(xx, depth_steps.size, 1).flatten('F'),
-             'phase': repmat(phase, depth_steps.size, 1).flatten('F')}
-    output =  {'z': z, 'u': u, 'v': v}
-    dfkin.update(output)
+    #dfkin = {'x': repmat(x*h, depth_steps.size, 1).T,
+    #         'phase': repmat(phase, depth_steps.size, 1).T}
+    #output =  {'z': z, 'u': u, 'v': v}
+    #dfkin.update(output)
     #print('---')
+    dfkin =  {'z': z.flatten('F'),
+              'u': u.flatten('F'),
+              'v': v.flatten('F')}
     return dfkin
 
 
@@ -420,7 +497,7 @@ def Input_Title_block(Ffile):
 
 #
 #
-def number_steps(StpLgth):
+def number_steps(StpLgth: int) -> int:
     """
     """
     npt = max(StpLgth, 2)

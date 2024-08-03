@@ -954,30 +954,6 @@ def pointkin(d: float, X: list[float],
     #print('-->')
     return kinout
 #
-#
-def kindfX(kin, etas, xx, zdepth):
-    """ """
-    df = DBframework()
-    dfkin = df.DataFrame(kin)
-    grpkin = dfkin.groupby(['x'])
-    #
-    #y4 = np.zeros((len(etas), len(zdepth)))
-    u = []
-    for i, step in enumerate(xx):
-        eta = etas[i]
-        items = grpkin.get_group(name=step)
-        for j, point in enumerate(zdepth):
-            if point > eta:
-                if np.isclose(point, eta, atol=0.01):
-                    y4[i, j-1] = 1 + eta / d
-                else:
-                    y4[i, j] = 1 + eta / d
-                break
-            else:
-                y4[i, j] = 1 + point / d    
-    #
-    dfkin
-#
 # -----------------------------------------------------
 #  Velocities, accelerations, and pressure at a point
 #
@@ -1051,64 +1027,4 @@ def Point(X, Y, kd, Tanh, B, n, ce, c, R, z, Is_finite):
     #
     return y, u, v, dphidt, ut, vt, ux, uy, Pressure, Bernoulli_check
 #
-#
-def get_kinematicX(n, z, Y, B, Tanh, nprofiles, points, is_finite):
-    """ """
-    pi = math.pi
-    kd = z[1]
-    c=z[4]/math.sqrt(z[1])
-    ce=z[5]/math.sqrt(z[1])
-    R=1+z[9]/z[1]    
-    # Surface - print out Velocity and acceleration profiles plus check of Bernoulli
-    #print("# %s\n", Title)
-    #print("%s\n", Method)
-    print("# Velocity and acceleration profiles and Bernoulli checks")
-    if is_finite:
-        print("# All quantities are dimensionless with respect to g and/or d")
-    else:
-        print("# All quantities are dimensionless with respect to g and/or k")
-    #
-    print("#*******************************************************************************")
-    if is_finite:
-        print("# y        u       v    dphi/dt   du/dt   dv/dt  du/dx   du/dy Bernoulli check")
-        print("# -     -------------   -------  ------   -----  ------------- ---------------")
-        print("# d        sqrt(gd)       gd        g       g       sqrt(g/d)        gd       ")
-    else:
-        print("# ky       u       v    dphi/dt   du/dt   dv/dt  du/dx   du/dy Bernoulli check")
-        print("#       -------------   -------  ------   -----  ------------- ---------------")
-        print("#         sqrt(g/k)       g/k       g       g       sqrt(gk)        g/k       ")
-    print("#*******************************************************************************")
-    print("# Note that increasing X/d and 'Phase' here describes half of a wave for")
-    print("# X/d >= 0. In a physical problem, where we might have a constant x, because")
-    print("# the phase X = x - c * t, then as time t increases, X becomes increasingly")
-    print("# negative and not positive as passing down the page here implies.")
-    print("#")
-    #
-    npt = number_steps(nprofiles)
-    xx =  array('f', [0 for i in range(npt)])
-    yy =  [] # array('f', [0 for i in range(npt)])
-    eta = array('f', [0 for i in range(npt)])
-    for j in range(npt):
-        #X = 0.5 * L * (j / nprofiles)
-        xx[j] = pi * (j / npt)
-        eta[j] = Surface(xx[j], Y, n)
-        yy.append([])
-        print("# X/d = {: 8.4f}, Phase = {: 6.1f}".format(xx[j]/kd, xx[j] * 180 / pi ))
-        for i in range(points):
-            if is_finite:
-                y = i * (1 + eta[j] / kd) / points
-                yy[j].append((1 + eta[j] / kd) * i/points)
-                (yyy, u, v, dphidt, ut, vt, ux, uy, 
-                 Pressure, Bernoulli_check) = Point(xx[j], kd*(y-1), kd, Tanh,
-                                                    B, n, ce, c, R, z, is_finite)                
-            else:
-                y = -pi + i / points * (eta[j] + pi)
-                (yyy, u, v, dphidt, ut, vt, ux, uy, 
-                 Pressure, Bernoulli_check) = Point(xx[j], y, kd, Tanh, 
-                                                    B, n, ce, c, R, z, is_finite)
-
-            print("{: 7.4f} {: 7.4f} {: 7.4f} {: 7.4f} {: 7.4f} {: 7.4f} {: 7.4f} {: 7.4f} {:7.0e}"
-                  .format(y, u, v, dphidt, ut, vt, ux, uy, Bernoulli_check))
-    print("#*******************************************************************************")
-    #return xx, eta    
 #

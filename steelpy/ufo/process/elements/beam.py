@@ -89,14 +89,14 @@ class BeamItemBasic:
     # ------------------------------------------------
     # Transformation
     #
-    @property
-    def T(self):
+    #@property
+    def T(self, plane2D: bool = False):
         """
         Returns Beam transformation matrix
         """
         Tlg = self.T3D()
         #Tlg2 = self.T3D2()
-        if self._plane.plane2D:
+        if plane2D:
             Tlg = self._M2D(Tlg)
         return Tlg
     #
@@ -111,27 +111,27 @@ class BeamItemBasic:
     # ------------------------------------------------
     # Stiffness
     #
-    @property
-    def Ke_global(self):
+    #@property
+    def Ke_global(self, plane2D: bool):
         """
         Return Beam stiffness matrix in global coordinates
         """
         #Tlg =  self.T
         #Kl = self.K_local
         #return Tlg.T @ Kl @ Tlg
-        return self.Ke()
+        return self.Ke(plane2D)
     #
-    def Ke(self, item: None = None):
+    def Ke(self, plane2D: bool, item: None = None):
         """ Return Beam stiffness matrix in global coordinates """
-        Tlg = self.T
-        Kl = self.Ke_local
+        Tlg = self.T(plane2D)
+        Kl = self.Ke_local(plane2D)
         return Tlg.T @ Kl @ Tlg        
     #
-    @property
-    def Ke_local(self):
+    #@property
+    def Ke_local(self, plane2D: bool):
         """Return the 2D/3D stiffness matrix in local coordinates """
         ke = self.Ke3D()
-        if self._plane.plane2D:
+        if plane2D:
             ke = self._M2D(ke)
         return ke
     #
@@ -170,7 +170,7 @@ class BeamItemBasic:
     # ------------------------------------------------
     # Geometry
     #
-    def Kg(self, Un: list):
+    def Kg(self, plane2D: bool, Un: list):
         """
         Return Beam geometrical stiffness matrix in global coordinates
         """
@@ -178,7 +178,7 @@ class BeamItemBasic:
         Kg = self.Kg_local(Un=Un)
         return Tb.T @ Kg @ Tb
     #
-    def Kg_local(self, Un:list):
+    def Kg_local(self, plane2D: bool, Un:list):
         """
         Return Beam geometrical stiffness matrix in local coordinates
         """
@@ -187,7 +187,7 @@ class BeamItemBasic:
             kg = self._M2D(kg)
         return kg
     #
-    def Kg3D(self, Un: list):
+    def Kg3D(self, plane2D: bool, Un: list):
         """
         Returns the condensed (and expanded) local geometrical stiffness matrix for 3D beam
         """
@@ -232,14 +232,14 @@ class BeamItemBasic:
     # ------------------------------------------------
     # Tangent
     #
-    def Kt(self, Un: list):
+    def Kt(self, plane2D: bool, Un: list):
         """ Return Beam tangent stiffness matrix in global coordinates"""
-        Tb = self.T
-        Kt = self.Kt_local(Un=Un)
+        Tb = self.T(plane2D)
+        Kt = self.Kt_local(plane2D=plane2D, Un=Un)
         #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
         return Tb.T @ Kt @ Tb
     #
-    def Kt_local(self, Un:list):
+    def Kt_local(self, plane2D: bool, Un:list):
         """
         Un : node displacement global system
 
@@ -248,13 +248,13 @@ class BeamItemBasic:
         """
         # ---------------------------------------------
         # convert global end-node disp in beam's local system
-        nd_local = self.T @ Un # nd_global
+        nd_local = self.T(plane2D) @ Un # nd_global
         # ---------------------------------------------
         # convert beam end-node disp to force [F = Kd] in local system
-        Fb = self.Ke_local @ nd_local
+        Fb = self.Ke_local(plane2D) @ nd_local
         # ---------------------------------------------
         kt = self.Kt3D(Fb=Fb)
-        if self._plane.plane2D:
+        if plane2D:
             kt = self._M2D(kt)
         return kt
     #
@@ -268,15 +268,15 @@ class BeamItemBasic:
         section = self.section.properties(poisson=material.poisson)
         # ---------------------------------------------
         kg = B3D2_Kt(Le=self.L,
-                    Ax=section.area,
-                    Asy=section.Asz,
-                    Asz=section.Asy,
-                    Jx=section.J,
-                    Iy=section.Iz, Iz=section.Iy,
-                    Emod=material.E, Gmod=material.G,
-                    Fb=Fb,
-                    shear=True,
-                    toler=0.01)
+                     Ax=section.area,
+                     Asy=section.Asz,
+                     Asz=section.Asy,
+                     Jx=section.J,
+                     Iy=section.Iz, Iz=section.Iy,
+                     Emod=material.E, Gmod=material.G,
+                     Fb=Fb,
+                     shear=True,
+                     toler=0.01)
         #
         # ---------------------------------------------
         k_cond = self._k_unc(kg)
@@ -285,8 +285,8 @@ class BeamItemBasic:
     # ------------------------------------------------
     # Mass
     #
-    @property
-    def Km_global(self):
+    #@property
+    def Km_global(self, plane2D: bool):
         """
         Return Beam mass matrix in global coordinates
         """
@@ -294,21 +294,21 @@ class BeamItemBasic:
         #Km = self.Km_local
         #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
         #return Tlg.T @ Km @ Tlg
-        return self.Kmass()
+        return self.Km(plane2D)
     #
-    def Km(self, item: None = None):
+    def Km(self, plane2D: bool, item: None = None):
         """ """
-        Tlg =  self.T
+        Tlg =  self.T(plane2D)
         Km = self.Km_local
         return Tlg.T @ Km @ Tlg        
     #
-    @property
-    def Km_local(self):
+    #@property
+    def Km_local(self, plane2D: bool):
         """
         Return Beam mass matrix in local coordinates
         """
         km = self.Km3D()
-        if self._plane.plane2D:
+        if plane2D:
             km = self._M2D(km)
         return km
     #
@@ -381,10 +381,11 @@ class BeamItemBasic:
         # Return the local stiffness matrix, with end releases applied
         return k_condensed
     #
-    def _M2D(self, ka):
+    def _M2D(self, ka, dof: list[str] = ['x', 'y', 'rz']):
         """Reduce matrix to 2D"""
         # removing z, Mx, My
-        for i in self._plane.index_off:
+        index_off = self.index_off(dof)
+        for i in index_off:
             ka = remove_column_row(ka, i, i)
         return ka
     #
@@ -432,5 +433,19 @@ class BeamItemBasic:
             nodeNo3[2] = (node[node_end].z + v3 * node_distance)
         #
         return nodeNo3    
+    #
+    #
+    #@property
+    def index_off(self, dof: list[str]) -> list[int]:
+        """return index"""
+        index = {'x': 0, 'y': 1, 'z': 2, 'rx': 3, 'ry': 4, 'rz': 5} 
+        idx3D = set(index.values())
+        ndof = len(idx3D)
+        #dofactive = set(self._index[item] for item in self.dof)
+        getidx = [index[item] for item in dof]
+        dofactive = set(getidx)
+        indexes = list(idx3D - dofactive)
+        indexes.extend([item + ndof for item in indexes])
+        return list(reversed(indexes)) # [2, 3, 4, 8, 9, 10]
     #
     #

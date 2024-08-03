@@ -4,7 +4,7 @@
 from __future__ import annotations
 #
 # Python stdlib imports
-from array import array
+#from array import array
 #from dataclasses import dataclass
 #import math
 #from typing import NamedTuple, Tuple, Union, List, Dict
@@ -20,12 +20,21 @@ import numpy as np
 # *********************************************************************
 
 def Solve(T: float, H: float, order: int,
-          current: float, c_type: int,
-          case: str, m: float, m1: float, m1_limit: float,
-          iter_limit: int = 20, L1: int = 10., T1: int = 10., accuracy: float = 1.e-4):
-    """ """
-    case = case.lower()
-    pi = np.pi
+          current: float, c_type: int, option: str,
+          m: float, m1: float, m1_limit: float = 1.e-8,
+          iter_limit: int = 20, L1: int = 10.,
+          T1: int = 10., accuracy: float = 1.e-4):
+    """
+    m1_limit : is the limiting value for m1
+    
+    Return:
+    L : Wave length
+    T : Wave period
+    m : Cnoidal parameter
+    K : elliptic integral of the first kind
+    """
+    option = option.lower()
+    pi = np.pi  
     K = 1
     if m1 < m1_limit:
         m = 1.
@@ -37,27 +46,33 @@ def Solve(T: float, H: float, order: int,
         print(f"{m:3.4f} {K:3.4f}")
         #
         e, ee, mm, Kd = Elliptic_integrals(m, m1_limit)
-        epsilon = H / hoverd(H, e, ee, m, mm, order)
-        if case == 'period':
+        hvd = hoverd(H, e, ee, m, mm, order)
+        epsilon = H / hvd
+        lambda_s = lambda_series(H, e, ee, m, mm, order)
+        if option == 'period':
             if c_type == 1:
                 K = (T * (current + Ubar_h(epsilon, e, m, mm, order)
-                          * np.sqrt(hoverd(H, e, ee, m, mm, order)))
-                     * np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order))
+                          * np.sqrt(hvd))
+                     * np.sqrt(3 * H / m) / 4 / lambda_s)
             else:
                 # if (c_type == 2):
-                K = (T * (current + Q_h(epsilon) * np.power(hoverd(H, e, ee, m, mm, order), 1.5))
-                     * np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order))
+                K = (T * (current + Q_h(epsilon) * np.power(hvd, 1.5))
+                     * np.sqrt(3 * H / m) / 4 / lambda_s)
         else:
             # elif (Known, Wavelength):
-            K = L * np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order)
-
+            K = L * np.sqrt(3 * H / m) / 4 / lambda_s
+        #
+        # ------------------------------
+        #
         if m1 > m1_limit:
             q1 = np.exp(-pi * K / Kd)
             m = np.power((1 - 2 * q1 + 2 * np.power(q1, 4)) / (1 + 2 * q1 + 2 * np.power(q1, 4)), 4)
             e, ee, mm, Kd = Elliptic_integrals(m, m1_limit)
-
-        if case == 'period':
-            L = K / (np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order))
+        #
+        lambda_s = lambda_series(H, e, ee, m, mm, order)
+        #
+        if option == 'period':
+            L = K / (np.sqrt(3 * H / m) / 4 / lambda_s)
             if abs(L / L1 - 1.) < accuracy:
                 break
             L1 = L
@@ -66,11 +81,11 @@ def Solve(T: float, H: float, order: int,
             if c_type == 1:
                 T = (K / ((current + Ubar_h(epsilon, e, m, mm, order)
                            * np.sqrt(hoverd(H, e, ee, m, mm, order)))
-                          * np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order)))
+                          * np.sqrt(3 * H / m) / 4 / lambda_s))
             else:
                 # if (c_type == 2):
                 T = (K / ((current + Q_h(epsilon) * np.power(hoverd(H, e, ee, m, mm, order), 1.5))
-                          * np.sqrt(3 * H / m) / 4 / lambda_series(H, e, ee, m, mm, order)))
+                          * np.sqrt(3 * H / m) / 4 / lambda_s))
 
             if abs(T / T1 - 1.) < accuracy:
                 break
@@ -82,9 +97,93 @@ def Solve(T: float, H: float, order: int,
     #
     print(f"{m:3.4f} {K:3.4f}")
     return L, T, K, Kd, e, ee, m, mm, q1
-
-
 #
+#
+def WavePeriod(H: float, T: float, L: float,
+               m1: float, order: int,
+               current: float, c_type: int,
+               iter_limit: float, m1_limit: float,
+               accuracy: float):
+    """ """
+    for niter in range(iter_limit + 1):
+        print(f"{m:3.4f} {K:3.4f}")
+        #
+        e, ee, mm, Kd = Elliptic_integrals(m, m1_limit)
+        hvd = hoverd(H, e, ee, m, mm, order)
+        epsilon = H / hvd
+        lambda_s = lambda_series(H, e, ee, m, mm, order)
+        # if case == 'period':
+        if c_type == 1:
+            K = (T * (current + Ubar_h(epsilon, e, m, mm, order)
+                      * np.sqrt(hvd))
+                 * np.sqrt(3 * H / m) / 4 / lambda_s)
+        else:
+            # if (c_type == 2):
+            K = (T * (current + Q_h(epsilon) * np.power(hvd, 1.5))
+                 * np.sqrt(3 * H / m) / 4 / lambda_s)
+        #
+        # ------------------------------
+        #
+        if m1 > m1_limit:
+            q1 = np.exp(-np.pi * K / Kd)
+            m = np.power((1 - 2 * q1 + 2 * np.power(q1, 4)) / (1 + 2 * q1 + 2 * np.power(q1, 4)), 4)
+            e, ee, mm, Kd = Elliptic_integrals(m, m1_limit)
+        #
+        lambda_s = lambda_series(H, e, ee, m, mm, order)
+        #
+        #if case == 'period':
+        L = K / (np.sqrt(3 * H / m) / 4 / lambda_s)
+        if abs(L / L1 - 1.) < accuracy:
+            return m, K, T
+        #
+        L1 = L
+
+    #if niter >= iter_limit:
+    raise RuntimeError("Iteration has not converged")
+    # print("\nContact John Fenton johndfenton@gmail.com")    
+#
+def Wavelength(H: float, T: float, L: float,
+               m1: float, order: int,
+               current: float, c_type: int,
+               iter_limit: float, m1_limit: float,
+               accuracy: float):
+    """ """
+    for niter in range(iter_limit + 1):
+        print(f"{m:3.4f} {K:3.4f}")
+        #
+        e, ee, mm, Kd = Elliptic_integrals(m, m1_limit)
+        hvd = hoverd(H, e, ee, m, mm, order)
+        epsilon = H / hvd
+        lambda_s = lambda_series(H, e, ee, m, mm, order)
+        # elif (Known, Wavelength):
+        K = L * np.sqrt(3 * H / m) / 4 / lambda_s
+        #
+        # ------------------------------
+        #
+        if m1 > m1_limit:
+            q1 = np.exp(-np.pi * K / Kd)
+            m = np.power((1 - 2 * q1 + 2 * np.power(q1, 4)) / (1 + 2 * q1 + 2 * np.power(q1, 4)), 4)
+            e, ee, mm, Kd = Elliptic_integrals(m, m1_limit)
+        #
+        lambda_s = lambda_series(H, e, ee, m, mm, order)
+        #
+        # elif(Known, Wavelength):
+        if c_type == 1:
+            T = (K / ((current + Ubar_h(epsilon, e, m, mm, order)
+                       * np.sqrt(hoverd(H, e, ee, m, mm, order)))
+                      * np.sqrt(3 * H / m) / 4 / lambda_s))
+        else:
+            # if (c_type == 2):
+            T = (K / ((current + Q_h(epsilon) * np.power(hoverd(H, e, ee, m, mm, order), 1.5))
+                      * np.sqrt(3 * H / m) / 4 / lambda_s))
+
+        if abs(T / T1 - 1.) < accuracy:
+            return m, K, T
+        T1 = T
+
+    #if niter >= iter_limit:
+    raise RuntimeError("Iteration has not converged")
+    # print("\nContact John Fenton johndfenton@gmail.com")
 #
 #
 #################################
@@ -95,10 +194,14 @@ def Solve(T: float, H: float, order: int,
 # Ubar_h ( H/h)
 #################################################
 
-def Ubar_h(epsilon: float, e: float, m: float, mm: array, order: int):
-    """"""
+def Ubar_h(epsilon: float, e: float,
+           m: float, mm: list, order: int):
+    """
+    U_bar_Height: is U/(g*h)^0.50 as a function of H/h, m, and e(m), Fenton (1999, eqn A.6)
+    """
+    # print('"U_bar_Height" is U/math.sqrt(g.h) as a function of H/h, m, and e(m), Fenton (1999, eqn A.6)')
     U_bar_Height = np.zeros(7)
-    # print(`"U_bar_Height" is U/math.sqrt(g.h) as a function of H/h, m, and e(m), Fenton (1999, eqn A.6)`)
+    
     U_bar_Height[1] = 1 + epsilon / m * (1. / 2 - e)
 
     U_bar_Height[2] = (U_bar_Height[1] + np.power(epsilon, 2) / mm[2]
@@ -130,10 +233,13 @@ def Ubar_h(epsilon: float, e: float, m: float, mm: array, order: int):
 # Q_h (H/h)
 #################################################
 
-def Q_h(epsilon: float, m: float, mm: array, order: int):
-    """ """
+def Q_h(epsilon: float, m: float, mm: list, order: int):
+    """
+    Q_Height: is Q/(g*h^3)^0.50 as a function of H/h and m, Fenton (1999, eqn A.4)
+    """
+    # print('"Q_Height" is Q/(g*h^3)^0.50 as a function of H/h and m, Fenton (1999, eqn A.4)')
     Q_Height = np.zeros(7)
-    # print("Q_Height" is Q/math.sqrt(g.h^3) as a function of H/h and m, Fenton (1999, eqn A.4))
+    
     Q_Height[1] = 1 + epsilon / m * (-1. / 2 + m)
 
     Q_Height[2] = Q_Height[1] + np.power(epsilon, 2) / mm[2] * (9. / 40 - 7. / 20 * m - 1. / 40 * mm[2])
@@ -159,18 +265,21 @@ def Q_h(epsilon: float, m: float, mm: array, order: int):
 # lambda_d ( H/d)
 #################################################
 
-def lambda_d(H: float, K: float, e: float, ee: array,
-             m: float, mm: array, order: int):
+def lambda_d(H: float, K: float, e: float, ee: list,
+             m: float, mm: list, order: int):
     """ """
     return K * 4 / np.sqrt(3 * H / m) * lambda_series(H, e, ee, m, mm, order)
 
 
 #
 #
-def lambda_series(H: float, e: float, ee: array, m: float, mm: array, order: int):
-    """ """
+def lambda_series(H: float, e: float, ee: list,
+                  m: float, mm: list, order: int):
+    """
+    Wavelength : is lamda/d as a function of H/d, m, and e(m), Fenton (1999, eqn A.7)
+    """
+    # print('"Wavelength" is lamda/d as a function of H/d, m, and e(m), Fenton (1999, eqn A.7)')
     Wavelength = np.zeros(7)
-    # print(`"Wavelength" is lamda/d as a function of H/d, m, and e(m), Fenton (1999, eqn A.7)`)
     Wavelength[1] = 1
     Wavelength[2] = Wavelength[1] + H / m * (-3. / 2 * e + 5. / 4 - 5. / 8 * m)
     Wavelength[3] = (Wavelength[2] + np.power(H, 2) / mm[2]
@@ -199,11 +308,10 @@ def lambda_series(H: float, e: float, ee: array, m: float, mm: array, order: int
 # h/d ( H, m)
 #################################################
 
-def hoverd(H: float, e: float, ee: array,
-           m: float, mm: array, order: int):
+def hoverd(H: float, e: float, ee: list,
+           m: float, mm: list, order: int):
     """ """
     hd = np.zeros(7)
-    # double hd[7]
     hd[1] = 1 + H / m * (1 - e - m)
     hd[2] = hd[1] + np.power(H / m, 2) * (-1. / 2 + 1. / 2 * m + (1. / 2 - 1. / 4 * m) * e)
 
@@ -233,11 +341,14 @@ def hoverd(H: float, e: float, ee: array,
 # alpha ( H/h)
 #################################################
 
-def Alpha(epsilon: float, m: float, mm: array, order: int):
-    """"""
+def Alpha(epsilon: float, m: float, mm: list,
+          order: int) -> float:
+    """This is the original series for alpha(H/h)
+    
+    alpha: is alpha as a function of H/h and m, Fenton (1999, eqn A.2)
+    """
+    # print('"Alpha" is alpha as a function of H/h and m, Fenton (1999, eqn A.2)')
     alpha = np.zeros(7)
-    # This is the original series for alpha(H/h)
-    # print("Alpha" is alpha as a function of H/h and m, Fenton (1999, eqn A.2))
     alpha[1] = 1
     alpha[2] = alpha[1] + epsilon / m * (1. / 4 - 7. / 8 * m)
 
@@ -252,9 +363,11 @@ def Alpha(epsilon: float, m: float, mm: array, order: int):
                    - 34858533. / 25088000 * mm[2] + 509843. / 2508800 + 2777099. / 6272000 * m))
 
     alpha[6] = Aitken(alpha, 5)
-
-    for i in range(1, 6 + 1):
-        alpha[i] = np.sqrt(3 * epsilon / 4 / m) * alpha[i]
+    #
+    alpha *= np.sqrt(3 * epsilon / 4 / m)
+    #
+    #for i in range(1, 6 + 1):
+    #    alpha[i] = np.sqrt(3 * epsilon / 4 / m) * alpha[i]
     return alpha[order]
 
 
@@ -263,10 +376,14 @@ def Alpha(epsilon: float, m: float, mm: array, order: int):
 # R_h ( H/h)
 #################################################
 
-def R_h(epsilon: float, m: float, mm: array, order: int):
-    """ """
+def R_h(epsilon: float, m: float, mm: list,
+        order: int) -> float:
+    """
+    R_Height: is R/(g*h) as a function of H/h and m, Fenton (1999, eqn A.5)
+    """
+    # print('"R_Height" is R/(g.h) as a function of H/h and m, Fenton (1999, eqn A.5)')
     R_Height = np.zeros(7)
-    # print(`"R_Height" is R/(g.h) as a function of H/h and m, Fenton (1999, eqn A.5)`)
+    
     R_Height[1] = 3. / 2 + epsilon / m * (-1. / 2 + m)
 
     R_Height[2] = (R_Height[1] + np.power(epsilon, 2) / mm[2]
@@ -294,12 +411,12 @@ def R_h(epsilon: float, m: float, mm: array, order: int):
 #####################
 
 def eta_h(x: float, alpha: float, epsilon: float,
-          m: float, mm: array, m1: float, m1_limit: float,
-          q1: float, K: float, Kd: float, order: int):
-    """ """
+          m: float, mm: list, m1: float, m1_limit: float,
+          q1: float, K: float, Kd: float, order: int) -> float:
+    """ Eta: is eta/h as a function of H/h, m, and cn^2, Fenton (1999, eqn A.1)"""
+    # print('"Eta" is eta/h as a function of H/h, m, and cn^2, Fenton (1999, eqn A.1)')
     C = np.zeros(11)
     Eta = np.zeros(7)
-    # print("Eta" is eta/h as a function of H/h, m, and cn^2, Fenton (1999, eqn A.1));
     #
     # Correction to 'm' from previous 'k' advised by Thomas Lykke Andersen
     C[1] = cn(alpha * x, m, m1, m1_limit, q1, K, Kd)
@@ -337,13 +454,17 @@ def eta_h(x: float, alpha: float, epsilon: float,
 # u_h (x/h, y/h)
 #####################
 
-def u_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
-    """ """
+def u_h(x: float, Y: float, alpha: float, delta: float,
+        m: float, mm: list, m1: float, m1_limit: float,
+        q1: float, K: float, Kd: float, order: int) -> float:
+    """
+    uu: is U/(g*h)^0.50 as a function of delta, m, y/h and cn^2, Fenton (1999, eqn A.3.1)'
+    """
+    # print('"uu" is U/math.sqrt(g.h) as a function of delta, m, y/h and cn^2, Fenton (1999, eqn A.3.1)')
     C = np.zeros(11)
     y = np.zeros(11)
     uu = np.zeros(7)
     # 
-    # print("uu" is U/math.sqrt(g.h) as a function of delta, m, y/h and cn^2, Fenton (1999, eqn A.3.1))
     # Correction to 'm' from previous 'k' advised by Thomas Lykke Andersen
     C[1] = cn(alpha * x, m, m1, m1_limit, q1, K, Kd)
     y[1] = Y
@@ -434,7 +555,9 @@ def u_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
 # v_h (delta, x, y)
 #####################
 
-def v_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
+def v_h(x: float, Y: float, alpha: float, delta: float,
+        m: float, mm: list, m1: float, m1_limit: float,
+        q1: float, K: float, Kd: float, order: int) -> float:
     """ """
     C = np.zeros(11)
     y = np.zeros(11)
@@ -509,14 +632,13 @@ def v_h(x, Y, alpha, delta, m, mm, m1, m1_limit, q1, K, Kd, order):
 
 
 #
-
 #########################
 # Convergence enhancement
 #########################
 #
-# Function to calculate Aitken transform
-def Aitken(S: array, j: int):
-    """ """
+# 
+def Aitken(S: list, j: int) -> float:
+    """ Function to calculate Aitken transform """
     den = S[j] + S[j - 2] - 2 * S[j - 1]
     if abs(den) < 1e-6:
         return S[j]
@@ -524,16 +646,5 @@ def Aitken(S: array, j: int):
         return S[j] - np.power(S[j] - S[j - 1], 2) / den
     # return R
 #
-# def zeros(m, n=False, code='d'):
-#    """
-#    Create zero matrix
-#    """
-#    if n:
-#        new_matrix = [array(code, [0 for row in range(n)]) for col in range(m)]
-#
-#    else:
-#        new_matrix = array(code, [0 for row in range(m)])
-#
-#    return new_matrix
 #
 #

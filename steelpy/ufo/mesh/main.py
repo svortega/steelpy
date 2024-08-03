@@ -13,6 +13,7 @@ import os
 # package imports
 from steelpy.ufo.process.main import ufoBasicModel, ModelClassBasic
 from steelpy.ufo.load.main import MeshLoad
+from steelpy.ufo.mesh.sqlite.main import MeshSQL
 from steelpy.ufo.mesh.sqlite.nodes import NodeSQL
 from steelpy.ufo.mesh.sqlite.elements import ElementsSQL
 from steelpy.ufo.mesh.sqlite.boundary import BoundarySQL
@@ -71,7 +72,7 @@ class ConceptMesh(ModelClassBasic):
     #
 #
 #
-class Mesh(ufoBasicModel):
+class Mesh(MeshSQL):
     """
     mesh[beam_name] = [number, element1, element2, elementn]
     """
@@ -86,30 +87,30 @@ class Mesh(ufoBasicModel):
                  sql_file:str|None = None):
         """
         """
-        mesh_type:str="sqlite"
-        #super().__init__()
+        #mesh_type:str="sqlite"
+        super().__init__(name=name, component=component, sql_file=sql_file)
         #
-        self._build = True
-        if sql_file:
-            #print('--')
-            sql_file = check_input_file(file=sql_file,
-                                        file_extension="db")
-            self.db_file = sql_file
-            self._build = False
-            # fixme: name
-            #self._name = sql_file.split('.')[0]
-        else:
-            self.db_file = self._get_file(name=name)
-            self.data_type = mesh_type
-            self._name = name
-            # FIXME : how to handle component? 
-            if not component:
-                component = name
-            #
-            conn = create_connection(self.db_file)
-            with conn:
-                self._create_table(conn)
-                comp_no = self._push_data(conn, component)
+        #self._build = True
+        #if sql_file:
+        #    #print('--')
+        #    sql_file = check_input_file(file=sql_file,
+        #                                file_extension="db")
+        #    self.db_file = sql_file
+        #    self._build = False
+        #    # fixme: name
+        #    #self._name = sql_file.split('.')[0]
+        #else:
+        #    self.db_file = self._get_file(name=name)
+        #    self.data_type = mesh_type
+        #    self._name = name
+        #    # FIXME : how to handle component? 
+        #    if not component:
+        #        component = name
+        #    #
+        #    conn = create_connection(self.db_file)
+        #    with conn:
+        #        self._create_table(conn)
+        #        comp_no = self._push_data(conn, component)
         #
         #self._component = component
         #
@@ -124,29 +125,29 @@ class Mesh(ufoBasicModel):
         #
         # --------------------------------------------------
         #
-        self._materials = Material(component=comp_no,
-                                    mesh_type=mesh_type, 
+        self._materials = Material(component=self._component,
+                                    mesh_type=self.data_type, 
                                     db_file=self.db_file)
     
-        self._sections = Section(component=comp_no,
-                                  mesh_type=mesh_type, 
+        self._sections = Section(component=self._component,
+                                  mesh_type=self.data_type, 
                                   db_file=self.db_file)       
         #
         # --------------------------------------------------
         #
-        self._nodes = NodeSQL(db_system=mesh_type,
-                              plane=self._plane,
-                              component=comp_no, 
-                              db_file=self.db_file)
+        #self._nodes = NodeSQL(db_system=mesh_type,
+        #                      plane=self._plane,
+        #                      component=comp_no, 
+        #                      db_file=self.db_file)
         #
-        self._boundaries = BoundarySQL(db_system=mesh_type,
-                                       component=comp_no,
-                                       db_file=self.db_file)
+        #self._boundaries = BoundarySQL(db_system=mesh_type,
+        #                               component=comp_no,
+        #                               db_file=self.db_file)
         #
-        self._elements = ElementsSQL(plane=self._plane,
-                                     db_system=mesh_type,
-                                     component=comp_no,
-                                     db_file=self.db_file)
+        #self._elements = ElementsSQL(plane=self._plane,
+        #                             db_system=mesh_type,
+        #                             component=comp_no,
+        #                             db_file=self.db_file)
         #
         # --------------------------------------------------
         # groups
@@ -157,8 +158,8 @@ class Mesh(ufoBasicModel):
         #elements=self._elements,
         #boundaries=self._boundaries,         
         self._load = MeshLoad(plane=self._plane,
-                              mesh_type=mesh_type,
-                              component=comp_no,
+                              mesh_type=self.data_type,
+                              component=self._component,
                               db_file=self.db_file)
         #
         # --------------------------------------------------
@@ -175,26 +176,23 @@ class Mesh(ufoBasicModel):
         #
     #
     #
-    def _get_file(self, name: str):
-        """ """
-        #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        filename = name + ".db"
-        path = os.path.abspath(filename)
-        #self.db_file = path
-        #directory = os.path.dirname(path)
-        #
-        #self.db_file:str = component + "_f2u.db"
-        #if mesh_type != "ttt": #"inmemory":
-        try: # remove file if exist
-            os.remove(path)
-        except FileNotFoundError:
-            pass
-        #
-        return path
-    #
-    #def check_file(self, name: str):
+    #def _get_file(self, name: str):
     #    """ """
-    #    pass
+    #    #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    #    filename = name + ".db"
+    #    path = os.path.abspath(filename)
+    #    #self.db_file = path
+    #    #directory = os.path.dirname(path)
+    #    #
+    #    #self.db_file:str = component + "_f2u.db"
+    #    #if mesh_type != "ttt": #"inmemory":
+    #    try: # remove file if exist
+    #        os.remove(path)
+    #    except FileNotFoundError:
+    #        pass
+    #    #
+    #    return path
+    #
     #
     # --------------------
     # Mesh items
@@ -260,61 +258,6 @@ class Mesh(ufoBasicModel):
     #
     #    
     #
-    # ------------------
-    # SQL ops
-    # ------------------
-    #
-    def _create_table(self, conn) -> None:
-        """ """
-        table = "CREATE TABLE IF NOT EXISTS Component (\
-                    number INTEGER PRIMARY KEY NOT NULL,\
-                    name NOT NULL,\
-                    type TEXT NOT NULL, \
-                    units TEXT NOT NULL,\
-                    superelement DECIMAL NOT NULL , \
-                    date TEXT NOT NULL,\
-                    title TEXT);"
-        create_table(conn, table)
-    #
-    #
-    def _push_data(self, conn,
-                   component: str|int|None,
-                   title: str|None = None):
-        """ """
-        table = 'INSERT INTO Component(name, type, units,\
-                                       superelement, date, title)\
-                            VALUES(?,?,?,?,?,?)'
-        #
-        date = dt.now().strftime('%Y-%m-%d')
-        data = (component, 'mesh', 'si', 0, date, title)
-        # push
-        cur = conn.cursor()
-        out = cur.execute(table, data)
-        return out.lastrowid
-    #
-    #
-    def _set_type(self, component: str|int,
-                  comp_type: str, title: str|None):
-        """ """
-        
-        time=dt.now().strftime('%Y-%m-%d')
-        #item = 'concept'
-        #
-        query = (time, comp_type, title, component)
-        table = f"UPDATE Component \
-                 SET date = ?, \
-                     type = ?, \
-                     title = ? \
-                 WHERE name = ?;"
-        #
-        conn = create_connection(self.db_file)
-        with conn:          
-            cur = conn.cursor()
-            comp = cur.execute(table, query)
-        #
-        if not comp:
-            raise IOError(f' component {component} not valid')
-    #
     # --------------------
     # Mesh Operations
     # --------------------
@@ -361,14 +304,14 @@ class Mesh(ufoBasicModel):
     def plane(self, plane2D: bool) -> None:
         """ """
         self._plane = MeshPlane(plane2D)
-        self._nodes.plane = self._plane
-        self._elements.plane = self._plane
+        #self._nodes.plane = self._plane
+        #self._elements.plane = self._plane
         self._load.plane = self._plane
     #
     def jbc(self):
         """ """
         #supports=self._boundaries._nodes
-        return self._nodes.jbc()
+        return self._nodes.jbc(dof=self._plane.dof)
     #
     #def neq(self):
     #    """number of equations"""
@@ -383,7 +326,8 @@ class Mesh(ufoBasicModel):
         # get data
         Ka = Ke_matrix(elements=self._elements,
                        nodes=self._nodes,
-                       ndof=self._plane.ndof,
+                       plane2D=self._plane.plane2D, 
+                       #dof=self._plane.dof,
                        #condensed=condensed,
                        sparse=sparse)
         #
@@ -399,7 +343,8 @@ class Mesh(ufoBasicModel):
         Kg = Kg_matrix(elements=self._elements,
                        nodes=self._nodes,
                        D=D,
-                       ndof=self._plane.ndof,
+                       plane2D=self._plane.plane2D, 
+                       #ndof=self._plane.ndof,
                        sparse=sparse)
         return Kg
     #
@@ -408,7 +353,8 @@ class Mesh(ufoBasicModel):
         Kt = Kt_matrix(elements=self._elements,
                        nodes=self._nodes,
                        D=D,
-                       ndof=self._plane.ndof,
+                       plane2D=self._plane.plane2D, 
+                       #ndof=self._plane.ndof,
                        sparse=sparse)
         return Kt
     #
@@ -417,7 +363,8 @@ class Mesh(ufoBasicModel):
         #
         Ma = Km_matrix(elements=self._elements,
                        nodes=self._nodes,
-                       ndof=self._plane.ndof,
+                       plane2D=self._plane.plane2D, 
+                       #ndof=self._plane.ndof,
                        sparse=sparse)
         return Ma
     #

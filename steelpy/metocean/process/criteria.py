@@ -78,7 +78,7 @@ class HydroCriteria(ClassBasicSQL):
     # ------------------
     # SQL ops
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         table = "CREATE TABLE IF NOT EXISTS Criteria (\
                     number INTEGER PRIMARY KEY NOT NULL,\

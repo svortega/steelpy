@@ -87,7 +87,7 @@ class CdCmCoefficients(HydroBasic):
     # SQL ops
     # ------------------
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         # Main
         table = "CREATE TABLE IF NOT EXISTS CdCm (\

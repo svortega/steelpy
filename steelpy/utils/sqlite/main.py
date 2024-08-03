@@ -72,7 +72,7 @@ class ClassBasicSQL(Mapping):
         # create table
         conn = create_connection(self.db_file)
         with conn:
-            self._create_table(conn)         
+            self._new_table(conn)
     
     def __len__(self) -> int:
         return len(self._labels)

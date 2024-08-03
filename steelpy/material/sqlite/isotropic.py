@@ -149,7 +149,7 @@ class MaterialSQL(MatBasicSQL):
     # ------------------    
     #  
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         table = "CREATE TABLE IF NOT EXISTS Material (\
                     number INTEGER PRIMARY KEY,\
@@ -557,7 +557,7 @@ class MaterialElasticSQL(MatBasicSQL):
 
     #
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         table = "CREATE TABLE IF NOT EXISTS MaterialElastic(\
                     number INTEGER PRIMARY KEY,\

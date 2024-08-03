@@ -19,7 +19,9 @@ import numpy as np
 #
 def Ke_matrix(elements,
               nodes,
-              ndof: int = 6,
+              plane2D: bool, 
+              #dof: list[str], 
+              #ndof: int = 6,
               #condensed: bool = True,
               sparse: bool = True,
               mitem:str = "Ke"):
@@ -28,15 +30,17 @@ def Ke_matrix(elements,
 
     elements:
     nodes:
-    ndof :
+    dof : ['x', 'y', 'z', 'rx', 'ry', 'rz']
     solver :
     condensed : Matrix with dof = 0 removed
     """
     start_time = time.time()
+    #ndof = len(dof)
     #mitem = "Ke"
     Ka = assemble_matrix(elements=elements,
                          nodes=nodes,
-                         ndof=ndof,
+                         plane2D=plane2D, 
+                         #ndof=ndof,
                          mitem=mitem, item=None)
     if sparse:
         from scipy.sparse import coo_matrix
@@ -50,14 +54,14 @@ def Ke_matrix(elements,
 #
 def Km_matrix(elements,
               nodes,
-              ndof:int = 6,
+              plane2D: bool, # ndof:int = 6,
               sparse:bool = True,
               mitem:str = "Km"):
     """ Mass matrix"""
     start_time = time.time()
     Ka = assemble_matrix(elements=elements,
                          nodes=nodes,
-                         ndof=ndof,
+                         plane2D=plane2D, # ndof=ndof,
                          mitem=mitem, item=None)
     if sparse:
         from scipy.sparse import coo_matrix
@@ -71,14 +75,14 @@ def Km_matrix(elements,
 #
 def Kg_matrix(elements,
               nodes, D,
-              ndof:int = 6,
+              plane2D: bool, # ndof:int = 6,
               sparse:bool = True,
               mitem:str="Kg"):
     """ Geometric stiffness matrix """
     start_time = time.time()
     Kg = assemble_Gmatrix(elements=elements,
                           nodes=nodes,
-                          ndof=ndof,
+                          plane2D=plane2D, # ndof=ndof,
                           mitem=mitem, item=D)
     if sparse:
         from scipy.sparse import coo_matrix
@@ -90,14 +94,14 @@ def Kg_matrix(elements,
 #
 def Kt_matrix(elements,
               nodes, D,
-              ndof:int = 6,
+              plane2D: bool, # ndof:int = 6,
               sparse:bool = True,
               mitem:str="Kt"):
     """ Tangent stiffness matrix """
     start_time = time.time()
     Kt = assemble_Gmatrix(elements=elements,
                           nodes=nodes,
-                          ndof=ndof,
+                          plane2D=plane2D, # ndof=ndof,
                           mitem=mitem, item=D)
     if sparse:
         from scipy.sparse import coo_matrix
@@ -111,7 +115,7 @@ def Kt_matrix(elements,
 # ------------------------------------------------------
 #
 #
-def form_matrix(elements, nn:int, ndof: int,
+def form_matrix(elements, nn:int, plane2D, #ndof: int,
                 mitem: str, item):
     """
     Global system stiffness matrix 
@@ -122,11 +126,14 @@ def form_matrix(elements, nn:int, ndof: int,
     :return
     Ka : global stiffness matrix
     """
+    ndof = 6
+    if plane2D:
+        ndof = 3
     # Initialize a K matrix of zeros
     Ka = np.zeros((nn*ndof, nn*ndof), dtype=np.float64)
     for key, element in elements.items():
         # TODO : check applicable to all element type
-        keg = getattr(element, mitem)(item)
+        keg = getattr(element, mitem)(plane2D, item)
         idof, jdof = element.DoF
         # node and corresponding dof (start, end)
         niqi, niqj = idof*ndof, idof*ndof + ndof
@@ -139,7 +146,7 @@ def form_matrix(elements, nn:int, ndof: int,
     return Ka
 #
 #
-def form_Gmatrix(elements, nn:int, ndof: int,
+def form_Gmatrix(elements, nn:int, plane2D, # ndof: int,
                  mitem: str, item):
     """
     Global system stiffness matrix 
@@ -150,6 +157,10 @@ def form_Gmatrix(elements, nn:int, ndof: int,
     :return
     Ka : global stiffness matrix
     """
+    ndof = 6
+    if plane2D:
+        ndof = 3
+    #
     # Initialize a K matrix of zeros
     Ka = np.zeros((nn*ndof, nn*ndof), dtype=np.float64)
     for key, element in elements.items():
@@ -166,7 +177,7 @@ def form_Gmatrix(elements, nn:int, ndof: int,
         #
         # ---------------------------------------------
         # get matrix
-        keg = getattr(element, mitem)(nd_global)
+        keg = getattr(element, mitem)(plane2D, nd_global)
         #
         # ---------------------------------------------
         # Assemble matrix
@@ -226,7 +237,7 @@ def form_Lmatrix(elements, nn: int, ndof: int,
 # ------------------------------------------------------
 #
 def assemble_matrix(elements, nodes,
-                    ndof: int,
+                    plane2D: bool, #ndof: int,
                     mitem: str, item):
     """
     Asseable the element matrices
@@ -240,7 +251,7 @@ def assemble_matrix(elements, nodes,
     #start_time = time.time()
     nn = len(nodes.keys())
     Ka = form_matrix(elements=elements,
-                     nn=nn, ndof=ndof,
+                     nn=nn, plane2D=plane2D, #ndof=ndof,
                      mitem=mitem, item=item)
     #
     #uptime = time.time() - start_time
@@ -248,8 +259,8 @@ def assemble_matrix(elements, nodes,
     return Ka
 #
 def assemble_Gmatrix(elements, nodes,
-                    ndof: int,
-                    mitem: str, item):
+                     plane2D: bool, #ndof: int,
+                     mitem: str, item):
     """
     Asseable the element matrices
     -------------------------------------------------
@@ -262,7 +273,7 @@ def assemble_Gmatrix(elements, nodes,
     #start_time = time.time()
     nn = len(nodes.keys())
     Ka = form_Gmatrix(elements=elements,
-                      nn=nn, ndof=ndof,
+                      nn=nn, plane2D=plane2D, # ndof=ndof,
                       mitem=mitem, item=item)
     #uptime = time.time() - start_time
     #print(f"** [{mitem}] assembly: {uptime:1.4e} sec")

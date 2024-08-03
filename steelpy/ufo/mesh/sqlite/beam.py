@@ -40,17 +40,17 @@ from steelpy.utils.sqlite.utils import create_connection
 #
 #
 class BeamSQL(BeamBasic):
-    __slots__ = ['_title', 'db_file', '_plane', '_component']
+    __slots__ = ['_title', 'db_file', '_component'] #'_plane',
     
     def __init__(self, db_file:str,
-                 component: int, 
-                 plane: NamedTuple) -> None:
+                 component: int) -> None:
+                 #plane: NamedTuple) -> None:
         """
         beam elements
         """
         super().__init__()
         self.db_file = db_file
-        self._plane = plane
+        #self._plane = plane
         self._component = component
     #
     @property
@@ -87,7 +87,7 @@ class BeamSQL(BeamBasic):
         #try:
         self._labels.index(beam_name)
         return BeamItemSQL(beam_name=beam_name,
-                           plane=self._plane,
+                           #plane=self._plane,
                            component=self._component,
                            db_file=self.db_file)
         #except ValueError:
@@ -297,10 +297,10 @@ class BeamSQL(BeamBasic):
 class BeamItemSQL(BeamItemBasic):
     """ """
     __slots__ = ['name', '_releases', 'type',
-                 'db_file', '_plane', '_component']
+                 'db_file', '_component'] # '_plane', 
     
     def __init__(self, beam_name:int,
-                 plane: NamedTuple,
+                 #plane: NamedTuple,
                  component: int, 
                  db_file:str) -> None:
         """
@@ -314,7 +314,7 @@ class BeamItemSQL(BeamItemBasic):
             #    raise IOError(f'beam {beam_name} not found')
         #
         super().__init__(beam_name)
-        self._plane = plane
+        #self._plane = plane
         self.db_file = db_file
         self._component = component
         #print('--')

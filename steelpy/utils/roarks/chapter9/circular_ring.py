@@ -378,7 +378,7 @@ class RingBase:
                  tm:float, tt:float, tv, 
                  istep:int, ist:int, crad:float, 
                  sx:float, cx:float, j:int, 
-                 xmom:List[float], xhop:List[float], xshr:List[float]):
+                 xmom:list[float], xhop:list[float], xshr:list[float]):
         '''
         General formulas for moment, hoop load and radial shear:
             M = MA - NAR(1-u) + VARz + LTM
@@ -410,7 +410,7 @@ class RingBase:
         #return xmom, xhop, xshr
     #    
     def rotadd(self, phase:float, 
-               xmom:List[float], xhop:List[float], xshr:List[float]):
+               xmom:list[float], xhop:list[float], xshr:list[float]):
         """
         phase : the rotation angle of the axis of symmetry of the loading pattern.
         """

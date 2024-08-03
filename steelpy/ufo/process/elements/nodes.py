@@ -45,7 +45,7 @@ class NodeBasic(Mapping):
     sets : List[tuple]
         set with node/element
     """
-    __slots__ = ['_labels', '_system', '_plane']
+    __slots__ = ['_labels', '_system'] # , '_plane'
 
     def __init__(self, system: str) -> None:
         """
@@ -89,16 +89,15 @@ class NodeBasic(Mapping):
     #
     # ----------------------------------
     #
-    @property
-    def plane(self) -> NamedTuple:
-        """ """
-        return self._plane
-
-    @plane.setter
-    def plane(self, plane: NamedTuple) -> None:
-        """ """
-        self._plane = plane
-
+    #@property
+    #def plane(self) -> NamedTuple:
+    #    """ """
+    #    return self._plane
+    #
+    #@plane.setter
+    #def plane(self, plane: NamedTuple) -> None:
+    #    """ """
+    #    self._plane = plane
     #
     @property
     def system(self) -> tuple:

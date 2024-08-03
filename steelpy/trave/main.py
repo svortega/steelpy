@@ -7,7 +7,7 @@ from __future__ import annotations
 #import multiprocessing
 #import pickle
 #from dataclasses import dataclass
-#from datetime import datetime as dt
+from datetime import datetime as dt
 
 # package imports
 from steelpy.trave.process.dynamic import eigen, trnsient
@@ -17,6 +17,7 @@ from steelpy.trave.postprocess.main import PostProcess
 #
 #from steelpy.trave.beam.main import Beam
 #from steelpy.utils.dataframe.main import DBframework
+from steelpy.utils.sqlite.utils import create_connection, create_table
 #
 #import numpy as np
 #
@@ -27,7 +28,7 @@ class TraveItem:
     A program for static & dynamic analysis
     of 3-d framed structures
     """
-    __slots__ = ['_plane2D', '_postprocess', '_solver', 
+    __slots__ = ['_plane2D', '_postprocess', '_solver', '_name', 
                  'db_file', '_build', '_name', '_Pdelta']
     
     def __init__(self, mesh,
@@ -36,6 +37,8 @@ class TraveItem:
                  log: bool = False) -> None:
         """
         """
+        self._name = name
+        #
         plane = "3D"
         if self._plane2D:
             plane = "2D"
@@ -50,12 +53,56 @@ class TraveItem:
         self._mesh.plane(self._plane2D)
         #
         #self._solver = UnSolver(mesh=self._mesh)
+        self.db_file = self._mesh.db_file
         #
         self._postprocess = PostProcess(mesh=self._mesh,
-                                        name=name)
-                                        #sql_file=sql_file)
-        
+                                        name=self._name)
+                                        #sql_file=self.db_file)
+        #
+        # create table
+        conn = create_connection(self.db_file)
+        with conn:
+            self._new_table(conn)
     #
+    # --------------------------------------------
+    # SQL ops
+    #
+    def _new_table(self, conn) -> None:
+        """ """
+        table = "CREATE TABLE IF NOT EXISTS Solution (\
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    name NOT NULL,\
+                    component_id INTEGER NOT NULL REFERENCES Component(number), \
+                    type TEXT NOT NULL, \
+                    Pdelta BOOL NOT NULL, \
+                    plane TEXT NOT NULL, \
+                    date TEXT NOT NULL,\
+                    units TEXT NOT NULL,\
+                    title TEXT);"
+        create_table(conn, table)    
+    #
+    #
+    def _push_data(self, conn,
+                   name: int|str,
+                   component: int,
+                   analysis_type: str,
+                   Pdelta: int, 
+                   plane: str, 
+                   title: str|None = None):
+        """ """
+        table = 'INSERT INTO Solution(name, component_id, type, Pdelta,\
+                                      plane, date, units, title)\
+                            VALUES(?,?,?,?,?,?,?,?)'
+        #
+        date = dt.now().strftime('%Y-%m-%d')
+        data = (name, component, analysis_type, Pdelta, 
+                plane, 'si', date, title)
+        # push
+        cur = conn.cursor()
+        out = cur.execute(table, data)
+        return out.lastrowid    
+    #
+    # --------------------------------------------
     #
     def static(self,
                second_order: bool = False,
@@ -68,6 +115,23 @@ class TraveItem:
         method : banded, frontal
         second_order : Second order (True/False)
         """
+        #
+        # update table        
+        conn = create_connection(self.db_file)
+        with conn:
+            name = 'test' #self._name
+            component = self._mesh._component
+            analysis_type = 'static'
+            Pdelta = second_order
+            #
+            plane = "3D"
+            if self._plane2D:
+                plane = "2D"
+            #
+            self._push_data(conn, name, component, 
+                            analysis_type, Pdelta, 
+                            plane)
+        #
         if (mesh := self._mesh):
             static =  StaticSolver(mesh=mesh)
             #

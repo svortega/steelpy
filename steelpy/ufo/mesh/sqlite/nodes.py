@@ -47,7 +47,7 @@ class NodeSQL(NodeBasic):
 
     def __init__(self,
                  db_file: str,
-                 plane: NamedTuple,
+                 #plane: NamedTuple,
                  component: str|int, 
                  db_system:str="sqlite",
                  system:str = 'cartesian') -> None:
@@ -55,12 +55,12 @@ class NodeSQL(NodeBasic):
         """
         super().__init__(system)
         self.db_file = db_file
-        self._plane = plane
+        #self._plane = plane
         self._component =  component
         # create node table
         conn = create_connection(self.db_file)
         with conn:
-            self._create_table(conn)
+            self._new_table(conn)
         #print('--> update labels?')
     #
     #
@@ -123,7 +123,7 @@ class NodeSQL(NodeBasic):
     # ---------------------------------
     # SQL ops
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         # Node main
         table = "CREATE TABLE IF NOT EXISTS Node (\
@@ -307,7 +307,7 @@ class NodeSQL(NodeBasic):
     # ---------------------------------
     #
     #@property
-    def jbc(self):
+    def jbc(self, dof: list[str]):
         """ joints with boundary"""
         nnp = len(self._labels)
         jbc = zeros(nnp, 6, code='I')
@@ -340,7 +340,7 @@ class NodeSQL(NodeBasic):
         #jbc = to_matrix(jbc, 6)
         df_jbc = db.DataFrame(data=jbc,
                               columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])
-        jbc = df_jbc[self._plane.dof].values.tolist()
+        jbc = df_jbc[dof].values.tolist()
         jbc = list(chain.from_iterable(jbc))
         #
         counter = count(start=1)
@@ -350,8 +350,9 @@ class NodeSQL(NodeBasic):
         #self._jbc = array('I', jbc)
         #
         #jbc = to_matrix(self._jbc, self._plane.ndof)
-        jbc = to_matrix(jbc, self._plane.ndof)
-        df_jbc = db.DataFrame(data=jbc, columns=self._plane.dof)
+        ndof = len(dof)
+        jbc = to_matrix(jbc, ndof)
+        df_jbc = db.DataFrame(data=jbc, columns=dof)
         #node_name = list(self._labels)
         df_jbc['node_name'] = [nidx[idx]
                                for idx, item in enumerate(jbc)]

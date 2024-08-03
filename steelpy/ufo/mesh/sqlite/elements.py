@@ -5,10 +5,10 @@
 from __future__ import annotations
 #from dataclasses import dataclass
 #from array import array
-from collections import Counter, defaultdict
+from collections import Counter #, defaultdict
 from collections.abc import Mapping
 #from math import dist
-from typing import NamedTuple
+#from typing import NamedTuple
 from itertools import chain
 import re
 
@@ -26,19 +26,19 @@ class ElementsSQL(ClassBasicSQL):
     __slots__ = ['_beams', '_plane', 'db_file', '_component']
     
     def __init__(self, db_file:str,
-                 plane: NamedTuple,
+                 #plane: NamedTuple,
                  component: int, 
                  db_system:str="sqlite") -> None:
         """
         """
         super().__init__(db_file)
         #self.db_file = db_file
-        self._plane = plane
+        #self._plane = plane
         self._component = component
         #
         self._beams = BeamSQL(db_file=db_file,
-                              component=component,
-                              plane=self._plane)
+                              component=component)
+                              #plane=self._plane)
     #
     #
     @property
@@ -68,16 +68,16 @@ class ElementsSQL(ClassBasicSQL):
         return [item[0] for item in items]
     #
     #
-    @property
-    def plane(self) -> NamedTuple:
-        """ """
-        return self._plane
-    
-    @plane.setter
-    def plane(self, plane: NamedTuple):
-        """ """
-        self._plane = plane
-        self._beams._plane = self._plane
+    #@property
+    #def plane(self) -> NamedTuple:
+    #    """ """
+    #    return self._plane
+    #
+    #@plane.setter
+    #def plane(self, plane: NamedTuple):
+    #    """ """
+    #    self._plane = plane
+    #    self._beams._plane = self._plane
     #
     # ---------------------------------
     #
@@ -155,7 +155,7 @@ class ElementsSQL(ClassBasicSQL):
     # SQL ops      
     #
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         elements = "CREATE TABLE IF NOT EXISTS Element(\
                             number INTEGER PRIMARY KEY NOT NULL,\

@@ -147,14 +147,14 @@ def get_surface(n: int, kd: float, Y: list, d:int, Tw: float, Lw: float,
     #xx = np.arange(npt) * pi / nprofiles
     #phase2 = xx * 180 / pi
     #
-    t = Tw / 2.0 # sec
-    omega = 2 * pi / Tw
+    #t = Tw / 2.0 # sec
+    #omega = 2 * pi / Tw
     x = np.linspace(0, Lw, npt, endpoint=True)
-    Theta =  kd / d * x - omega * t
+    Theta =  kd / d * x - np.pi # omega * t
     phase = np.round(Theta * 180 / pi,  decimals=1)
     #
     #eta = np.array([surface(item, Y, n) for item in x])
-    Keta =  surfacenp(Theta, Y, n)
+    Keta = surfacenp(Theta, Y, n)
     #
     if is_finite:
         Keta /= kd

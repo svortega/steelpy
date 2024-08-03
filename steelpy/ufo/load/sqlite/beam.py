@@ -151,7 +151,7 @@ class BeamLoadItemSQL(BeamSQLMaster):
         with conn:  
             #beam = check_element(conn, beam_name)
             beam =  BeamItemSQL(beam_name=beam_name,
-                                plane=self._plane,
+                                #plane=self._plane,
                                 component=self._component, 
                                 db_file=self.db_file)
         #try:
@@ -468,8 +468,8 @@ class BeamLoadItemSQL(BeamSQLMaster):
         """ """
         #print('-->')
         beams = BeamSQL(db_file=self.db_file,
-                        component=self._component,
-                        plane=self._plane)
+                        component=self._component)
+                        #plane=self._plane)
         #
         #print(' beam load')
         conn = create_connection(self.db_file)
@@ -790,8 +790,8 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
         """ """
         #print('-->')
         beams = BeamSQL(db_file=self._db_file,
-                        component=self._component,
-                        plane=self._plane)        
+                        component=self._component)
+                        #plane=self._plane)        
         #1 / 0
         #beamfun = defaultdict(list)
         loadfun = []
@@ -947,7 +947,7 @@ class BeamDistributedSQL(BeamLineBasic):
         conn = create_connection(self._db_file)
         with conn:
             self._beam =  BeamItemSQL(beam_name,
-                                      plane=self._plane,
+                                      #plane=self._plane,
                                       component=self._component, 
                                       db_file=self._db_file)
         #
@@ -1264,7 +1264,7 @@ class BeamPointSQL(BeamPointBasic):
         conn = create_connection(self._db_file)
         with conn:
             self._beam =  BeamItemSQL(beam_name,
-                                      plane=self._plane,
+                                      #plane=self._plane,
                                       component=self._component, 
                                       db_file=self._db_file)
                
