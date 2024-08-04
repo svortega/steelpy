@@ -6,7 +6,7 @@ from __future__ import annotations
 
 
 # package imports
-from steelpy.ufo.mesh.main import ConceptMesh
+#from steelpy.ufo.mesh.main import ConceptMesh
 from steelpy.ufo.process.main import ufoBasicModel, ModelClassBasic
 #
 from steelpy.ufo.concept.elements.joint import Connection
@@ -30,21 +30,22 @@ from steelpy.ufo.plot.main import PlotConcept
 #
 class Concept(ModelClassBasic):
     """ f2u Concept model Class """
-    __slots__ = ['_labels', '_item', '_name',
+    __slots__ = ['_labels', '_item', '_component',
                  '_properties', '_mesh']
     #
-    def __init__(self, name:str, properties):
+    def __init__(self, component:str|int,
+                 mesh, properties):
         """
         """
         super().__init__()
-        self._name = name
-        #self._mesh = mesh
+        self._component = component
+        self._mesh = mesh
         self._properties = properties
         self._item : dict = {}
         #
-        self._mesh = ConceptMesh(name=self._name)
+        #self._mesh = ConceptMesh(name=self._name)
     #
-    def __setitem__(self, name: int|str, parameters: list|str) -> None:
+    def __setitem__(self, name: int|str, title: int|str) -> None:
         """
         """
         try:
@@ -54,13 +55,11 @@ class Concept(ModelClassBasic):
             self._labels.append(name)
             #self._item.append(name)
             #
-            self._mesh[name] = parameters
+            self._mesh[name] = title
             #
             self._item[name] = ConceptItem(component=name,
-                                           title=parameters,
+                                           title=title,
                                            mesh=self._mesh[name], 
-                                           #materials=self._mesh[name]._materials,
-                                           #sections=self._mesh[name]._sections,
                                            properties= self._properties)
     
     #
@@ -117,7 +116,6 @@ class ConceptItem(ufoBasicModel):
     
     def __init__(self, component:str,
                  title: str, mesh, 
-                 #materials, sections, 
                  properties) -> None: 
         """
         """

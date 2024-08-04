@@ -30,7 +30,7 @@ class BoundaryNodeSQL(BoundaryNode):
         # create node table
         conn = create_connection(self._db_file)
         with conn:        
-            self._create_table(conn)
+            self._new_table(conn)
     #
     def __setitem__(self, node_name: int,
                     fixity:list|tuple|dict|str) -> None:
@@ -92,7 +92,7 @@ class BoundaryNodeSQL(BoundaryNode):
         table = 'SELECT Node.name \
                  FROM Node, NodeBoundary \
                  WHERE NodeBoundary.node_id = Node.number \
-                 AND Node.component_id = ? ;'
+                 AND Node.mesh_id = ? ;'
         
         conn = create_connection(self._db_file)
         with conn:        
@@ -102,7 +102,7 @@ class BoundaryNodeSQL(BoundaryNode):
         return [item[0] for item in items]     
     #
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         table = "CREATE TABLE IF NOT EXISTS NodeBoundary(\
                             number INTEGER PRIMARY KEY NOT NULL,\
@@ -143,7 +143,7 @@ class BoundaryNodeSQL(BoundaryNode):
         table = "SELECT Node.name, NodeBoundary.* \
                 FROM Node, NodeBoundary \
                 WHERE NodeBoundary.node_id = Node.number \
-                AND Node.component_id = ? ;"
+                AND Node.mesh_id = ? ;"
         #
         conn = create_connection(self._db_file)
         with conn:
@@ -245,7 +245,7 @@ class BoundarySQL:
         table = 'SELECT Node.name \
                 FROM Node, NodeBoundary \
                 WHERE NodeBoundary.node_id = Node.number \
-                AND Node.component_id = ? ;'
+                AND Node.mesh_id = ? ;'
         
         conn = create_connection(self._db_file)
         with conn:        

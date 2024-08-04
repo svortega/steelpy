@@ -183,9 +183,11 @@ beam.P = {#'L1':4.5*units.m,
 f2umodel = UFOmodel("BeamDesign_0")
 mesh = f2umodel.mesh()
 
-mesh.material([[10, 'linear', 275.0 * units.MPa]])
+mesh[10] = 'beam design example 0'
 
-mesh.section([[155, 'ub', 253.5*units.mm, 8.60*units.mm,
+mesh[10].material([[10, 'linear', 275.0 * units.MPa]])
+
+mesh[10].section([[155, 'ub', 253.5*units.mm, 8.60*units.mm,
                254.0*units.mm, 14.22*units.mm,  
                1. * 254.0*units.mm, 1. * 14.22*units.mm,
                0*units.mm],
@@ -193,7 +195,7 @@ mesh.section([[155, 'ub', 253.5*units.mm, 8.60*units.mm,
               [15, 'ub', 351*units.mm, 8.64*units.mm,
                204.0*units.mm, 15.10*units.mm]])
 
-mesh.node([(1, 0*units.ft,   0*units.ft),
+mesh[10].node([(1, 0*units.ft,   0*units.ft),
            ##(2, 15*units.ft,  0*units.ft),
            #(2, 1*units.m,  0*units.m),
            #(3, 2*units.m,  0*units.m),
@@ -202,12 +204,12 @@ mesh.node([(1, 0*units.ft,   0*units.ft),
            #(6, 5*units.m,  0*units.m)])
            (6, 28*units.ft,  0*units.ft)])
 
-mesh.boundary([[1, 'support', 'fixed'],
+mesh[10].boundary([[1, 'support', 'fixed'],
                #[6, 'support', 'free']])
                 [6, 'support', (0,1,1,1,0,0)]])
 #
 # [element_id, node1, node2, material, section, roll_angle]
-mesh.element([#(1,  'beam',  1, 2, 10, 15, 0),
+mesh[10].element([#(1,  'beam',  1, 2, 10, 15, 0),
               #(2,  'beam',  2, 3, 10, 15, 0),
               #(3,  'beam',  3, 4, 10, 15, 0),
               #(4,  'beam',  4, 5, 10, 15, 0),
@@ -219,7 +221,7 @@ mesh.element([#(1,  'beam',  1, 2, 10, 15, 0),
 # Load input
 # ----------------------------------------------------
 #
-load = mesh.load()
+load = mesh[10].load()
 #
 # ----------------------------------------------------
 # Basic Load
@@ -373,7 +375,7 @@ mesh.build()
 # Structural Analysis
 # ----------------------------------------------------
 #
-frame = Trave2D(mesh=mesh)
+frame = Trave2D(mesh=mesh[10])
 frame.static(second_order=True)
 results = frame.results(beam_steps=4)
 #

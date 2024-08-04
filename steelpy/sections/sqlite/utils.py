@@ -38,7 +38,7 @@ class SectionMainSQL(SectionMain):
         """ """
         query = (self._component, )
         table = "SELECT name from Section \
-                 WHERE component_id = ? ;"
+                 WHERE mesh_id = ? ;"
         #
         conn = create_connection(self.db_file)
         with conn:
@@ -52,8 +52,8 @@ class SectionMainSQL(SectionMain):
         """ """
         query = (self._component, )
         table = "SELECT SectionGeometry.type \
-                 FROM Section, SectionGeometry, Component \
-                 WHERE Component.number = ? \
+                 FROM Section, SectionGeometry, Mesh \
+                 WHERE Mesh.number = ? \
                  AND Section.number = SectionGeometry.section_id ; "
         conn = create_connection(self.db_file)
         #
@@ -68,7 +68,7 @@ class SectionMainSQL(SectionMain):
         """ """
         query = (self._component, )
         table = "SELECT title from Section \
-                 WHERE component_id =? ; "
+                 WHERE mesh_id =? ; "
         #
         conn = create_connection(self.db_file)
         with conn:           
@@ -107,7 +107,7 @@ class SectionMainSQL(SectionMain):
         """ """
         query = (name, self._component, )
         table = f'SELECT {item} FROM Section \
-                 WHERE number = ? AND component_id = ?;'
+                 WHERE number = ? AND mesh_id = ?;'
         cur = conn.cursor()
         cur.execute(table, query)
         record = cur.fetchone()
@@ -119,9 +119,9 @@ class SectionMainSQL(SectionMain):
         """
         query = (section_name, self._component)
         table = f"SELECT Section.*, SectionGeometry.* \
-                  FROM Section, SectionGeometry, Component \
+                  FROM Section, SectionGeometry, Mesh \
                   WHERE Section.name = ? \
-                  AND Component.number = ? \
+                  AND Mesh.number = ? \
                   AND Section.number = SectionGeometry.section_id ;"
         #
         cur = conn.cursor()
@@ -140,10 +140,10 @@ class SectionMainSQL(SectionMain):
         name, component_id, title
         """
         query = (section_id, self._component, *properties)
-        table = 'INSERT INTO  Section(name, component_id,\
-                                          SA_inplane, SA_outplane,\
-                                          shear_stress, build, compactness,\
-                                          title)\
+        table = 'INSERT INTO  Section(name, mesh_id,\
+                                        SA_inplane, SA_outplane,\
+                                        shear_stress, build, compactness,\
+                                        title)\
                     VALUES(?,?,?,?,?,?,?,?)'
         #
         cur = conn.cursor()
@@ -188,7 +188,7 @@ class SectionMainSQL(SectionMain):
         query = (value, section_id, self._component, )
         table = f'UPDATE Section SET {item} = ? \
                   WHERE number = ? \
-                  AND component_id = ?;'
+                  AND mesh_id = ?;'
         cur = conn.cursor()
         cur.execute(table, query)
     #
@@ -371,8 +371,8 @@ def get_propertyX(conn, component_name):
     #
     query = (component_name, )
     table = "SELECT Section.name, Section.number, SectionProperty.*\
-                from Section, SectionProperty, Component \
-                WHERE Component.number = ? \
+                from Section, SectionProperty, Mesh \
+                WHERE Mesh.number = ? \
                 AND Section.number = SectionProperty.section_id;"
     #
     cur = conn.cursor()
@@ -411,7 +411,7 @@ def _get_section(conn, section_id:int,
     """
     query = (section_id, component)
     table = "SELECT * from Section \
-             WHERE number = ? AND component_id = ?;"
+             WHERE number = ? AND mesh_id = ?;"
     cur = conn.cursor()
     cur.execute(table, query)
     row = cur.fetchone()
@@ -464,9 +464,9 @@ def get_section(conn, section_name: int|str,
     #
     query = (section_name, component, )
     table = f"SELECT Section.*, SectionGeometry.* \
-              FROM Section, SectionGeometry, Component \
+              FROM Section, SectionGeometry, Mesh \
               WHERE Section.name = ? \
-              AND Component.number = ? \
+              AND Mesh.number = ? \
               AND Section.number = SectionGeometry.section_id ;"              
     #
     cur = conn.cursor()
@@ -484,9 +484,9 @@ def get_sectionXX(conn, section_name: int|str,
     1 / 0
     query = (section_name, component)
     table = f"SELECT Section.*, SectionGeometry.* \
-              FROM Section, SectionGeometry, Component \
+              FROM Section, SectionGeometry, Mesh \
               WHERE Section.name = ? \
-              AND Component.number = ? \
+              AND Mesh.number = ? \
               AND Section.number = SectionGeometry.section_id ;"    
     #
     #cur = conn.cursor()

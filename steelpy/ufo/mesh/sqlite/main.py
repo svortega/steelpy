@@ -18,10 +18,41 @@ from steelpy.ufo.mesh.sqlite.boundary import BoundarySQL
 from steelpy.utils.io_module.inout import check_input_file
 from steelpy.ufo.process.main import ufoBasicModel #, ModelClassBasic
 from steelpy.utils.sqlite.utils import create_connection, create_table
-
+#
+from steelpy.utils.sqlite.main import ClassMainSQL
 #
 #
-class MeshSQL(ufoBasicModel):
+#
+class MeshSQL(ClassMainSQL, ufoBasicModel):
+    """
+    mesh[beam_name] = [number, element1, element2, elementn]
+    """
+    def __init__(self, component:str|int,
+                 name:str|None = None,
+                 sql_file:str|None = None):
+        """
+        """
+        super().__init__(name=name, sql_file=sql_file)
+        #
+        self.data_type = "sqlite"
+        self._component = component
+        # --------------------------------------------------
+        #
+        self._nodes = NodeSQL(db_system=self.data_type,
+                              component=self._component, 
+                              db_file=self.db_file)
+        #
+        self._boundaries = BoundarySQL(db_system=self.data_type,
+                                       component=self._component,
+                                       db_file=self.db_file)
+        #
+        self._elements = ElementsSQL(db_system=self.data_type,
+                                     component=self._component,
+                                     db_file=self.db_file)
+        #         
+#
+#
+class UFOmain(ufoBasicModel):
     """
     mesh[beam_name] = [number, element1, element2, elementn]
     """
@@ -34,8 +65,6 @@ class MeshSQL(ufoBasicModel):
         """
         """
         self.data_type = "sqlite"
-        #mesh_type:str="sqlite"
-        #super().__init__()
         #
         self._build = True
         if sql_file:
@@ -61,19 +90,17 @@ class MeshSQL(ufoBasicModel):
         #
         # --------------------------------------------------
         #
-        self._nodes = NodeSQL(db_system=self.data_type,
-                              #plane=self._plane,
-                              component=self._component, 
-                              db_file=self.db_file)
+        #self._nodes = NodeSQL(db_system=self.data_type,
+        #                      component=self._component, 
+        #                      db_file=self.db_file)
         #
-        self._boundaries = BoundarySQL(db_system=self.data_type,
-                                       component=self._component,
-                                       db_file=self.db_file)
+        #self._boundaries = BoundarySQL(db_system=self.data_type,
+        #                               component=self._component,
+        #                               db_file=self.db_file)
         #
-        self._elements = ElementsSQL(db_system=self.data_type,
-                                     #plane=self._plane,
-                                     component=self._component,
-                                     db_file=self.db_file)
+        #self._elements = ElementsSQL(db_system=self.data_type,
+        #                             component=self._component,
+        #                             db_file=self.db_file)
         #        
     #
     #
@@ -104,10 +131,7 @@ class MeshSQL(ufoBasicModel):
         table = "CREATE TABLE IF NOT EXISTS Component (\
                     number INTEGER PRIMARY KEY NOT NULL,\
                     name NOT NULL,\
-                    type TEXT NOT NULL, \
                     plane TEXT NOT NULL, \
-                    units TEXT NOT NULL,\
-                    superelement DECIMAL NOT NULL , \
                     date TEXT NOT NULL,\
                     title TEXT);"
         create_table(conn, table)
@@ -118,12 +142,12 @@ class MeshSQL(ufoBasicModel):
                    plane: str = '3D', 
                    title: str|None = None):
         """ """
-        table = 'INSERT INTO Component(name, type, plane, units,\
-                                       superelement, date, title)\
-                            VALUES(?,?,?,?,?,?,?)'
+        table = 'INSERT INTO Component(name, plane,\
+                                       date, title)\
+                            VALUES(?,?,?,?)'
         #
         date = dt.now().strftime('%Y-%m-%d')
-        data = (component, 'mesh', plane, 'si', 0, date, title)
+        data = (component,  plane, date, title)
         # push
         cur = conn.cursor()
         out = cur.execute(table, data)

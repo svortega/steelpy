@@ -28,50 +28,42 @@ from steelpy.utils.sqlite.utils import create_connection, create_table
 class MeshLoad:
     """
     """
-    __slots__ = ['_df_nodal', '_plane', '_component', 
+    __slots__ = ['_df_nodal', '_component', 
                  '_hydro', '_basic', '_combination',
                  '_elements', '_nodes', '_boundaries',
                  '_db_file']
 
-    def __init__(self, #nodes, elements, boundaries, 
-                 plane: NamedTuple, 
+    def __init__(self, 
                  mesh_type: str,
                  component: str|int, 
                  db_file: str | None = None):
         """
         """
-        self._plane = plane
         self._component = component
         self._db_file = db_file
         #
         # mesh 
         self._nodes = NodeSQL(db_system=mesh_type,
-                              #plane=self._plane,
                               component=component, 
                               db_file=db_file)
         #
         self._elements = ElementsSQL(db_system=mesh_type,
-                                     #plane=self._plane,
                                      component=component,
                                      db_file=db_file)
         #
         #
         self._basic = BasicLoadSQL(db_file,
-                                   component=component,
-                                   plane=self._plane)
+                                   component=component)
         #
         self._combination = LoadCombSQL(db_file,
-                                        component=component,
-                                        plane=self._plane)
+                                        component=component)
         #
         self._hydro = MetoceanLoadSQL(db_file=db_file,
-                                      component=component,
-                                      plane=self._plane)
-        #
+                                      component=component)
         #
         conn = create_connection(self._db_file)
         with conn: 
-            self._create_table(conn)        
+            self._new_table(conn)        
     #
     #
     def __str__(self) -> str:
@@ -83,14 +75,12 @@ class MeshLoad:
     #
     # ----------------------------
     #
-    def _create_table(self, conn):
+    def _new_table(self, conn):
         """ """
-        # -------------------------------------
-        # Main
         table = "CREATE TABLE IF NOT EXISTS Load(\
                 number INTEGER PRIMARY KEY NOT NULL,\
                 name NOT NULL,\
-                component_id INTEGER NOT NULL REFERENCES Component(number), \
+                mesh_id INTEGER NOT NULL REFERENCES Mesh(number), \
                 level TEXT NOT NULL,\
                 title TEXT,\
                 input_type TEXT, \
@@ -100,21 +90,21 @@ class MeshLoad:
     #
     # ----------------------------
     #
-    @property
-    def plane(self) -> NamedTuple:
-        """
-        """
-        return self._plane
-        
-    @plane.setter
-    def plane(self, plane: NamedTuple) -> None:
-        """
-        """
-        self._plane = plane
-        self._basic._plane = self._plane
-        self._hydro._plane = self._plane
-        self._combination._plane = self._plane
-
+    #@property
+    #def plane(self) -> NamedTuple:
+    #    """
+    #    """
+    #    return self._plane
+    #    
+    #@plane.setter
+    #def plane(self, plane: NamedTuple) -> None:
+    #    """
+    #    """
+    #    self._plane = plane
+    #    self._basic._plane = self._plane
+    #    self._hydro._plane = self._plane
+    #    self._combination._plane = self._plane
+    #
     #
     # -----------------------------------------------
     #

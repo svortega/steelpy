@@ -41,7 +41,7 @@ class MatBasicSQL(ClassBasicSQL):
         """ """
         query = (self._component, )
         table = 'SELECT name FROM Material\
-                 WHERE component_id = ? ;'
+                 WHERE mesh_id = ? ;'
         #
         conn = create_connection(self.db_file)
         with conn:        
@@ -154,7 +154,7 @@ class MaterialSQL(MatBasicSQL):
         table = "CREATE TABLE IF NOT EXISTS Material (\
                     number INTEGER PRIMARY KEY,\
                     name NOT NULL,\
-                    component_id INTEGER NOT NULL REFERENCES Component(number), \
+                    mesh_id INTEGER NOT NULL REFERENCES Mesh(number), \
                     type TEXT NOT NULL,\
                     title TEXT);"
         #
@@ -288,7 +288,7 @@ def push_material(conn, material_name: str|int,
     """
     """
     project = (material_name, component, material_type, None, )
-    sql = 'INSERT INTO  Material(name, component_id, type, title)\
+    sql = 'INSERT INTO  Material(name, mesh_id, type, title)\
            VALUES(?,?,?,?)'
     cur = conn.cursor ()
     cur.execute (sql, project)
@@ -314,9 +314,9 @@ def get_materials(conn, component: int):
     query = (component, )
     table = "SELECT Material.name, Material.type,\
                         MatElastoPlastic.*\
-                FROM Material, MatElastoPlastic, Component \
+                FROM Material, MatElastoPlastic, Mesh \
                 WHERE  materials.number = MatElastoPlastic.number \
-                AND Component.number = ?;"
+                AND Mesh.number = ?;"
     #
     cur = conn.cursor()
     cur.execute(table, query)
@@ -343,11 +343,11 @@ def get_materialSQL(conn, material_name:int|str,
     """
     query = (material_name, component, )
     table = "SELECT Material.name, Material.type, \
-                    MaterialElastic.*, Component.name \
-                FROM Component, Material, MaterialElastic\
+                    MaterialElastic.*, Mesh.name \
+                FROM Mesh, Material, MaterialElastic\
                 WHERE  Material.number = MaterialElastic.material_id\
                 AND Material.name = ? \
-                AND Component.number = ? ;"
+                AND Mesh.number = ? ;"
     #
     with conn: 
         cur = conn.cursor()
@@ -595,9 +595,9 @@ class MaterialElasticSQL(MatBasicSQL):
         query = (self._component, )
         table = "SELECT Material.name, Material.type, Material.title, \
                         MaterialElastic.*\
-                        FROM Material, MaterialElastic, Component\
+                        FROM Material, MaterialElastic, Mesh\
                         WHERE  Material.number = MaterialElastic.material_id \
-                        AND Component.number = ? ;"
+                        AND Mesh.number = ? ;"
         #
         conn = create_connection(self.db_file)
         with conn:
@@ -625,17 +625,17 @@ class MaterialElasticSQL(MatBasicSQL):
         # push material header
         dfmat = df[['name', 'type']].copy()
         dfmat['title'] = None
-        dfmat['component_id'] = self._component
+        dfmat['mesh_id'] = self._component
         with conn:
             dfmat.to_sql('Material', conn,
-                         index_label=['name', 'component_id',
+                         index_label=['name', 'mesh_id',
                                       'type', 'title'], 
                          if_exists='append', index=False)
         #
         #
         query = (self._component, )
         table = "SELECT * from Material \
-                 WHERE Material.component_id = ?"
+                 WHERE Material.mesh_id = ?"
         #
         cur = conn.cursor()
         cur.execute(table, query)
@@ -666,7 +666,7 @@ def get_mat_specs(conn, material_name:int|str, component: int):
     """
     query = (material_name, component, )
     table = "SELECT number, type FROM Material \
-             WHERE  name = ? AND component_id =?;"
+             WHERE  name = ? AND mesh_id =?;"
     
     cur = conn.cursor()
     cur.execute(table, query)

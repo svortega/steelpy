@@ -451,14 +451,14 @@ class StaticSolver:
     #
     def _basicload(self):
         """ """
-        Fn = self._mesh._load._basic.Fn()
+        Fn = self._mesh._load._basic.Fn(plane=self._mesh._plane)
         #
         if len(Fn) == 0:
             raise IOError('Load Combination is required')
         #
         colgrp = ['load_name', 'load_id', 
                   'load_level', 'load_title',
-                  'load_system', 'component_name',
+                  'load_system', 'mesh_name',
                   'node_name', 'node_index']
         #
         hforce =  self._mesh._plane.hforce
@@ -527,7 +527,7 @@ class StaticSolver:
                 comb['load_name'] = row.load_name
                 comb['load_id'] = row.load_id
                 comb['load_title'] = row.load_title
-                comb['component_name'] = row.component_name
+                comb['mesh_name'] = row.mesh_name
                 #
                 try:
                     dftemp = db.concat([dftemp, comb], ignore_index=True)
@@ -538,7 +538,7 @@ class StaticSolver:
             #check = dftemp.groupby(['node_name', 'c']).sum().reset_index()
             dftemp = dftemp.groupby(['load_name', 'load_id','load_level',
                                      'load_title', 'load_system',
-                                     'component_name', 'node_name'],
+                                     'mesh_name', 'node_name'],
                                       as_index=False)[values].sum()
             #test
             dfnode = db.concat([dfnode, dftemp], ignore_index=True)
@@ -580,10 +580,10 @@ class StaticSolver:
     #
     def _combload(self):
         """ """
-        Fn = self._mesh._load._combination.Fn()
+        Fn = self._mesh._load._combination.Fn(plane=self._mesh._plane)
         colgrp = ['load_name', 'load_id', 
                   'load_level', 'load_title',
-                  'load_system', 'component_name',
+                  'load_system', 'mesh_name',
                   'node_name', 'node_index']
         #
         hforce =  self._mesh._plane.hforce
@@ -630,7 +630,7 @@ class StaticSolver:
         # ------------------------------            
         #
         colgrp = ['load_name', 'load_id', 'load_level',
-                  'load_system', 'component_name',]
+                  'load_system', 'mesh_name',]
         #
         Fgrp = Fn.groupby(colgrp)
         Ugrp = Un.groupby(colgrp)
@@ -726,7 +726,7 @@ class StaticSolver:
         # ------------------------------            
         #
         colgrp = ['load_name', 'load_id', 'load_level',
-                  'load_system', 'component_name',]
+                  'load_system', 'mesh_name',]
         #
         Ugrp = Un.groupby(colgrp)
         Dgrp = Dn.groupby(colgrp)
@@ -801,7 +801,7 @@ class StaticSolver:
         #
         colgrp = ['load_name', 'load_id', 
                   'load_level', 'load_title',
-                  'load_system', 'component_name',
+                  'load_system', 'mesh_name',
                   'node_name', 'node_index']
         #
         hforce =  self._plane.hforce
@@ -811,7 +811,7 @@ class StaticSolver:
         D = Fn[colgrp+hdisp]
         #
         #
-        colgrp = ['load_name', 'component_name',
+        colgrp = ['load_name', 'mesh_name',
                   'load_level',  'load_system']      
         #
         #
@@ -862,7 +862,7 @@ class StaticSolver:
         # group FER node load
         colgrp = ['load_name', 'load_id', 
                   'load_level','load_system',
-                  'component_name']
+                  'mesh_name']
         #
         ndof = self._mesh._plane.ndof
         hforce =  self._mesh._plane.hforce
@@ -1031,7 +1031,7 @@ class StaticSolver:
         """displacement dataframe"""
         db = DBframework()
         header = ['load_name', 'load_id', 'load_level',
-                  'load_system', 'component_name', 'load_title', 
+                  'load_system', 'mesh_name', 'load_title', 
                   'node_name', *self._mesh._plane.hdisp]
         return db.DataFrame(data=dftemp, columns=header, index=None)
     #    

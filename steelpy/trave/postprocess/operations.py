@@ -96,7 +96,7 @@ class MainProcess:
         #
         conn = create_connection(self._db_file)
         with conn:
-            self._create_table(conn)        
+            self._new_table(conn)        
         #      
         #
         self._results = Results(mesh=mesh, 
@@ -140,7 +140,7 @@ class MainProcess:
         cur.execute(table, data)         
     #
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         #       
         #
@@ -151,8 +151,8 @@ class MainProcess:
         # Node end forces
         table_nodes = "CREATE TABLE IF NOT EXISTS ResultNodeForce (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        load_name NOT NULL,\
-                        component_name NOT NULL, \
+                        load_name NOT NULL REFERENCES Load(name),\
+                        mesh_name NOT NULL REFERENCES Mesh(name), \
                         load_level TEXT NOT NULL,\
                         load_system TEXT NOT NULL,\
                         node_name DECIMAL NOT NULL,\
@@ -169,8 +169,8 @@ class MainProcess:
         # Node Reactions
         table_nodes = "CREATE TABLE IF NOT EXISTS ResultNodeReaction (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        load_name NOT NULL,\
-                        component_name NOT NULL, \
+                        load_name NOT NULL REFERENCES Load(name),\
+                        mesh_name NOT NULL REFERENCES Mesh(name), \
                         load_level TEXT NOT NULL,\
                         load_system TEXT NOT NULL,\
                         node_name DECIMAL NOT NULL,\
@@ -189,8 +189,8 @@ class MainProcess:
         # Member global end forces
         table_nodes = "CREATE TABLE IF NOT EXISTS ResultMemberEndForce (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        load_name NOT NULL,\
-                        component_name NOT NULL, \
+                        load_name NOT NULL REFERENCES Load(name),\
+                        mesh_name NOT NULL REFERENCES Mesh(name),\
                         load_level TEXT NOT NULL,\
                         load_system TEXT NOT NULL,\
                         element_name NOT NULL,\
@@ -212,8 +212,8 @@ class MainProcess:
         # Beam local deflection
         table_nodes = "CREATE TABLE IF NOT EXISTS ResultBeamDeflection (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        load_name NOT NULL,\
-                        component_name NOT NULL, \
+                        load_name NOT NULL REFERENCES Load(name),\
+                        mesh_name NOT NULL REFERENCES Mesh(name),\
                         load_level TEXT NOT NULL,\
                         load_system TEXT NOT NULL,\
                         element_name NOT NULL,\
@@ -230,8 +230,8 @@ class MainProcess:
         # Beam Local internal forces
         table_nodes = ("CREATE TABLE IF NOT EXISTS ResultBeamForce (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        load_name NOT NULL,\
-                        component_name NOT NULL, \
+                        load_name NOT NULL REFERENCES Load(name),\
+                        mesh_name NOT NULL REFERENCES Mesh(name),\
                         load_level TEXT NOT NULL,\
                         load_system TEXT NOT NULL,\
                         element_name NOT NULL,\
@@ -252,8 +252,8 @@ class MainProcess:
         # Beam local stress
         table_nodes = "CREATE TABLE IF NOT EXISTS ResultBeamStress (\
                         number INTEGER PRIMARY KEY NOT NULL,\
-                        load_name NOT NULL,\
-                        component_name NOT NULL, \
+                        load_name NOT NULL REFERENCES Load(name),\
+                        mesh_name NOT NULL REFERENCES Mesh(name),\
                         load_level TEXT NOT NULL,\
                         load_system TEXT NOT NULL,\
                         element_name NOT NULL,\
@@ -282,7 +282,7 @@ class MainProcess:
     def _get_beam_end_disp(self, elements, df_ndisp,
                            Pdelta: bool):
         """convert beam end-node disp to force [F = Kd] in global system"""
-        ndgrp = df_ndisp.groupby(['load_name', 'component_name',
+        ndgrp = df_ndisp.groupby(['load_name', 'mesh_name',
                                   'load_level',  'load_system'])
         #
         ndof = 6
@@ -388,13 +388,13 @@ class MainProcess:
         """
         start_time = time.time()
         #
-        ndgrp = df_ndisp.groupby(['load_name', 'component_name',
+        ndgrp = df_ndisp.groupby(['load_name', 'mesh_name',
                                   'load_level',  'load_system'])
         #
-        benlgrp = benl_df.groupby(['load_name', 'component_name',
+        benlgrp = benl_df.groupby(['load_name', 'mesh_name',
                                   'load_level', 'load_system'])
         #
-        lfgrp = load_func.groupby(['load_name', 'component_name',
+        lfgrp = load_func.groupby(['load_name', 'mesh_name',
                                     'load_level'])
         #
         # Dummy Bending [V, M, theta, w]
@@ -588,7 +588,7 @@ class MainProcess:
         # --------------------------------------------
         #
         #1/0
-        header = ['load_name', 'component_name', 'load_level',
+        header = ['load_name', 'mesh_name', 'load_level',
                   #'load_id','load_title',
                   'load_system',
                   'element_name', 'node_end',
@@ -602,7 +602,7 @@ class MainProcess:
                                 columns=header, index=None)
         # reorder columns
         df_membf.drop(columns=['blank1', 'blank2'])
-        df_membf = df_membf[['load_name', 'component_name',
+        df_membf = df_membf[['load_name', 'mesh_name',
                              #'load_id',
                              'load_level',
                              #'load_title', 
@@ -628,7 +628,7 @@ class MainProcess:
         #hforce = ['node_name', *self._plane.hforce]
         # get df 
         db = DBframework()
-        header: list[str] = ['load_name', 'component_name',
+        header: list[str] = ['load_name', 'mesh_name',
                              #'load_id',
                              'load_level', 
                              # 'load_title',
@@ -636,7 +636,7 @@ class MainProcess:
                              'element_name',
                              *hforce]
         df_nforce = db.DataFrame(data=dftemp, columns=header, index=None)
-        #return df_nforce[['load_name', 'component_name',
+        #return df_nforce[['load_name', 'mesh_name',
         #                  #'load_id','load_title',
         #                  'load_level',
         #                  'load_system', 'element_name',
@@ -647,7 +647,7 @@ class MainProcess:
     def get_reactions(self, nforce):
         """ get nodal reactions """
         #
-        nforce = (nforce.groupby(['load_name', 'component_name',
+        nforce = (nforce.groupby(['load_name', 'mesh_name',
                                   #'load_id',
                                   'load_level',
                                   #'load_title',
@@ -685,7 +685,7 @@ class MainProcess:
         start_time = time.time()
         elements = self._mesh._elements
         members = bforce_df.groupby(['element_name',
-                                     'load_name', 'component_name',
+                                     'load_name', 'mesh_name',
                                      'load_level', 'load_system'])
         #
         for key, item in members:
@@ -737,14 +737,14 @@ class MainProcess:
                                     values=self._plane.hforce)
         #
         #
-        df_Qbeam = df_beamf[['load_name', 'component_name', 
+        df_Qbeam = df_beamf[['load_name', 'mesh_name', 
                              'load_level', 'load_system',
                              'element_name', 'node_end',
                              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                              #'rx', 'ry', 'rz',
                              'Psi', 'B', 'Tw']]
         #
-        df_Dbeam = df_beamf[['load_name', 'component_name', 
+        df_Dbeam = df_beamf[['load_name', 'mesh_name', 
                              'load_level', 'load_system',
                              'element_name', 'node_end',
                              'x', 'y', 'z', 'rx', 'ry', 'rz']]
@@ -774,7 +774,7 @@ class MainProcess:
         #
         # Push to sql
         #
-        header = ['load_name', 'component_name', 
+        header = ['load_name', 'mesh_name', 
                   'load_level', 'load_system',
                   'element_name', 'node_name']
         header.extend(self._plane.hforce)        
@@ -972,7 +972,7 @@ def update_memberdf(dfmemb, dfcomb,
                 dftemp = comb
     #
     try:
-        dftemp = dftemp.groupby(['load_name', 'component_name',
+        dftemp = dftemp.groupby(['load_name', 'mesh_name',
                                  'load_level', 'load_system',
                                  #'load_title',  'load_id',
                                  'element_name', item],

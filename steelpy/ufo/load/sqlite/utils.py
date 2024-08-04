@@ -16,7 +16,7 @@ def get_load_data(conn, load_name:int|str, load_level: str,
     table = f"SELECT * FROM Load \
                 WHERE name = ? \
                 AND level = ? \
-                AND component_id = ? ;"
+                AND mesh_id = ? ;"
     
     cur = conn.cursor()
     cur.execute (table, query)
@@ -85,7 +85,7 @@ def pull_load(conn, load_name: str|int,
               FROM Load \
               WHERE name = ?\
               AND level = ? \
-              AND component_id = ? ;"    
+              AND mesh_id = ? ;"    
     with conn:
         cur = conn.cursor()
         cur.execute(table, query)
@@ -102,13 +102,13 @@ def get_load_basics(conn, component: int):
     cur = conn.cursor()
     #
     table = "SELECT Node.name, Node.number FROM Node \
-            WHERE Node.component_id = ? ;"
+            WHERE Node.mesh_id = ? ;"
     cur.execute(table, query)
     nodes = cur.fetchall()
     nodes = {item[0]:item[1] for item in nodes}
     #
     table = "SELECT Element.name, Element.number FROM Element \
-             WHERE Element.component_id = ? ;"
+             WHERE Element.mesh_id = ? ;"
     cur.execute(table, query)
     elements = cur.fetchall()
     elements = {item[0]:item[1] for item in elements}            
@@ -116,7 +116,7 @@ def get_load_basics(conn, component: int):
     query = ('basic', component, )
     table = "SELECT Load.name, Load.number FROM Load \
              WHERE Load.level = ? \
-             AND Load.component_id = ? ;"
+             AND Load.mesh_id = ? ;"
     cur.execute(table, query)
     basic = cur.fetchall()
     basic = {item[0]:item[1] for item in basic}

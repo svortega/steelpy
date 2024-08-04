@@ -58,7 +58,7 @@ class BeamSQL(BeamBasic):
         """ """
         query = ('beam', self._component)
         table = "SELECT name FROM Element \
-                 WHERE type = ? AND component_id = ? "
+                 WHERE type = ? AND mesh_id = ? "
         conn = create_connection(self.db_file)
         with conn:        
             cur = conn.cursor()
@@ -118,7 +118,7 @@ class BeamSQL(BeamBasic):
                  sections[parameters[3]],
                  roll_angle)
         #
-        table = 'INSERT INTO Element(name, component_id, type, \
+        table = 'INSERT INTO Element(name, mesh_id, type, \
                                      material_id, section_id,\
                                      roll_angle)\
                                 VALUES(?,?,?,?,?,?) ;'
@@ -161,7 +161,7 @@ class BeamSQL(BeamBasic):
         query = (self._component, )
         table = "SELECT name, number \
                  FROM Material \
-                 WHERE component_id = ?;"
+                 WHERE mesh_id = ?;"
         #
         cur = conn.cursor()
         cur.execute(table, query)
@@ -175,7 +175,7 @@ class BeamSQL(BeamBasic):
         query = (self._component, )
         table = "SELECT name, number \
                  FROM Section \
-                 WHERE component_id = ?;"
+                 WHERE mesh_id = ?;"
         cur = conn.cursor()
         cur.execute(table, query)
         sections = cur.fetchall()
@@ -211,7 +211,7 @@ class BeamSQL(BeamBasic):
         with conn:
             cur = conn.cursor()
             table = "SELECT name, number FROM Material \
-                     WHERE component_id = ? ;"
+                     WHERE mesh_id = ? ;"
             #
             cur.execute(table, query)
             materials = cur.fetchall()
@@ -219,13 +219,13 @@ class BeamSQL(BeamBasic):
             #
             #
             table = "SELECT .name, number FROM Section \
-                     WHERE component_id = ? ;"
+                     WHERE mesh_id = ? ;"
             #cur = conn.cursor()
             cur.execute(table, query)
             sections = cur.fetchall()
             sections = {item[0]:item[1] for item in sections}
         #
-        df['component_id'] = self._component
+        df['mesh_id'] = self._component
         df['material_id'] = df['material_name'].apply(lambda x: materials[x])
         df['section_id'] = df['section_name'].apply(lambda x: sections[x])
         #
@@ -235,7 +235,7 @@ class BeamSQL(BeamBasic):
         #
         # Element
         #
-        mheader = ['name', 'component_id', 'type',
+        mheader = ['name', 'mesh_id', 'type',
                   'material_id', 'section_id',
                   'roll_angle', 'title']
         members = df[mheader]
@@ -250,7 +250,7 @@ class BeamSQL(BeamBasic):
         with conn:
             query = ('beam', self._component)
             table = "SELECT name, number FROM Element \
-                     WHERE type = ? WHERE component_id = ? ;"
+                     WHERE type = ? WHERE mesh_id = ? ;"
             #
             cur = conn.cursor()
             cur.execute(table, query)
@@ -260,7 +260,7 @@ class BeamSQL(BeamBasic):
             #
             query = (self._component)
             table = "SELECT name, number FROM Node \
-                     WHERE component_id = ?;"
+                     WHERE mesh_id = ?;"
             #
             cur = conn.cursor()
             cur.execute(table, query)

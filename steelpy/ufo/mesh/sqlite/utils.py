@@ -21,7 +21,7 @@ def check_nodes(conn, node_name: int|str, component: int):
     query = (node_name, component, )
     table = f"SELECT * FROM Node \
                 WHERE name = ? \
-                AND component_id= ? ;"
+                AND mesh_id= ? ;"
     
     cur = conn.cursor()
     #if isinstance(node_name, str):
@@ -42,11 +42,11 @@ def get_nodes_connec(conn, component: int):
     """ """
     query = ('beam', component)
     table = 'SELECT Element.number, ElementConnectivity.node_end, Node.name \
-                FROM ElementConnectivity, Element, Node, Component \
+                FROM ElementConnectivity, Element, Node, Mesh \
                 WHERE Element.number = ElementConnectivity.element_id \
                 AND Node.number = ElementConnectivity.node_id \
                 AND Element.type = ? \
-                AND Component.number = ? ;'
+                AND Mesh.number = ? ;'
     #
     cur = conn.cursor()
     cur.execute(table, query)
@@ -83,7 +83,7 @@ def check_element(conn, element_name: int|str, component: int):
     query = (element_name, component, )
     table = f"SELECT * FROM Element \
                        WHERE name = ? \
-                       AND component_id = ? ;"
+                       AND mesh_id = ? ;"
     cur = conn.cursor()
     #if isinstance(element_name, str):
     #    cur.execute (f"SELECT * FROM Element \
@@ -109,10 +109,10 @@ def get_elements(conn, component: int):
     table = "SELECT Element.name, Element.type,\
                     Material.name, Section.name, \
                     Element.roll_angle, Element.title\
-            FROM Element, Material, Section, Component\
+            FROM Element, Material, Section, Mesh\
             WHERE Element.material_id = Material.number \
             AND Element.section_id = Section.number \
-            AND Component.number = ? ;"
+            AND Mesh.number = ? ;"
     #
     cur = conn.cursor()
     cur.execute (table, query)
@@ -146,13 +146,13 @@ def get_element_data(conn, element_name: str|int,
     table = "SELECT Element.name, Element.number, Element.type,\
                     Element.roll_angle, Material.name, \
                     Section.name, Element.title \
-            FROM Element, Material, Section, Component \
+            FROM Element, Material, Section, Mesh \
             WHERE Element.name = ? \
             AND Element.type = ? \
-            AND Component.number = ?  \
+            AND Mesh.number = ?  \
             AND Element.material_id = Material.number \
             AND Element.section_id = Section.number \
-            AND Element.component_id =  Component.number ;"
+            AND Element.mesh_id =  Mesh.number ;"
     #
     cur = conn.cursor()
     cur.execute (table, query)
@@ -171,7 +171,7 @@ def update_element_item(conn, name: str|int, item: str,
     query = (value, name, component, )
     table = f'UPDATE Element SET {item} = ? \
              WHERE name = ? \
-             AND component._number = ? ;'
+             AND mesh_id = ? ;'
     cur = conn.cursor()
     cur.execute(table, query)
 #
@@ -199,12 +199,12 @@ def get_connectivity(conn, element_name: int|str,
     """ """
     query = (element_name, component)
     table = "SELECT ElementConnectivity.node_end, Node.name \
-                FROM ElementConnectivity, Node, Element, Component \
+                FROM ElementConnectivity, Node, Element, Mesh \
             WHERE Node.number = ElementConnectivity.node_id\
             AND Element.number = ElementConnectivity.element_id\
-            AND Element.component_id =  Component.number \
+            AND Element.mesh_id =  Mesh.number \
             AND Element.name = ? \
-            AND Component.number = ? ;"
+            AND Mesh.number = ? ;"
     #
     cur = conn.cursor()
     cur.execute(table, query)
@@ -234,7 +234,7 @@ def get_connectivities(conn, component: int):
                 FROM Element, Node, ElementConnectivity \
              WHERE Element.number = ElementConnectivity.element_id \
              AND Node.number = ElementConnectivity.node_id \
-             AND Element.component_id = ?;"
+             AND Element.mesh_id = ?;"
     #
     cur = conn.cursor()
     cur.execute(table, query)
@@ -256,7 +256,7 @@ def get_unitvector(conn, beam_name: int,
              FROM Element, ElementDirectionCosine \
              WHERE Element.number = ElementDirectionCosine.element_id \
              AND element.name = ? \
-             AND Element.component_id = ? \
+             AND Element.mesh_id = ? \
              ORDER BY ElementDirectionCosine.axis ASC;'
     cur = conn.cursor()
     cur.execute (table, query)

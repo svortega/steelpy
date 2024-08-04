@@ -53,18 +53,18 @@ class BeamSQLMaster(Mapping):
 # ---------------------------------
 #
 class BeamLoadItemSQL(BeamSQLMaster):
-    __slots__ = ['_name',  '_load', '_plane', '_component', 
-                 '_plane', '_node_eq', 'db_file', '_system_flag', 
+    __slots__ = ['_name',  '_load', '_component', 
+                 '_node_eq', 'db_file', '_system_flag', 
                  '_beam']
 
-    def __init__(self, load_name: str|int, plane: NamedTuple,
+    def __init__(self, load_name: str|int, #plane: NamedTuple,
                  component: int, 
                  db_file: str) -> None:
         """
         """
         #
         self._name = load_name
-        self._plane = plane
+        #self._plane = plane
         self._component = component
         #self._system_flag: int = 0
         super().__init__()
@@ -73,12 +73,12 @@ class BeamLoadItemSQL(BeamSQLMaster):
         # create table
         conn = create_connection(self.db_file)
         with conn:
-            self._create_table(conn)
+            self._new_table(conn)
         #
         #
         self._load = BeamLoadTypeSQL(load_name=self._name,
                                      component=self._component,
-                                     plane=self._plane, 
+                                     #plane=self._plane, 
                                      db_file=self.db_file)
     #
     @property
@@ -93,7 +93,7 @@ class BeamLoadItemSQL(BeamSQLMaster):
                 AND LoadBasic.number = LoadBeamPoint.basic_id \
                 AND LoadBasic.load_id = Load.number \
                 AND Load.name = ? \
-                AND Load.component_id = ? ;"
+                AND Load.mesh_id = ? ;"
         #table += load_name
         #
         conn = create_connection(self.db_file)
@@ -109,7 +109,7 @@ class BeamLoadItemSQL(BeamSQLMaster):
                 WHERE LoadBeamLine.element_id = Element.number \
                 AND LoadBasic.number = LoadBeamLine.basic_id \
                 AND LoadBasic.load_id = Load.number \
-                AND Load.name = ? AND Load.component_id = ? ;"
+                AND Load.name = ? AND Load.mesh_id = ? ;"
         #table += load_name
         #
         conn = create_connection(self.db_file)
@@ -291,7 +291,7 @@ class BeamLoadItemSQL(BeamSQLMaster):
     #
     # -----------------------------------------------
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         # -------------------------------------
         # line 
@@ -574,7 +574,7 @@ class BeamLoadTypeSQL(BeamTypeBasic):
 
     def __init__(self, load_name: str|int,
                  component: int,
-                 plane, 
+                 #plane, 
                  db_file: str): #, beams
         """
         """
@@ -585,12 +585,12 @@ class BeamLoadTypeSQL(BeamTypeBasic):
         #
         self._line = BeamDistributedSQL(load_name=self._name,
                                         component=component,
-                                        plane=plane, 
+                                        #plane=plane, 
                                         db_file=self._db_file)
         
         self._point = BeamPointSQL(load_name=self._name,
                                    component=component,
-                                   plane=plane, 
+                                   #plane=plane, 
                                    db_file=self._db_file)
         #
         #self._beam =  beam
@@ -611,24 +611,24 @@ class BeamLoadTypeSQL(BeamTypeBasic):
 # TODO: Why this global?
 class BeamLoadGloabalSQL(BeamSQLMaster):
     """ """
-    __slots__ = ['_db_file', '_component', '_plane']
+    __slots__ = ['_db_file', '_component']
     
-    def __init__(self,  component: int, plane, db_file: str) -> None:
+    def __init__(self,  component: int, db_file: str) -> None:
         """
         """
         #super().__init__()
         self._db_file =  db_file
         self._component = component
-        self._plane = plane
+        #self._plane = plane
         
         #
         self._line = BeamDistributedSQL(load_name='*',
                                         component=component,
-                                        plane=plane, 
+                                        #plane=plane, 
                                         db_file=self._db_file)
         self._point = BeamPointSQL(load_name='*',
                                    component=component,
-                                   plane=plane, 
+                                   #plane=plane, 
                                    db_file=self._db_file)        
     #
     # ------------------
@@ -888,16 +888,16 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
 #
 class BeamDistributedSQL(BeamLineBasic): 
     __slots__ = ['_db_file', '_name', '_beam', 
-                 '_plane', '_component']
+                 '_component']
     
     def __init__(self, load_name: str|int,
-                 component: int, plane, 
+                 component: int, #plane, 
                  db_file: str) -> None:
         """
         """
         super().__init__()
         self._db_file = db_file
-        self._plane = plane
+        #self._plane = plane
         self._name = load_name
         self._component = component
         #
@@ -914,7 +914,7 @@ class BeamDistributedSQL(BeamLineBasic):
         table = "SELECT Element.name \
                  FROM Element, LoadBeamLine \
                  WHERE LoadBeamLine.element_id = Element.number \
-                 AND Element.component_id = ? ;"
+                 AND Element.mesh_id = ? ;"
         #
         # Extract data from sqlite
         conn = create_connection(self._db_file)
@@ -947,7 +947,6 @@ class BeamDistributedSQL(BeamLineBasic):
         conn = create_connection(self._db_file)
         with conn:
             self._beam =  BeamItemSQL(beam_name,
-                                      #plane=self._plane,
                                       component=self._component, 
                                       db_file=self._db_file)
         #
@@ -1057,7 +1056,7 @@ class BeamDistributedSQL(BeamLineBasic):
                     WHERE LoadBeamLine.basic_id = LoadBasic.number\
                     AND LoadBeamLine.element_id = Element.number \
                     AND LoadBasic.load_id = Load.number \
-                    AND Load.component_id = ? ;"
+                    AND Load.mesh_id = ? ;"
             #
             cur = conn.cursor()
             cur.execute(table, query)            
@@ -1171,12 +1170,12 @@ def get_line_load(conn, beam_name:int|str,
     """ """
     query = [component]
     table = "SELECT Load.name, Element.name, \
-             LoadBeamLine.*, Component.name \
-             FROM Load, Element, LoadBasic, LoadBeamLine, Component \
+             LoadBeamLine.*, Mesh.name \
+             FROM Load, Element, LoadBasic, LoadBeamLine, Mesh \
              WHERE LoadBeamLine.basic_id = LoadBasic.number \
              AND LoadBeamLine.element_id = Element.number \
              AND LoadBasic.load_id = Load.number \
-             AND Component.number = ? "
+             AND Mesh.number = ? "
     #
     # get beam data
     if beam_name in ['*', '']:
@@ -1217,16 +1216,16 @@ def get_line_load(conn, beam_name:int|str,
 #
 class BeamPointSQL(BeamPointBasic):
     __slots__ = ['_db_file', '_name', '_beam', 
-                 '_component', '_plane']
+                 '_component'] # , '_plane'
 
     def __init__(self, load_name: str|int,
-                 component: int, plane,
+                 component: int, #plane,
                  db_file: str) -> None:
         """
         """
         super().__init__()
         self._db_file = db_file
-        self._plane = plane
+        #self._plane = plane
         self._name = load_name
         self._component = component
         #
@@ -1243,7 +1242,7 @@ class BeamPointSQL(BeamPointBasic):
         table = "SELECT Element.name \
                  FROM Element, LoadBeamPoint \
                  WHERE LoadBeamPoint.element_id = Element.number \
-                 AND Element.component_id = ? ;"
+                 AND Element.mesh_id = ? ;"
         #
         # Extract data from sqlite
         conn = create_connection(self._db_file)
@@ -1264,7 +1263,6 @@ class BeamPointSQL(BeamPointBasic):
         conn = create_connection(self._db_file)
         with conn:
             self._beam =  BeamItemSQL(beam_name,
-                                      #plane=self._plane,
                                       component=self._component, 
                                       db_file=self._db_file)
                
@@ -1366,7 +1364,7 @@ class BeamPointSQL(BeamPointBasic):
                     WHERE LoadBeamPoint.basic_id = LoadBasic.number\
                         AND LoadBeamPoint.element_id = Element.number \
                         AND LoadBasic.load_id = Load.number \
-                        AND Load.component_id = ? ;"
+                        AND Load.mesh_id = ? ;"
             #
             cur = conn.cursor()
             cur.execute(table, query)            
@@ -1473,12 +1471,12 @@ def get_point_load(conn, beam_name:int|str,
     """ """
     query = [component]
     table = "SELECT Load.name, Element.name, \
-            LoadBeamPoint.*, Component.name \
-            FROM Load, Element, LoadBeamPoint, LoadBasic, Component \
+            LoadBeamPoint.*, Mesh.name \
+            FROM Load, Element, LoadBeamPoint, LoadBasic, Mesh \
             WHERE LoadBeamPoint.basic_id = LoadBasic.number \
             AND LoadBeamPoint.element_id = Element.number \
             AND LoadBasic.load_id = Load.number \
-            AND Component.number = ? "
+            AND Mesh.number = ? "
     #
     #
     # get beam data

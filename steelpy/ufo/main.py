@@ -10,11 +10,12 @@ from steelpy.ufo.mesh.main import Mesh
 from steelpy.ufo.concept.main import Concept
 from steelpy.ufo.properties.main import Properties
 #
+from steelpy.ufo.mesh.sqlite.main import UFOmain
 # 
 #
 #
 #
-class UFOmodel:
+class UFOmodel(UFOmain):
     """
     UFO Model class
     
@@ -41,22 +42,31 @@ class UFOmodel:
       :number:  integer internal number 
       :name:  string node external name
     """
-    __slots__ = ['_name', # 'type', 'data',
-                 #'db_file', '_plot', 'mesh_type',
-                 '_properties', # '_materials', '_sections', 
+    __slots__ = ['_name', '_properties', 
                  '_mesh', '_concept']
 
-    def __init__(self, name:str|int) -> None:
+    def __init__(self, name:str|int|None = None,
+                 sql_file:str|None = None) -> None:
         """
         mesh_type : sqlite/inmemory
         """
-        print("-- module : ufo Version 6.00dev")
+        print("-- module : ufo Version 6.50dev")
         print('{:}'.format(52*'-'))
         #
-        self._name = name
+        super().__init__(name=name,
+                         sql_file=sql_file)        
+        #
+        # mesh basic
+        self._mesh = Mesh(component=self._component, 
+                          sql_file=self.db_file)
+        #self._name = name
         self._properties = Properties()
-        self._concept = Concept(name=self._name,
+        #
+        self._concept = Concept(component=self._component,
+                                mesh=self._mesh, 
                                 properties=self._properties)
+
+    #
     #
     # -------------------
     #
@@ -76,16 +86,10 @@ class UFOmodel:
     #
     # -------------------
     #
-    def mesh(self, #name:str|None = None,
-             sql_file:str|None = None):
+    def mesh(self): #name:str|None = None,
+             #sql_file:str|None = None):
         """ """
-        #if not name:
-        name = self._name
-        if sql_file:
-            name = None
-        
-        return Mesh(name=name,
-                    sql_file=sql_file)
+        return self._mesh
 
     #
     # -------------------

@@ -69,7 +69,7 @@ class NodeLoadGlobalSQL(NodeMainSQL):
                 WHERE LoadNode.node_id = Node.number \
                 AND LoadBasic.number = LoadNode.basic_id \
                 AND LoadBasic.load_id = Load.number \
-                AND Node.component_id = ? ;"
+                AND Node.mesh_id = ? ;"
         #
         conn = create_connection(self._db_file)
         with conn:
@@ -143,7 +143,7 @@ class NodeLoadGlobalSQL(NodeMainSQL):
         with conn:
             query = (self._component, )
             table = "SELECT Node.name, Node.number FROM Node \
-                     WHERE Node.component_id = ?;"
+                     WHERE Node.mesh_id = ?;"
             cur = conn.cursor()
             cur.execute(table, query)
             nodes = cur.fetchall()
@@ -152,7 +152,7 @@ class NodeLoadGlobalSQL(NodeMainSQL):
             #
             query = (self._component, )
             table = "SELECT Element.name, Element.number FROM Element \
-                     WHERE Element.component_id = ?;"
+                     WHERE Element.mesh_id = ?;"
             cur = conn.cursor()
             cur.execute(table, query)
             elements = cur.fetchall()
@@ -162,7 +162,7 @@ class NodeLoadGlobalSQL(NodeMainSQL):
             query = ('basic', self._component, )
             table = "SELECT Load.name, Load.number FROM Load \
                          WHERE Load.level = ? \
-                         AND Load.component_id = ?;"
+                         AND Load.mesh_id = ?;"
             cur = conn.cursor()
             cur.execute(table)
             basic = cur.fetchall()
@@ -223,7 +223,7 @@ class NodeLoadItemSQL(ClassBasicSQL):
                 AND LoadBasic.number = LoadNode.basic_id \
                 AND LoadBasic.load_id = Load.number \
                 AND Load.name = ? \
-                AND Load.component_id = ? ;"
+                AND Load.mesh_id = ? ;"
         #
         conn = create_connection(self.db_file)
         with conn:
@@ -473,7 +473,7 @@ class NodeItemSQL:
                 WHERE LoadNode.node_id = Node.number \
                 AND LoadBasic.number = LoadNode.basic_id \
                 AND LoadBasic.load_id = Load.number \
-                AND Node.component_id = ? ;"
+                AND Node.mesh_id = ? ;"
         #
         conn = create_connection(self._db_file)
         with conn:
@@ -850,7 +850,7 @@ def pull_NodeLoad_SQLdata(conn, load_name: int|str,
         items.extend([load_type])
         table += "AND LoadNode.type = ? "     
     #
-    table += "AND Component.number = ? ;"
+    table += "AND Mesh.number = ? ;"
     items.extend([component])
     #
     # Node load
@@ -862,15 +862,16 @@ def pull_NodeLoad(conn, items: list, utils: str):
     """ """
     # TODO: check it
     table = "SELECT Load.name AS load_name, \
-                    Component.name AS component_name, \
+                    Mesh.name AS mesh_name, \
                     Load.title AS load_title, \
                     Node.name AS node_name, \
-                    Node.mesh_idx as node_index, \
+                    Node.idx as node_index, \
                     LoadNode.* \
-            FROM Load, Node, LoadNode, LoadBasic, Component \
+            FROM Load, Node, LoadNode, LoadBasic, Mesh \
             WHERE LoadNode.basic_id = LoadBasic.number \
             AND LoadBasic.load_id = Load.number \
-            AND LoadNode.node_id = Node.number  "
+            AND LoadNode.node_id = Node.number \
+            AND Load.mesh_id = Mesh.number  "
     #
     table += utils
     #
@@ -889,13 +890,13 @@ def pull_BeamNodeLoad(conn, items: list, utils: str):
     """ """
     1 / 0
     table = "SELECT Load.name AS load_name, \
-                    Component.name AS component_name, \
+                    Mesh.name AS mesh_name, \
                     Load.title AS load_title, \
                     Node.name AS node_name, \
                     Node.mesh_idx as node_index, \
                     Element.name as element_name, \
                     LoadNode.* \
-            FROM Load, Node, Element, LoadNode, LoadBasic, Component \
+            FROM Load, Node, Element, LoadNode, LoadBasic, Mesh \
             WHERE LoadNode.basic_id = LoadBasic.number \
             AND LoadBasic.load_id = Load.number \
             AND LoadNode.node_id = Node.number \
@@ -986,7 +987,7 @@ def pull_NodeLoad_df(conn, load_name: int|str,
                                   #beam_flag = beam_flag)
     
     #
-    cols = ['load_name', 'component_name', 
+    cols = ['load_name', 'mesh_name', 
             'load_title',
             'node_name', 'node_index', 
             #'element_name',
@@ -1005,7 +1006,7 @@ def pull_NodeLoad_df(conn, load_name: int|str,
     df['load_level'] = 'basic'
     #df['component'] = component
     #
-    df = df[['load_name', 'component_name', 
+    df = df[['load_name', 'mesh_name', 
              'load_title', 'load_level',
              'load_id', 'load_system', 'load_comment',
              #'element_name',

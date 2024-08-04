@@ -104,13 +104,14 @@ class LoadCombinationBasic(Mapping):
         # Combination formed by basic loads only
         dftemp = []
         for key, item in self._combination.items():
+            #mesh_name = item.mesh_name
             for bl_name, factor in comb[key].items():
                 dftemp.append([key, item.number, 'combination',
-                               item.title, item._component_name,
+                               item.title, item.mesh_name,
                                bl_name, factor])
         #
         header = ['load_name', 'load_id','load_type',
-                  'load_title', 'component_name', 
+                  'load_title', 'mesh_name', 
                   'basic_load', 'factor']
         db = DBframework()
         df_comb = db.DataFrame(data=dftemp, columns=header, index=None)

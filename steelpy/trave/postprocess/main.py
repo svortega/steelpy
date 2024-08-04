@@ -123,7 +123,7 @@ class UnSQL:
         #
         conn = create_connection(self.db_file)
         with conn:
-            self._create_table(conn)
+            self._new_table(conn)
     #
     # ---------------------------------
     #
@@ -136,7 +136,7 @@ class UnSQL:
             ndata = self._pull_data(conn)
         #
         # dataframe
-        cols = ['number', 'load_name', 'component_name',
+        cols = ['number', 'load_name', 'mesh_name',
                 'load_level', 'load_system', 
                 'node_name',
                 'x', 'y', 'z', 'rx', 'ry', 'rz']         
@@ -167,14 +167,14 @@ class UnSQL:
         #df = self._update_ndf(dfnode=df, dfcomb=df_comb)
         #
         #
-        header = ['load_name', 'component_name',
+        header = ['load_name', 'mesh_name',
                   'load_level', 'load_system',
                   'node_name',
                   'x', 'y', 'z', 'rx', 'ry', 'rz']
         try: # 3d plane
             nodeconn = df[header].copy()
         except KeyError: # 2d plane
-            header = ['load_name', 'component_name', 
+            header = ['load_name', 'mesh_name', 
                       'load_level', 'load_system', 
                       'node_name','x', 'y', 'rz']
             nodeconn = df[header].copy()
@@ -231,13 +231,13 @@ class UnSQL:
     # ---------------------------------
     # SQL ops
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         # Node displacement solution
         table_nodes = "CREATE TABLE IF NOT EXISTS ResultNodeDisplacement (\
                         number INTEGER PRIMARY KEY NOT NULL,\
                         load_name NOT NULL,\
-                        component_name NOT NULL, \
+                        mesh_name NOT NULL, \
                         load_level TEXT NOT NULL,\
                         load_system TEXT NOT NULL,\
                         node_name NOT NULL,\

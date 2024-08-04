@@ -53,13 +53,13 @@ class ShapeStressBasic:
             stress = self._stress(actions=actions_df,
                                   G=G, E=E, poisson=poisson)
             # -------------------------------------
-            header = ['load_name', 'component_name', 
+            header = ['load_name', 'mesh_name', 
                       'load_level', 'load_system',
                       'element_name', 
                       'node_end','stress_points', 'y', 'z']
             # -------------------------------------
             coord = stress.stress_point
-            items = [[row.load_name, row.component_name, 
+            items = [[row.load_name, row.mesh_name, 
                       row.load_level, row.load_system, 
                       row.element_name, row.node_end,
                       x+1, coord.y[x], coord.z[x]]

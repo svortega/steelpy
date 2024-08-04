@@ -46,7 +46,7 @@ class ElementsSQL(ClassBasicSQL):
         """ """
         query = (self._component, )
         table = 'SELECT Element.name FROM Element \
-                 WHERE component_id = ? '
+                 WHERE mesh_id = ? '
         conn = create_connection(self.db_file)
         with conn:        
             cur = conn.cursor()
@@ -59,7 +59,7 @@ class ElementsSQL(ClassBasicSQL):
         """ """
         query = (self._component, )
         table = 'SELECT Element.type FROM Element \
-                 WHERE component_id = ? '
+                 WHERE mesh_id = ? '
         conn = create_connection(self.db_file)
         with conn:        
             cur = conn.cursor()
@@ -160,7 +160,7 @@ class ElementsSQL(ClassBasicSQL):
         elements = "CREATE TABLE IF NOT EXISTS Element(\
                             number INTEGER PRIMARY KEY NOT NULL,\
                             name NOT NULL,\
-                            component_id INTEGER NOT NULL REFERENCES Component(number), \
+                            mesh_id INTEGER NOT NULL REFERENCES Mesh(number), \
                             type TEXT NOT NULL,\
                             material_id INTEGER NOT NULL REFERENCES Material(number),\
                             section_id INTEGER NOT NULL REFERENCES Section(number),\
@@ -254,7 +254,7 @@ class ElementsSQL(ClassBasicSQL):
         """ """
         query = (self._component)
         table = f"SELECT name FROM Element \
-                WHERE component_id = ?;"
+                WHERE mesh_id = ?;"
         #
         conn = create_connection(self.db_file)
         with conn:

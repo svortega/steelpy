@@ -17,11 +17,12 @@ f2umodel = UFOmodel(name="wave_test3")
 #
 mesh = f2umodel.mesh()
 #
+mesh['wt3'] = "wave_test"
 # ----------------------------------------------------
 # Material input
 # ----------------------------------------------------
 #
-material = mesh.material()
+material = mesh['wt3'].material()
 matlinear = material.linear()
 matlinear[1] = [345.0 * units.MPa]
 print(material)
@@ -31,7 +32,7 @@ print(material)
 # Section Input
 # ----------------------------------------------------
 #
-section = mesh.section()
+section = mesh['wt3'].section()
 section[2] = ['Tubular', 500 * units.mm, 25 * units.mm]
 print(section)
 #
@@ -41,7 +42,7 @@ print(section)
 #
 #
 # Node input
-nodes = mesh.node()
+nodes = mesh['wt3'].node()
 nodes[10] = [0 * units.m, -100* units.m, 0 * units.m]
 nodes[20] = [0 * units.m, -75 * units.m, 0 * units.m]
 nodes[30] = [0 * units.m, -50 * units.m, 0 * units.m]
@@ -53,7 +54,7 @@ print(nodes)
 #
 #
 # boundary Input
-boundary = mesh.boundary()
+boundary = mesh['wt3'].boundary()
 #
 supports = boundary.nodes()
 supports[10] = 'fixed'
@@ -69,7 +70,7 @@ print(boundary)
 # Element input
 #
 #
-elements = mesh.element()
+elements = mesh['wt3'].element()
 #
 beams = elements.beam()
 # beam[number] = [material, section, node1, node2, roll_angle]
@@ -281,7 +282,7 @@ metcond[20].parameters = {'Design load': 'max_BS',
 # Basic Load
 #
 # loading
-load = mesh.load()
+load = mesh['wt3'].load()
 #
 # ----------------------------------------------------
 # Basic Load
@@ -298,7 +299,7 @@ hydro = loadCase.metocean(metcond)
 mesh.build()
 #
 print("Load")
-loadm = mesh.load()
+loadm = mesh['wt3'].load()
 basicLoad = loadm.basic()
 print(basicLoad)
 #
@@ -306,7 +307,7 @@ print(basicLoad)
 # Structural Analysis
 # ----------------------------------------------------
 #
-frame = Trave2D(mesh=mesh)
+frame = Trave2D(mesh=mesh['wt3'])
 frame.static()
 results = frame.results()
 print(results)

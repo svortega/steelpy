@@ -22,29 +22,29 @@ from steelpy.utils.dataframe.main import DBframework
 #
 #
 class BasicLoadSQL(LoadCaseBasic):
-    __slots__ = ['db_file', '_plane', '_component']
+    __slots__ = ['db_file', '_component']
 
     #
-    def __init__(self, db_file:str, plane: NamedTuple,
+    def __init__(self, db_file:str, #plane: NamedTuple,
                  component: int) -> None:
         """
         """
         super().__init__()
         #
         self.db_file = db_file
-        self._plane = plane
+        #self._plane = plane
         self._component = component
         #
         self._nodes = NodeLoadGlobalSQL(component=self._component,
                                         db_file=self.db_file)
         #
         self._beams = BeamLoadGloabalSQL(component=self._component,
-                                         plane=self._plane, 
+                                         #plane=self._plane, 
                                          db_file=self.db_file)
         #
         conn = create_connection(self.db_file)
         with conn: 
-            self._create_table(conn)        
+            self._new_table(conn)        
     #
     @property
     def _labels(self):
@@ -54,7 +54,7 @@ class BasicLoadSQL(LoadCaseBasic):
                   FROM Load, LoadBasic \
                   WHERE Load.level = ? \
                   AND LoadBasic.load_id = Load.number\
-                  AND Load.component_id = ? ;"
+                  AND Load.mesh_id = ? ;"
         conn = create_connection(self.db_file)
         with conn:        
             cur = conn.cursor()
@@ -83,7 +83,6 @@ class BasicLoadSQL(LoadCaseBasic):
         try:
             index = self._labels.index(load_name)
             return LoadTypeSQL(load_name=load_name,
-                               plane=self._plane,
                                component=self._component, 
                                bd_file=self.db_file)
         except ValueError:
@@ -95,7 +94,7 @@ class BasicLoadSQL(LoadCaseBasic):
     def _push_load(self, conn, load_name:int|str, load_title:str):
         """ """
         query = (load_name,  self._component, "basic", load_title, 'ufo', None)
-        table = 'INSERT INTO Load(name, component_id, level, title, \
+        table = 'INSERT INTO Load(name, mesh_id, level, title, \
                  input_type, input_file) \
                  VALUES(?,?,?,?,?,?)'
         cur = conn.cursor()
@@ -109,7 +108,7 @@ class BasicLoadSQL(LoadCaseBasic):
         cur.execute(table, query)        
     #
     #
-    def _create_table(self, conn):
+    def _new_table(self, conn):
         """ """
         # -------------------------------------
         # Main
@@ -238,7 +237,7 @@ class BasicLoadSQL(LoadCaseBasic):
         #
         # [Fx, Fy, Fz, Mx, My, Mz]
         # [V, M, w, theta]
-        header = ['load_name', 'component_name',
+        header = ['load_name', 'mesh_name',
                   'load_comment', 'load_type', 
                   'load_level', 'load_system',
                   'element_name', 'node_end',
@@ -293,13 +292,13 @@ class BasicLoadSQL(LoadCaseBasic):
         return dfbeam
     #
     #
-    def Fn(self):
+    def Fn(self, plane):
         """
         Global matrix consisting of summation of force & displacement 
         """
-        # FIXME: step neds to be sorted
-        columns = [*self._plane.hforce, *self._plane.hdisp]
-        headgrp = ['load_name', 'component_name',
+        # FIXME: step needs to be sorted
+        columns = [*plane.hforce, *plane.hdisp]
+        headgrp = ['load_name', 'mesh_name',
                    'load_id', 'load_level',
                    'load_title','load_system',
                    'node_name', 'node_index']
@@ -318,7 +317,7 @@ class BasicLoadSQL(LoadCaseBasic):
         Fn_df = dfnodal.add(dfbeam, fill_value=0)
         Fn_df.reset_index(inplace=True)
         #
-        return Fn_df.reindex(columns=['load_name', 'component_name', 
+        return Fn_df.reindex(columns=['load_name', 'mesh_name', 
                                       'load_id', 'load_level',
                                       'load_title','load_system',
                                       #'load_title', 'load_comment', 'load_system',
@@ -331,7 +330,7 @@ class BasicLoadSQL(LoadCaseBasic):
 def pull_ENL_df(conn, component: int):
     """ Equivalent Nodal Loads """
     df = pull_FER_data(conn, component)
-    df = df[['load_name', 'component_name', 
+    df = df[['load_name', 'mesh_name', 
              'load_title', 'load_level',
              'load_id', 'load_system', 'load_comment',
              'element_name',
@@ -346,7 +345,7 @@ def pull_FER_df(conn, component: int):
     """ """
     df = pull_FER_data(conn, component)
     #
-    return df[['load_name', 'component_name', 
+    return df[['load_name', 'mesh_name', 
              'load_title', 'load_level',
              'load_id', 'load_system', 'load_comment',
              'element_name',
@@ -360,26 +359,26 @@ def pull_FER_data(conn, component: int):
     """ """
     query = (component, )
     table = "SELECT Load.name AS load_name, \
-                    Component.name AS component_name, \
+                    Mesh.name AS mesh_name, \
                     Load.title AS load_title, \
                     Node.name AS node_name, \
-                    Node.mesh_idx as node_index, \
+                    Node.idx as node_index, \
                     Element.name as element_name, \
                     LoadBeamFER.* \
-            FROM Load, Node, Element, LoadBasic, LoadBeamFER, Component \
+            FROM Load, Node, Element, LoadBasic, LoadBeamFER, Mesh \
             WHERE LoadBeamFER.basic_id = LoadBasic.number \
             AND LoadBasic.load_id = Load.number \
             AND LoadBeamFER.node_id = Node.number \
             AND LoadBeamFER.element_id =  Element.number \
-            AND Load.component_id = Component.number \
-            AND Component.number = ?;"
+            AND Load.mesh_id = Mesh.number \
+            AND Mesh.number = ?;"
     #
     cur = conn.cursor()
     cur.execute(table, query)
     rows = cur.fetchall()
     #
     #
-    cols = ['load_name', 'component_name', 
+    cols = ['load_name', 'mesh_name', 
             'load_title',
             'node_name', 'node_index', 
             'element_name',
@@ -403,17 +402,17 @@ class LoadTypeSQL(LoadTypeBasic):
     """
     """
     __slots__ = ['_node', '_beam', '_selfweight', '_component', 
-                 'name', 'number', 'title', '_db_file', '_plane']
+                 'name', 'number', 'title', '_db_file']
 
     def __init__(self, load_name: str|int,
-                 plane: NamedTuple,
+                 #plane: NamedTuple,
                  component: int, 
                  bd_file:str):
         """
         """
         self.name = load_name
         self._db_file = bd_file
-        self._plane = plane
+        #self._plane = plane
         self._component = component
         #
         self.number, self.title = self._load_spec(self.name)
@@ -423,7 +422,7 @@ class LoadTypeSQL(LoadTypeBasic):
                                      db_file=self._db_file)
         #
         self._beam = BeamLoadItemSQL(load_name=load_name,
-                                     plane=self._plane,
+                                     #plane=self._plane,
                                      component=component, 
                                      db_file=self._db_file)
         #
@@ -437,7 +436,7 @@ class LoadTypeSQL(LoadTypeBasic):
         table = 'SELECT Load.name \
                  FROM Load, LoadBasic\
                  WHERE LoadBasic.load_id = Load.number \
-                 AND component_id = ?;'
+                 AND mesh_id = ?;'
         conn = create_connection(self._db_file)
         with conn:        
             cur = conn.cursor()
@@ -452,7 +451,7 @@ class LoadTypeSQL(LoadTypeBasic):
                  FROM Load, LoadBasic \
                  WHERE Load.name = ? \
                  AND LoadBasic.load_id = Load.number \
-                 AND component_id = ?;'
+                 AND mesh_id = ?;'
         #
         conn = create_connection(self._db_file)
         with conn:        

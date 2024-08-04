@@ -109,7 +109,7 @@ class SectionSQL(SectionMainSQL):
         table = "CREATE TABLE IF NOT EXISTS Section (\
                     number INTEGER PRIMARY KEY NOT NULL,\
                     name NOT NULL,\
-                    component_id INTEGER NOT NULL REFERENCES Component(number),\
+                    mesh_id INTEGER NOT NULL REFERENCES Mesh(number),\
                     SA_inplane DECIMAL, \
                     SA_outplane DECIMAL,\
                     shear_stress TEXT, \

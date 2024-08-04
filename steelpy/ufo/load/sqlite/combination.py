@@ -22,28 +22,28 @@ from steelpy.utils.dataframe.main import DBframework
 #
 class LoadCombSQL(LoadCombinationBasic):
     
-    __slots__ = ['_labels', '_title', '_number', 'db_file', '_plane', 
+    __slots__ = ['_labels', '_title', '_number', 'db_file',
                  '_index', '_basic', '_combination', '_metocean',
                  '_component']
     #
-    def __init__(self, db_file:str, plane: NamedTuple,
+    def __init__(self, db_file:str, #plane: NamedTuple,
                  component: int):
         """
         """
         super().__init__()
         #
         self.db_file = db_file
-        self._plane=plane
+        #self._plane=plane
         self._component = component
         #
         self._basic = BasicLoadSQL(db_file=self.db_file,
-                                   component=component,
-                                   plane=self._plane)
+                                   component=component)
+                                   #plane=self._plane)
         self._combination = {}
         #
         conn = create_connection(self.db_file)
         with conn: 
-            self._create_table(conn)
+            self._new_table(conn)
     #
     def __setitem__(self, load_name:int|str, load_title:str) -> None:
         """
@@ -81,7 +81,7 @@ class LoadCombSQL(LoadCombinationBasic):
         except ValueError:
             raise IOError("load combination {:} not defined".format(load_name))
     #
-    def _create_table(self, conn):
+    def _new_table(self, conn):
         """ """
         table = "CREATE TABLE IF NOT EXISTS LoadCombination(\
                     number INTEGER PRIMARY KEY NOT NULL,\
@@ -97,7 +97,7 @@ class LoadCombSQL(LoadCombinationBasic):
         """
         project = (name, component, level, title, 'ufo')
         sql = 'INSERT INTO Load(\
-               name, component_id, level, title, input_type)\
+               name, mesh_id, level, title, input_type)\
                VALUES(?,?,?,?,?)'
         #
         cur = conn.cursor()
@@ -196,7 +196,7 @@ class LoadCombSQL(LoadCombinationBasic):
         #print('load function')
         basic = self._basic
         dfcomb = self.to_basic()
-        header = ['load_name', 'component_name']
+        header = ['load_name', 'mesh_name']
         combgrp = dfcomb.groupby(header)
         Fbgrp = Fb_local.groupby(header)
         #
@@ -213,7 +213,7 @@ class LoadCombSQL(LoadCombinationBasic):
                 loadfun.extend(lfout)
         #
         header = ['load_name', 'basic_load',
-                  'component_name',
+                  'mesh_name',
                   'load_comment', 'load_type', 
                   'load_level', 'load_system',
                   'element_name', 'node_end']
@@ -226,7 +226,7 @@ class LoadCombSQL(LoadCombinationBasic):
                               index=None)       
         #
         #
-        header = ['load_name', 'component_name',
+        header = ['load_name', 'mesh_name',
                   #'load_comment', 'load_type',
                   'load_level', 'load_system',
                   'element_name', 'node_end']
@@ -236,9 +236,9 @@ class LoadCombSQL(LoadCombinationBasic):
         dfload['load_level'] = 'combination'
         return dfload
     #
-    def Fn(self):
+    def Fn(self, plane):
         """ """
-        dfbasic = self._basic.Fn()
+        dfbasic = self._basic.Fn(plane=plane)
         dfcomb = self.to_basic()
         #
         values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
@@ -251,7 +251,7 @@ class LoadCombSQL(LoadCombinationBasic):
         #
         colgrp = ['load_name', 'load_id', 
                   'load_level', 'load_title',
-                  'load_system', 'component_name',
+                  'load_system', 'mesh_name',
                   'node_name', 'node_index']
         #        
         dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
@@ -285,7 +285,7 @@ class LoadCombSQL(LoadCombinationBasic):
         #
         colgrp = ['load_name', 'load_id', 
                   'load_level', 'load_title',
-                  'load_system', 'component_name',
+                  'load_system', 'mesh_name',
                   'element_name', 
                   'node_name', 'node_index']        
         dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
@@ -299,7 +299,7 @@ class LoadCombSQL(LoadCombinationBasic):
         """
         db = DBframework()
         # group basic load by name
-        header = ['component_name','load_name']
+        header = ['mesh_name', 'load_name']
         blgrp = dfbasic.groupby(header)
         combgrp = dfcomb.groupby(header)
         dftemp = []
@@ -377,11 +377,11 @@ class CombTypeSQL:
         return self._metocean
     #
     @property
-    def _component_name(self):
+    def mesh_name(self):
         """ component name """
         query = (self._component, )
         table = 'SELECT name \
-                 FROM Component WHERE number = ?;'
+                 FROM Mesh WHERE number = ?;'
         conn = create_connection(self.db_file)
         with conn:
             cur = conn.cursor()
@@ -508,7 +508,7 @@ class BasicCombSQL(Mapping):
 def get_load_list(conn, component: int):
     """ """
     query = (component, )
-    table = "SELECT * FROM Load WHERE component_id = ?"
+    table = "SELECT * FROM Load WHERE mesh_id = ?"
     #
     cur = conn.cursor()
     cur.execute(table, query)
@@ -522,7 +522,7 @@ def get_load_number(conn, load_name:int|str,
     query = (load_name, component, level)
     table = "SELECT * FROM Load \
              WHERE name = ? \
-             AND component_id = ? \
+             AND mesh_id = ? \
              AND level = ?"
     #
     cur = conn.cursor()
@@ -561,7 +561,7 @@ def get_comb_number(conn, load_name:int,
     table = f"SELECT * FROM Load\
             WHERE name = ? \
             AND type = 'combination' \
-            AND component_id = ?"
+            AND mesh_id = ?"
     cur = conn.cursor()
     cur.execute(table, query)
     loads = cur.fetchone()

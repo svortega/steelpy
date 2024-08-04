@@ -39,16 +39,15 @@ from steelpy.utils.sqlite.utils import create_connection #, create_table
 #
 #
 class MetoceanLoadSQL(MetoceanLoad):
-    __slots__ = ['db_file', '_plane', '_component']
+    __slots__ = ['db_file', '_component']
     #
-    def __init__(self, db_file:str,
-                 plane: NamedTuple, component: int) -> None:
+    def __init__(self, db_file:str, component: int) -> None:
         """
         """
         super().__init__()
         #
         self.db_file = db_file
-        self._plane = plane
+        #self._plane = plane
         self._component = component
     #
     #
@@ -96,7 +95,7 @@ class MetoceanLoadSQL(MetoceanLoad):
         """ """
         query = (name, self._component, "basic", title, 'metocean', file, )
         #project = (load_name, load_title, "basic", 'metocean')
-        table = 'INSERT INTO Load(name, component_id, level, title, \
+        table = 'INSERT INTO Load(name, mesh_id, level, title, \
                                   input_type, input_file) \
                  VALUES(?,?,?,?,?,?)'
         cur = conn.cursor()

@@ -18,15 +18,16 @@ f2umodel = UFOmodel("2D_example_0")
 #
 mesh = f2umodel.mesh()
 #
+mesh['2D'] = '2D example'
 #
 # ----------------------------------------------------
 # Material input
 # ----------------------------------------------------
 # [elastic, Fy, Fu, E, G, Poisson, density, alpha]
-mesh.material([[10, 'linear', 345.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa],
-               [15, 'linear', 245.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa]])
+mesh['2D'].material([[10, 'linear', 345.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa],
+                     [15, 'linear', 245.0 * units.MPa, 490.0 * units.MPa, 200 * units.GPa]])
 #
-material = mesh.material()
+material = mesh['2D'].material()
 print(material)
 #
 
@@ -35,11 +36,11 @@ print(material)
 # Section Input
 # ----------------------------------------------------
 #
-mesh.section([[15, 'rectangle', 8 * units.inch, 4 * units.inch],
-              [20, 'ub', 240*units.mm, 6.2*units.mm, 120*units.mm, 9.8*units.mm],
-              [25, 'Tubular', 300 * units.mm, 10 * units.mm]])
+mesh['2D'].section([[15, 'rectangle', 8 * units.inch, 4 * units.inch],
+                    [20, 'ub', 240*units.mm, 6.2*units.mm, 120*units.mm, 9.8*units.mm],
+                    [25, 'Tubular', 300 * units.mm, 10 * units.mm]])
 #
-print(mesh.section())
+print(mesh['2D'].section())
 #
 #
 # ----------------------------------------------------
@@ -53,12 +54,12 @@ bayWidth = 4.0 * units.m
 #
 # nodes coordinates [node_id, x, y, z=0]
 #
-mesh.node([(1, storeyBase,   storeyBase),
-           (2, storeyBase, storeyHeight1),
-           (3, bayWidth, storeyHeight2),
-           (4, bayWidth,   storeyBase)])
+mesh['2D'].node([(1, storeyBase,   storeyBase),
+                 (2, storeyBase, storeyHeight1),
+                 (3, bayWidth, storeyHeight2),
+                 (4, bayWidth,   storeyBase)])
 #
-print(mesh.node())
+print(mesh['2D'].node())
 #
 #
 # ----------------------------------------------------
@@ -66,10 +67,10 @@ print(mesh.node())
 # ----------------------------------------------------
 #
 # [node_id, type, fixity]
-mesh.boundary([[1, 'support', 'pinned'],
-               [4, 'support', 'fixed']])
+mesh['2D'].boundary([[1, 'support', 'pinned'],
+                     [4, 'support', 'fixed']])
 #
-print(mesh.boundary())
+print(mesh['2D'].boundary())
 #
 # ----------------------------------------------------
 # Element input
@@ -80,11 +81,11 @@ print(mesh.boundary())
 # Elements[number] = [plate, node1, node2, node3, node4, material, section, ]
 #
 #
-mesh.element([(1,  'beam',  1, 2, 10, 15, 0),
-              (2,  'beam',  2, 3, 15, 20, 0),
-              (3,  'beam',  3, 4, 10, 25, 0)])
+mesh['2D'].element([(1,  'beam',  1, 2, 10, 15, 0),
+                    (2,  'beam',  2, 3, 15, 20, 0),
+                    (3,  'beam',  3, 4, 10, 25, 0)])
 #
-print(mesh.element().beam())
+print(mesh['2D'].element().beam())
 #
 #
 # ----------------------------------------------------
@@ -96,7 +97,7 @@ print(mesh.element().beam())
 # Basic Load (global system default)
 #
 # loading
-load = mesh.load()
+load = mesh['2D'].load()
 #
 # load.basic.system = 'local'  # This will affect beam load only (global default)
 #
@@ -159,22 +160,22 @@ print(basic)
 mesh.build()
 #
 print("Nodes")
-nodes = mesh.node()
+nodes = mesh['2D'].node()
 nodedf = nodes.df
 print(nodedf)
 #
 print("boundaries")
-bds = mesh.boundary()
+bds = mesh['2D'].boundary()
 bdsdf = bds.df
 print(bdsdf)
 #
 print("Elements")
-elements = mesh.element()
+elements = mesh['2D'].element()
 elementsdf = elements.df
 print(elements)
 #
 print("Load")
-loadm = mesh.load()
+loadm = mesh['2D'].load()
 basicLoad = loadm.basic()
 bl_nodedf = basicLoad.node().df
 print(bl_nodedf)
@@ -212,7 +213,7 @@ print(bl_blinedf)
 # Structural Analysis Implicit
 # ----------------------------------------------------
 #
-frame = Trave2D(mesh=mesh)
+frame = Trave2D(mesh=mesh['2D'])
 frame.static()
 results = frame.results()
 #

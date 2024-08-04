@@ -14,9 +14,9 @@ import os
 from steelpy.ufo.process.main import ufoBasicModel, ModelClassBasic
 from steelpy.ufo.load.main import MeshLoad
 from steelpy.ufo.mesh.sqlite.main import MeshSQL
-from steelpy.ufo.mesh.sqlite.nodes import NodeSQL
-from steelpy.ufo.mesh.sqlite.elements import ElementsSQL
-from steelpy.ufo.mesh.sqlite.boundary import BoundarySQL
+#from steelpy.ufo.mesh.sqlite.nodes import NodeSQL
+#from steelpy.ufo.mesh.sqlite.elements import ElementsSQL
+#from steelpy.ufo.mesh.sqlite.boundary import BoundarySQL
 from steelpy.ufo.mesh.process.main import Ke_matrix, Kg_matrix, Km_matrix, Kt_matrix
 from steelpy.ufo.plot.main import PlotMesh
 #
@@ -27,23 +27,25 @@ from steelpy.sections.main import Section
 from steelpy.material.main import Material
 #
 from steelpy.utils.dataframe.main import DBframework
-from steelpy.utils.io_module.inout import check_input_file
+#from steelpy.utils.io_module.inout import check_input_file
 from steelpy.utils.sqlite.utils import create_connection, create_table
+from steelpy.utils.sqlite.main import ClassBasicSQL
 #
-
+#
 #
 #
 class ConceptMesh(ModelClassBasic):
     """ Mesh Model Class"""
-    __slots__ = ['_name', 'db_file', '_item']
+    __slots__ = ['_component', 'db_file', '_item']
     
-    def __init__(self, name:str|None = None,
+    def __init__(self, component:str,
                  sql_file:str|None = None):
         """
         """
         super().__init__()
-        self._name = name
+        self._component = component
         self._item:dict = {}
+        self._mesh = Mesh(component, sql_file=sql_file)
     #
     def __setitem__(self, name: int|str, title: int|str) -> None:
         """
@@ -53,8 +55,8 @@ class ConceptMesh(ModelClassBasic):
             raise Exception(f'Item {name} already exist')
         except ValueError:
             self._labels.append(name)
-            self._item[name] = Mesh(name=self._name,
-                                    component=name)
+            self._item[name] = MeshItem(name=self._name,
+                                        component=name)
             #            
             self._item[name]._set_type(component=name,
                                        comp_type='concept',
@@ -72,7 +74,150 @@ class ConceptMesh(ModelClassBasic):
     #
 #
 #
-class Mesh(MeshSQL):
+#
+class Mesh(ClassBasicSQL):
+    __slots__ = ['_name', 'db_file', '_item', 
+                 '_plane', '_component']
+    
+    def __init__(self, component:int, sql_file:str):
+        """
+        """
+        super().__init__(db_file=sql_file)
+        self._component = component
+        self._item:dict = {}
+        #print('--')
+    #
+    #
+    # --------------------------------------------
+    #
+    #
+    @property
+    def _labels(self):
+        """ """
+        query = (self._component, )
+        table = 'SELECT name FROM Mesh \
+                 WHERE component_id = ? \
+                 ORDER BY number ASC ;'
+        #
+        conn = create_connection(self.db_file)
+        with conn:        
+            cur = conn.cursor()
+            cur.execute(table, query)
+            items = cur.fetchall()
+        return [item[0] for item in items]
+    #
+    def __setitem__(self, name: int|str, title: str) -> None:
+        """
+        """
+        #
+        try:
+            self._labels.index(name)
+            raise Exception(f' mesh {name} already exist')
+        except ValueError:        
+            #
+            conn = create_connection(self.db_file)
+            with conn:
+                number = self._push_data(conn, name=name, title=title)
+        #
+        self._item[name] = MeshItem(name=name, component=number,
+                                    sql_file=self.db_file)
+        #1 / 0
+    #
+    def __getitem__(self, name: str|int) -> tuple:
+        """
+        node_number : node number
+        """
+        try:
+            self._labels.index(name)
+            #conn = create_connection(self.db_file)
+            #with conn:
+            #    item = self._pull_data(conn, name)
+            #return node
+            #print('--> mesh')
+            #return MeshItem(name=name,
+            #                component=item[0],
+            #                sql_file=self.db_file)
+            return self._item[name]
+        except ValueError:
+            raise IndexError(f' mesh : {name} not valid')        
+        #1 / 0
+    #
+    #
+    # --------------------------------------------
+    # SQL ops
+    #
+    def _new_table(self, conn) -> None:
+        """ """
+        table = "CREATE TABLE IF NOT EXISTS Mesh (\
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    name NOT NULL,\
+                    component_id INTEGER NOT NULL REFERENCES Component(number), \
+                    plane TEXT NOT NULL, \
+                    units TEXT NOT NULL,\
+                    superelement DECIMAL NOT NULL , \
+                    date TEXT NOT NULL,\
+                    title TEXT);"
+        create_table(conn, table)
+    #
+    def _push_data(self, conn,
+                   name: str|int,
+                   title: str, 
+                   plane: str = '3D'):
+        """ """
+        table = 'INSERT INTO Mesh(name, component_id, plane, units,\
+                                  superelement, date, title)\
+                            VALUES(?,?,?,?,?,?,?)'
+        #
+        date = dt.now().strftime('%Y-%m-%d')
+        data = (name, self._component, plane, 'si', 0, date, title)
+        # push
+        cur = conn.cursor()
+        out = cur.execute(table, data)
+        return out.lastrowid
+    #
+    def _pull_data(self, conn, name: int|str, item: str = '*'):
+        """ """
+        project = (name, self._component)
+        table = f'SELECT Mesh.{item}, \
+                    Component.name \
+                FROM Mesh, Component \
+                WHERE Mesh.name = ? \
+                AND Mesh.component_id = ?'
+        cur = conn.cursor()
+        cur.execute(table, project)
+        record = cur.fetchone()
+        return record
+    #
+    def _set_type(self, component: str|int,
+                  comp_type: str, title: str|None):
+        """ """
+        
+        time=dt.now().strftime('%Y-%m-%d')
+        #item = 'concept'
+        #
+        query = (time, comp_type, title, component)
+        table = f"UPDATE Mesh \
+                 SET date = ?, \
+                     type = ?, \
+                     title = ? \
+                 WHERE name = ?;"
+        #
+        conn = create_connection(self.db_file)
+        with conn:          
+            cur = conn.cursor()
+            comp = cur.execute(table, query)
+        #
+        if not comp:
+            raise IOError(f' mesh {component} not valid')
+    #
+    def build(self):
+        """ """
+        for key, item in self._item.items():
+            print(f' building mesh : {key}')
+            item.build()
+#
+#
+class MeshItem(MeshSQL):
     """
     mesh[beam_name] = [number, element1, element2, elementn]
     """
@@ -87,41 +232,14 @@ class Mesh(MeshSQL):
                  sql_file:str|None = None):
         """
         """
-        #mesh_type:str="sqlite"
-        super().__init__(name=name, component=component, sql_file=sql_file)
+        super().__init__(name=name,
+                         component=component,
+                         sql_file=sql_file)
         #
-        #self._build = True
-        #if sql_file:
-        #    #print('--')
-        #    sql_file = check_input_file(file=sql_file,
-        #                                file_extension="db")
-        #    self.db_file = sql_file
-        #    self._build = False
-        #    # fixme: name
-        #    #self._name = sql_file.split('.')[0]
-        #else:
-        #    self.db_file = self._get_file(name=name)
-        #    self.data_type = mesh_type
-        #    self._name = name
-        #    # FIXME : how to handle component? 
-        #    if not component:
-        #        component = name
-        #    #
-        #    conn = create_connection(self.db_file)
-        #    with conn:
-        #        self._create_table(conn)
-        #        comp_no = self._push_data(conn, component)
-        #
-        #self._component = component
         #
         # --------------------------------------------------
-        #
-        #self._plane = Plane3D()
-        self._plane = MeshPlane(plane2D=False)
-        #self._ndof = 6        
-        #
-        #self._materials = materials
-        #self._sections = sections
+        # TODO: should plane be out of mesh?
+        self._plane = MeshPlane(plane2D=False)     
         #
         # --------------------------------------------------
         #
@@ -134,46 +252,18 @@ class Mesh(MeshSQL):
                                   db_file=self.db_file)       
         #
         # --------------------------------------------------
-        #
-        #self._nodes = NodeSQL(db_system=mesh_type,
-        #                      plane=self._plane,
-        #                      component=comp_no, 
-        #                      db_file=self.db_file)
-        #
-        #self._boundaries = BoundarySQL(db_system=mesh_type,
-        #                               component=comp_no,
-        #                               db_file=self.db_file)
-        #
-        #self._elements = ElementsSQL(plane=self._plane,
-        #                             db_system=mesh_type,
-        #                             component=comp_no,
-        #                             db_file=self.db_file)
-        #
-        # --------------------------------------------------
         # groups
         self._groups = Groups()
-        #
-        #self._load:Load|None = None
-        #nodes=self._nodes,
-        #elements=self._elements,
-        #boundaries=self._boundaries,         
-        self._load = MeshLoad(plane=self._plane,
-                              mesh_type=self.data_type,
+        #     
+        self._load = MeshLoad(mesh_type=self.data_type,
                               component=self._component,
                               db_file=self.db_file)
         #
         # --------------------------------------------------
         # Ops
         self._df = DBframework()
-        self._Kmatrix:bool = False
-        #self._plane2D:bool = False
-        # mesh
-        #self._plot = PlotMesh(mesh=self)
         #
-        # Solution
-        #self._solution =  UnSQL(load=self._load,
-        #                        db_file=self.db_file,)
-        #
+    #
     #
     #
     #def _get_file(self, name: str):
@@ -306,7 +396,7 @@ class Mesh(MeshSQL):
         self._plane = MeshPlane(plane2D)
         #self._nodes.plane = self._plane
         #self._elements.plane = self._plane
-        self._load.plane = self._plane
+        #self._load.plane = self._plane
     #
     def jbc(self):
         """ """

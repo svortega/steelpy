@@ -69,7 +69,7 @@ class NodeSQL(NodeBasic):
         """ """
         query = (self._component, )
         table = 'SELECT Node.name FROM Node \
-                 WHERE component_id = ? \
+                 WHERE mesh_id = ? \
                  ORDER BY number ASC ;'
         #
         conn = create_connection(self.db_file)
@@ -129,9 +129,9 @@ class NodeSQL(NodeBasic):
         table = "CREATE TABLE IF NOT EXISTS Node (\
                 number INTEGER NOT NULL,\
                 name INTEGER NOT NULL,\
-                component_id INTEGER NOT NULL REFERENCES Component(number), \
+                mesh_id INTEGER NOT NULL REFERENCES Mesh(number), \
                 title NOT NULL,\
-                mesh_idx INTEGER NOT NULL, \
+                idx INTEGER NOT NULL, \
                 PRIMARY KEY (number));"
         #
         create_table(conn, table)
@@ -170,8 +170,8 @@ class NodeSQL(NodeBasic):
         # -------------------------------------------
         #
         query = (node_number, self._component, node_name, idx)
-        table = 'INSERT INTO Node(name, component_id, \
-                                  title, mesh_idx) \
+        table = 'INSERT INTO Node(name, mesh_id, \
+                                  title, idx) \
                                   VALUES(?,?,?,?);' 
         #
         #cur = conn.cursor()
@@ -213,7 +213,7 @@ class NodeSQL(NodeBasic):
         query = (self._component, )
         table = f'SELECT NodeCoordinate.{key}, Node.title \
                   FROM Node, NodeCoordinate \
-                  WHERE Node.component_id = ? \
+                  WHERE Node.mesh_id = ? \
                   AND Node.name = NodeCoordinate.node_id \
                   AND ABS({item} - {value}) <= MAX({rel_tol} * MAX(ABS({item}), ABS({value})), {abs_tol})'
             #.format(key, item, value, rel_tol, item, value, abs_tol)
@@ -229,7 +229,7 @@ class NodeSQL(NodeBasic):
         1 / 0
         project = (value, name, self._component, )
         sql = f'UPDATE Node SET {item} = ? \
-                WHERE name = ? AND component_id = ? '
+                WHERE name = ? AND mesh_id = ? '
 
         cur = conn.cursor()
         cur.execute(sql, project)
@@ -241,7 +241,7 @@ class NodeSQL(NodeBasic):
         query = (self._component, )
         conn = create_connection(self.db_file)
         table = 'SELECT * FROM Node \
-                WHERE component_id = ? \
+                WHERE mesh_id = ? \
                 ORDER BY number ASC'
         cur = conn.cursor()
         cur.execute(table, query)
@@ -262,7 +262,7 @@ class NodeSQL(NodeBasic):
             indexes = [(x, rows[node_name], self._component,)
                        for x, node_name in enumerate(new_numbers)]
 
-            update_colum(conn, colname='mesh_idx',
+            update_colum(conn, colname='idx',
                          newcol=indexes)
     #
     #
@@ -274,7 +274,7 @@ class NodeSQL(NodeBasic):
             query = (self._component, )
             table = f'SELECT {head.upper()}(NodeCoordinate.{col}) \
                       FROM Node, NodeCoordinate \
-            WHERE Node.component_id = ? \
+            WHERE Node.mesh_id = ? \
             AND Node.number = NodeCoordinate.node_id'
             
             cur = conn.cursor()
@@ -366,13 +366,13 @@ class NodeSQL(NodeBasic):
     def jwbc(self):
         """ joints with boundary condition"""
         project = (self._component, )
-        table = 'SELECT Node.mesh_idx, \
+        table = 'SELECT Node.idx, \
                  IIF(Node.number = NodeBoundary.node_id,\
                      (NodeBoundary.x, NodeBoundary.y, NodeBoundary.z, \
                      NodeBoundary.rx, NodeBoundary.ry, NodeBoundary.rz) ,\
                      (0,0,0,0,0,0)) AS JBC \
                 FROM Node, NodeBoundary \
-                WHERE Node.component_id = ?'
+                WHERE Node.mesh_id = ?'
         #table = 'SELECT Node, NodeBoundary \
         #            CASE \
         #                WHEN Node.number = NodeBoundary.node_id \
@@ -411,12 +411,12 @@ class NodeSQL(NodeBasic):
     def DOF_unreleased(self):
         """ list of the indices for the unreleased DOFs """
         project = (self._component, )
-        table = 'SELECT Node.mesh_idx, Node.name, \
+        table = 'SELECT Node.idx, Node.name, \
                         NodeBoundary.* \
                  FROM Node, NodeBoundary \
                  WHERE Node.number = NodeBoundary.node_id \
-                 AND Node.component_id = ? \
-                 ORDER BY Node.mesh_idx ASC'
+                 AND Node.mesh_id = ? \
+                 ORDER BY Node.idx ASC'
         conn = create_connection(self.db_file)
         with conn:        
             cur = conn.cursor()
@@ -447,9 +447,9 @@ class NodeSQL(NodeBasic):
         """get node dataframe"""
         db = DBframework()
         conn = create_connection(self.db_file)
-        table = f'SELECT Node.name, Node.component_id, NodeCoordinate.* \
+        table = f'SELECT Node.name, Node.mesh_id, NodeCoordinate.* \
                   FROM Node, NodeCoordinate \
-                  WHERE Node.component_id = {self._component} \
+                  WHERE Node.mesh_id = {self._component} \
                   AND Node.number = NodeCoordinate.node_id ;'
         nodes = db.read_sql_query(table,conn)
         nodes.drop(columns=['node_id'], inplace=True)
@@ -494,7 +494,7 @@ class NodeSQL(NodeBasic):
         #
         nodes = df[header.keys()].copy()
         #nodes[["x", "y", "z"]] = df[coord].values.tolist()
-        nodes['component_id'] = self._component
+        nodes['mesh_id'] = self._component
         nodes['type'] = self._system
         nodes[['r', 'theta', 'phi']] = None
         #
@@ -517,7 +517,7 @@ class NodeSQL(NodeBasic):
         #
         with conn:
             nodes.to_sql('Node', conn,
-                         index_label=['name', 'component_id', 'type',
+                         index_label=['name', 'mesh_id', 'type',
                                       'x', 'y', 'z', 'r',
                                       'theta', 'phi', 'idx'], 
                          if_exists='append', index=False)
@@ -548,11 +548,11 @@ def pull_node_item(conn, node_name, component, item):
     """ """
     project = (node_name, component)
     table = f'SELECT NodeCoordinate.{item}, \
-                   Node.title, Node.mesh_idx \
+                   Node.title, Node.idx \
             FROM Node, NodeCoordinate \
             WHERE Node.number =  NodeCoordinate.node_id\
             AND Node.name = ? \
-            AND Node.component_id = ?'
+            AND Node.mesh_id = ?'
     cur = conn.cursor()
     cur.execute(table, project)
     record = cur.fetchone()
@@ -593,11 +593,11 @@ def pull_boundary(conn, component: int,
     #
     project = [component]
     #
-    table = 'SELECT Node.mesh_idx, Node.name, \
+    table = 'SELECT Node.idx, Node.name, \
              NodeBoundary.{:} \
              FROM Node, NodeBoundary \
              WHERE Node.number = NodeBoundary.node_id \
-             AND Node.component_id = ?'.format(item)
+             AND Node.mesh_id = ?'.format(item)
     #
     if node_name:
         table += 'AND Node.name = ?'
@@ -614,7 +614,7 @@ def pull_node_number(conn, node_name:int,
     project = (node_name, component)
     table = f'SELECT number FROM Node \
               WHERE name = ? \
-              AND component_id = ?'
+              AND mesh_id = ?'
     cur = conn.cursor()
     cur.execute(table, project)
     record = cur.fetchone()
@@ -624,7 +624,7 @@ def pull_node_rows(conn, component: int):
     """ """
     project = (component,)
     table = f'SELECT number, name FROM Node \
-              WHERE component_id = ?'
+              WHERE mesh_id = ?'
     cur = conn.cursor()
     cur.execute(table, project)
     records = cur.fetchall()
@@ -633,8 +633,8 @@ def pull_node_rows(conn, component: int):
 def pull_node_index(conn, component: int):
     """ """
     project = (component,)
-    table = f'SELECT mesh_idx, name FROM Node \
-              WHERE component_id = ?'
+    table = f'SELECT idx, name FROM Node \
+              WHERE mesh_id = ?'
     cur = conn.cursor()
     cur.execute(table, project)
     records = cur.fetchall()
@@ -646,7 +646,7 @@ def pull_node_name(conn, node_title: int|str,
     project = (node_title, component)
     table = f'SELECT name FROM Node \
               WHERE title = ? \
-              AND component_id = ?'
+              AND mesh_id = ?'
     cur = conn.cursor()
     cur.execute(table, project)
     record = cur.fetchone()
@@ -660,7 +660,7 @@ def update_colum(conn, colname: str, newcol: list):
     #query = (component, )
     table = f'UPDATE Node SET {colname} = ? \
               WHERE rowId = ? \
-              AND component_id = ?;'
+              AND mesh_id = ?;'
     cur = conn.cursor()
     cur.executemany(table, newcol)
 #

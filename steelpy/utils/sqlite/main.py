@@ -24,25 +24,25 @@ from steelpy.utils.io_module.inout import check_input_file
 class ClassMainSQL:
     __slots__ = ['db_file', '_build', '_name']
     
-    def __init__(self, name:str|None,
-                 sql_file:str|None):
+    def __init__(self, name:str, sql_file:str):
         """
         """
-        #
+        self._name = name
+        # TODO: build flag to be defined
         self._build = True 
         if sql_file:
             sql_file = check_input_file(file=sql_file,
                                         file_extension="db")
             self.db_file = sql_file
-            self._build = False
+            #self._build = False
         elif name:
             self.db_file = self._get_file(name=name)
-            self._name = name
+            #self._name = name
             #conn = create_connection(self.db_file)
             #with conn:
             #    self._create_table(conn)
         else:
-            IOError('Project name or SQL file missing')
+            IOError('SQL file missing')
     #
     #
     def _get_file(self, name: str):
@@ -95,4 +95,5 @@ class ClassBasicSQL(Mapping):
         while True:
             n += 1
             yield n
+#
 #
