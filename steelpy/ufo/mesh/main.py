@@ -292,28 +292,28 @@ class MeshItem(MeshSQL):
               df=None):
         """
         """
-        supports = self._boundaries.support()
+        #supports = self._boundaries.support()
         #if values:
         if isinstance(values, (list,tuple)):
             if isinstance(values[0], (list,tuple)):
                 for value in values:
-                    self._nodes[value[0]] = value[1:4]
-                    try:
-                        if isinstance(value[4], str):
-                            supports[value[0]] = value[4]
-                        else:
-                            supports[value[0]] = value[4:]
-                    except IndexError:
-                        pass
+                    self._nodes[value[0]] = value[1:]
+                    #try:
+                    #    if isinstance(value[4], str):
+                    #        supports[value[0]] = value[4]
+                    #    else:
+                    #        supports[value[0]] = value[4:]
+                    #except IndexError:
+                    #    pass
             else:
-                self._nodes[values[0]] = values[1:4]
-                try:
-                    if isinstance(values[4], str):
-                        supports[values[0]] = values[4]
-                    else:
-                        supports[values[0]] = values[4:]
-                except IndexError:
-                    pass
+                self._nodes[values[0]] = values[1:]
+                #try:
+                #    if isinstance(values[4], str):
+                #        supports[values[0]] = values[4]
+                #    else:
+                #        supports[values[0]] = values[4:]
+                #except IndexError:
+                #    pass
         #
         # dataframe input
         try:
@@ -324,27 +324,6 @@ class MeshItem(MeshSQL):
         #
         return self._nodes
 
-    #
-    #
-    def boundary(self, values:None|list|tuple=None,
-                   df=None):
-        """
-        """
-        if isinstance(values, (list, tuple)):
-            if isinstance(values[0], (list,tuple)):
-                for item in values:
-                    self._boundaries[item[0]] = item[1:]
-            else:
-                self._boundaries[values[0]] = values[1:]
-        #
-        # dataframe input
-        try:
-            df.columns
-            self._boundaries.df = df
-        except AttributeError:
-            pass 
-        #
-        return self._boundaries
     #
     #    
     #

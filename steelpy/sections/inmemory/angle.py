@@ -63,7 +63,7 @@ class Angle(ShapeBasic):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        return AngleBasic(name=self._labels[index], 
+        return AngleBasic(#name=self._labels[index], 
                           d=self._d[index], tw=self._tw[index],
                           b=self._b[index], r=self._r[index])
 #

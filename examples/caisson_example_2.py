@@ -1,4 +1,4 @@
-from steelpy import f2uModel
+from steelpy import UFOmodel
 from steelpy import Units
 from steelpy import Trave3D
 #
@@ -7,19 +7,20 @@ units = Units()
 # -----------------------------------
 # Start conceptual modelling
 # -----------------------------------
-f2u_model = f2uModel(component="EA_PDQ_Caisson_C1")
+f2u_model = UFOmodel(name="EA_PDQ_Caisson_C1")
 #
 #
 concept = f2u_model.concept()
+concept[10] = 'Caisson_2'
 #
 # -----------------------------------
 # define material
-material = concept.materials()
+material = concept[10].material()
 material["MAT345"] = ['elastic', 345.0 * units.MPa]
 #
 # -----------------------------------
 # Define sections
-section = concept.sections()
+section = concept[10].section()
 # Caisson
 section["T1350x40"] = ['Tubular', 1350 * units.mm, 40 * units.mm]
 section["T1350x25"] = ['Tubular', 1350 * units.mm, 25 * units.mm]
@@ -36,7 +37,7 @@ section["T100x25"] = ['Tubular', 100 * units.mm, 25 * units.mm]
 #
 #
 # define Elevations
-elevation = concept.points()
+elevation = concept[10].point()
 elevation[1] = [0*units.m, 14.2*units.m, 0*units.m]
 elevation[2] = [0*units.m, 8.0*units.m, 0*units.m]
 elevation[3] = [0*units.m, -14.0*units.m, 0*units.m]
@@ -44,7 +45,7 @@ elevation[4] = [0*units.m, -39.0*units.m, 0*units.m]
 elevation[5] = [0*units.m, -64.0*units.m, 0*units.m]
 elevation[6] = [0*units.m, -74.0*units.m, 0*units.m]
 #
-point = concept.points()
+point = concept[10].point()
 point[22] = [0*units.m, 8.0*units.m, -1.5*units.m]
 point[33] = [0*units.m, -14.0*units.m, -1.5*units.m]
 point[44] = [2.7*units.m, -39.0*units.m, 0*units.m]
@@ -52,10 +53,10 @@ point[55] = [2.7*units.m, -64.0*units.m, 0*units.m]
 #
 # -----------------------------------
 #
-elements = concept.elements()
+elements = concept[10].element()
 #
 # Start beam modelling
-beam = elements.beams()
+beam = elements.beam()
 # set material & section default
 material.default = "MAT345"
 #
@@ -105,22 +106,38 @@ beam["bm17"] = elevation[5], point[55]
 #
 #concept.boundaries([[point, node1, type, boundary/parameters],
 #                     line, node1, node2, type, boundary/parameters])
-boundary = concept.boundaries()
-supports = boundary.supports()
+boundary = concept[10].boundary()
+supports = boundary.point()
 #
-supports['fixed'] = 'fixed'
-supports['fixed'].points = elevation[1]
-supports['fixed'].points = point[22]
-supports['fixed'].points = point[33]
-supports['fixed'].points = point[44]
-supports['fixed'].points = point[55]
+supports['sp1'] = elevation[1]
+supports['sp1'].restrain = 'fixed'
+#
+supports['sp2'] = point[22]
+supports['sp2'].restrain = 'fixed'
+#
+supports['sp3'] = point[33]
+supports['sp3'].restrain = 'fixed'
+#
+supports['sp4'] = point[44]
+supports['sp4'].restrain = 'fixed'
+#
+supports['sp5'] = point[55]
+supports['sp5'].restrain = 'fixed'
+#
+#
+#supports['fixed'] = 'fixed'
+#supports['fixed'].points = elevation[1]
+#supports['fixed'].points = point[22]
+#supports['fixed'].points = point[33]
+#supports['fixed'].points = point[44]
+#supports['fixed'].points = point[55]
 #
 #
 #
 # -----------------------------------
 # Start concept loading
 #
-load = concept.load()
+load = concept[10].load()
 # define basic load
 basic = load.basic()
 #
@@ -210,26 +227,26 @@ basic[1].beam.line = {'qx': 90 * units.kN / units.m, "name":"wave_7"}
 # ----------------------------------------------------
 #
 #
-mesh = concept.mesh()
+mesh = concept[10].mesh()
 #
 #
 #
 #
 print("Materials")
-print(material)
+print(mesh.material())
 #
 print("Sections")
-print(section)
+print(mesh.section())
 #
-nodes = mesh.nodes()
+nodes = mesh.node()
 print(nodes)
 #
-bds = mesh.boundaries()
+bds = mesh.boundary()
 print("boundaries")
 print(bds)
 #
 print("")
-elements = mesh.elements()
+elements = mesh.element()
 print(elements)
 #
 loadm = mesh.load()

@@ -87,20 +87,16 @@ class SolidSection(ShapeBasic):
         shape_type = self._type[index]
 
         if re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
-            return CircleSolid(name=shape_name, d=self._d[index],
-                               type=shape_type)
+            return CircleSolid(d=self._d[index])
 
         elif re.match(r"\b((solid|bar(\_)?)?square|rectangle)\b", shape_type, re.IGNORECASE):
-            return RectangleSolid(name=shape_name, depth=self._d[index],
-                                  width=self._wb[index],
-                                  type=shape_type)
+            return RectangleSolid(depth=self._d[index], width=self._wb[index])
 
         elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
             c = abs(self._wt[index] - self._wb[index]) / 2.0
-            return TrapeziodSolid(name=shape_name, depth=self._d[index],
+            return TrapeziodSolid(depth=self._d[index],
                                   width=self._wb[index],
-                                  a=self._wt[index], c=c,
-                                  type=shape_type)
+                                  a=self._wt[index], c=c)
 
         else:
             raise Exception(f" section type {shape_type} not recognized")

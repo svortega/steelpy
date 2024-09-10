@@ -27,7 +27,7 @@ axis = namedtuple('Axis', ['y', 'z'])
 #-------------------------------------------------
 #
 #
-@dataclass
+@dataclass(slots=True)
 class BoxBasic(ShapeStressBasic):
     """
     Calculate the section properties of a box section
@@ -82,11 +82,13 @@ class BoxBasic(ShapeStressBasic):
     tw: float
     b: float
     tb: float
-    shape:str = 'box'
+    #shape:str = 'box'
     #
     # --------------------------------------------
-    #      
-    #
+    @property
+    def shape(self):
+        return 'Box'    
+    # --------------------------------------------
     #
     def _properties(self, poisson: float):
         """ """

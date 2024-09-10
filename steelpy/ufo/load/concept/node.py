@@ -17,10 +17,10 @@ from steelpy.ufo.load.process.nodes import (NodeLoadMaster,
 #
 class NodeLoadItemIM(Mapping):
     __slots__ = ['_title', '_labels', '_type', '_number',
-                 '_f2u_nodes', #'_load_name',
+                 '_f2u_points', #'_load_name',
                  '_load', '_displacement', '_mass', '_node']
 
-    def __init__(self, load_name, load_title, nodes) -> None:
+    def __init__(self, load_name, load_title, points) -> None:
         """
         """
         self._labels = []
@@ -30,7 +30,7 @@ class NodeLoadItemIM(Mapping):
         #
         self._node = NodeItemIM(load_name=load_name,
                                 load_title=load_title)
-        self._f2u_nodes = nodes
+        self._f2u_points = points
     #
     def __setitem__(self, node_name: int|str,
                     node_load: list) -> None:
@@ -51,20 +51,21 @@ class NodeLoadItemIM(Mapping):
             self._node._displacement[node_name] = node_load[1:]
         
         else:
-            raise IOError(f'node load type {load_type} not recognized')
+            raise IOError(f'Load type {load_type} not recognized')
         #
     #
-    def __getitem__(self, node_id: int | str):
+    def __getitem__(self, node_name: int | str):
         """
         """
         try:
-            node_name =self._f2u_nodes.get_name(node_id)
-            if not node_id in self._labels:
-                self._labels.append(node_id)
+            point = self._f2u_points[node_name]
+            #node_name =self._f2u_points.get_name(node_name)
+            if not node_name in self._labels:
+                self._labels.append(node_name)
             #
-            return self._node(node_id)
+            return self._node(node_name)
         except KeyError:
-            raise IOError(f"Node {node_id} not found")
+            raise IOError(f"Point {node_name} not found")
 
     #
     def __contains__(self, value) -> bool:

@@ -25,7 +25,7 @@ axis = namedtuple('Axis', ['y', 'z'])
 #      Standard Section Profiles
 #-------------------------------------------------
 #
-@dataclass
+@dataclass(slots=True)
 class AngleBasic(ShapeStressBasic):
     """
     Calculate the section properties of an angle section
@@ -80,11 +80,14 @@ class AngleBasic(ShapeStressBasic):
     tw:float
     b:float
     r:float
-    shape:str = 'Angle'
+    #shape:str = 'Angle'
     #
-    # -----------------------------------------------------
+    # --------------------------------------------
+    @property
+    def shape(self):
+        return 'Angle'
     #    
-    def _properties(self):
+    def _properties(self, poisson: float):
         # -------------------------------------------------
         #
         Yc, Zc = self.centroid
@@ -317,13 +320,22 @@ class AngleBasic(ShapeStressBasic):
         Jx = Iy + Iz
         rp = (Jx / area) ** 0.50
         #
+        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw)
+                             J=J, Cw=Cw,
+                             alpha_sy=alpha_sy,
+                             alpha_sz=alpha_sz)
 
     #
+    #
+    def alpha_s(self, poisson: float):
+        """Shear correction factor"""
+        alpha_s = (4 + 3 * poisson) / (2 * (1 + poisson))
+        print('fix angle shear correction factor')
+        return alpha_s, alpha_s    
     #
     def _stressX(self, actions, stress=None):
         """
@@ -543,8 +555,13 @@ class AngleBasic(ShapeStressBasic):
     #
     def _dimension(self) -> str:
         """ Print section dimensions"""
-        return ("{:23s} {:>19} {:1.4E} {:1.4E} {:1.4E} {:1.4E}\n"
-                .format(self.shape, "", self.d, self.tw, self.b, self.tw))
+        out = "{:<32s}{:1.4e} {:1.4e}\n"\
+               .format(self.shape, self.d, self.b)
+        out += "{:<48s}{:1.4e} {:1.4e}\n"\
+               .format("", self.tw, self.tw)         
+        #return ("{:23s} {:>19} {:1.4E} {:1.4E} {:1.4E} {:1.4E}\n"
+        #        .format(self.shape, "", self.d, self.tw, self.b, self.tw))
+        return out
 
     #
     #

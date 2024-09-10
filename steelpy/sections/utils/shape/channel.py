@@ -25,7 +25,7 @@ axis = namedtuple('Axis', ['y', 'z'])
 #      Standard Section Profiles
 #-------------------------------------------------
 #
-@dataclass
+@dataclass(slots=True)
 class ChannelBasic(ShapeStressBasic):
     """
     Calculate the section properties of a channel section
@@ -78,7 +78,12 @@ class ChannelBasic(ShapeStressBasic):
     tw: float
     b: float
     tb: float
-    shape:str = 'Channel'
+    #shape:str = 'Channel'
+    #
+    # --------------------------------------------
+    @property
+    def shape(self):
+        return 'Channel'
     #
     # --------------------------------------------
     #
@@ -114,7 +119,7 @@ class ChannelBasic(ShapeStressBasic):
         #
         return stress_out           
     #
-    def _properties(self):
+    def _properties(self, poisson: float):
         """ """
         # self.a *= factors[0]
         # self.ta *= factors[0]
@@ -182,12 +187,21 @@ class ChannelBasic(ShapeStressBasic):
         Jx = Iy + Iz
         rp = math.sqrt(Jx / area)
         #
+        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw)
-
+                             J=J, Cw=Cw,
+                             alpha_sy=alpha_sy,
+                             alpha_sz=alpha_sz)
+    #
+    #
+    def alpha_s(self, poisson: float):
+        """Shear correction factor"""
+        alpha_s = (4 + 3 * poisson) / (2 * (1 + poisson))
+        print('fix channel shear correction factor')
+        return alpha_s, alpha_s
     #
     def curved(self, R):
         """

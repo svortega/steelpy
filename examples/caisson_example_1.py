@@ -1,4 +1,4 @@
-from steelpy import f2uModel
+from steelpy import UFOmodel
 from steelpy import Units
 from steelpy import Trave3D
 #
@@ -9,14 +9,15 @@ units = Units()
 # -----------------------------------
 # Start conceptual modelling
 # -----------------------------------
-f2u_model = f2uModel(component="caisson_1") # set name component
+f2u_model = UFOmodel(name="caisson_1") # set name component
 #
 concept = f2u_model.concept() # call conceptual model
+concept[10] = 'Caisson_1'
 #
 #
 # -----------------------------------
 # define material
-material = concept.materials()
+material = concept[10].material()
 #
 # material[number] = [elastic, Fy, Fu, E, G, Poisson, density, alpha]
 material["MAT45"] = ['elastic', 345.0 * units.MPa]
@@ -25,7 +26,7 @@ print(material["MAT45"].Fy)
 #
 # -----------------------------------
 # Define sections
-section = concept.sections()
+section = concept[10].section()
 #
 # section[section_name] =  ['Tubular', Diametre, Wall_thickness]
 section["TUB500"] = ['Tubular', 500 * units.mm, 25 * units.mm]
@@ -36,16 +37,16 @@ section["TUB400"] = ['Tubular', 400 * units.mm, 15 * units.mm]
 #
 # -----------------------------------
 # define points
-point = concept.points()
+point = concept[10].point()
 point[3] = [4*units.m, 3*units.m]
 point[4] = {"x":4*units.m, "y":0*units.m}
 #print(point[4])
 #
 # -----------------------------------
-elements = concept.elements()
+elements = concept[10].element()
 #
 # Start beam modelling
-beam = elements.beams()
+beam = elements.beam()
 # set material & section default
 material.default = "MAT45"
 section.default = "TUB500"
@@ -68,20 +69,20 @@ beam["bm3"] = point[3], point[4]
 #
 # -----------------------------------
 # Define boundary conditions
-boundary = concept.boundaries()
-supports = boundary.supports()
+boundary = concept[10].boundary()
+supports = boundary.point()
 #
-supports['fixed'] = 'fixed'
-# define boundary via coordinades with list = [x, y, z=0]
-supports['fixed'].points = [0*units.m, 0*units.m]
-# define beam via concept Points = point
-supports['fixed'].points = point[4]
+supports['fixed_1'] = [0*units.m, 0*units.m] 
+supports['fixed_1'].restrain = 'fixed'
+# 
+supports['fixed_2'] = point[4]
+supports['fixed_2'].restrain = 'fixed'
 #
 #
 # -----------------------------------
 # Start concept loading
 #
-load = concept.load()
+load = concept[10].load()
 # define basic load
 basic = load.basic()
 # create new basic load
@@ -131,8 +132,8 @@ basic[3].beam.point = {'fx':-100 * units.kN,  # beam point axial load
 #
 # Structure
 #
-plot = concept.plot()
-plot.frame()
+#plot = concept[10].plot()
+#plot.frame()
 #plot.material()
 #plot.section()
 #
@@ -147,23 +148,23 @@ plot.frame()
 # ----------------------------------------------------
 #
 #
-mesh = concept.mesh()
+mesh = concept[10].mesh()
 #
 #
 print("Materials")
-print(material)
+print(mesh.material())
 #
 print("Sections")
-print(section)
+print(mesh.section())
 #
-nodes = mesh.nodes()
+nodes = mesh.node()
 #print("Nodes")
 print(nodes)
 #for key, node in nodes.items():
 #    print(node)
 #
 print("")
-elements = mesh.elements()
+elements = mesh.element()
 print("Elements")
 print(elements)
 #for key, element in elements.items():

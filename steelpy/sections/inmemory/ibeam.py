@@ -68,7 +68,7 @@ class Ibeam(ShapeBasic):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        return IbeamBasic(name=self._labels[index], 
+        return IbeamBasic(#name=self._labels[index], 
                           d=self._d[index], tw=self._tw[index],
                           bft=self._bft[index], tft=self._tft[index],
                           bfb=self._bfb[index], tfb=self._tfb[index], 

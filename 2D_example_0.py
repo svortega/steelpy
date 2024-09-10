@@ -52,32 +52,22 @@ storeyHeight1 = 6.0 * units.m
 storeyHeight2 = 3.0 * units.m
 bayWidth = 4.0 * units.m
 #
-# nodes coordinates [node_id, x, y, z=0]
+# nodes coordinates [node_id, x, y, z=0, boundary=None]
 #
-mesh['2D'].node([(1, storeyBase,   storeyBase),
+mesh['2D'].node([(1, storeyBase,   storeyBase), #, 'pinned'
                  (2, storeyBase, storeyHeight1),
                  (3, bayWidth, storeyHeight2),
-                 (4, bayWidth,   storeyBase)])
+                 (4, bayWidth,   storeyBase)]) # , 'fixed'
 #
 print(mesh['2D'].node())
 #
-#
-# ----------------------------------------------------
-# boundary Input
-# ----------------------------------------------------
-#
-# [node_id, type, fixity]
-mesh['2D'].boundary([[1, 'support', 'pinned'],
-                     [4, 'support', 'fixed']])
-#
-print(mesh['2D'].boundary())
 #
 # ----------------------------------------------------
 # Element input
 # ----------------------------------------------------
 #
 # Example:
-# Elements[number] = [beam, node1, node2, material, section, roll_angle]
+# Elements[number] = [beam, node1, node2, material, section, roll_angle=0, ecc1, ecc2]
 # Elements[number] = [plate, node1, node2, node3, node4, material, section, ]
 #
 #
@@ -85,8 +75,28 @@ mesh['2D'].element([(1,  'beam',  1, 2, 10, 15, 0),
                     (2,  'beam',  2, 3, 15, 20, 0),
                     (3,  'beam',  3, 4, 10, 25, 0)])
 #
-print(mesh['2D'].element().beam())
+beams = mesh['2D'].element().beam()
+print(beams)
 #
+#
+# ----------------------------------------------------
+# boundary Input
+# ----------------------------------------------------
+#
+# [boundary_id, support, node_id, type[restrain|spring], fixity] # global
+# [boundary_id, node_id, type, fixity, translation|(beam|local), dircos|beam_id] # local
+#
+#mesh['2D'].boundary([{'name': 1, 'support': 1, 'restrain': 'pinned'},
+#                     {'name': 2, 'support': 4, 'restrain': 'fixed'},
+#                     {'name': 3, 'support': 4, 'restrain': 'slide', 'translation': beams[3].dircos}])
+#
+# [1, 'node', 3, spring, [kx,ky,kz,krx,kry,krz]]
+#
+mesh['2D'].boundary([[1, 'support', 1, 'restrain', 'pinned'],
+                     [2, 'support', 4, 'restrain', 'fixed']])
+                     #[3, 'beam', 3, 'node', 2, 'support', 'slide']])
+#
+print(mesh['2D'].boundary())
 #
 # ----------------------------------------------------
 # Load input

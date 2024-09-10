@@ -42,7 +42,7 @@ class Material(Mapping):
 
     #
     def __setitem__(self, material_name: str | int,
-                    properties: list[float] | dict[str, float] | str) -> None:
+                    properties: tuple|list|dict[str, float]|str) -> None:
         """
         [name, elastic, Fy, Fu, E, G, Poisson, density, alpha, title(optional)]
         """
@@ -57,11 +57,12 @@ class Material(Mapping):
         # set material default plastic
         if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
             raise NotImplementedError('--> Mat type not yet implemented')
+        
         elif re.match(r"\b(elastic|linear(\_elastic)?)\b", material_type, re.IGNORECASE):
             properties = get_isomat_prop(properties)
+        
         else:
-            raise IOError(' material type {:} not recognised'
-                          .format(material_type))
+            raise IOError(f' material type {material_type} not recognised')
         #
         self._material[material_name] = [material_type, *properties]
 

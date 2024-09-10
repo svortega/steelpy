@@ -15,6 +15,7 @@ from steelpy.utils.sqlite.utils import create_connection, create_table
 #
 from steelpy.ufo.process.elements.nodes import NodePoint, NodeBasic
 from steelpy.ufo.process.elements.boundary import BoundaryItem
+from steelpy.ufo.mesh.sqlite.boundary import (push_boundary, push_boundary_node)
 #
 from steelpy.utils.dataframe.main import DBframework
 
@@ -82,7 +83,7 @@ class NodeSQL(NodeBasic):
     # ---------------------------------
     #
     def __setitem__(self, node_number: int,
-                    coordinates: list[float]|dict[str, float]) -> None:
+                    coordinates: tuple|list|dict[str, float]) -> None:
         """
         """
         if not isinstance(node_number, int):
@@ -92,7 +93,9 @@ class NodeSQL(NodeBasic):
             self._labels.index(node_number)
             raise Exception(f' warning node {node_number} already exist')
         except ValueError:
-            coord = self.get_coordinates(coordinates)
+            data = self.get_coordinates(coordinates)
+            coord = data[:3]
+            fixity = data[3]
             #
             try:
                 node_id = coordinates.name
@@ -101,11 +104,19 @@ class NodeSQL(NodeBasic):
             #
             conn = create_connection(self.db_file)
             with conn:
+                bid = None
+                if fixity:
+                    mesh_id = self._component
+                    bid = push_node_boundary(conn, node_id,
+                                             mesh_id, fixity)
+                
                 self._push_node(conn,
                                 node_number=node_number,
                                 node_name=node_id, 
-                                coordinates=coord)
+                                coordinates=coord,
+                                boundary=bid)
                 #conn.commit()
+
     #
     def __getitem__(self, node_number: int) -> tuple:
         """
@@ -132,6 +143,7 @@ class NodeSQL(NodeBasic):
                 mesh_id INTEGER NOT NULL REFERENCES Mesh(number), \
                 title NOT NULL,\
                 idx INTEGER NOT NULL, \
+                boundary_id INTEGER REFERENCES Boundary(number), \
                 PRIMARY KEY (number));"
         #
         create_table(conn, table)
@@ -154,7 +166,8 @@ class NodeSQL(NodeBasic):
     #
     def _push_node(self, conn, node_number: int,
                    node_name: int | str,
-                   coordinates: list|tuple):
+                   coordinates: list|tuple,
+                   boundary: int|None = None):
         """
         Create a new project into the projects table
         node_number: int
@@ -169,10 +182,11 @@ class NodeSQL(NodeBasic):
         #
         # -------------------------------------------
         #
-        query = (node_number, self._component, node_name, idx)
+        query = (node_number, self._component, node_name,
+                 idx, boundary)
         table = 'INSERT INTO Node(name, mesh_id, \
-                                  title, idx) \
-                                  VALUES(?,?,?,?);' 
+                                  title, idx, boundary_id) \
+                                  VALUES(?,?,?,?,?);' 
         #
         #cur = conn.cursor()
         node_id = cur.execute(table, query).lastrowid
@@ -207,8 +221,8 @@ class NodeSQL(NodeBasic):
                          component=self._component,
                          item=item)
     #
-    def _isclose(self, key:str, item:str, value:float,
-                    rel_tol:float=1e-6, abs_tol:float=0.0)-> tuple:
+    def _isclose(self, item:str, value:float, key:str = '*', 
+                 rel_tol:float=1e-6, abs_tol:float=0.0)-> tuple:
         """ """
         query = (self._component, )
         table = f'SELECT NodeCoordinate.{key}, Node.title \
@@ -331,7 +345,7 @@ class NodeSQL(NodeBasic):
         #
         for item in fixity:
             # [node_idx] = [x,y,z,rx,ry,rz]
-            jbc[item[0]] = item[4:10]
+            jbc[item[0]] = item[5:11]
             #node_name.append(item[1])
         #      
         #
@@ -575,11 +589,12 @@ def pull_node_boundary(conn, node_name: int|str,
     #
     data = pull_boundary(conn, component,
                          node_name, item)
+    
     try:
         data = data[0]
-        boundary = BoundaryItem(*data[4:10],
-                                number=data[2],
-                                name=data[3],
+        boundary = BoundaryItem(*data[5:11],
+                                number=data[4],
+                                name=data[2],
                                 node=node_name)
     except IndexError:
         boundary = None
@@ -593,11 +608,14 @@ def pull_boundary(conn, component: int,
     #
     project = [component]
     #
-    table = 'SELECT Node.idx, Node.name, \
-             NodeBoundary.{:} \
-             FROM Node, NodeBoundary \
-             WHERE Node.number = NodeBoundary.node_id \
-             AND Node.mesh_id = ?'.format(item)
+    table = f'SELECT Node.idx, Node.name, \
+             Boundary.name, \
+             BoundaryFixity.{item} \
+             FROM Node, BoundaryFixity, Boundary, Mesh \
+             WHERE Node.boundary_id = Boundary.number \
+             AND BoundaryFixity.boundary_id = Boundary.number \
+             AND Node.mesh_id = Boundary.mesh_id \
+             AND Mesh.number = ?'
     #
     if node_name:
         table += 'AND Node.name = ?'
@@ -652,6 +670,22 @@ def pull_node_name(conn, node_title: int|str,
     record = cur.fetchone()
     return record[0]
 #
+#
+# ---------------------------------
+#
+def push_node_boundary(conn, node_id: int, mesh_id: int,
+                       fixity: list, btype: str = 'restrain',
+                       title: str|None=None):
+    """ """
+    boundary_id = push_boundary(conn, name=node_id,
+                                mesh_id=mesh_id,
+                                btype=btype,
+                                title=None)
+    
+    push_boundary_node(conn, boundary_id,
+                       fixity, title)
+    #1 / 0
+    return boundary_id
 #
 # ---------------------------------
 #

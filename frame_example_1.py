@@ -11,7 +11,7 @@ units = Units()
 ufo_model = UFOmodel(name="FrameExample_1")
 #
 concept = ufo_model.concept()
-concept[10] =  'Concept_1'
+concept[10] = 'Frame_Concept_1'
 #
 # -----------------------------------
 # define material
@@ -57,6 +57,27 @@ point[33] = [0*units.m, -14.0*units.m, -1.5*units.m]
 #point[33] = [-1.5*units.m, -14.0*units.m, 0*units.m]
 #point[44] = [0*units.m, -39.0*units.m, 2.7*units.m]
 #point[55] = [0*units.m, -64.0*units.m, 2.7*units.m]
+#
+#
+# -----------------------------------
+# Define boundary conditions
+boundary = concept[10].boundary()
+#supports = boundary.support()
+spoint = boundary.point()
+#
+#supports['fixed'] = 'fixed'
+#supports['pinned'] = 'pinned'
+#
+spoint["sp1"] = point[22]
+spoint["sp1"].restrain = "fixed"
+#
+spoint["sp4"] = point[33]
+spoint["sp4"].restrain = 'pinned'
+#
+# Test
+#spoint["sp5"] = [0*units.m, 4.0*units.m, 0*units.m]
+#spoint["sp5"].restrain = 'pinned'
+#
 #
 # -----------------------------------
 # Start beam modelling
@@ -105,28 +126,6 @@ section.default = "T1350x40"
 beam["bm15"] = elevation[3], point[33]
 #beam["bm16"] = elevation[4], point[44]
 #beam["bm17"] = elevation[5], point[55]
-#
-# -----------------------------------
-# Define boundary conditions
-boundary = concept[10].boundary()
-supports = boundary.support()
-#
-supports['fixed'] = 'fixed'
-supports['pinned'] = 'pinned'
-#
-#boundary["sp1"] = elevation[1]
-#boundary["sp1"].support = "pinned"
-#
-supports['fixed'].points = point[22]
-#
-supports['pinned'].points = point[33]
-#boundary["sp3"].support = 'pinned'
-#
-#boundary["sp4"] = point[44]
-#boundary["sp4"].support = 'pinned'
-#
-#boundary["sp5"] = point[55] 
-#boundary["sp5"].support = 'pinned'
 #
 #
 # -----------------------------------

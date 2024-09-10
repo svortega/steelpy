@@ -262,17 +262,17 @@ class MeshLoad:
 class ConceptLoad:
     
     __slots__ = ["_basic", "_combination", '_hydro', '_mass',
-                 '_nodes', '_elements', '_boundaries', '_component']
+                 '_point', '_elements', '_boundaries', '_component']
     
     def __init__(self, points, elements, boundaries, component: int) -> None:
         """
         """
-        self._nodes = points
+        self._point = points
         self._elements = elements
         self._boundaries = boundaries
         self._component = component
         #
-        self._basic = BasicLoadConcept(points=self._nodes,
+        self._basic = BasicLoadConcept(points=self._point,
                                        elements=self._elements,
                                        component=component)
         #

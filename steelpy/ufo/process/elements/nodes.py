@@ -16,7 +16,7 @@ from typing import NamedTuple
 from math import isclose, dist
 #
 # package imports
-#from steelpy.utils.dataframe.main import DBframework
+from steelpy.ufo.process.elements.boundary import get_node_boundary
 
 
 #
@@ -89,16 +89,6 @@ class NodeBasic(Mapping):
     #
     # ----------------------------------
     #
-    #@property
-    #def plane(self) -> NamedTuple:
-    #    """ """
-    #    return self._plane
-    #
-    #@plane.setter
-    #def plane(self, plane: NamedTuple) -> None:
-    #    """ """
-    #    self._plane = plane
-    #
     @property
     def system(self) -> tuple:
         """
@@ -108,9 +98,9 @@ class NodeBasic(Mapping):
     # ----------------------------------
     #
     def get_coordinates(self, coordinates):
-        """ """
+        """ return [x, y, z, boundary]"""
         if isinstance(coordinates, (list, tuple)):
-            coordinates = check_point_list(coordinates, steps=3)
+            coordinates = check_point_list(coordinates)
         elif isinstance(coordinates, dict):
             coordinates = check_point_dic(coordinates)
         else:
@@ -146,7 +136,7 @@ class NodeBasic(Mapping):
         # get index of x coord location in existing database
         coord = self.get_coordinates(coordinates)
         #
-        items = self._isclose(key='*', item='x', value=coord[0],
+        items = self._isclose(item='x', value=coord[0], key='*', 
                               abs_tol=tol, rel_tol=rel_tol)
         # check if y and z coord match
         if items:
@@ -424,8 +414,13 @@ class CoordCartesian(NamedTuple):
     number: int
     index: int
     boundary: tuple | None
-    system: str = "cartesian"
-
+    #system: str = "cartesian"
+    #
+    #
+    @property
+    def system(self):
+        return "cartesian"
+    #
     #sets: List[Tuple]
     #
     #def get_coordinates(self, units:str='metre'):
@@ -508,8 +503,11 @@ class CoordCylindrical(NamedTuple):
     number: int
     index: int
     boundaries: tuple
-    system: str = "cylindrical"
-
+    #system: str = "cylindrical"
+    #
+    @property
+    def system(self):
+        return "cylindrical"    
 #
 class CoordSpherical(NamedTuple):
     """
@@ -521,8 +519,11 @@ class CoordSpherical(NamedTuple):
     number: int
     index: int
     boundaries: tuple
-    system: str = "spherical"
-
+    #system: str = "spherical"
+    #
+    @property
+    def system(self):
+        return "spherical"   
 
 #
 #
@@ -569,32 +570,60 @@ class NodePoint:
 
 
 #
+# --------------------------------------------------------
 #
-def check_point_list(data, steps: int = 6) -> list[float]:
-    """ """
-    new_data = []
+def check_point_list(data: list|tuple, steps: int = 3) -> list:
+    """ [x, y, z, boundary] """
+    new_data = [0] * steps
+    #temp = []
+    #for x in range(steps):
+    #    try:
+    #        try:
+    #            temp.append(data[x].value)
+    #        except AttributeError:
+    #            temp.append(data[x])
+    #    except IndexError:
+    #        temp.append(0.0)
+    #
+    data = list(data)
+    #
+    # check for boundary
+    if isinstance(data[-1], (list, tuple, dict, str)):
+        new_data.append(get_node_boundary(fixity=data[-1]))
+        data.pop(-1)
+    else:
+        new_data.append(None)
+    #
     for x in range(steps):
         try:
             try:
-                new_data.append(data[x].value)
+                new_data[x] = data[x].value
             except AttributeError:
-                new_data.append(data[x])
+                new_data[x] = data[x]
+                #raise IOError('units miising')
         except IndexError:
-            new_data.append(0.0)
+            #temp.append(0.0)
+            pass
+    #
     return new_data
 
 
 #
-def check_point_dic(data) -> list[float]:
+def check_point_dic(data) -> list:
     """ """
-    new_data = [0, 0, 0]
+    new_data = [0, 0, 0, None]
     for key, item in data.items():
         if re.match(r"\b(x)\b", str(key), re.IGNORECASE):
             new_data[0] = item.value
+            
         elif re.match(r"\b(y)\b", str(key), re.IGNORECASE):
             new_data[1] = item.value
+            
         elif re.match(r"\b(z)\b", str(key), re.IGNORECASE):
             new_data[2] = item.value
+            
+        elif re.match(r"\b(boundar(y|ies))\b", str(key), re.IGNORECASE):
+            new_data[3] = get_node_boundary(fixity=item.value)      
     return new_data
 #
-#
+

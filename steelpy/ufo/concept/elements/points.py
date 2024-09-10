@@ -5,7 +5,7 @@
 from __future__ import annotations
 from array import array
 import logging
-#from math import isclose, dist
+from math import isclose, dist
 #from collections.abc import Mapping
 #
 # package imports
@@ -40,7 +40,7 @@ class NodesIM(NodeBasic):
     __slots__ = ['_labels', '_number', '_x', '_y', '_z', 
                  '_system',  '_sets', '_component', '_boundary']
     
-    def __init__(self, component: str, boundary, 
+    def __init__(self, component: str, #boundary, 
                  system:str = 'cartesian') -> None:
         """
         """
@@ -53,24 +53,23 @@ class NodesIM(NodeBasic):
         self._number : array = array('I', [])
         #
         self._component = component
-        self._boundary = boundary
+        #self._boundary = boundary
+    #
+    #
     #
     # ----------------------------------
     #
-    #
-    # ---------------------------------
-    #
-    def __setitem__(self, node_name: int,
+    def __setitem__(self, name: int|str,
                     coordinates: list[float]|dict[str,float]) -> None:
         """
         """
         try:
-            self._labels.index(node_name)
+            self._labels.index(name)
             raise Exception('    *** warning point {:} already exist'
-                            .format(node_name))
+                            .format(name))
         except ValueError:
             coordinates = self.get_coordinates(coordinates)
-            self._labels.append(node_name)
+            self._labels.append(name)
             self._number.append(len(self._labels))
             self._x.append(coordinates[0])
             self._y.append(coordinates[1])
@@ -86,10 +85,10 @@ class NodesIM(NodeBasic):
         try:
             _index = self._labels.index(node_name)
             # FIXME : boundary shouldbe free or fixed?
-            try:
-                boundary = self._boundary[node_name]
-            except TypeError:
-                boundary = [0, 0, 0, 0, 0, 0]
+            #try:
+            #    boundary = self._boundary[node_name]
+            #except TypeError:
+            #    boundary = [0, 0, 0, 0, 0, 0]
             #
             #system = get_coordinate_system(self._system)
             node = NodePoint(name=node_name,
@@ -102,11 +101,11 @@ class NodesIM(NodeBasic):
                              r=None, theta=None, phi=None,
                              title=None, 
                              index=self._number[_index]-1,
-                             boundary=boundary)
+                             boundary=None)
             return node.system()
         except ValueError:
             raise IndexError('   *** node {:} does not exist'.format(node_name))
-    #
+    
     def __delitem__(self, node_name: int) -> None:
         """
         """
@@ -123,6 +122,7 @@ class NodesIM(NodeBasic):
             logging.warning(' delete -- node {:} does not exist'.format(node_name))
             return
     #
+    # ----------------------------------
     #
     def renumbering(self, new_numbers:list[int]):
         """ """
@@ -160,4 +160,31 @@ class NodesIM(NodeBasic):
         min_z = min(self._z)
         return [max_x, max_y, max_z], [min_x, min_y, min_z]
     #
+    #  
+    #
+    def _isclose(self, item:str, value:float, key:str = '*',
+                 rel_tol:float=1e-6, abs_tol:float=0.0)-> tuple:
+        """ """
+        if item in ['x']:
+            val = self._x
+            
+        elif item in ['y']:
+            val = self._y
+        
+        elif item in ['z']:
+            val = self._z
+        
+        else:
+            raise IOError(f' coord:{item} not valid')
+        
+        #
+        idx = [x for x, item in enumerate(val)
+                if isclose(value, item, abs_tol=abs_tol, rel_tol=rel_tol)]
+        #
+        items = [[self._number[i], self._number[i], self._system, 
+                  self._x[i], self._y[i],  self._z[i], self._labels[i]]
+                 for i in idx]
+        return items
+    #
+    # ----------------------------------
 #

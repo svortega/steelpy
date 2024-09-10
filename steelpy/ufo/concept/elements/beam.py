@@ -213,9 +213,10 @@ class Steps:
         index = self.indices[-1]
         nodes = self._cls._connectivity[index]
         node1 = self._cls.f2u_points[nodes[0]]
-        node1 = self._cls.f2u_points._get_coordinates(node1)
-        node2 = self._cls.f2u_points._get_coordinates(coord)
-        length = math.dist(node1, node2)
+        # [x, y, z, boundary]
+        node1 = self._cls.f2u_points.get_coordinates(node1)
+        node2 = self._cls.f2u_points.get_coordinates(coord)
+        length = math.dist(node1[:3], node2[:3])
         self._cls._segment[index] = length
         new_index = self._cls._duplicate_element(index)
         self._cls._step_label[new_index] = step_name

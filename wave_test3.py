@@ -43,27 +43,27 @@ print(section)
 #
 # Node input
 nodes = mesh['wt3'].node()
-nodes[10] = [0 * units.m, -100* units.m, 0 * units.m]
-nodes[20] = [0 * units.m, -75 * units.m, 0 * units.m]
-nodes[30] = [0 * units.m, -50 * units.m, 0 * units.m]
-nodes[40] = [0 * units.m, -25 * units.m, 0 * units.m]
+nodes[10] = [0 * units.m, -100* units.m, 0 * units.m, 'fixed']
+nodes[20] = [0 * units.m, -75 * units.m, 0 * units.m, 'pinned']
+nodes[30] = [0 * units.m, -50 * units.m, 0 * units.m, 'pinned']
+nodes[40] = [0 * units.m, -25 * units.m, 0 * units.m, 'pinned']
 nodes[50] = [0 * units.m,  0 * units.m, 0 * units.m]
-nodes[60] = [0 * units.m,  25* units.m, 0 * units.m]
-nodes[70] = [0 * units.m, 50* units.m, 0 * units.m]
+nodes[60] = [0 * units.m,  25* units.m, 0 * units.m, 'pinned']
+nodes[70] = [0 * units.m, 50* units.m, 0 * units.m, 'fixed']
 print(nodes)
 #
 #
 # boundary Input
 boundary = mesh['wt3'].boundary()
-#
-supports = boundary.nodes()
-supports[10] = 'fixed'
-supports[20] = 'pinned'
-supports[30] = 'pinned'
-supports[40] = 'pinned'
-#supports[50] = 'pinned'
-supports[60] = 'pinned'
-supports[70] = 'fixed'
+##
+#supports = boundary.nodes()
+#supports[10] = 'fixed'
+#supports[20] = 'pinned'
+#supports[30] = 'pinned'
+#supports[40] = 'pinned'
+##supports[50] = 'pinned'
+#supports[60] = 'pinned'
+#supports[70] = 'fixed'
 print(boundary)
 #
 #

@@ -152,7 +152,7 @@ class TrapezoidBasic(ShapeStressBasic):
         return math.hypot(self.d, self.width)
 #
 #
-@dataclass
+@dataclass(slots=True)
 class RectangleSolid(TrapezoidBasic):
     """
     Calculate the section properties of a rectangular solid section\n
@@ -201,8 +201,13 @@ d   |     |   Z
     #name: str | int
     depth:float
     width:float
-    shape: str
-    #  
+    #shape: str
+    #
+    # --------------------------------------------
+    #
+    @property
+    def shape(self):
+        return 'rectangle'    
     #
     @property
     def a(self):
@@ -461,7 +466,7 @@ d   |     |   Z
     #
 #
 #
-@dataclass
+@dataclass(slots=True)
 class TrapeziodSolid(TrapezoidBasic):
     """
     Calculate the section properties of a trapezoidal solid section\n  
@@ -504,8 +509,13 @@ class TrapeziodSolid(TrapezoidBasic):
     width:float
     a:float
     c:float
-    shape: str = 'trapezoid'
+    #shape: str = 'trapezoid'
     #
+    # --------------------------------------------
+    #
+    @property
+    def shape(self):
+        return 'trapezoid'   
     #
     def _properties(self, poisson: float):
         """
@@ -641,7 +651,7 @@ class TrapeziodSolid(TrapezoidBasic):
         Zc = 0.50 * self.depth - Zc
         #
         #
-        alpha_sy = self.alpha_s(poisson=poisson)
+        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
@@ -649,7 +659,7 @@ class TrapeziodSolid(TrapezoidBasic):
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
                              J=J, Cw=Cw,
                              alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sy)                             
+                             alpha_sz=alpha_sz)
     #
     #
     def taux_max(self, Mt):
@@ -829,7 +839,7 @@ class TrapeziodSolid(TrapezoidBasic):
 #
 # ------------------------------
 #
-@dataclass
+@dataclass(slots=True)
 class CircleSolid(ShapeStressBasic):
     """
     Calculate the section properties of a circular solid section\n
@@ -858,7 +868,13 @@ class CircleSolid(ShapeStressBasic):
     """
     #name: str | int
     d:float
-    shape: str = 'Circular'
+    #shape: str = 'Circular'
+    #
+    # --------------------------------------------
+    #
+    @property
+    def shape(self):
+        return 'Circular'
     #
     # --------------------------------------------
     #
@@ -1098,7 +1114,7 @@ class CircleSolid(ShapeStressBasic):
     def _dimension(self) -> str:
         """ """
         return  ("{:9s} {:1.4E}\n"
-                 .format(self.type, self.d))
+                 .format(self.shape, self.d))
     #
     #
     @property

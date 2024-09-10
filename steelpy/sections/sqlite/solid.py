@@ -94,14 +94,14 @@ class SolidSectionSQL(SectionMainSQL):
                            compactness,
                            None,)     # title
 
-            elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
+            elif re.match(r"\b((solid|bar(\_)?)?trapezoid)\b", shape_type, re.IGNORECASE):
                 #self._type.append('trapeziod')
                 wb = parameters[1]
                 wt = parameters[2]
                 #self._wb.append(parameters[1])
                 #self._wt.append(parameters[2])
                 section = (shape_name,
-                           "trapeziod",   # shape type
+                           "trapezoid",   # shape type
                            None, None,    # diameter, wall_thickess
                            d, None,       # height, web_thickness
                            wb, None,       # top_flange_width, top_flange_thickness
@@ -132,22 +132,20 @@ class SolidSectionSQL(SectionMainSQL):
         row = self.get_section(shape_name)
         
         if re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
-            d = row[5]
-            return CircleSolid(name=shape_name, d=d, shape=shape_type)
+            d = row[3]
+            return CircleSolid(name=shape_name, d=d)
 
         elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
             d = row[5]
             wb = row[7]
-            return RectangleSolid(name=shape_name, depth=d, width=wb,
-                                  shape=shape_type)
+            return RectangleSolid(name=shape_name, depth=d, width=wb)
 
-        elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b((solid|bar(\_)?)?trapezoid)\b", shape_type, re.IGNORECASE):
             d = row[5]
             wb = row[7]
             wt = row[9]            
             c = abs(wt - wb) / 2.0
-            return TrapeziodSolid(name=shape_name, depth=d, width=wb,
-                                  a=wt, c=c, shape=shape_type)
+            return TrapeziodSolid(name=shape_name, depth=d, width=wb, a=wt, c=c)
 
         else:
             raise Exception(f" section type {shape_type} not recognized")

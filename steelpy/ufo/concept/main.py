@@ -130,22 +130,19 @@ class ConceptItem(ufoBasicModel):
         self._sections = mesh._sections
         self._nodes = mesh._nodes
         #
-        #self._materials = Material(mesh_type="inmemory")
-        #
-        #self._sections = Section(mesh_type="inmemory")
-        #
         # 
         self.joints = Connection(points=self._nodes)
         #
         self._hinges = Releases()
         #
-        #
-        self._boundaries = BoundaryConcept(#points=self._nodes,
-                                           component=self._component)
-        #
         # Points
-        self._point = NodesIM(component=self._component,
-                              boundary=self._boundaries)
+        self._point = NodesIM(component=self._component)
+        #                      boundary=self._boundaries)
+        #
+        #
+        self._boundaries = BoundaryConcept(points=self._point,
+                                           component=self._component)
+        #        
         #
         self._elements = ConceptElements(points=self._nodes,
                                          materials=self._materials,
@@ -155,7 +152,7 @@ class ConceptItem(ufoBasicModel):
         self._groups = Groups()
         #
         #self._load = load
-        self._load = ConceptLoad(points=self._nodes,
+        self._load = ConceptLoad(points=self._point,
                                  elements=self._elements,
                                  component=self._component, 
                                  boundaries=self._boundaries)

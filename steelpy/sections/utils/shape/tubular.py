@@ -148,13 +148,17 @@ class TubularPoint(NamedTuple):
 #
 #
 #
-@dataclass
+@dataclass(slots=True)
 class TubularBasic(ShapeStressBasic):
     #name:str | int
     diameter:float
     thickness:float
-    shape:str = 'tubular'
+    #shape:str = 'tubular'
     #
+    # --------------------------------------------
+    @property
+    def shape(self):
+        return 'Tubular'     
     # --------------------------------------------
     #
     def _properties(self, poisson: float):

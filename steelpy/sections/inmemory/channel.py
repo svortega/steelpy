@@ -62,7 +62,7 @@ class Channel(ShapeBasic):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        return ChannelBasic(name=self._labels[index], 
+        return ChannelBasic(#name=self._labels[index], 
                             d=self._d[index], tw=self._tw[index],
                             b=self._b[index], tb=self._tb[index])
 # 

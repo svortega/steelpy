@@ -75,7 +75,7 @@ class TeeSQLite(SectionMainSQL):
         row = self.get_section(shape_name)
         return TeeBasic(name=row[0], 
                         d=row[5], tw=row[6],
-                        b=row[7], tb=row[8])    
+                        b=row[7], tb=row[8])
     #    
     @property
     def d(self):

@@ -103,7 +103,7 @@ class TubularIM(ShapeBasic):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        return TubularBasic(name=self._labels[index],
+        return TubularBasic(#name=self._labels[index],
                             diameter=self._d[index], thickness=self._tw[index])
     #
     @property

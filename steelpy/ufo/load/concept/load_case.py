@@ -83,8 +83,7 @@ class LoadTypesConcept:
                   'name', 'number', 'title', 'f2u_points', 'f2u_beams']
 
     def __init__(self, name: str|int, number: int, title: str,
-                 component: int, 
-                 points, beams):
+                 component: int, points, beams):
         """
         """
         self.f2u_points = points
@@ -98,7 +97,7 @@ class LoadTypesConcept:
         
         self._node = NodeLoadItemIM(load_name=self.name,
                                     load_title=self.title,
-                                    nodes=self.f2u_points)
+                                    points=self.f2u_points)
         
         self._beam = BeamLoadItemIM(load_name=self.name,
                                     load_title=self.title,

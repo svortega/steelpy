@@ -204,9 +204,9 @@ mesh[10].node([(1, 0*units.ft,   0*units.ft),
            #(6, 5*units.m,  0*units.m)])
            (6, 28*units.ft,  0*units.ft)])
 
-mesh[10].boundary([[1, 'support', 'fixed'],
-               #[6, 'support', 'free']])
-                [6, 'support', (0,1,1,1,0,0)]])
+mesh[10].boundary([[1, 'support', 1, 'restrain', 'fixed'],
+                 #[2, 'support', 6, 'restrain', 'free']])
+                   [2, 'support', 6, 'restrain', (0,1,1,1,0,0)]])
 #
 # [element_id, node1, node2, material, section, roll_angle]
 mesh[10].element([#(1,  'beam',  1, 2, 10, 15, 0),

@@ -167,52 +167,52 @@ def get_shapeSQL(shape_type, geometry):
     """ """
     if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
         shape = TubularQSL()
-        return TubularQSL(name=geometry[0], 
-                            diameter=geometry[3], thickness=geometry[4]) 
+        return TubularQSL(#name=geometry[0], 
+                          diameter=geometry[3], thickness=geometry[4]) 
 
     #elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
     #    return self._solid[shape_name]
     elif re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
         d = geometry[3]
-        return CircleBasic(name=geometry[0], d=d, type=shape_type)
+        return CircleBasic(d=d)
 
     elif re.match(r"\b((solid|bar(\_)?)?square|rectangle)\b", shape_type, re.IGNORECASE):
         d = geometry[3]
         wb = geometry[7]
-        return RectangleBasic(name=geometry[0], depth=d, width=wb,
-                              type=shape_type)
+        return RectangleBasic(#name=geometry[0],
+                              depth=d, width=wb)
 
     elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
         d = geometry[5]
         wb = geometry[7]
         wt = geometry[9]            
         c = abs(wt - wb) / 2.0
-        return Trapeziod(name=geometry[0], depth=d, width=wb,
-                         a=wt, c=c, type=shape_type)    
+        return Trapeziod(#name=geometry[0],
+                         depth=d, width=wb, a=wt, c=c)    
     
     elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
-        return IbeamBasic(name=geometry[0], 
+        return IbeamBasic(#name=geometry[0], 
                           d=geometry[5], tw=geometry[6],
                           bft=geometry[7], tft=geometry[8],
                           bfb=geometry[9], tfb=geometry[10])
     
     elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-        return BoxBasic(name=geometry[0], 
-                d=geometry[5], tw=geometry[6],
-                b=geometry[7], tb=geometry[8])
+        return BoxBasic(#name=geometry[0], 
+                        d=geometry[5], tw=geometry[6],
+                        b=geometry[7], tb=geometry[8])
     
     elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-        return ChannelBasic(name=geometry[0], 
-                    d=geometry[5], tw=geometry[6],
-                    b=geometry[7], tb=geometry[8])
+        return ChannelBasic(#name=geometry[0], 
+                            d=geometry[5], tw=geometry[6],
+                            b=geometry[7], tb=geometry[8])
     
     elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-        return TeeBasic(name=geometry[0], 
+        return TeeBasic(#name=geometry[0], 
                         d=geometry[5], tw=geometry[6],
                         b=geometry[7], tb=geometry[8])
     
     elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-        return AngleBasic(name=geometry[0], 
+        return AngleBasic(#name=geometry[0], 
                           d=geometry[5], tw=geometry[6],
                           b=geometry[7], r=0)
     

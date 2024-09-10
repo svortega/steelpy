@@ -112,6 +112,7 @@ class MeshingConcept:
         """ """
         print('--- Meshing Boundary')
         units = Units()
+        #1 / 0
         # Mesh
         mesh = self._mesh
         mnodes = mesh.node()
@@ -121,7 +122,7 @@ class MeshingConcept:
         msupports = mboundaries.support()
         # concepts
         cboundary = self.concept.boundary()
-        csupports = cboundary.support()
+        csupports = cboundary.point()
         celements = self.concept.element()
         cbeams = celements.beam()
         #
@@ -129,22 +130,22 @@ class MeshingConcept:
         #
         missing = defaultdict(list)
         # find existing nodes
-        for key, value in csupports.items():
-            #support = value.support
-            support = value.points
-            for point in support.points:
-                try:
-                    #print(point)
-                    node_title = mnodes.get_point_name(point)
-                    node_id = mnodes.get_name(node_title)
-                    msupports[node_id] = [*support[:6], key]
-                    print(f"Boundary: {key}  @ Node: {node_id}")
-                except IOError:
-                    missing[key].append(point)
+        for key, support in csupports.items():
+            restrain = support.restrain
+            point = support.point
+            #for point in support.points:
+            try:
+                #print(point)
+                node_title = mnodes.get_point_name(point)
+                node_id = mnodes.get_name(node_title)
+                msupports[key] = [node_id, 'restrain', [*restrain[:6]]]
+                print(f"Boundary: {key}  @ Node: {node_id}")
+            except IOError:
+                missing[key].append(point)
         #
         # if missing boundaries, find if coordinates along members
         #if missing:
-        for boundary, points, in missing.items():
+        for supname, points, in missing.items():
             missing_found = [item.name for item in points] #defaultdict(list)
             for key, cbeam in cbeams.items():
                 p1, p2 = cbeam.nodes
@@ -154,6 +155,7 @@ class MeshingConcept:
                 #Pb = cboundary[boundary].point
                 # Fixme : what format?
                 #Pb = [Pb[0].value, Pb[1].value, Pb[2].value]
+                #1/0
                 for point in points:
                     Pb = point[:3]
                     if point_line.is_on_segment(Pb):
@@ -175,10 +177,11 @@ class MeshingConcept:
                             new_node = self._get_node_name(coord)
                             # set boundary
                             #support = cboundary[boundary].support
-                            support = csupports[boundary].points
+                            restrain = csupports[supname].restrain
                             #if support:
-                            msupports[new_node] = support[:6] # point.boundary
-                            print(f"Boundary: {boundary} on Beam: {key} @ Node: {new_node}")
+                            #msupports[new_node] = support[:6] # point.boundary
+                            msupports[key] = [new_node, 'restrain', [*restrain[:6]]]
+                            print(f"Boundary: {supname} on Beam: {key} @ Node: {new_node}")
                             #
                             # existing element
                             mnodes = beam.connectivity
@@ -230,11 +233,12 @@ class MeshingConcept:
         Mlbasic = mload.basic()
         # Concept
         Concept = self.concept
-        Celements = Concept.element()
-        Cbeams = Celements.beam()
-        Cloads = Concept.load()
-        Clbasic = Cloads.basic()
-        CPoints = Concept.point()
+        celements = Concept.element()
+        Cbeams = celements.beam()
+        Cpoints = Concept.point()
+        cloads = Concept.load()
+        Clbasic = cloads.basic()
+
         #
         for Clb_name, Clb_item in Clbasic.items():
             # clone mesh load
@@ -316,7 +320,7 @@ class MeshingConcept:
             #
             # Nodal load process
             for CPname, CPloads in Clb_item._node.items():
-                point = CPoints[CPname]
+                point = Cpoints[CPname]
                 #
                 #for pname, pload in CPloads._load.items():
                 for pload in CPloads.load:
@@ -354,7 +358,7 @@ class MeshingConcept:
                         beam = self._get_beam(point, beams=Mbeams)
                     #1 / 0
         #
-        Clwave = Cloads.metocean()
+        Clwave = cloads.metocean()
         Mlwave = mload.metocean()
         # Metocean
         for name, condition in Clwave.items():

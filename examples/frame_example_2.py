@@ -136,7 +136,8 @@ boundary = mesh.boundaries()
 #boundary.supports([[1, 'fixed'],
 #                   [4, [1,1,1,1,1,1]]])
 #
-supports = boundary.supports()
+#supports = boundary.supports()
+supports = boundary.node()
 # supports[node_number] =  boundary/parameters
 #supports[1] = 'fixed'
 #supports[4] = [1,1,1,1,1,1]

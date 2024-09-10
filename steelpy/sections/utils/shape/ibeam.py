@@ -82,7 +82,7 @@ axis = namedtuple('Axis', ['y', 'z'])
 #
 #-------------------------------------------------
 #
-@dataclass
+@dataclass(slots=True)
 class IbeamBasic(ShapeStressBasic):
     """
     ============================================  
@@ -147,6 +147,11 @@ class IbeamBasic(ShapeStressBasic):
     tfb: float
     root_radius:float = 0
     shape:str = 'I section'
+    #
+    # --------------------------------------------
+    #@property
+    #def shape(self):
+    #    return 'I section'
     #
     # --------------------------------------------
     #

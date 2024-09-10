@@ -242,6 +242,40 @@ class ufoBasicModel:
         return self._elements
     #
     #
+    def boundary(self, values: None | list | tuple | dict = None,
+                 df=None):
+        """
+        """
+        # 1 / 0
+        if values:
+            if isinstance(values, dict):
+                1 / 0
+
+            elif isinstance(values, (list, tuple)):
+                if isinstance(values[0], (list, tuple)):
+                    for item in values:
+                        self._boundaries[item[0]] = item[1:]
+
+                elif isinstance(values[0], dict):
+                    for item in values:
+                        self._boundaries[item['name']] = item
+                else:
+                    self._boundaries[values[0]] = values[1:]
+
+            else:
+                raise IOError('Boundary input data not valid')
+        #
+        # dataframe input
+        try:
+            df.columns
+            self._boundaries.df = df
+        except AttributeError:
+            pass
+            #
+        return self._boundaries
+
+    #
+    #
     # --------------------
     # Load
     # -------------------- 

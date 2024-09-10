@@ -121,7 +121,7 @@ class SectionMain(ShapeBasic):
             elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
                 self._tubular[shape_name] = properties
 
-            elif re.match(r"\b((solid|bar(\_)?)?square|rectangle|trapeziod|circular|round)\b",
+            elif re.match(r"\b((solid|bar(\_)?)?square|rectangle|trapezoid|circular|round)\b",
                           shape_type, re.IGNORECASE):
                 self._solid[shape_name] = [shape_type, *properties] 
 
@@ -150,7 +150,7 @@ class SectionMain(ShapeBasic):
         if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
             return self._tubular[shape_name]
 
-        elif re.match(r"\b((solid|bar(\_)?)?square|rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b((solid|bar(\_)?)?square|rectangle|trapezoid|circular|round)\b", shape_type, re.IGNORECASE):
             return self._solid[shape_name]
         
         elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
@@ -264,7 +264,7 @@ class SectionMain(ShapeBasic):
             elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
                 self._tubular.df= section
             
-            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b",
+            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapezoid|circular|round)\b",
                            shape_type, re.IGNORECASE):
                 self._solid.df= section
             
@@ -329,7 +329,7 @@ class SectionBasicXX(ShapeBasic):
             elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
                 self._tubular[shape_name] = properties
 
-            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b",
+            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapezoid|circular|round)\b",
                           shape_type, re.IGNORECASE):
                 self._solid[shape_name] = [shape_type, *properties] 
 
@@ -358,7 +358,7 @@ class SectionBasicXX(ShapeBasic):
         if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
             return self._tubular[shape_name]
 
-        elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapezoid|circular|round)\b", shape_type, re.IGNORECASE):
             return self._solid[shape_name]
         
         elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
@@ -398,52 +398,50 @@ class SectionBasicXX(ShapeBasic):
 def ShapeGeometry(shape_type: str, geometry: list):
         """ """
         if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
-            return TubularBasic(name=geometry[0], 
+            return TubularBasic(name=geometry[0],
                                 diameter=geometry[3], thickness=geometry[4]) 
     
         #elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
         #    return self._solid[shape_name]
         elif re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
             d = geometry[5]
-            return CircleSolid(name=geometry[0], d=d, shape=shape_type)
+            return CircleSolid(name=geometry[0], d=d)
     
         elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
             d = geometry[5]
             wb = geometry[7]
-            return RectangleSolid(name=geometry[0], depth=d, width=wb,
-                                  shape=shape_type)
+            return RectangleSolid(name=geometry[0], depth=d, width=wb)
     
-        elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b((solid|bar(\_)?)?trapezoid)\b", shape_type, re.IGNORECASE):
             d = geometry[5]
             wb = geometry[7]
             wt = geometry[9]            
             c = abs(wt - wb) / 2.0
-            return TrapeziodSolid(name=geometry[0], depth=d, width=wb,
-                             a=wt, c=c, shape=shape_type)
+            return TrapeziodSolid(name=geometry[0], depth=d, width=wb, a=wt, c=c)
         
         elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
-            return IbeamBasic(name=geometry[0], 
+            return IbeamBasic(name=geometry[0],
                               d=geometry[5], tw=geometry[6],
                               bft=geometry[7], tft=geometry[8],
                               bfb=geometry[9], tfb=geometry[10])
         
         elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-            return BoxBasic(name=geometry[0], 
-                    d=geometry[5], tw=geometry[6],
-                    b=geometry[7], tb=geometry[8])
+            return BoxBasic(name=geometry[0],
+                            d=geometry[5], tw=geometry[6],
+                            b=geometry[7], tb=geometry[8])
         
         elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-            return ChannelBasic(name=geometry[0], 
-                        d=geometry[5], tw=geometry[6],
-                        b=geometry[7], tb=geometry[8])
+            return ChannelBasic(name=geometry[0],
+                                d=geometry[5], tw=geometry[6],
+                                b=geometry[7], tb=geometry[8])
         
         elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-            return TeeBasic(name=geometry[0], 
+            return TeeBasic(name=geometry[0],
                             d=geometry[5], tw=geometry[6],
                             b=geometry[7], tb=geometry[8])
         
         elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-            return AngleBasic(name=geometry[0], 
+            return AngleBasic(name=geometry[0],
                               d=geometry[5], tw=geometry[6],
                               b=geometry[7], r=0)
         

@@ -27,7 +27,7 @@ axis = namedtuple('Axis', ['y', 'z'])
 # ----------------------------------------
 #
 #
-@dataclass
+@dataclass(slots=True)
 class TeeBasic(ShapeStressBasic):
     """
     Calculate the section properties of a T section
@@ -79,8 +79,12 @@ class TeeBasic(ShapeStressBasic):
     tw: float
     b: float
     tb: float
-    shape:str = 'T Section'
+    #shape:str = 'T Section'
     #
+    # --------------------------------------------
+    @property
+    def shape(self):
+        return 'T Section'    
     #
     def _stressX(self, actions, stress=None, stress_type: str='average'):
         """

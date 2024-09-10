@@ -12,9 +12,13 @@ from typing import NamedTuple
 # package imports
 from steelpy.ufo.process.elements.nodes import NodePoint
 from steelpy.ufo.process.elements.boundary import BoundaryNode, BoundaryItem
+#from steelpy.ufo.concept.elements.points import NodesIM
 
+# ------------------------------------------------------
 #
-class BoundaryNodes(BoundaryNode):
+# TODO : remove redundant code
+#
+class PointSupport(BoundaryNode):
     """
     FE Fixity
 
@@ -36,9 +40,11 @@ class BoundaryNodes(BoundaryNode):
                  '_rx', '_ry', '_rz',
                  '_labels', '_number', '_title']
 
-    def __init__(self) -> None:
+    def __init__(self, component) -> None:
         """
         """
+        super().__init__(component)
+        #
         self._labels: list[int|str] = []
         self._number : array = array('I', [])
         self._x : array = array('i', [])
@@ -49,9 +55,7 @@ class BoundaryNodes(BoundaryNode):
         self._rz : array = array('i', [])
         #
         self._title : list[int|str] = []
-        #
-        super().__init__()
-    #
+    # 
     #
     def __setitem__(self, node_id:int|str,
                     value:list|tuple|dict|str) -> None:
@@ -124,10 +128,11 @@ class BoundaryNodes(BoundaryNode):
         title = "NULL"
         if isinstance(value, list):
             node_name = value[0]
-            if isinstance(value[1], str):
-                value = self.get_boundary(value[1])
-            else:
-                1/0
+            #if isinstance(value[1], str):
+            #    value = self.get_boundary(value[1])
+            #else:
+            #    1/0
+            value = self._get_fixity(fixity=value[1])
         elif isinstance(value, BoundaryItem):
             node_name = value.node
             title = value.name
@@ -165,32 +170,116 @@ class BoundaryNodes(BoundaryNode):
             n += 1
 #
 #
-# TODO : remove redundant code
-#
-class BoundaryJoint:
+class BoundaryPoint(Mapping):
+    __slots__ = ['_point', '_component', '_nodes',
+                 '_labels', '_boundary']    
 
-    def __init__(self) -> None:
+    def __init__(self, points, component:str|int) -> None:
         """
         """
-        self._nodes = BoundaryNodes()
+        # concept
+        self._point = points
+        self._component = component
+        #
+        self._boundary = BoundaryConceptItem(self._point,
+                                             self._component)
+        #
+        self._labels:list[str|int] = []
+        self._nodes:list[str|int] = []
     #
     #
-    def supports(self, values:list|None=None):
-        """"""
-        return self.point(values)    
+    def __setitem__(self, name: int|str,
+                    cood:list|tuple|str) -> None:
+        """
+        """
+        try:
+            self._labels.index(name)
+            raise IOError(f' *** warning support {name} already exist')
+        except ValueError:
+            self._labels.append(name)
+            # set connectivity
+            try:
+                node_id = self._point.get_point_name(cood)
+            except IOError:
+                node_id = self._point.get_new_point(cood)            
+        #
+        self._nodes.append(node_id)
+        #print(f'boundary : {name}')
+        
+    #
+    def __getitem__(self, name: int|str):
+        """
+        """
+        try:
+            index = self._labels.index(name)
+            node_id = self._nodes[index]
+            return self._boundary(node_id)
+            #1 / 0
+        except ValueError:
+            raise IndexError(f' ** Support {name} no valid')
+        
+        
+    #
+    def __len__(self) -> float:
+        return len(self._labels)
+    
+    def __iter__(self):
+        return iter(self._labels)
+    
+    def __contains__(self, value) -> bool:
+        return value in self._labels    
+    #    
+    #
+    #def supports(self, values:list|None=None):
+    #    """"""
+    #    return self.point(values)    
+    #
+    #@property
+    #def point(self):
+    #    """"""
+    #    return self._node
+    #
+    #@point.setter
+    #def point(self, values):
+    #    """"""
+    #    for value in values:
+    #        self._nodes[value[0]] = value[1:]
+#
+#
+class BoundaryConceptItem:
+    """ """
+    __slots__ = ['_node_id', '_points', '_component',
+                 '_support']
+    
+    def __init__(self, points, component:str|int):
+        """
+        """
+        # concept points
+        self._points = points
+        self._component = component
+        #
+        self._support = PointSupport(self._component)
+    #
+    def __call__(self, node_id):
+        self._node_id = node_id
+        return self
+    #
     #
     @property
     def point(self):
-        """"""
-        return self._nodes
-
-    @point.setter
-    def point(self, values):
-        """"""
-        for value in values:
-            self._nodes[value[0]] = value[1:]
-
-
+        """ """
+        return self._points[self._node_id]
+    #
+    @property
+    def restrain(self):
+        """ """
+        return self._support[self._node_id]
+    
+    @restrain.setter
+    def restrain(self, fixity:list|tuple|dict|str):
+        """Boundary condition inserted at support points"""
+        self._support[self._node_id] = fixity
+        #1 /0   
 #
 #
 class BoundaryType:
@@ -203,12 +292,12 @@ class BoundaryType:
         self._boundary_name = boundary_name
     #
     @property
-    def support(self):
+    def restrain(self):
         """ """
         return self._cls._nodes.point[self._boundary_name]
     
-    @support.setter
-    def support(self, conditions):
+    @restrain.setter
+    def restrain(self, conditions):
         """ """
         self._cls._nodes.point[self._boundary_name] = conditions
         #print('--')
@@ -277,6 +366,7 @@ class ConceptBoundaries:
         self._supports.node = points
         #print('---')
 #
+# ------------------------------------------------------
 # 
 class BoundaryConcept:
     """
@@ -286,15 +376,19 @@ class BoundaryConcept:
     Line
     
     """
-    __slots__ = ['_labels', '_number', '_supports',
-                 '_component']
+    __slots__ = ['_labels', '_number', '_component', 
+                 '_point', ]
     
-    def __init__(self, component:str|int):
+    def __init__(self, points, component:str|int):
         """
         """
         self._component = component
-        self._supports = BoundariesSupports(#points,
-                                            self._component)
+        #self._points = BoundaryNodes()
+        #self._supports = BoundarySupport(points,
+        #                                 self._component)
+        self._point = BoundaryPoint(points, component)
+        #
+        
     #
     #
     #
@@ -308,9 +402,9 @@ class BoundaryConcept:
     #    return value in self._labels    
     #
     #
-    def support(self):
-        """ """
-        return self._supports
+    #def support(self):
+    #    """ """
+    #    return self._supports
     #
     #def support(self, dof:list|tuple|str = 'fixed',
     #            name:str|None = None):
@@ -329,13 +423,20 @@ class BoundaryConcept:
     #        self._nodes[bname] = BoundariesJoint(fixity=fixity)
     #        return self._nodes[bname]
     #
-    #def point(self, dof:list|tuple|str):
-    #    """
-    #    Boundary condition inserted at points
-    #    """
-    #    self._fixity = self.get_fixity(dof)
-    #    #print('-->', fixity)
-    #    return self._nodes
+    def point(self):
+        """
+        Boundary condition inserted at points
+        """
+        return self._point
+    #
+    def line(self):
+        """ """
+        raise NotImplemented()
+    #
+    #
+    def rigid_link(self):
+        """ """
+        raise NotImplemented()
     #
     # ----------------------------
     # Operations
@@ -378,18 +479,18 @@ class BoundaryConcept:
         #print('---')    
 #
 #
-class BoundariesSupports(Mapping):
+class BoundarySupport(Mapping):
     """
     """
     __slots__ = ['_labels', '_type', '_number', '_fixity',
                  '_nodes', '_line', '_nitems', '_litems',
                  '_points', '_component']
     
-    def __init__(self, component:str|int):
+    def __init__(self, points, component:str|int):
         """
         """
         # concept points
-        #self._points = points
+        self._points = points
         self._component = component
         #
         self._fixity:list = []
@@ -397,7 +498,7 @@ class BoundariesSupports(Mapping):
         self._type:list[str|int] = []
         self._number:list[int] = []
         #
-        self._nodes = BoundaryNodes()
+        #self._nodes = BoundaryNodes()
         self._line = []
         #
         self._nitems: dict = {}
@@ -409,14 +510,14 @@ class BoundariesSupports(Mapping):
         """
         try:
             self._labels.index(name)
-            raise IOError(f'    *** warning support {name} already exist')
+            raise IOError(f' *** warning support {name} already exist')
         except ValueError:
             self._labels.append(name)
             self._nitems[name] = []
             self._litems[name] = []
         #
         self._fixity.append(self.get_fixity(dof))
-        #print('-->')
+        print(f'boundary : {name}')
         
     #
     def __getitem__(self, name: int|str):
@@ -438,7 +539,7 @@ class BoundariesSupports(Mapping):
     
     def __contains__(self, value) -> bool:
         return value in self._labels    
-    #    
+    #
     #
     # ----------------------------
     # Operations
@@ -524,7 +625,7 @@ class SupportItems:
         #
         self.cls._nodes[nname] = self.cls._fixity[index]
         self.cls._nitems[self._name].append(coordinates)
-        #print('bound')
+        print(f'boundary node {nname}')
     #
     #
     def _set_item(self, b_name, b_type):
