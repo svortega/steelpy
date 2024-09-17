@@ -212,7 +212,7 @@ regwave['100yrs_1'] = [15*units.m, 12.0*units.sec, 100*units.m, 'Stokes']
 regwave['100yrs_2'] = {'Hw': 15*units.m, 'Tw': 12.0*units.sec, 'd': 100*units.m,
                        'wave_theory': 'Fourier'}
 
-regwave['100yrs_3'] = [0.30 * units.m, 6.4 * units.sec, 1*units.m, 'Cnoidal']
+#regwave['100yrs_3'] = [0.30 * units.m, 6.4 * units.sec, 1*units.m, 'Cnoidal']
 regwave['100yrs_4'] = [0.30 * units.m, 6.4 * units.sec, 1*units.m, 'Fourier']
 #
 #kinematic = regwave['100yrs'].kinematics()

@@ -10,7 +10,8 @@ from concurrent.futures import ProcessPoolExecutor
 #from multiprocessing import Pool
 #from collections import defaultdict
 from dataclasses import dataclass
-from typing import NamedTuple
+import time
+#from typing import NamedTuple
 #import re
 import os
 #from operator import itemgetter
@@ -121,7 +122,8 @@ class MetoceanLoadSQL(MetoceanLoad):
     def process(self):
         """ """
         if self._condition:
-            print('--- Metocean Process')
+            #print('--- Metocean Process')
+            start_time = time.time()
             #
             # ------------------------------------------
             #
@@ -153,6 +155,9 @@ class MetoceanLoadSQL(MetoceanLoad):
                     #
                     self._push_wload(conn, df_bload)
                 #res.Fwave()
+            #
+            uptime = time.time() - start_time
+            print(f"** Metocean Beam Load Process: {uptime:1.4e} sec")
         #print('-->')
         #1 / 0
     #
@@ -169,21 +174,13 @@ class MetoceanLoadSQL(MetoceanLoad):
         """ """
         dfgrp = df.groupby(['basic_id', 'title', 'time'])
         for key, item in dfgrp:
-            #bidx = int(key[0])
-            #title = str(key[1])
-            #step = float(key[2])
-            #idx = pull_basic(conn, load_id=int(key[0]),
-            #                 load_type='metocean')
-            #
-            #bidx = self._push_basicload(conn, load_id=idx, step='time')
-            #
             df_bload = item.drop(columns=['BS', 'OTM', 'design_load'])
             df_bload.rename(columns={'time': 'step'}, inplace=True)
             #df_bload['basic_id'] = bidx
             df_bload.to_sql('LoadBeamLine', conn,
                             if_exists='append',
                             index=False)
-        print('--')
+        #print('--')
     #    
 #
 #

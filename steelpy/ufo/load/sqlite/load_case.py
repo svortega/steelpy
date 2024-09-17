@@ -5,7 +5,8 @@
 # Python stdlib imports
 from __future__ import annotations
 #from dataclasses import dataclass
-from typing import NamedTuple
+import time
+#from typing import NamedTuple
 #import re
 
 # package imports
@@ -258,7 +259,9 @@ class BasicLoadSQL(LoadCaseBasic):
         Fixed End Reactions (FER) 
         Convert element load to global node loads
         """
-        print('--- FER Operation')
+        # TODO : loop slow
+        #print('--- FER Operation')
+        start_time = time.time()
         beams = elements.beam()
         load_name = list(self.keys())
         for lname in load_name:
@@ -279,7 +282,9 @@ class BasicLoadSQL(LoadCaseBasic):
             # -------------------------------
             # 
             # -------------------------------
-            #
+        #
+        uptime = time.time() - start_time
+        print(f"** FER Operation: {uptime:1.4e} sec")
     #
     #
     def ENL(self):
@@ -405,14 +410,12 @@ class LoadTypeSQL(LoadTypeBasic):
                  'name', 'number', 'title', '_db_file']
 
     def __init__(self, load_name: str|int,
-                 #plane: NamedTuple,
                  component: int, 
                  bd_file:str):
         """
         """
         self.name = load_name
         self._db_file = bd_file
-        #self._plane = plane
         self._component = component
         #
         self.number, self.title = self._load_spec(self.name)
@@ -422,7 +425,6 @@ class LoadTypeSQL(LoadTypeBasic):
                                      db_file=self._db_file)
         #
         self._beam = BeamLoadItemSQL(load_name=load_name,
-                                     #plane=self._plane,
                                      component=component, 
                                      db_file=self._db_file)
         #

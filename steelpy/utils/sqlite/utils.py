@@ -18,7 +18,7 @@ def create_connection(db_file):
     """ create a database connection to a SQLite database
     """
     try:
-        conn = sqlite3.connect(db_file)
+        conn = sqlite3.connect(db_file, check_same_thread=False)
         #print('sqlite version {:} {:}'.format(sqlite3.version, sqlite3.sqlite_version_info))
         return conn
     except sqlite3.Error as e:

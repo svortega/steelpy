@@ -5,7 +5,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from collections.abc import Mapping
-from typing import NamedTuple
+from concurrent.futures import ThreadPoolExecutor
+#from typing import NamedTuple
 import re
 from math import isclose
 #
@@ -51,6 +52,30 @@ class BeamSQLMaster(Mapping):
 #
 #
 # ---------------------------------
+#
+def fer_b2n(beam, bload, global_system:int):
+    """"""
+    node1, node2 = beam.nodes
+    # print(f'line load {key}')
+    lnload = bload.fer_beam(beam=beam,
+                            system=global_system)
+    #
+    load7 = zerofilter(lnload[7])
+    load8 = zerofilter(lnload[8])
+    #
+    return [bload.load_name,
+            bload.title,
+            global_system,
+            beam.number,
+            node1.number,
+            load7,
+            node2.number,
+            load8,
+            bload.load_step]
+#
+#
+# ---------------------------------
+#
 #
 class BeamLoadItemSQL(BeamSQLMaster):
     __slots__ = ['_name',  '_load', '_component', 
@@ -198,7 +223,7 @@ class BeamLoadItemSQL(BeamSQLMaster):
     #
     def fer2(self, beams, load_name: str|int):
         """
-        Beam reacition global system according to boundaries
+        Beam reaction global system according to boundaries
         """
         conn = create_connection(self.db_file)
         with conn:         
@@ -263,15 +288,33 @@ class BeamLoadItemSQL(BeamSQLMaster):
         """ Push Fix End Reactions (FER) global system in sqlite """
         conn = create_connection(self.db_file)
         with conn:
-            basic = pull_basic(conn, load_name=self._name)
+            basic = pull_basic(conn,
+                               load_name=self._name)
+            line, point = get_beam_load(conn,
+                                        load_name=self._name,
+                                        beam_name='*',
+                                        component=self._component)
         try:
             basic_id =  basic[0]
         except IndexError:
-            raise IOError(f"Load {load_name} not found")        
+            raise IOError(f"Load {self._name} not found")
         #
-        items = self.fer2(beams, self._name)
+        global_system = 0
+        b2n = []
+        with ThreadPoolExecutor() as executor:
+            for item in line:
+                beam = beams[item.name]
+                b2n.append(executor.submit(fer_b2n, beam, item, global_system).result())
+            #
+            for item in point:
+                beam = beams[item.name]
+                b2n.append(executor.submit(fer_b2n, beam, item, global_system).result())
+        #
+        #
+        #
+        #items = self.fer2(beams, self._name)
         res =[]
-        for gnload in items:
+        for gnload in b2n:
             try:
                 1 / gnload[2]
                 raise RuntimeError('node load in local system')
@@ -545,6 +588,7 @@ class BeamLoadItemSQL(BeamSQLMaster):
         #1 / 0
         return loadfun
 #
+# ---------------------------------
 #
 def zerofilter(items: list):
     """remove near zero items"""
@@ -561,7 +605,6 @@ def get_beam_load(conn, beam_name:int|str,
     point = get_point_load(conn, beam_name,
                            load_name, component)
     return line, point
-#
 #
 # ---------------------------------
 #

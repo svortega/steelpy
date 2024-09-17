@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime as dt
 from typing import NamedTuple
 import time
-import os
+#import os
 #
 
 # package imports
@@ -212,9 +212,12 @@ class Mesh(ClassBasicSQL):
     #
     def build(self):
         """ """
+        #print('{:}'.format(52 * '-'))
         for key, item in self._item.items():
-            print(f' building mesh : {key}')
+            #print(f' building mesh : {key}')
+            #print('{:}'.format(52 * '-'))
             item.build()
+        #print('{:}'.format(52 * '-'))
 #
 #
 class MeshItem(MeshSQL):
@@ -351,6 +354,8 @@ class MeshItem(MeshSQL):
     def build(self):
         """ """
         print('{:}'.format(52 * '-'))
+        print(f' building mesh : {self._name}')
+        print('{:}'.format(52 * '-'))
         start_time = time.time()
         # mesh checks
         orphan_nodes = self._nodes.orphan(self._elements)
@@ -365,6 +370,7 @@ class MeshItem(MeshSQL):
         #
         uptime = time.time() - start_time
         print(f"** Mesh Building: {uptime:1.4e} sec")
+        print('{:}'.format(52 * '-'))
     #
     # --------------------
     # Matrix Operations

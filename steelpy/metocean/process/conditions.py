@@ -1,11 +1,12 @@
 # 
-# Copyright (c) 2019 steelpy
+# Copyright (c) 2009 steelpy
 #
 # 
 # Python stdlib imports
 from __future__ import annotations
 from collections.abc import Mapping
 #from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import NamedTuple
 #from math import prod
@@ -852,10 +853,8 @@ class CombTypes:
         # get parameters
         parameters = self.parameters
         #
-        dftemp = []
         #
         # ------------------------------------------
-        # TODO: Multiprocess --> sqlite issue
         #
         #cpuno = os.cpu_count() - 1
         #
@@ -894,28 +893,27 @@ class CombTypes:
         #    pool.close()
         #    pool.join()
         #
+        #
+        with ThreadPoolExecutor() as executor:
+            results = executor.map(wload.Fwave, beams.values())
+            dftemp = [result for result in results]
+        #
+        #
         # ------------------------------------------
         #
-        for beam in beams.values():
-            # solve beam forces
-            qload = wload.Fwave(beam=beam)
-            #solution = Fwave.solve()
-            #dftemp.extend(solution)
-            dftemp.append(qload)
-            #print('-->')
+        #dftemp = []
+        #for beam in beams.values():
+        #    # solve beam forces
+        #    qload = wload.Fwave(beam=beam)
+        #    #solution = Fwave.solve()
+        #    #dftemp.extend(solution)
+        #    dftemp.append(qload)
+        #    #print('-->')
         #
         # ------------------------------------------
         # create database
         #
-        #header = ['element_type', 'element_name', 'element_id', 
-        #          'type',
-        #          'qx0', 'qy0', 'qz0', 'qt0', 
-        #          'qx1', 'qy1', 'qz1', 'qt1',
-        #          'L0', 'L1', 'BS', 'OTM', 
-        #          'x', 'y', 'z']        
-        #
         df = DBframework()
-        #df_bload = df.DataFrame(data=dftemp, columns=header, index=None)
         df_bload = df.concat(dftemp)
         #
         #

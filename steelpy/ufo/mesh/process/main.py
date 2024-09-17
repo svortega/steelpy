@@ -4,25 +4,18 @@
 
 # Python stdlib imports
 from __future__ import annotations
+from concurrent.futures import ThreadPoolExecutor
 import time
-from itertools import chain
+#from itertools import chain
 
 # package imports
-#steelpy.f2uModel.mesh
-#from steelpy.f2uModel.mesh.process.matrix.Kassemble import assemble_banded_Kmatrix
-#
-#from steelpy.utils.math.operations import remove_column_row
-#from steelpy.ufo.mesh.process.operations import assemble_matrix, assemble_Gmatrix #, assemble_Lmatrix
-
 import numpy as np
+from scipy.sparse import coo_matrix
 
 #
 def Ke_matrix(elements,
               nodes,
-              plane2D: bool, 
-              #dof: list[str], 
-              #ndof: int = 6,
-              #condensed: bool = True,
+              plane2D: bool,
               sparse: bool = True,
               mitem:str = "Ke"):
     """
@@ -39,11 +32,10 @@ def Ke_matrix(elements,
     #mitem = "Ke"
     Ka = assemble_matrix(elements=elements,
                          nodes=nodes,
-                         plane2D=plane2D, 
-                         #ndof=ndof,
+                         plane2D=plane2D,
                          mitem=mitem, item=None)
     if sparse:
-        from scipy.sparse import coo_matrix
+        #from scipy.sparse import coo_matrix
         Ka = coo_matrix(Ka)
     #
     uptime = time.time() - start_time
@@ -54,17 +46,17 @@ def Ke_matrix(elements,
 #
 def Km_matrix(elements,
               nodes,
-              plane2D: bool, # ndof:int = 6,
+              plane2D: bool,
               sparse:bool = True,
               mitem:str = "Km"):
     """ Mass matrix"""
     start_time = time.time()
     Ka = assemble_matrix(elements=elements,
                          nodes=nodes,
-                         plane2D=plane2D, # ndof=ndof,
+                         plane2D=plane2D,
                          mitem=mitem, item=None)
     if sparse:
-        from scipy.sparse import coo_matrix
+        #from scipy.sparse import coo_matrix
         Ka = coo_matrix(Ka)
     #
     uptime = time.time() - start_time
@@ -75,17 +67,17 @@ def Km_matrix(elements,
 #
 def Kg_matrix(elements,
               nodes, D,
-              plane2D: bool, # ndof:int = 6,
+              plane2D: bool,
               sparse:bool = True,
               mitem:str="Kg"):
     """ Geometric stiffness matrix """
     start_time = time.time()
     Kg = assemble_Gmatrix(elements=elements,
                           nodes=nodes,
-                          plane2D=plane2D, # ndof=ndof,
+                          plane2D=plane2D,
                           mitem=mitem, item=D)
     if sparse:
-        from scipy.sparse import coo_matrix
+        #from scipy.sparse import coo_matrix
         Kg = coo_matrix(Kg)
     #
     uptime = time.time() - start_time
@@ -94,17 +86,17 @@ def Kg_matrix(elements,
 #
 def Kt_matrix(elements,
               nodes, D,
-              plane2D: bool, # ndof:int = 6,
+              plane2D: bool,
               sparse:bool = True,
               mitem:str="Kt"):
     """ Tangent stiffness matrix """
     start_time = time.time()
     Kt = assemble_Gmatrix(elements=elements,
                           nodes=nodes,
-                          plane2D=plane2D, # ndof=ndof,
+                          plane2D=plane2D,
                           mitem=mitem, item=D)
     if sparse:
-        from scipy.sparse import coo_matrix
+        #from scipy.sparse import coo_matrix
         Kt = coo_matrix(Kt)
     #
     uptime = time.time() - start_time
@@ -114,9 +106,27 @@ def Kt_matrix(elements,
 #
 # ------------------------------------------------------
 #
+def assembly(element, Ka: np.array,
+             ndof:int, mitem:str,
+             plane2D:bool, item: list|tuple|np.array|None):
+    """
+    """
+    # TODO : check applicable to all element type
+    keg = getattr(element, mitem)(plane2D, item)
+    idof, jdof = element.DoF
+    # node and corresponding dof (start, end)
+    niqi, niqj = idof*ndof, idof*ndof + ndof
+    njqi, njqj = jdof*ndof, jdof*ndof + ndof
+    # assemble global stiffness matrix, quadrant 1 to 4
+    Ka[niqi:niqj, niqi:niqj] += keg[:ndof, :ndof]             # 2nd
+    Ka[niqi:niqj, njqi:njqj] += keg[:ndof, ndof:2*ndof]       # 1st
+    Ka[njqi:njqj, niqi:niqj] += keg[ndof:2*ndof, :ndof]       # 3rd
+    Ka[njqi:njqj, njqi:njqj] += keg[ndof:2*ndof, ndof:2*ndof] # 4th
+    #return Ka
 #
-def form_matrix(elements, nn:int, plane2D, #ndof: int,
-                mitem: str, item):
+#
+def form_matrix2(elements, nn:int, plane2D: bool,
+                mitem: str, item: list|tuple|None):
     """
     Global system stiffness matrix 
     
@@ -126,9 +136,9 @@ def form_matrix(elements, nn:int, plane2D, #ndof: int,
     :return
     Ka : global stiffness matrix
     """
-    ndof = 6
+    ndof:int = 6
     if plane2D:
-        ndof = 3
+        ndof:int = 3
     # Initialize a K matrix of zeros
     Ka = np.zeros((nn*ndof, nn*ndof), dtype=np.float64)
     for key, element in elements.items():
@@ -145,9 +155,31 @@ def form_matrix(elements, nn:int, plane2D, #ndof: int,
         Ka[njqi:njqj, njqi:njqj] += keg[ndof:2*ndof, ndof:2*ndof] # 4th
     return Ka
 #
+def form_matrix(elements, nn: int, plane2D: bool,
+                 mitem: str, item: list|tuple|None):
+    """
+    Global system stiffness matrix
+
+    elements :
+    nn  : node number
+    ndof : node degree of freedom
+    :return
+    Ka : global stiffness matrix
+    """
+    ndof: int = 6
+    if plane2D:
+        ndof: int = 3
+    # Initialize a K matrix of zeros
+    Ka = np.zeros((nn * ndof, nn * ndof), dtype=np.float64)
+    with ThreadPoolExecutor() as executor:
+        for key, element in elements.items():
+            executor.submit(assembly, element, Ka, ndof, mitem, plane2D, item)
+    #
+    return Ka
 #
-def form_Gmatrix(elements, nn:int, plane2D, # ndof: int,
-                 mitem: str, item):
+#
+def form_Gmatrix(elements, nn:int, plane2D: bool,
+                 mitem: str, item:list|tuple|None):
     """
     Global system stiffness matrix 
     
@@ -163,82 +195,45 @@ def form_Gmatrix(elements, nn:int, plane2D, # ndof: int,
     #
     # Initialize a K matrix of zeros
     Ka = np.zeros((nn*ndof, nn*ndof), dtype=np.float64)
-    for key, element in elements.items():
-        nodes = element.connectivity
-        # ---------------------------------------------
-        # displacement
-        nd_global = np.concatenate((item.loc[nodes[0]],
-                                    item.loc[nodes[1]]), axis=None)
-        # ---------------------------------------------
-        # convert global end-node disp in beam's local system
-        # [x,y,z,rx,ry,rz]
-        #nd_local = Tb @ nd_global
-        #P = nd_local[6]-nd_local[0]
-        #
-        # ---------------------------------------------
-        # get matrix
-        keg = getattr(element, mitem)(plane2D, nd_global)
-        #
-        # ---------------------------------------------
-        # Assemble matrix
-        idof, jdof = element.DoF
-        # node and corresponding dof (start, end)
-        niqi, niqj = idof*ndof, idof*ndof + ndof
-        njqi, njqj = jdof*ndof, jdof*ndof + ndof
-        # assemble global stiffness matrix, quadrant 1 to 4
-        Ka[niqi:niqj, niqi:niqj] += keg[:ndof, :ndof]             # 2nd
-        Ka[niqi:niqj, njqi:njqj] += keg[:ndof, ndof:2*ndof]       # 1st
-        Ka[njqi:njqj, niqi:niqj] += keg[ndof:2*ndof, :ndof]       # 3rd
-        Ka[njqi:njqj, njqi:njqj] += keg[ndof:2*ndof, ndof:2*ndof] # 4th
+    with ThreadPoolExecutor() as executor:
+        for key, element in elements.items():
+            nodes = element.connectivity
+            # ---------------------------------------------
+            # displacement
+            nd_global = np.concatenate((item.loc[nodes[0]],
+                                        item.loc[nodes[1]]), axis=None)
+            #
+            executor.submit(assembly, element, Ka, ndof, mitem, plane2D, nd_global)
+            # ---------------------------------------------
+            # convert global end-node disp in beam's local system
+            # [x,y,z,rx,ry,rz]
+            #nd_local = Tb @ nd_global
+            #P = nd_local[6]-nd_local[0]
+            #
+            # ---------------------------------------------
+            # get matrix
+            #keg = getattr(element, mitem)(plane2D, nd_global)
+            #
+            # ---------------------------------------------
+            # Assemble matrix
+            #idof, jdof = element.DoF
+            # node and corresponding dof (start, end)
+            #niqi, niqj = idof*ndof, idof*ndof + ndof
+            #njqi, njqj = jdof*ndof, jdof*ndof + ndof
+            # assemble global stiffness matrix, quadrant 1 to 4
+            #Ka[niqi:niqj, niqi:niqj] += keg[:ndof, :ndof]             # 2nd
+            #Ka[niqi:niqj, njqi:njqj] += keg[:ndof, ndof:2*ndof]       # 1st
+            #Ka[njqi:njqj, niqi:niqj] += keg[ndof:2*ndof, :ndof]       # 3rd
+            #Ka[njqi:njqj, njqi:njqj] += keg[ndof:2*ndof, ndof:2*ndof] # 4th
     # 
     return Ka
 #
 #
-def form_Lmatrix(elements, nn: int, ndof: int,
-                 mitem: str, item):
-    """
-    Global system stiffness matrix
-
-    elements :
-    nn  : node number
-    ndof : node degree of freedom
-    miten : str
-    item:
-    :return
-    Ka : global stiffness matrix
-    """
-    # Initialize a K matrix of zeros
-    Ka = np.zeros((nn * ndof, nn * ndof), dtype=np.float64)
-    for key, element in elements.items():
-        # nodes = element.nodes
-        nodes = element.connectivity
-        #Tb = element.T
-        # ---------------------------------------------
-        # displacement
-        nd_global = np.concatenate((item.loc[nodes[0]],
-                                    item.loc[nodes[1]]), axis=None)
-        # ---------------------------------------------
-        # get matrix
-        keg = getattr(element, mitem)(nd_global)
-        #
-        #
-        idof, jdof = element.DoF
-        # node and corresponding dof (start, end)
-        niqi, niqj = idof * ndof, idof * ndof + ndof
-        njqi, njqj = jdof * ndof, jdof * ndof + ndof
-        # assemble global stiffness matrix, quadrant 1 to 4
-        Ka[niqi:niqj, niqi:niqj] += keg[:ndof, :ndof]  # 2nd
-        Ka[niqi:niqj, njqi:njqj] += keg[:ndof, ndof:2 * ndof]  # 1st
-        Ka[njqi:njqj, niqi:niqj] += keg[ndof:2 * ndof, :ndof]  # 3rd
-        Ka[njqi:njqj, njqi:njqj] += keg[ndof:2 * ndof, ndof:2 * ndof]  # 4th
-    #
-    return Ka
-#
 # ------------------------------------------------------
 #
 def assemble_matrix(elements, nodes,
-                    plane2D: bool, #ndof: int,
-                    mitem: str, item):
+                    plane2D: bool,
+                    mitem: str, item:list|tuple|None):
     """
     Asseable the element matrices
     -------------------------------------------------
@@ -246,12 +241,13 @@ def assemble_matrix(elements, nodes,
     jbc : nodes freedom
     ndof : node degree of freedom
     mitem : matrix item
+    item : None
     """
     #print(f"** Processing Global [{mitem}] Matrix")
     #start_time = time.time()
     nn = len(nodes.keys())
     Ka = form_matrix(elements=elements,
-                     nn=nn, plane2D=plane2D, #ndof=ndof,
+                     nn=nn, plane2D=plane2D,
                      mitem=mitem, item=item)
     #
     #uptime = time.time() - start_time
@@ -259,8 +255,8 @@ def assemble_matrix(elements, nodes,
     return Ka
 #
 def assemble_Gmatrix(elements, nodes,
-                     plane2D: bool, #ndof: int,
-                     mitem: str, item):
+                     plane2D: bool,
+                     mitem: str, item:list|tuple|None):
     """
     Asseable the element matrices
     -------------------------------------------------
@@ -268,12 +264,13 @@ def assemble_Gmatrix(elements, nodes,
     jbc : nodes freedom
     ndof : node degree of freedom
     mitem : matrix item
+    item :
     """
     #print(f"** Processing Global [{mitem}] Matrix")
     #start_time = time.time()
     nn = len(nodes.keys())
     Ka = form_Gmatrix(elements=elements,
-                      nn=nn, plane2D=plane2D, # ndof=ndof,
+                      nn=nn, plane2D=plane2D,
                       mitem=mitem, item=item)
     #uptime = time.time() - start_time
     #print(f"** [{mitem}] assembly: {uptime:1.4e} sec")
