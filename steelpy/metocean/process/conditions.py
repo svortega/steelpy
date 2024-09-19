@@ -6,10 +6,12 @@
 from __future__ import annotations
 from collections.abc import Mapping
 #from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import NamedTuple
 #from math import prod
+import os
+#import platform
 import re
 
 # package imports
@@ -856,7 +858,14 @@ class CombTypes:
         #
         # ------------------------------------------
         #
-        #cpuno = os.cpu_count() - 1
+        #print(os.name)
+        psystem = os.name
+        if psystem == 'posix':
+            cpuno = max(1, os.cpu_count() - 1)
+            executor = ProcessPoolExecutor(max_workers=cpuno)
+        else:
+            executor = ThreadPoolExecutor()
+        #
         #
         #def myfunc(beam):
         #    beam = BeamItemSQL(name,
@@ -893,11 +902,21 @@ class CombTypes:
         #    pool.close()
         #    pool.join()
         #
+        # ------------------------------------------
         #
-        with ThreadPoolExecutor() as executor:
-            results = executor.map(wload.Fwave, beams.values())
-            dftemp = [result for result in results]
+        dftemp = []
         #
+        with executor:
+        #with ThreadPoolExecutor() as executor:
+            #results = executor.map(wload.Fwave, beams.values())
+            #dftemp = [result for result in results]
+            for results in executor.map(wload.Fwave, beams.values()):
+                dftemp.append(results)
+        #
+        #
+        #with ProcessPoolExecutor(max_workers=cpuno) as executor:
+        #    for results in executor.map(wload.Fwave, beams.values()):
+        #        dftemp.append(results)
         #
         # ------------------------------------------
         #

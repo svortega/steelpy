@@ -5,10 +5,11 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from collections.abc import Mapping
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 #from typing import NamedTuple
 import re
 from math import isclose
+import os
 #
 # package imports
 #
@@ -221,68 +222,6 @@ class BeamLoadItemSQL(BeamSQLMaster):
     #
     # -----------------------------------------------
     #
-    def fer2(self, beams, load_name: str|int):
-        """
-        Beam reaction global system according to boundaries
-        """
-        conn = create_connection(self.db_file)
-        with conn:         
-            line, point = get_beam_load(conn,
-                                        load_name=load_name,
-                                        beam_name='*',
-                                        component=self._component)
-        #
-        b2n = []
-        global_system = 0
-        # line loadreactions
-        for bload in line:
-            beam = beams[bload.name]
-            node1, node2 = beam.nodes
-            #print(f'line load {key}')
-            lnload = bload.fer_beam(beam=beam,
-                                    system=global_system)
-                                    #Pdelta=Pdelta)
-            # local to global system
-            #gnload = [*res[7], *res[8]]
-            #lnload = trnsload(gnload, beam.T3D())
-            #
-            load7 = zerofilter(lnload[7])
-            load8 = zerofilter(lnload[8])
-            #
-            b2n.append([bload.load_name,
-                        bload.title,
-                        global_system, 
-                        beam.number,
-                        node1.number,
-                        load7,
-                        node2.number,
-                        load8,
-                        bload.load_step])
-        # point load
-        for bload in point:
-            beam = beams[bload.name]
-            node1, node2 = beam.nodes
-            #print(f'point load {key}')
-            lnload = bload.fer_beam(beam=beam,
-                                    system=global_system)
-                                    #Pdelta=Pdelta)
-            #gnload = [*res[7], *res[8]]
-            #lnload = trnsload(gnload, beam.T3D())
-            #
-            load7 = zerofilter(lnload[7])
-            load8 = zerofilter(lnload[8])
-            #
-            b2n.append([bload.load_name,
-                        bload.title,
-                        global_system, 
-                        beam.number,
-                        node1.number,
-                        load7,
-                        node2.number,
-                        load8,
-                        bload.load_step])
-        #
-        return b2n    
     #
     def fer(self, beams) -> None:
         """ Push Fix End Reactions (FER) global system in sqlite """
@@ -299,9 +238,21 @@ class BeamLoadItemSQL(BeamSQLMaster):
         except IndexError:
             raise IOError(f"Load {self._name} not found")
         #
+        # ------------------------------------------
+        #
+        psystem = os.name
+        if psystem == 'posix':
+            cpuno = max(1, os.cpu_count() - 1)
+            executor = ProcessPoolExecutor(max_workers=cpuno)
+        else:
+            executor = ThreadPoolExecutor()
+        #
+        # ------------------------------------------
+        #
         global_system = 0
         b2n = []
-        with ThreadPoolExecutor() as executor:
+        with executor:
+        #with ThreadPoolExecutor() as executor:
             for item in line:
                 beam = beams[item.name]
                 b2n.append(executor.submit(fer_b2n, beam, item, global_system).result())
@@ -311,8 +262,6 @@ class BeamLoadItemSQL(BeamSQLMaster):
                 b2n.append(executor.submit(fer_b2n, beam, item, global_system).result())
         #
         #
-        #
-        #items = self.fer2(beams, self._name)
         res =[]
         for gnload in b2n:
             try:

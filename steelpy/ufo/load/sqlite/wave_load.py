@@ -22,19 +22,13 @@ from operator import sub, add
 # package imports
 from steelpy.ufo.load.process.wave_load import MetoceanLoad # WaveData, 
 from steelpy.ufo.load.sqlite.utils import pull_basic, push_basic
-#from steelpy.ufo.load.process.beam.beam import LineBeam
 from steelpy.ufo.mesh.sqlite.beam import BeamSQL # BeamItemSQL, 
 from steelpy.ufo.mesh.sqlite.utils import (get_connectivity,
                                            get_element_data) # check_element)
 from steelpy.sections.sqlite.utils import get_section
 from steelpy.ufo.mesh.sqlite.nodes import pull_node
 #
-from steelpy.utils.sqlite.utils import create_connection #, create_table
-#from steelpy.utils.math.operations import linspace, trnsload
-#
-#
-#import pandas as pd
-#from steelpy.utils.dataframe.main import DBframework
+from steelpy.utils.sqlite.utils import create_connection
 #
 #
 #
@@ -129,37 +123,26 @@ class MetoceanLoadSQL(MetoceanLoad):
             #
             beams = BeamSQL(db_file=self.db_file,
                             component=self._component)
-                            #plane=self._plane)
             #
             # ------------------------------------------
             conn = create_connection(self.db_file)
             for item in self._condition:
                 df_bload = item.beam_load(beams)
-                #
                 # ------------------------------------------
                 # push data in database
-                #
                 with conn:
-                    #load_id = pull_basic(conn,
-                    #                     load_name=item.name)
-                    #
                     design =  df_bload['design_load'].tolist()[0]
-                    #
                     basic_id = push_basic(conn,
                                          load_name=item.name,
                                          component=self._component, 
                                          design_load=design, 
                                          step_type='time')
                     df_bload['basic_id'] = basic_id
-                    #df_bload.drop(columns=['design_load'], inplace=True)
-                    #
                     self._push_wload(conn, df_bload)
-                #res.Fwave()
             #
             uptime = time.time() - start_time
             print(f"** Metocean Beam Load Process: {uptime:1.4e} sec")
         #print('-->')
-        #1 / 0
     #
     # -----------------------------------------------
     #
