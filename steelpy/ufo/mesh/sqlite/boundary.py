@@ -9,8 +9,8 @@ import re
 
 
 # package imports
-from steelpy.ufo.process.elements.boundary import BoundaryItem, BoundaryNode
-from steelpy.ufo.process.elements.boundary import get_node_boundary, get_nboundary_dict
+from steelpy.ufo.process.boundary import (BoundaryItem, BoundaryNode, get_support_df, 
+                                          get_node_boundary, find_boundary_type)
 #from steelpy.ufo.mesh.sqlite.beam import BeamSQL, BeamItemSQL
 
 from steelpy.ufo.mesh.sqlite.utils import check_nodes
@@ -180,54 +180,19 @@ class BoundaryNodeSQL(BoundaryNode):
     @df.setter
     def df(self, df):
         """ """
-        #
-        columns = list(df.columns)
-        header = {}
-        for key in columns:
-            if re.match(r"\b(id|name|node(s)?)\b", key, re.IGNORECASE):
-                header[key] = 'name'
-            
-            elif re.match(r"\b(type)\b", key, re.IGNORECASE):
-                header[key] = 'type'
-            #
-            # displacement
-            elif re.match(r"\b((i)?(\_|\-|\s*)?x)\b", key, re.IGNORECASE):
-                header[key] = 'x'
-            
-            elif re.match(r"\b((i)?(\_|\-|\s*)?y)\b", key, re.IGNORECASE):
-                header[key] = 'y'               
-            
-            elif re.match(r"\b((i)?(\_|\-|\s*)?z)\b", key, re.IGNORECASE):
-                header[key] = 'z'
-            #
-            # rotation
-            elif re.match(r"\b((r)?(\_|\-|\s*)?x)\b", key, re.IGNORECASE):
-                header[key] = 'rx'
-            
-            elif re.match(r"\b((r)?(\_|\-|\s*)?y)\b", key, re.IGNORECASE):
-                header[key] = 'ry'               
-            
-            elif re.match(r"\b((r)?(\_|\-|\s*)?z)\b", key, re.IGNORECASE):
-                header[key] = 'rz'
-            #
-            elif re.match(r"\b(title)\b", key, re.IGNORECASE):
-                header[key] = 'title'
-        #
-        nodes = df[header.keys()].copy()
-        nodes.rename(columns=header, inplace=True)
-        #support.query("x != '' and y != '' and z != '' and rx != '' and ry != '' and rz != ''",
-        #              inplace=True)        
-        #
+        nodes = get_support_df(df)       
         for row in nodes.itertuples():
             #print(row)
-            fixity=[row.x, row.y, row.z,
-                    row.rx, row.ry, row.rz]
-            if any(fixity):
-                #print(fixity)
-                self.__setitem__(node_name=row.name,
-                                 fixity=fixity)
-        #
-        #
+            fixity = row.restrain
+            #fixity=[row.x, row.y, row.z,
+            #        row.rx, row.ry, row.rz]
+            #if any(fixity):
+            #print(fixity)
+            values = [row.node, row.type, fixity]
+            self.__setitem__(name=row.name,
+                                 values=values)
+#
+#
 #
 #
 def pull_node_boundary(conn, node_id: int,
@@ -281,8 +246,6 @@ class BoundarySQL:
         self._boundary = BoundaryNodeSQL(component=self._component,
                                          db_file=self._db_file)
         #
-        #self._beams = BeamSQL(db_file=self._db_file,
-        #                      component=self._component)
     #
     #
     @property
@@ -328,47 +291,8 @@ class BoundarySQL:
             #        raise IOError('node missing')
             else:
                 raise IOError(f'boundary {btype} not valid')
-            #
-            #if isinstance(values, dict):
-            #    fixity = get_nboundary_dict(values)
-                
-            #else:
-            #    #
-            #    (btype, node_id,
-            #     fixity, dircos) = get_boundary_list(items=values)
-            #    title = None
-                #1 / 0
-                #    
-                #fixity = get_node_boundary(values[-1])
-                #try:
-                #    title = fixity[6]
-                #except IndexError:
-                #    title = None
-                #
-            #    conn = create_connection(self._db_file)
-            #    with conn:
-            #        boundary_id = self._push_boundary(conn, name, btype)
-            #    #
-                #
-                #if re.match(r"\b(node(s)?|support(s)?|constrain(s)?)\b", btype, re.IGNORECASE):
-                #
-            #    conn = create_connection(self._db_file)
-            #    with conn:
-            #        push_boundary_node(conn, boundary_id, fixity[:6], title)
-            #        update_node(conn, colname='boundary_id', item=boundary_id,
-            #                    node_id=node_id, mesh_id=self._component)
-                #
-                #if isinstance(values[1], str):
-                #    self._nodes[node_id] = values[-1]
-                #else:
-                #self._nodes[node_id] = values[2:]
-            #elif 'curve' == boundary_type :
-            #    raise Exception('--> Mat type No ready')
-            #else:
-            #    raise IOError(f' NodeBoundary type {btype} not recognised')
-            #1 / 0
-
-
+    #
+    #
     def __getitem__(self, name: int|str):
         """
         """
@@ -446,7 +370,7 @@ class BoundarySQL:
     def support(self, values:list|tuple|dict|None = None):
         """
         values: [node_id, 'restrain'|'spring'|'matrix', fixity,
-#                'skew'|('beam'|'local'), dircos|beam_id]
+                 'skew'|('beam'|'local'), dircos|beam_id]
         """
         if isinstance(values, (list|tuple)):
             if isinstance(values[0], (list|tuple)):
@@ -481,6 +405,7 @@ class BoundarySQL:
     def get_number(self, start:int=1):
         """
         """
+        1 / 0
         try:
             n = max(self._number) + 1
         except ValueError:
@@ -559,21 +484,20 @@ class BoundarySQL:
     @df.setter
     def df(self, df):
         """nodes in dataframe format"""
+        columns = list(df.columns)
+        for key in columns:
+            if re.match(r"\b(((boundar(y|ies)(_|-|\s*)?)?)?type)\b", key, re.IGNORECASE):
+                df['type'] = df[key].apply(lambda x: find_boundary_type(x))
+                break         
+        #df.columns find_boundary_type
+        #df['type'] = df['type'].apply(lambda x: 'support'
+        #                              if re.match(r"\b(node(s)?|support(s)?|constrain(s)?)\b", x, re.IGNORECASE)
+        #                              else x)
+        #
+        grptype = df.groupby('type')
         try:
-            df.columns
-            #
-            #df[df['typr'].apply(lambda x: 'support'
-            #                    #if re.search('^f', x)
-            #                    if re.match(r"\b(node(s)?|support(s)?|constrain(s)?)\b", x, re.IGNORECASE)
-            #                    else x)]
-            #
-            df['type'] = df['type'].apply(lambda x: 'support'
-                                          if re.match(r"\b(node(s)?|support(s)?|constrain(s)?)\b", x, re.IGNORECASE)
-                                          else x)
-            #
-            grptype = df.groupby('type')
-            #
-            self._nodes.df = grptype.get_group('support')
+            group = grptype.get_group('support')
+            self._boundary.df = group
         except AttributeError:
             raise IOError('Node df not valid')      
 #

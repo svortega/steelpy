@@ -11,9 +11,11 @@ import re
 # package imports
 #
 from steelpy.ufo.mesh.sqlite.nodes import pull_node, pull_node_number
-from steelpy.ufo.load.process.nodes import (get_nodal_load,
-                                            PointNode,
-                                            DispNode)
+from steelpy.ufo.load.process.node import (get_nodal_load,
+                                           PointNode,
+                                           DispNode,
+                                           NodeLoadBasic,
+                                           get_NodaLoad_df)
 
 from steelpy.ufo.load.sqlite.utils import get_load_data, pull_basic
 #
@@ -25,29 +27,9 @@ from steelpy.utils.dataframe.main import DBframework
 #
 # ---------------------------------
 #
-class NodeMainSQL(Mapping):
-    
-    def __init__(self):
-        """ """
-        pass
-    # 
-    #
-    # -----------------------------------------------
-    #
-    def __contains__(self, value) -> bool:
-        return value in self._labels
-
-    def __len__(self) -> int:
-        return len(self._labels)
-
-    def __iter__(self):
-        """
-        """
-        items = set(self._labels)
-        return iter(items)
 #
 #
-class NodeLoadGlobalSQL(NodeMainSQL):
+class NodeLoadGlobalSQL(NodeLoadBasic):
     __slots__ = ['_node', '_db_file', '_component'] 
     
     def __init__(self, component: int, db_file: str) -> None: # 
@@ -239,12 +221,14 @@ class NodeLoadItemSQL(ClassBasicSQL):
                     node_load: list|tuple|dict) -> None:
         """
         """
+        point_load = get_nodal_load(node_load)
+        #
         conn = create_connection(self.db_file)
         with conn:
             push_node_load(conn,
                            load_name=self._name,
                            node_name=node_name,  
-                           node_load=node_load,
+                           node_load=point_load,
                            component=self._component)
         #
     #
@@ -397,45 +381,51 @@ class NodeLoadItemSQL(ClassBasicSQL):
     @df.setter
     def df(self, df):
         """ """
-        1 / 0 # FIXME : basic load id
-        conn = create_connection(self._db_file)
+        dfdict = get_NodaLoad_df(df)
+        #
+        conn = create_connection(self.db_file)
         with conn:        
             cur = conn.cursor()
-            cur.execute("SELECT Node.name, Node.number FROM Node;")
+            table = "SELECT Node.name, Node.number FROM Node \
+                    WHERE Node.mesh_id = ? ;"
+            query = (self._component, )
+            cur.execute(table, query)
             nodes = cur.fetchall()
             nodes = {item[0]:item[1] for item in nodes}
             #
-            #cur.execute("SELECT Element.name, Element.number FROM Element;")
-            #elements = cur.fetchall()
-            #elements = {item[0]:item[1] for item in elements}            
-            #
-            cur.execute("SELECT Load.name, Load.number FROM Load \
-                         WHERE Load.level = 'basic';")
+            table = "SELECT Load.name, Load.number FROM Load \
+                     WHERE Load.level = ? \
+                     AND Load.mesh_id = ? ;"
+            query = ('basic', self._component, )
+            cur.execute(table, query)
             basic = cur.fetchall()
             basic = {item[0]:item[1] for item in basic}        
         #
-        df['load_id'] = df['name'].apply(lambda x: basic[x])
-        #df['element_id'] = None # df['name'].apply(lambda x: elements[x])
-        df['node_id'] = df['node'].apply(lambda x: nodes[x])
-        df['system'] = 'global'
-        df['type'] = df['type'].apply(lambda x: x.lower())
-        #
-        #
-        header = ['load_id', 'element_id', 'node_id',
+        header = ['basic_id', 'node_id',
                   'title', 'system', 'type',
                   'fx', 'fy', 'fz', 'mx', 'my', 'mz',
-                  'x', 'y', 'z', 'rx', 'ry', 'rz']
+                  'x', 'y', 'z', 'rx', 'ry', 'rz',
+                  'psi', 'B', 'Tw','step']        
         #
-        nodeconn = df[header].copy()
-        nodeconn.replace(to_replace=[''], value=[float(0)], inplace=True)
-        #nodeconn['element_id'] = df['element_id']
-        nodeconn['title'] = df['title']
+        for key, item in  dfdict.items():
+            nodeconn = item.copy()
+            nodeconn['basic_id'] = nodeconn['name'].apply(lambda x: basic[x])
+            nodeconn['node_id'] = nodeconn['node'].apply(lambda x: nodes[x])
+            nodeconn.replace(to_replace=[''], value=[float(0)], inplace=True)
+            nodeconn[['psi', 'B', 'Tw']] = None
+            #
+            if key in ['force']:
+                nodeconn[['x', 'y', 'z', 'rx', 'ry', 'rz']] = None
+            elif key in ['displacement', 'mass']:
+                nodeconn[['fx', 'fy', 'fz', 'mx', 'my', 'mz']] = None
+            else:
+                raise IOError(f'node load {key} not valid')
+            #
+            with conn:
+                nodeconn[header].to_sql('LoadNode', conn,
+                                        index_label=header, 
+                                        if_exists='append', index=False)
         #
-        with conn:
-            nodeconn.to_sql('LoadNode', conn,
-                            index_label=header, 
-                            if_exists='append', index=False)
-        #print('node load in')
         #1 / 0     
 #
 #
@@ -576,7 +566,12 @@ class NodeItemSQL:
     def load(self, node_load:list|tuple|dict):
         """ """
         # update load with header
-        if isinstance(node_load, dict):
+        if isinstance(node_load, PointNode):
+            node_load = ['force',
+                         # Fx, Fy, Fz, Mx, My, Mz,
+                         *node_load[:6],
+                         node_load.title]
+        elif isinstance(node_load, dict):
             node_load.update({'type': 'force',})
         
         elif isinstance(node_load[0], list):
@@ -699,11 +694,12 @@ def push_node_load(conn, load_name: str|int,
                    component: int,
                    system: str = "global"):
     """
+    node_load = [type, Fx, Fy, Fz, Mx, My, Mz, title]
     """
     # clean nodal load input
-    point_load = get_nodal_load(node_load)
-    load_type = point_load.pop(0)
-    load_title = point_load.pop(-1)
+    #point_load = get_nodal_load(node_load)
+    load_type = node_load.pop(0)
+    load_title = node_load.pop(-1)
     #
     node_id, load_id = pull_load_specs(conn,
                                       node_name,
@@ -722,29 +718,29 @@ def push_node_load(conn, load_name: str|int,
     if re.match(r"\b(point|load|node|force)\b", load_type, re.IGNORECASE):
         project = (basic_id, node_id,                   # basic_id,  node_id
                    load_title, system, 'force',         # title, system, type, 
-                   *point_load,                         # fx, fy, fz, mx, my, mz,
+                   *node_load,                          # fx, fy, fz, mx, my, mz,
                    None, None, None, None, None, None)  # x, y, z, rx, ry, rz
     # TODO: define mass
     elif re.match(r"\b(mass)\b", load_type, re.IGNORECASE):
         project = (basic_id, node_id,                    # basic_id,  node_id
                    load_title, system, 'mass',           # title, system, type, 
                    None, None, None, None, None, None,   # fx, fy, fz, mx, my, mz,
-                   *point_load)                          # x, y, z, rx, ry, rz
+                   *node_load)                           # x, y, z, rx, ry, rz
 
     elif re.match(r"\b(disp(lacement)?)\b", load_type, re.IGNORECASE):
         project = (basic_id, node_id,                   # basic_id,  node_id
                    load_title, system, 'displacement',  # title, system, type, 
                    None, None, None, None, None, None,  # fx, fy, fz, mx, my, mz,
-                   *point_load)                         # x, y, z, rx, ry, rz
+                   *node_load)                          # x, y, z, rx, ry, rz
 
     else:
         raise IOError(f'node load type {load_type} not recognized')
     #
     # print('-->')
     sql = 'INSERT INTO LoadNode(basic_id, node_id, \
-                                    title, system, type, \
-                                    fx, fy, fz, mx, my, mz,\
-                                    x, y, z, rx, ry, rz)\
+                                title, system, type, \
+                                fx, fy, fz, mx, my, mz,\
+                                x, y, z, rx, ry, rz)\
                                 VALUES(?,?,?,?,?,?,?,?,?, \
                                        ?,?,?,?,?,?,?,?)'
     cur = conn.cursor()

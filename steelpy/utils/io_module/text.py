@@ -120,7 +120,7 @@ def find_keyword(word_in, keys):
 
     if not _match:
         raise IOError('  **  error data {:} not recognized'.format(word_in))
-        #print('      process terminated')
+        #print('      utils terminated')
         #1/0
         #sys.exit()
     return _match

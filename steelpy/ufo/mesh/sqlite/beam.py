@@ -32,8 +32,9 @@ from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            get_unitvector, 
                                            update_element_item,
                                            check_element)
-from steelpy.ufo.process.elements.beam import BeamBasic, BeamItemBasic
+from steelpy.ufo.process.beam import BeamBasic, BeamItemBasic
 from steelpy.ufo.mesh.process.brotation import unitvec_0, unitvec_1
+from steelpy.ufo.process.element import get_beam_df
 from steelpy.utils.sqlite.utils import create_connection
 #
 #import numpy as np
@@ -206,6 +207,9 @@ class BeamSQL(BeamBasic):
     @df.setter
     def df(self, df):
         """ """
+        # clean df
+        df = get_beam_df(df)
+        #
         query = (self._component, )
         conn = create_connection(self.db_file)
         with conn:
@@ -218,7 +222,7 @@ class BeamSQL(BeamBasic):
             materials = {item[0]:item[1] for item in materials}
             #
             #
-            table = "SELECT .name, number FROM Section \
+            table = "SELECT name, number FROM Section \
                      WHERE mesh_id = ? ;"
             #cur = conn.cursor()
             cur.execute(table, query)
@@ -226,8 +230,8 @@ class BeamSQL(BeamBasic):
             sections = {item[0]:item[1] for item in sections}
         #
         df['mesh_id'] = self._component
-        df['material_id'] = df['material_name'].apply(lambda x: materials[x])
-        df['section_id'] = df['section_name'].apply(lambda x: sections[x])
+        df['material_id'] = df['material'].apply(lambda x: materials[x])
+        df['section_id'] = df['section'].apply(lambda x: sections[x])
         #
         if not df.columns.isin(['title']).any():
             df['title'] = None
@@ -250,7 +254,7 @@ class BeamSQL(BeamBasic):
         with conn:
             query = ('beam', self._component)
             table = "SELECT name, number FROM Element \
-                     WHERE type = ? WHERE mesh_id = ? ;"
+                     WHERE type = ? AND mesh_id = ? ;"
             #
             cur = conn.cursor()
             cur.execute(table, query)
@@ -258,11 +262,11 @@ class BeamSQL(BeamBasic):
             elements = {item[0]:item[1] for item in elements}
             #
             #
-            query = (self._component)
+            query = (self._component, )
             table = "SELECT name, number FROM Node \
-                     WHERE mesh_id = ?;"
+                     WHERE mesh_id = ? ;"
             #
-            cur = conn.cursor()
+            #cur = conn.cursor()
             cur.execute(table, query)
             nodes = cur.fetchall()
             nodes = {item[0]:item[1] for item in nodes}
@@ -270,7 +274,7 @@ class BeamSQL(BeamBasic):
         nheader = ['element_id', 'node_id', 'node_end']
         df['element_id'] = df['name'].apply(lambda x: elements[x])
         #
-        df['node_id'] = df['node_1'].apply(lambda x: elements[x])
+        df['node_id'] = df['node1'].apply(lambda x: nodes[x])
         df['node_end'] = int(1)
         nodeconn = df[nheader]
         with conn:        
@@ -279,7 +283,7 @@ class BeamSQL(BeamBasic):
                             if_exists='append', index=False)
             
         #
-        df['node_id'] = df['node_2'].apply(lambda x: elements[x])
+        df['node_id'] = df['node2'].apply(lambda x: nodes[x])
         df['node_end'] = int(2)
         nodeconn = df[nheader]
         with conn:        

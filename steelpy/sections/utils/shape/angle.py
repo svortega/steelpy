@@ -11,9 +11,10 @@ import math
 #
 
 # package imports
-from steelpy.sections.utils.shape.utils import ShapeProperty
+from steelpy.sections.utils.shape.utils import (ShapeProperty, get_sect_list,
+                                                get_sect_dict, ShapeDim)
 from steelpy.sections.utils.shape.stress import BeamStress, ShapeStressBasic
-#from steelpy.sections.process.shape import SectionBasic, ShapeBasic
+#from steelpy.sections.utils.shape import SectionBasic, ShapeBasic
 
 #
 #-------------------------------------------------
@@ -569,3 +570,22 @@ class AngleBasic(ShapeStressBasic):
     def Dh(self):
         """Hydrodynamic diametre"""
         return math.hypot(self.d, self.b)
+#
+#
+#
+def get_Lsection(parameters: list|tuple|dict)->list:
+    """Return : [shape, d/h, tw, b, tw, r,
+                 FAvy, FAvz, shear_stress,
+                 build, compactness, title]"""
+    if isinstance(parameters,(list,tuple)):
+        prop = get_sect_list(parameters, number= 11, step= 5)
+    elif isinstance(parameters, dict):
+        prop = get_sect_dict(parameters, number= 11, step= 5)
+    else:
+        raise IOError('Section data not valid')
+    #
+    prop = ['Angle', *prop]
+    return ShapeDim(*prop)
+#
+#
+#

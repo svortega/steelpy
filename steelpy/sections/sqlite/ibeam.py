@@ -5,12 +5,13 @@
 # Python stdlib imports
 from __future__ import annotations
 #from collections import namedtuple
-#from typing import NamedTuple
+from typing import NamedTuple
 #
 #
 # package imports
 from steelpy.sections.utils.shape.ibeam import IbeamBasic
 from steelpy.sections.sqlite.utils import SectionMainSQL
+from steelpy.sections.utils.operations import get_sect_properties
 from steelpy.utils.sqlite.utils import create_connection
 #
 #
@@ -37,7 +38,8 @@ class IbeamSQL(SectionMainSQL):
     #
     #
     #
-    def __setitem__(self, shape_name: int|str, parameters: list) -> None:
+    def __setitem__(self, shape_name: int|str,
+                    parameters: list|NamedTuple) -> None:
         """
         parameters = []
         """
@@ -45,33 +47,17 @@ class IbeamSQL(SectionMainSQL):
             self._labels.index(shape_name)
             raise Exception('element {:} already exist'.format(shape_name))
         except ValueError:
-            #self._labels.append(shape_name)
-            #
-            d = parameters[0]
-            tw = parameters[1]
-            bf = parameters[2]
-            tf = parameters[3]
-            bfb = parameters[4]
-            tfb = parameters[5]
-            r = parameters[6]
-            title = parameters[7]
-            #
-            FAvy = 1
-            FAvz = 1
-            shear_stress:str = 'maximum'
-            build:str = 'welded'
-            compactness = None
             section = (shape_name, 
-                       "I section",   # shape type
-                       None, None,    # diameter, wall_thickess
-                       d, tw,         # height, web_thickness
-                       bf, tf,        # top_flange_width, top_flange_thickness
-                       bfb, tfb,      # bottom_flange_width, bottom_flange_thickness
-                       r,             # fillet_radius
-                       FAvy, FAvz,
-                       shear_stress, build,
-                       compactness,
-                       title, )
+                       parameters.shape, # shape type
+                       None, None,       # diameter, wall_thickess
+                       parameters.d,     # height,
+                       parameters.tw,    # web_thickness
+                       parameters.bf,    # top_flange_width,
+                       parameters.tf,    # top_flange_thickness
+                       parameters.bfb,   # bottom_flange_width,
+                       parameters.tfb,   # bottom_flange_thickness
+                       parameters.r,     # fillet_radius
+                       *parameters[8:])  # FAvy, FAvz, shear_stress, build, compactness, title
             number = self.push_section(section)
             #self._number.append(number)
     #

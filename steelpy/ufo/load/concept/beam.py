@@ -5,7 +5,7 @@
 # Python stdlib imports
 from __future__ import annotations
 from array import array
-from collections.abc import Mapping
+#from collections.abc import Mapping
 #from collections import defaultdict
 #from operator import sub, add
 import re
@@ -22,53 +22,54 @@ from steelpy.ufo.load.process.beam.main import BeamTypeBasic, BeamLineBasic, Bea
 from steelpy.utils.dataframe.main import DBframework
 #from steelpy.utils.math.operations import trnsload
 
-from steelpy.ufo.load.process.operations import (get_BeamLoad_dic,
+from steelpy.ufo.load.process.beam.utils import (get_BeamLoad_dic,
                                                  get_BeamLoad_list_units,
                                                  get_BeamLine_dic,  
-                                                 get_BeamNode_load,
+                                                 #get_BeamPoint_load,
                                                  get_BeamLine_load)
+from steelpy.ufo.load.process.beam.main import BeamLoadBasic
 #
 #
 # ---------------------------------
 #
-class BeamIMMaster(Mapping):
+class BeamIMMaster(BeamLoadBasic):
     
     def __init__(self) -> None:
         """
         """
+        super().__init__()
+        #
         self._index: int
         self._labels: list[str|int] = []
         self._title: list[str] = []
         self._load_id: list[str|int] = []
         self._complex: array = array("I", [])
-        # 0-global/ 1-local
-        #self._system_flag: int = 0
         self._system: array = array("I", [])
     #
-    def __len__(self) -> int:
-        beams = list(dict.fromkeys(self._labels))
-        return len(beams)
+    #def __len__(self) -> int:
+    #    beams = list(dict.fromkeys(self._labels))
+    #    return len(beams)
     #
-    def __contains__(self, value) -> bool:
-        return value in self._labels
+    #def __contains__(self, value) -> bool:
+    #    return value in self._labels
     #
-    def __iter__(self):
-        """
-        """
-        items = list(set(self._labels))
-        return iter(items)
+    #def __iter__(self):
+    #    """
+    #    """
+    #    items = list(set(self._labels))
+    #    return iter(items)
     #
-    def __str__(self) -> str:
-        """ """
-        output = ""
-        beams = list(dict.fromkeys(self._labels))
-        #beams = list(set(self._labels))
-        for beam in beams:
-            items = self.__getitem__(beam)
-            for item in items:
-                output += item.__str__()
-        #print('---')
-        return output
+    #def __str__(self) -> str:
+    #    """ """
+    #    output = ""
+    #    beams = list(dict.fromkeys(self._labels))
+    #    #beams = list(set(self._labels))
+    #    for beam in beams:
+    #        items = self.__getitem__(beam)
+    #        for item in items:
+    #            output += item.__str__()
+    #    #print('---')
+    #    return output
     #
     #
     # ------------------
@@ -89,15 +90,11 @@ class BeamLoadItemIM(BeamIMMaster):
         """
         """
         super().__init__()
-        #self._ufo_beam = beams
-        #self._load_name = load_name
+        #
         self._load = BeamLoadTypeIM(load_name=load_name,
                                     load_title=load_title,
-                                    #ufo_beam=beams, 
                                     component=component)
-        #
-        #self._node_eq = BeamToNodeIM(load_name=load_name)
-
+    #
     #
     def __setitem__(self, beam_name: int|str,
                     beam_load: list|tuple) -> None:
@@ -116,14 +113,12 @@ class BeamLoadItemIM(BeamIMMaster):
         #
         self._beam_id = beam_name
         self._labels.append(beam_name)
-        #
     #
     def __getitem__(self, beam_name: int | str):
         """
         """
         self._labels.append(beam_name)
         return self._load(beam=beam_name)
-    #
     #
     def __str__(self, units: str = "si") -> str:
         """ """
@@ -132,8 +127,18 @@ class BeamLoadItemIM(BeamIMMaster):
         output += self._point.__str__(load_name=self._name)
         return output
     #
-    # ----------------------------------------
+    # -----------------------------------------------
     #
+    @property
+    def df(self):
+        """ beam load df"""
+        print(' beam load')
+        1 / 0
+    
+    @df.setter
+    def df(self, df):
+        """ """
+        1 / 0 # FIXME basicload id
 #
 #
 #

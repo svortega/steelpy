@@ -9,7 +9,7 @@ from __future__ import annotations
 #
 # package imports
 # steelpy.f2uModel.load
-#from steelpy.ufo.load.process.actions import SelfWeight
+#from steelpy.ufo.load.utils.actions import SelfWeight
 #from steelpy.ufo.load.concept.beam import BeamLoadItemIM
 #from steelpy.ufo.load.concept.node import NodeLoadItemIM
 #from steelpy.ufo.load.concept.timehistory import TimeHistory

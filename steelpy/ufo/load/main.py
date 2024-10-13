@@ -88,24 +88,6 @@ class MeshLoad:
         create_table(conn, table)
     #
     #
-    # ----------------------------
-    #
-    #@property
-    #def plane(self) -> NamedTuple:
-    #    """
-    #    """
-    #    return self._plane
-    #    
-    #@plane.setter
-    #def plane(self, plane: NamedTuple) -> None:
-    #    """
-    #    """
-    #    self._plane = plane
-    #    self._basic._plane = self._plane
-    #    self._hydro._plane = self._plane
-    #    self._combination._plane = self._plane
-    #
-    #
     # -----------------------------------------------
     #
     #

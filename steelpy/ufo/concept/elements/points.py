@@ -9,7 +9,7 @@ from math import isclose, dist
 #from collections.abc import Mapping
 #
 # package imports
-from steelpy.ufo.process.elements.nodes import NodePoint, NodeBasic
+from steelpy.ufo.process.node import NodePoint, NodeBasic
 #
 #
 #
@@ -65,8 +65,7 @@ class NodesIM(NodeBasic):
         """
         try:
             self._labels.index(name)
-            raise Exception('    *** warning point {:} already exist'
-                            .format(name))
+            raise Exception(f'*** warning point {name} already exist')
         except ValueError:
             coordinates = self.get_coordinates(coordinates)
             self._labels.append(name)
@@ -83,24 +82,17 @@ class NodesIM(NodeBasic):
         node_name : node number
         """
         try:
-            _index = self._labels.index(node_name)
-            # FIXME : boundary shouldbe free or fixed?
-            #try:
-            #    boundary = self._boundary[node_name]
-            #except TypeError:
-            #    boundary = [0, 0, 0, 0, 0, 0]
-            #
-            #system = get_coordinate_system(self._system)
+            index = self._labels.index(node_name)
             node = NodePoint(name=node_name,
                              component=self._component, 
-                             number=self._number[_index], 
+                             number=self._number[index], 
                              coord_system=self._system, 
-                             x=self._x[_index], 
-                             y=self._y[_index], 
-                             z=self._z[_index],
+                             x=self._x[index], 
+                             y=self._y[index], 
+                             z=self._z[index],
                              r=None, theta=None, phi=None,
-                             title=None, 
-                             index=self._number[_index]-1,
+                             title=node_name, 
+                             index=self._number[index]-1,
                              boundary=None)
             return node.system()
         except ValueError:

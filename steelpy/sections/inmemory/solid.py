@@ -12,12 +12,12 @@ import re
 #from typing import NamedTuple
 
 # package imports
-#from steelpy.sections.process.operations import ShapeProperty
-#from steelpy.sections.process.stress import BeamStress
+#from steelpy.sections.utils.operations import ShapeProperty
+#from steelpy.sections.utils.stress import BeamStress
 from steelpy.sections.utils.shape.main import ShapeBasic
 from steelpy.sections.utils.shape.solid import (CircleSolid,
                                                 RectangleSolid,
-                                                TrapeziodSolid)
+                                                TrapezoidSolid)
 
 # ----------------------------------------
 #      Basic Solid Shapes
@@ -94,7 +94,7 @@ class SolidSection(ShapeBasic):
 
         elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
             c = abs(self._wt[index] - self._wb[index]) / 2.0
-            return TrapeziodSolid(depth=self._d[index],
+            return TrapezoidSolid(depth=self._d[index],
                                   width=self._wb[index],
                                   a=self._wt[index], c=c)
 

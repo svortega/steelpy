@@ -13,7 +13,7 @@ from typing import NamedTuple
 
 # package imports
 from steelpy.ufo.load.sqlite.load_case import BasicLoadSQL
-from steelpy.ufo.load.process.operations import duplicates, indices
+from steelpy.ufo.load.process.utils import duplicates, indices
 from steelpy.ufo.load.process.combination import LoadCombinationBasic
 # steelpy
 from steelpy.utils.sqlite.utils import create_connection, create_table

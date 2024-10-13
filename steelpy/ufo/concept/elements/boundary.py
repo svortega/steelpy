@@ -10,8 +10,8 @@ from typing import NamedTuple
 #
 #
 # package imports
-from steelpy.ufo.process.elements.nodes import NodePoint
-from steelpy.ufo.process.elements.boundary import BoundaryNode, BoundaryItem
+from steelpy.ufo.process.node import NodePoint
+from steelpy.ufo.process.boundary import BoundaryNode, BoundaryItem
 #from steelpy.ufo.concept.elements.points import NodesIM
 
 # ------------------------------------------------------

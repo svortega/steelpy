@@ -4,7 +4,7 @@
 # Python stdlib imports
 from __future__ import annotations
 from dataclasses import dataclass
-from collections.abc import Mapping
+#from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 #from typing import NamedTuple
 import re
@@ -17,39 +17,23 @@ from steelpy.ufo.mesh.sqlite.beam import BeamItemSQL, BeamSQL
 from steelpy.ufo.mesh.sqlite.utils import check_element #, check_nodes
 
 from steelpy.ufo.load.process.beam.beam import LineBeam, PointBeam
+
 from steelpy.ufo.load.process.beam.main import (BeamTypeBasic,
                                                 BeamLineBasic,
-                                                BeamPointBasic)
-from steelpy.ufo.load.sqlite.utils import get_load_data, pull_basic
+                                                BeamPointBasic,
+                                                BeamLoadBasic)
+
+from steelpy.ufo.load.process.beam.utils import (get_BeamLoad_df,
+                                                 find_BeamLoad_item,
+                                                 find_load_type)
+
+from steelpy.ufo.load.sqlite.utils import pull_basic, get_load_basics
 
 from steelpy.utils.math.operations import linstep
 from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.dataframe.main import DBframework
 #
 #
-#
-# ---------------------------------
-#
-class BeamSQLMaster(Mapping):
-    
-    def __init__(self) -> None:
-        """
-        """
-        self._system_flag: int = 0   
-    #
-    # -----------------------------------------------
-    #
-    def __len__(self) -> int:
-        return len(self._labels)
-    #
-    def __contains__(self, value) -> bool:
-        return value in self._labels
-    #
-    def __iter__(self):
-        """
-        """
-        return iter(self._labels) 
-    #  
 #
 #
 # ---------------------------------
@@ -78,7 +62,7 @@ def fer_b2n(beam, bload, global_system:int):
 # ---------------------------------
 #
 #
-class BeamLoadItemSQL(BeamSQLMaster):
+class BeamLoadItemSQL(BeamLoadBasic):
     __slots__ = ['_name',  '_load', '_component', 
                  '_node_eq', 'db_file', '_system_flag', 
                  '_beam']
@@ -88,12 +72,10 @@ class BeamLoadItemSQL(BeamSQLMaster):
                  db_file: str) -> None:
         """
         """
+        super().__init__()
         #
         self._name = load_name
-        #self._plane = plane
         self._component = component
-        #self._system_flag: int = 0
-        super().__init__()
         #
         self.db_file = db_file
         # create table
@@ -104,7 +86,6 @@ class BeamLoadItemSQL(BeamSQLMaster):
         #
         self._load = BeamLoadTypeSQL(load_name=self._name,
                                      component=self._component,
-                                     #plane=self._plane, 
                                      db_file=self.db_file)
     #
     @property
@@ -150,51 +131,39 @@ class BeamLoadItemSQL(BeamSQLMaster):
     # -----------------------------------------------
     #
     #
-    def __setitem__(self, beam_name: int|str,
-                    beam_load: list) -> None:
+    def __setitem__(self, name: int|str,
+                    load: list|tuple|dict) -> None:
         """
         """
-        #
-        if isinstance(beam_load, dict):
-            load_type = beam_load['type']
+        if isinstance(load, dict):
+            columns = list(load.keys())
+            header = {item:find_BeamLoad_item(item) for item in columns}
+            for key, item in header.items():
+                if item in ['type']:
+                    load_type = find_load_type(load[key])
+                    break
         else:
-            load_type = beam_load[0]
+            load_type = find_load_type(load[0])
         #
         if re.match(r"\b(point|mass)\b", load_type, re.IGNORECASE):
-            self._load._point[beam_name] = beam_load
-            
+            self._load._point[name] = load
         elif re.match(r"\b(line|u(niform(ly)?)?d(istributed)?l(oad)?)\b",
                       load_type, re.IGNORECASE):
-            self._load._line[beam_name] = beam_load
-        
+            self._load._line[name] = load
         else:
-            raise IOError(f'Beam lod type {beam_load[0]} not implemented')    
+            raise NotImplementedError(f'Beam lod {load_type} not implemented')    
     #
     def __getitem__(self, beam_name: int | str):
         """
         """
         conn = create_connection(self.db_file)
         with conn:  
-            #beam = check_element(conn, beam_name)
             beam =  BeamItemSQL(beam_name=beam_name,
-                                #plane=self._plane,
                                 component=self._component, 
                                 db_file=self.db_file)
-        #try:
-        #memb_type = beam.type # beam[3]
+        #
         if beam.type != 'beam':
             raise ValueError(f"element {beam_name} type {beam.type} not valid")
-        #except TypeError:
-        #    raise IOError(f"beam {beam_name} not found")
-        #
-        #if not beam_name in self._labels:
-        #if not beam_name in  self._labels:
-        #self._labels.append(beam_name)
-        #return self._load(beam=beam)
-        #return BeamLoadTypeSQL(load_name=self._name,
-        #                       beam=beam,
-        #                       component=self._component, 
-        #                       db_file=self.db_file)
         #
         return self._load(beam=beam)
     #
@@ -379,79 +348,51 @@ class BeamLoadItemSQL(BeamSQLMaster):
     @df.setter
     def df(self, df):
         """ """
-        1 / 0 # FIXME basicload id
+        dfdict = get_BeamLoad_df(df, system=self._system_flag)
+        #
         conn = create_connection(self.db_file)
         with conn:
             nodes, elements, basic = get_load_basics(conn, self._component)
-            #print('--')
         #
-        df['basic_id'] = df['name'].apply(lambda x: basic[x])
-        df['element_id'] =  df['beam'].apply(lambda x: elements[x])
-        #df['node_id'] = df['node'].apply(lambda x: nodes[x])
-        df['system'] = 'local'
-        df['type'] = df['type'].apply(lambda x: x.lower())
-        #
-        bgroup = df.groupby('type')
-        try:
-            bpoint = bgroup.get_group('point')
-            #pheader = ['name', 'beam', 'title', 'type', 
-            #           'L0', 'fx', 'fy', 'fz', 'mx', 'my', 'mz']
-            #bpoint = bpoint[pheader]
-            #bpoint['type'] = 'force'
-            bpoint[['x', 'y', 'z', 'rx', 'ry', 'rz']] = None
-            #1 / 0
-            #bload._beam._point.df = bpoint
+        for key, item in  dfdict.items():
+            bconn = item.copy()
+            bconn['basic_id'] = bconn['name'].apply(lambda x: basic[x])
+            bconn['element_id'] =  bconn['beam'].apply(lambda x: elements[x])
+            bconn.replace(to_replace=[''], value=[float(0)], inplace=True)
             #
             header = ['basic_id', 'element_id',
                       'title', 'system', 'type', 'L0', 
                       'fx', 'fy', 'fz', 'mx', 'my', 'mz',
-                      'x', 'y', 'z', 'rx', 'ry', 'rz']        
+                      'x', 'y', 'z', 'rx', 'ry', 'rz']
             #
-            bconn = bpoint[header].copy()
-            bconn.replace(to_replace=[''], value=[float(0)], inplace=True)
-            bconn['title'] = bpoint['title']
-            #
-            with conn:
-                bconn.to_sql('LoadBeamPoint', conn,
-                             index_label=header, 
-                             if_exists='append', index=False)            
-        except KeyError:
-            pass
+            if key in ['point']:
+                bconn[['x', 'y', 'z', 'rx', 'ry', 'rz']] = None
+                with conn:
+                    bconn[header].to_sql('LoadBeamPoint', conn,
+                                         index_label=header, 
+                                         if_exists='append', index=False)
+            elif key in ['line']:
+                header = ['basic_id', 'element_id',
+                          'title', 'system', 'type',
+                          'L0', 'qx0', 'qy0', 'qz0', 'qt0',
+                          'L1', 'qx1', 'qy1', 'qz1', 'qt1',
+                          'step']
+                with conn:
+                    bconn[header].to_sql('LoadBeamLine', conn,
+                                         index_label=header,
+                                         if_exists='append', index=False)                
+            
+            elif key in ['mass']:
+                bconn[['fx', 'fy', 'fz', 'mx', 'my', 'mz']] = None
+                with conn:
+                    bconn[header].to_sql('LoadBeamPoint', conn,
+                                         index_label=header, 
+                                         if_exists='append', index=False)
+            
+            else:
+                raise IOError(f'beam load {key} not valid')
         #
-        try:
-            bline = bgroup.get_group('line')
-            #header = ['name', 'beam', 'title', 'type', 
-            #          'L0', 'qx0', 'qy0', 'qz0', 'L1','qx1', 'qy1', 'qz1']
-            #bline = bline[lheader]
-            #bline['type'] = 'load'
-            bline[['BS', 'OTM']] = None
-            #1 / 0
-            #bload._beam._line.df = bline
-            #        
-            #
-            header = ['basic_id', 'element_id',
-                      'title', 'system', 'type',
-                      'L0', 'qx0', 'qy0', 'qz0', 'qt0',
-                      'L1', 'qx1', 'qy1', 'qz1', 'qt1',
-                      'BS', 'OTM']
-            #
-            bconn = bline[header].copy()
-            bconn[['BS', 'OTM']] = None
-            bconn.replace(to_replace=[''], value=[float(0)], inplace=True)
-            bconn['title'] = bline['title']
-            #
-            with conn:
-                bconn.to_sql('LoadBeamLine', conn,
-                             index_label=header,
-                             if_exists='append', index=False)
-        except KeyError:
-            pass
-        #
-        try:
-            bmass = bgroup.get_group('mass')
-            1 / 0
-        except KeyError:
-            pass        
+        #   
     #
     # -----------------------------------------------
     #
@@ -577,16 +518,12 @@ class BeamLoadTypeSQL(BeamTypeBasic):
         #
         self._line = BeamDistributedSQL(load_name=self._name,
                                         component=component,
-                                        #plane=plane, 
                                         db_file=self._db_file)
         
         self._point = BeamPointSQL(load_name=self._name,
                                    component=component,
-                                   #plane=plane, 
                                    db_file=self._db_file)
         #
-        #self._beam =  beam
-        #self._beam_name = beam.name
     #
     #
     #def __call__(self, beam):
@@ -601,26 +538,24 @@ class BeamLoadTypeSQL(BeamTypeBasic):
 # ---------------------------------
 #
 # TODO: Why this global?
-class BeamLoadGloabalSQL(BeamSQLMaster):
+class BeamLoadGloabalSQL(BeamLoadBasic):
     """ """
-    __slots__ = ['_db_file', '_component']
+    __slots__ = ['_db_file', '_component', '_line', '_point']
     
     def __init__(self,  component: int, db_file: str) -> None:
         """
         """
-        #super().__init__()
+        super().__init__()
+        #
         self._db_file =  db_file
         self._component = component
-        #self._plane = plane
-        
         #
         self._line = BeamDistributedSQL(load_name='*',
                                         component=component,
-                                        #plane=plane, 
                                         db_file=self._db_file)
+        
         self._point = BeamPointSQL(load_name='*',
                                    component=component,
-                                   #plane=plane, 
                                    db_file=self._db_file)        
     #
     # ------------------
@@ -636,15 +571,6 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
                                       plane=self._plane,
                                       component=self._component,
                                       db_file=self._db_file)
-            #beam = check_element(conn, beam_name)        
-        #try:
-        #    self._beam.name
-        #except (TypeError, IndexError):
-        #    raise IOError(f"beam {beam_name} not found")
-        #
-        # TODO: check if _beam_id affects something else
-        #self._beam_id = beam_name
-        #self._labels.append(beam_name)
         #
         load_type = beam_load.pop(0)
         #
@@ -728,24 +654,16 @@ class BeamLoadGloabalSQL(BeamSQLMaster):
     def __getitem__(self, beam_name: int | str):
         """
         """
+        1 / 0
         conn = create_connection(self._db_file)
         with conn:  
-            #beam = check_element(conn, beam_name)
             beam =  BeamItemSQL(beam_name=beam_name,
                                 plane=self._plane,
                                 component=self._component,
                                 db_file=self._db_file)
-        #try:
-        #memb_type = beam.type # beam[3]
+        #
         if beam.type != 'beam':
             raise ValueError(f"element {beam_name} type {beam.type} not valid")
-        #except TypeError:
-        #    raise IOError(f"beam {beam_name} not found")
-        #
-        #return BeamLoadTypeSQL(load_name=self._name,
-        #                       beam=beam, 
-        #                       db_file=self._db_file)
-        1 / 0
     #
     # ------------------
     #
@@ -883,20 +801,14 @@ class BeamDistributedSQL(BeamLineBasic):
                  '_component']
     
     def __init__(self, load_name: str|int,
-                 component: int, #plane, 
+                 component: int, 
                  db_file: str) -> None:
         """
         """
         super().__init__()
         self._db_file = db_file
-        #self._plane = plane
         self._name = load_name
-        self._component = component
-        #
-        # create table
-        #conn = create_connection(self._db_file)
-        #with conn:
-        #    self._create_table(conn)         
+        self._component = component        
     #
     #
     @property
@@ -981,34 +893,7 @@ class BeamDistributedSQL(BeamLineBasic):
         return output
     #
     #
-    # -----------------------------------------------
-    #
-    #def _create_table(self, conn) -> None:
-    #    """ """
-    #    table = "CREATE TABLE IF NOT EXISTS LoadBeamLine(\
-    #                number INTEGER PRIMARY KEY NOT NULL,\
-    #                load_id INTEGER NOT NULL REFERENCES Load(number),\
-    #                element_id INTEGER NOT NULL REFERENCES Element(number),\
-    #                title TEXT,\
-    #                system INTEGER NOT NULL,\
-    #                type TEXT NOT NULL,\
-    #                L0 DECIMAL,\
-    #                qx0 DECIMAL,\
-    #                qy0 DECIMAL,\
-    #                qz0 DECIMAL,\
-    #                qt0 DECIMAL,\
-    #                L1 DECIMAL,\
-    #                qx1 DECIMAL,\
-    #                qy1 DECIMAL,\
-    #                qz1 DECIMAL,\
-    #                qt1 DECIMAL,\
-    #                BS DECIMAL,\
-    #                OTM DECIMAL,\
-    #                x DECIMAL,\
-    #                y DECIMAL,\
-    #                z DECIMAL);"
-    #    #
-    #    create_table(conn, table)    
+    # -----------------------------------------------   
     #
     def _push_load(self, conn, beam_name: str, load: list):
         """ """
@@ -1208,23 +1093,17 @@ def get_line_load(conn, beam_name:int|str,
 #
 class BeamPointSQL(BeamPointBasic):
     __slots__ = ['_db_file', '_name', '_beam', 
-                 '_component'] # , '_plane'
+                 '_component']
 
     def __init__(self, load_name: str|int,
-                 component: int, #plane,
+                 component: int,
                  db_file: str) -> None:
         """
         """
         super().__init__()
         self._db_file = db_file
-        #self._plane = plane
         self._name = load_name
         self._component = component
-        #
-        # create table
-        #conn = create_connection(self._db_file)
-        #with conn:
-        #    self._create_table(conn)
     #
     #
     @property
@@ -1251,26 +1130,15 @@ class BeamPointSQL(BeamPointBasic):
     def __setitem__(self, beam_name: int|str, point_load: list) -> None:
         """
         """
-        #
         conn = create_connection(self._db_file)
         with conn:
             self._beam =  BeamItemSQL(beam_name,
                                       component=self._component, 
                                       db_file=self._db_file)
-               
-        #try:
-        #    self._beam.name
-        #except (TypeError, IndexError):
-        #    raise IOError(f"beam {beam_name} not found")        
+                      
         #
-        point_type = 'force' #point_load.pop(0)
-        point_load =  self._get_point(point_load)
-        # get load data
-        # set element load
-        #self._labels.append(beam_name)
-        #title = point_load.pop()
-        #self._title.append(title)
-        #system = point_load.pop() #line_load[8]        
+        point_type = 'force'
+        point_load =  self._get_point(point_load)       
         # 
         # push to SQL
         conn = create_connection(self._db_file)
@@ -1286,7 +1154,6 @@ class BeamPointSQL(BeamPointBasic):
     def __getitem__(self, beam_name:int|str)-> list:
         """
         """
-        #bd_file = self._db_file
         # get beam load
         conn = create_connection(self._db_file)
         with conn:
@@ -1312,30 +1179,6 @@ class BeamPointSQL(BeamPointBasic):
     #
     # -----------------------------------------------
     #
-    #def _create_table(self, conn) -> None:
-    #    """ """
-    #    table = "CREATE TABLE IF NOT EXISTS LoadBeamPoint(\
-    #                number INTEGER PRIMARY KEY NOT NULL,\
-    #                load_id INTEGER NOT NULL REFERENCES Load(number),\
-    #                element_id INTEGER NOT NULL REFERENCES Element(number),\
-    #                title TEXT,\
-    #                system INTEGER NOT NULL,\
-    #                type TEXT NOT NULL,\
-    #                L0 DECIMAL,\
-    #                fx DECIMAL,\
-    #                fy DECIMAL,\
-    #                fz DECIMAL,\
-    #                mx DECIMAL,\
-    #                my DECIMAL,\
-    #                mz DECIMAL,\
-    #                x DECIMAL,\
-    #                y DECIMAL,\
-    #                z DECIMAL,\
-    #                rx DECIMAL,\
-    #                ry DECIMAL,\
-    #                rz DECIMAL);"
-    #    #
-    #    create_table(conn, table)
     #
     # -----------------------------------------------
     #
@@ -1347,7 +1190,7 @@ class BeamPointSQL(BeamPointBasic):
         #
         with conn:
             query = (self._component, )
-            table = "SELECT Load.*, \
+            table = "SELECT Load.number, Load.name, Load.level, Load.title, \
                         Element.name, \
                         LoadBeamPoint.title, LoadBeamPoint.system,\
                         LoadBeamPoint.L0, LoadBeamPoint.fx, LoadBeamPoint.fy, LoadBeamPoint.fz, \
@@ -1362,7 +1205,7 @@ class BeamPointSQL(BeamPointBasic):
             cur.execute(table, query)            
             rows = cur.fetchall()
         #
-        cols = ['load_id','load_name', 'load_title', 'load_level', 'load_type', 
+        cols = ['load_id','load_name', 'load_level', 'load_title', 
                 'element_name',
                 'load_comment', 'load_system',
                 'L0', 'Fx', 'Fy', 'Fz',

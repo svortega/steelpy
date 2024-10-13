@@ -12,8 +12,8 @@ from typing import NamedTuple
 
 # package imports
 from steelpy.utils.units.main import Units
-from ..process.print_report import print_isomat
-#from ..process.operations import get_isomat_prop_df
+from ..utils.print_report import print_isomat
+#from ..utils.operations import get_isomat_prop_df
 #
 from steelpy.utils.dataframe.main import DBframework
 
@@ -487,7 +487,7 @@ class MaterialElastic(Mapping):
     @property
     def df(self):
         """ raw data for dataframe"""
-        #from steelpy.process.dataframe.dframe import DataFrame
+        #from steelpy.utils.dataframe.dframe import DataFrame
         df = DBframework()
         matype = ['elastic' for _ in self._labels]
         data = {"name": self._labels,

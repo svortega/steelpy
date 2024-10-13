@@ -61,7 +61,7 @@ def find_force_item(word_in):
     
     if not _match:
         print('  **  erorr material item {:} not recognized'.format(word_in))
-        print('      process terminated')
+        print('      utils terminated')
         sys.exit()
 
     return _match

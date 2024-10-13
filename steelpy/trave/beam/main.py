@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019 steelpy
+# Copyright (c) 2009 steelpy
 # 
 
 # Python stdlib imports
@@ -13,17 +13,11 @@ from __future__ import annotations
 
 # package imports
 #
-#from steelpy.ufo.concept.elements.beam import ConceptBeam
-from steelpy.ufo.load.concept.beam import BeamLoadItemIM #,  ConceptBeam
-#from steelpy.ufo.load.concept.combination import LoadCombConcept
-#from steelpy.ufo.load.process.beam.main import BeamBasicLoad
-#
+from steelpy.ufo.load.concept.beam import BeamLoadItemIM
 from steelpy.sections.main import SectionIM
+from steelpy.sections.utils.operations import get_section
 from steelpy.material.main import MaterialIM
-#
 from steelpy.trave.beam.operation import BeamBasic
-#
-#import pandas as pd
 from steelpy.utils.dataframe.main import DBframework
 #
 # 
@@ -45,25 +39,14 @@ class Beam:
         self.steps: int = steps
         #
         self._materials = MaterialIM()
-        #
         self._sections = SectionIM()
-        #
-        #self._beam = ConceptBeam(beam_type="beam",
-        #                         points,
-        #                         materials,
-        #                         sections,
-        #                         labels,
-        #                         element_type)
-        #
-        self._db = DBframework()
         #
         self._basic = BeamLoadItemIM(load_name="beam", 
                                      load_title="beam",
                                      component=self.name)
-                                     #beams=self)
+        #
+        self._db = DBframework()
         self._basic._load.local_system()
-        #self._combination = LoadCombConcept(basic_load)
-        #self.load = BeamBasicLoad(beam=self)
         self._Pdelta = True
     #
     #
@@ -92,12 +75,12 @@ class Beam:
         return self._sections['beam']
 
     @section.setter
-    def section(self, section):
+    def section(self, properties):
         """
-        section_type : select beam's cross section shape (tubular/rectangular,I_section)
+        section_type : select beam's cross-section shape (tubular/rectangular,I_section)
         """
-    #    self._section = section
-        self._sections["beam"] = section
+        properties = get_section(properties)
+        self._sections["beam"] = properties
     #
     @property
     def material(self):
@@ -180,8 +163,6 @@ class Beam:
     def q(self, value:list|tuple|dict):
         """line load"""
         self._basic[self.name].line = value
-        #self._basic[self.name] = ['line', value]
-        #self._basic._load._line[self.name] = value
     #
     @property
     def load_combination(self):
@@ -202,17 +183,6 @@ class Beam:
             else:    
                 self.load.combination[value[0]] = value[1]
     #
-    #@property
-    #def load_combination(self):
-    #    """
-    #    """
-    #    return self._load_combination
-    #
-    #@load_combination.setter
-    #def load_combination(self, value:list):
-    #    """
-    #    """
-    #    self._load_combination.append(value)
     #
     # -----------------------------------------------------
     # TODO: beam with multiple supports
@@ -248,31 +218,12 @@ class Beam:
     def _getloads(self):
         """get beam loading"""
         bloads = []
-        #bloads.extend(item for item in self.load.basic.line.values())
-        #bloads.extend(item for item in self.load.basic.point.values())
-        # line load
-        #bloads.extend(self.load.basic.line)
-        # point load
-        #bloads.extend(self.load.basic.point)
-        #
-        #for item in self._basic._load.line.values():
-        #    bloads.extend(item)
         for item in self._basic._load._line.values():
             bloads.extend(item)
-            
-        #if self._basic._load.line:
-        #    bloads.extend(self._basic._load.line)
         #
         for item in self._basic._load._point.values():
             bloads.extend(item)
         #
-        #if self._basic._load.point:
-        #    bloads.extend(self._basic._load.point)
-        #    
-        #rex = self.load._basic.reactions()
-        #
-        #line = self.load.basic.line
-        #point = self.load.basic.point
         return bloads
     #
     #    

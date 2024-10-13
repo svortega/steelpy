@@ -913,7 +913,7 @@ class PD8010_2004:
                           2*(x/self.Py)*(self.fo*self.Do/self.tnom))
         #
         # Find first root (Note that it may not be the minimum
-        # use 'full' to find all roots, but process is slow)
+        # use 'full' to find all roots, but utils is slow)
         #self.Search = 'FAST'
         # Find Pc
         self.Pc = GoalSeeker(f, self.Sigmau*10, self.RootSearch)

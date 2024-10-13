@@ -10,6 +10,7 @@ import re
 from operator import sub, add
 
 # package imports
+from steelpy.ufo.process.node import NodePoint
 from steelpy.ufo.mesh.process.brotation import Rmatrix2
 from steelpy.utils.units.main import Units
 #
@@ -48,7 +49,6 @@ class ElementConcept:
     def nodes(self) -> list:
         """
         """
-        #conn = self._cls._connectivity[self.index]
         jnt = []
         for conn in self._cls._connectivity[self.index]:
             nname =self._cls.f2u_points.get_name(conn)
@@ -469,12 +469,13 @@ class ConceptBeam(Mapping):
     @df.setter
     def df(self, df):
         """ """
+        1 / 0
         #col = df.columns.tolist()
-        coord = list(filter(lambda v: re.match('coord(inate)?(\_)?(x|y|z)(\_)?(1|2)',
+        coord = list(filter(lambda v: re.match('coord(inate)?(_)?(x|y|z)(_)?(1|2)',
                                                v, re.IGNORECASE), df.columns))
 
         if coord:
-            coord1 = list(filter(lambda v: re.match('coord(inate)?(\_)?(x|y|z)(\_)?1',
+            coord1 = list(filter(lambda v: re.match('coord(inate)?(_)?(x|y|z)(_)?1',
                                                     v, re.IGNORECASE), coord))
             coord1.sort(key=alphaNumOrder)
             coord2 = list(set(coord) - set(coord1))
@@ -648,7 +649,18 @@ class BeamItemConcept(ElementConcept):
             nodeNo3[1] = (node[node_end].y + v2 * node_distance)
             nodeNo3[2] = (node[node_end].z + v3 * node_distance)
         #
-        return nodeNo3  
+        nodeNo3 = NodePoint(name=0,
+                            component=0, 
+                            number=0, 
+                            coord_system='cartesian', 
+                            x=nodeNo3[0], 
+                            y=nodeNo3[1], 
+                            z=nodeNo3[2],
+                            r=None, theta=None, phi=None,
+                            title=None, 
+                            index=0,
+                            boundary=None)
+        return nodeNo3.system()
     #
     #
     @property

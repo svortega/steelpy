@@ -121,7 +121,7 @@ def nodeload(ax, nodes, nload, scale:float = 1.0):
     if df_nload.empty:
         return
     #
-    # process
+    # utils
     #
     colmax = df_nload[['Fx', 'Fy', 'Fz']].abs().max()
     df_nload[['Fxnorm', 'Fynorm', 'Fznorm']] = df_nload[['Fx', 'Fy', 'Fz']].apply(lambda x: x/colmax.max(), axis=0)
@@ -199,7 +199,7 @@ def beamlineload(ax, beams, nodes, lineload,
     if df_bload.empty:
         return
     #
-    # process
+    # utils
     #    
     colmax = df_bload[['qx0', 'qy0', 'qz0','qx1', 'qy1', 'qz1']].abs().max()
     df_bload[['qx0norm', 'qy0norm', 'qz0norm',
@@ -274,7 +274,7 @@ def beampointload(ax, beams, nodes, pointload,
     if df_bload.empty:
         return
     #
-    # process
+    # utils
     #
     #
     colmax = df_bload[['Fx', 'Fy', 'Fz']].abs().max()

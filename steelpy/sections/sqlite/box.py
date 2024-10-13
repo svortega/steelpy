@@ -11,6 +11,7 @@ from __future__ import annotations
 #
 from steelpy.sections.sqlite.utils import SectionMainSQL
 from steelpy.sections.utils.shape.box import BoxBasic
+from steelpy.sections.utils.operations import get_sect_properties
 #
 #
 #
@@ -38,30 +39,16 @@ class BoxSQL(SectionMainSQL):
             self._labels.index(shape_name)
             raise Exception('element {:} already exist'.format(shape_name))
         except ValueError:
-            #self._labels.append(shape_name)
             #
-            d = parameters[0]
-            tw = parameters[1]
-            b = parameters[2]
-            tb = parameters[3]
-            FAvy = 1
-            FAvz = 1
-            shear_stress:str = 'maximum'
-            build:str = 'welded'            
-            compactness = None
             section = (shape_name,
-                       "Box",  # shape type
-                       None, None, # diameter, wall_thickess
-                       d, tw,      # height, web_thickness
-                       b, tb,      # top_flange_width, top_flange_thickness
-                       b, tb,      # bottom_flange_width, bottom_flange_thickness
-                       None,       # root radius
-                       FAvy, FAvz,
-                       shear_stress, build,
-                       compactness,
-                       None,)     # title
+                       "Box",                       # shape type
+                       None, None,                  # diameter, wall_thickess
+                       parameters.d, parameters.tw, # height, web_thickness
+                       parameters.b, parameters.tb, # top_flange_width, top_flange_thickness
+                       parameters.b, parameters.tb, # bottom_flange_width, bottom_flange_thickness
+                       parameters.r,                # root radius
+                       *parameters[6:])             # FAvy, FAvz, shear_stress, build, compactness, title
             number = self.push_section(section)
-            #self._number.append(number)
     #
     def __getitem__(self, shape_name: str | int):
         """

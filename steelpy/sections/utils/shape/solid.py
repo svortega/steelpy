@@ -8,11 +8,12 @@ from __future__ import annotations
 from collections import namedtuple
 from dataclasses import dataclass
 import math
-#import re
+import re
 from typing import NamedTuple
 
 # package imports
-from steelpy.sections.utils.shape.utils import ShapeProperty
+from steelpy.sections.utils.shape.utils import (ShapeProperty, get_sect_list,
+                                                get_prop_dict)
 from steelpy.sections.utils.shape.stress import ShapeStressBasic
 
 
@@ -159,15 +160,15 @@ class RectangleSolid(TrapezoidBasic):
 
 +   +-----+
     |     |
-d   |     |   Z
+h   |     |   Z
     |     |   ^
 +   +-----+   + > Y
-    *  w  *
+    *  b  *
 
     Parameters
     ----------
-    d : Height
-    w : Width
+    h : Height
+    b : width|base
 
     Returns
     ----------
@@ -201,7 +202,6 @@ d   |     |   Z
     #name: str | int
     depth:float
     width:float
-    #shape: str
     #
     # --------------------------------------------
     #
@@ -467,23 +467,23 @@ d   |     |   Z
 #
 #
 @dataclass(slots=True)
-class TrapeziodSolid(TrapezoidBasic):
+class TrapezoidSolid(TrapezoidBasic):
     """
     Calculate the section properties of a trapezoidal solid section\n  
     
-        | c |  wt  |
+        | c |  a  |
     +   +   +------+
            *        *
-    d     *          *     Z
+    h     *          *     Z
          *            *    ^
     +   +--------------+   + > Y
-        |      wb      |
+        |      b      |
     
     Parameters
     ----------
-    d  : Section height
-    wb : Width bottom
-    wt : Width top (default Wb)
+    h  : Section height
+    b  : Width bottom
+    a  : Width top (default Wb)
     c  : (default [wb-wt]/2)
 
     Returns
@@ -509,7 +509,6 @@ class TrapeziodSolid(TrapezoidBasic):
     width:float
     a:float
     c:float
-    #shape: str = 'trapezoid'
     #
     # --------------------------------------------
     #
@@ -1126,3 +1125,116 @@ class CircleSolid(ShapeStressBasic):
 #
 #
 #
+class SolidDim(NamedTuple):
+    """ """
+    shape:str
+    h:float
+    b:float|None
+    a:float|None
+    #
+    FAvy:float
+    FAvz:float
+    shear_stress:str
+    build:str
+    compactness:str|None
+    title:str|None
+    #
+    @property
+    def d(self):
+        """"""
+        return self.h
+#
+#
+def get_solid_section(shape:str, parameters: list|tuple|dict)->list:
+    """Return : [diameter/height, base, a,
+                 FAvy, FAvz, shear_stress,
+                 build, compactness, title]"""
+    if isinstance(parameters,(list,tuple)):
+        prop = get_sect_list(parameters, number= 9, step=3)
+    elif isinstance(parameters, dict):
+        prop = get_sect_dict(parameters)
+    else:
+        raise IOError('Section data not valid')
+    #
+    match shape:
+        case 'Rectangle bar':
+            # check if symmetry
+            if not prop[1]:
+                prop[1] = prop[0]
+            section = [shape,       # shape type
+                        prop[0],    # h - height
+                        prop[1],    # b - base bottom
+                        prop[2],    # None
+                        *prop[3:]]  # FAvy, FAvz, shear_stress, build, compactness, title
+        case 'Trapezoid bar':
+            #if not prop[4]:
+            #    prop[4] = abs(prop[3] - prop[2]) / 2.0
+            section = [shape,       # shape type
+                        prop[0],    # h - height
+                        prop[1],    # b - base bottom
+                        prop[2],    # a - base top
+                        *prop[3:]]  # FAvy, FAvz, shear_stress, build, compactness, title
+        case 'Circular bar':
+            section = [shape,       # shape type
+                       prop[0],     # diameter
+                       prop[1],     # None
+                       prop[2],     # None                     
+                       *prop[3:]]   # FAvy, FAvz, shear_stress, build, compactness, title
+    #
+    return SolidDim(*section)
+#
+#
+def get_sect_dict(parameters: dict,
+                  number:int = 9, step:int=3)->list:
+    """Return : [diameter/height, base, a,
+                 FAvy, FAvz, shear_stress,
+                 build, compactness, title]"""
+    # basic information
+    section = [None] * step
+    #section[step+0] = 1.0       # FAvy
+    #section[step+1] = 1.0       # FAvz
+    #section[step+2] = 'maximum' # shear_stress
+    #section[step+3] = 'welded'  # build
+    #
+    #matkeys = list(parameters.keys())
+    for key, item in parameters.items():
+        if re.match(r"\b(d(iamet(re|er)?)?|h(eight)?|depth)\b", key, re.IGNORECASE):
+            try:
+                section[0] = item.value
+            except AttributeError:
+                raise IOError("units required")
+        #elif re.match(r"\b(h(eight)?|depth)\b", key, re.IGNORECASE):
+        #    try:
+        #        section[1] = item.value
+        #    except AttributeError:
+        #        raise IOError("units required")
+        elif re.match(r"\b(b(ase)?)\b", key, re.IGNORECASE):
+            try:
+                section[1] = item.value
+            except AttributeError:
+                raise IOError("units required")
+        elif re.match(r"\b(a)\b", key, re.IGNORECASE):
+            try:
+                section[2] = item.value
+            except AttributeError:
+                raise IOError("units required")
+        #elif re.match(r"\b(c)\b", key, re.IGNORECASE):
+        #    try:
+        #        section[3] = item.value
+        #    except AttributeError:
+        #        raise IOError("units required")
+        #elif re.match(r"\b(SA(_|\s*)?inplane)\b", key, re.IGNORECASE):
+        #    section[step] = item
+        #elif re.match(r"\b(SA(_|\s*)?outplane)\b", key, re.IGNORECASE):
+        #    section[step+1] = item
+        #elif re.match(r"\b(shear(_|\s*)?stress)\b", key, re.IGNORECASE):
+        #    section[step+2] = item
+        #elif re.match(r"\b(build)\b", key, re.IGNORECASE):
+        #    section[step+3] = item
+        #elif re.match(r"\b(compactness)\b", key, re.IGNORECASE):
+        #    section[step+4] = item
+        #elif re.match(r"\b(title)\b", key, re.IGNORECASE):
+        #    section[step+5] = item
+    #
+    section.extend(get_prop_dict(parameters))
+    return section

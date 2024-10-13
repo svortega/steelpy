@@ -227,7 +227,7 @@ class BasicLoadSQL(LoadCaseBasic):
     #
     def function(self, steps:int,
                  Pa:float=0.0, factor:float=1):
-        """process element load"""
+        """utils element load"""
         #
         dftemp = self._beams.load_function(steps=steps,
                                            Pa=Pa, factor=factor)

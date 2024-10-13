@@ -15,7 +15,7 @@ from .channel import Channel
 from .box import Box
 from .ibeam import Ibeam
 from .solid import SolidSection
-#from ..process.operations import get_sect_properties
+#from ..utils.operations import get_sect_properties
 from steelpy.sections.utils.shape.main import SectionMain
 from steelpy.utils.dataframe.main import DBframework
 

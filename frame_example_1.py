@@ -144,20 +144,6 @@ point_load.load = {'fz': 5000 * units.kN, 'title': "point_F22"}
 point_load.load = {'fz': 5000 * units.kN, 'title': "point_F22"}
 point_load.load = {'mz': 100 * units.kN*units.m, 'title': "point_M22"}
 #
-#basic[1].beam = beam["bm12"]
-#basic[1].beam.line_load["wave_1"] = {'qz': 10 * units.kN / units.m}
-##
-#basic[1].beam = beam["bm9"]
-#basic[1].beam.line_load["wave_2"] = {'qz': 10 * units.kN / units.m}
-##
-#basic[1].beam = beam["bm6"]
-#basic[1].beam.line_load["wave_3"] = {'qz': 10 * units.kN / units.m}
-#
-#basic[1].beam = beam["bm3"]
-#basic[1].beam.line_load["wave_4"] = {'qz': -1000 * units.kN / units.m}
-#
-#basic[1].beam = beam["bm27"]
-#basic[1].beam.line_load["wave_5"] = {'qz': 10 * units.kN / units.m}
 #
 ##basic[1].beam.line_load["snow_2"] = {'qy1': 0 * units.kN / units.m, # in plane triangular load
 ##                                     'qy2':-2 * units.kN / units.m} # from node to node
@@ -171,32 +157,11 @@ basic[1].beam.line = {'qy1': 2 * units.kN / units.m, # start load value
                       'd1': 0.5 * units.m, # load start 0.5m from node 1
                       'd2': 1.0 * units.m, # load end 1m from node 2
                       'title': "snow_3"}
-##
-#basic[2] = 'point_loading'
-##
-#basic[2].point = elevation[1]
-#basic[2].point.load["point_1"] = {'fz': 1000 * units.kN} # nodal load in plane
-##
-#basic[2].point = elevation[2]
-#basic[2].point.load["point_2"] = {'fz': 1000 * units.kN}
-##
-#basic[2].point = elevation[3]
-#basic[2].point.load["point_3"] = {'fz': 1000 * units.kN}
-##
-#basic[2].point = elevation[4]
-#basic[2].point.load["point_4"] = {'fz': 1000 * units.kN}
-##
-#basic[2].point = elevation[5]
-#basic[2].point.load["point_5"] = {'fz': 1000 * units.kN}
-##
-#basic[2].point = elevation[6]
-#basic[2].point.load["point_6"] = {'fz': 1000 * units.kN}
-##
-##
 #
-##point[100] = [0*units.m, 9.5*units.m, 0*units.m]
-##basic[2].point = point[100]
-##basic[2].point.load["point_100"] = {'fz': 1000 * units.kN}
+basic[1].beam.point = {'Fx': 10 * units.kN,
+                       'L': 0.0 * units.m,
+                       'title': 'snow_4'}
+#
 #
 basic[3] = 'crane load'
 basic[3].beam = beam["bm3"]
@@ -206,15 +171,6 @@ basic[3].beam.point = {'fx': -5000 * units.kN,  # beam point axial load
 #
 print(basic)
 #
-#for load_name, lcase in basic.items():
-#    # Beam line load process
-#    for bname, loads in lcase.beam.items():
-#        #line_load.items():
-#        beam_item = beam[bname]
-#        for item in loads.line:
-#            print(item)
-#        for item in loads.point:
-#            print(item)
 #
 #
 #
@@ -268,4 +224,4 @@ frame = Trave3D(mesh=mesh)
 frame.static()
 results = frame.results()
 print(results)
-print('-->')
+print('--> xx')

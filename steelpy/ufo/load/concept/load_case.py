@@ -138,16 +138,6 @@ class LoadTypesConcept:
             node_id = self.f2u_points.get_new_point(values)
         self._node_id = node_id
     #
-    #@property
-    #def line(self):
-    #    """ """
-    #    return self._line[self._line_id]
-    #
-    #@line.setter
-    #def line(self, values):
-    #    """ """
-    #    1 / 0
-    #
     #
     @property
     def beam(self):

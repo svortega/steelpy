@@ -19,17 +19,15 @@ from steelpy.utils.units.buckingham import Number
 from steelpy.utils.math.operations import trnsload
 #from steelpy.utils.math.operations import linspace
 # steelpy.
-from steelpy.ufo.load.process.operations import(get_BeamLoad_list_units,
+from steelpy.ufo.load.process.beam.utils import(get_BeamLoad_list_units,
                                                 get_BeamLine_dic,
                                                 get_BeamLoad_dic,
-                                                get_BeamNode_load,
+                                                #get_BeamPoint_load,
                                                 get_BeamLine_load)
 #
 #
 # steelpy.
 from steelpy.trave.beam.operation import BeamTorsion, BeamAxial, BeamBending
-#from steelpy.trave.beam.roark.chapter10.table103_point import BTWSupPoint
-#from steelpy.trave.beam.pilkey.chapter14.table_C import BTOpenSupports
 from steelpy.trave.beam.operation import BeamBasic
 #
 import numpy as np
@@ -603,19 +601,6 @@ class BeamLoadBasic:
         #unit_bm = "N*m"
         #unit_fl = "N/m"
         output = ""
-        #if header:
-        #    output += "\n"
-        #    output += f"--- Beam \n"
-        #    output += f"Element Name{6 * ' '}L1[{unit_lenght}] qx1[{unit_fl}] qy1[{unit_fl}] qz1[{unit_fl}] System Complex\n"
-        #    output += f"Line Load{9 * ' '}L2[{unit_lenght}] qx2[{unit_fl}] qy2[{unit_fl}] qz2[{unit_fl}] Comment\n"
-        #    output += "\n"
-        #    output += f"--- Beam \n"
-        #    output += f"Element Name{6 * ' '}L1[{unit_lenght}] fx [{unit_force}] fy [{unit_force}] fz [{unit_force}] System Complex\n"
-        #    output += f"Point Load{15 * ' '}mx [{unit_bm}] my [{unit_bm}] mz [{unit_bm}] Comment\n"
-        #    output += "\n"
-        #    output += "{:}\n".format(80 * ".")
-        #    output += "\n"
-        # 1/0
         # output += "--- Beam Line Load\n"
         output += self._line.__str__()
         # output += "--- Beam Point Load\n"

@@ -943,7 +943,7 @@ Req = namedtuple('Reactions', ['x', 't', 'y', 'z'])
 Tload = namedtuple('TorsionLoad', ['Psi', 'B', 'Tw'])
 #
 # -----------------------------------------------------------
-# Combination process
+# Combination utils
 # -----------------------------------------------------------
 #
 #

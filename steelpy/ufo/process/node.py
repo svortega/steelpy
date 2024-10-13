@@ -16,8 +16,8 @@ from typing import NamedTuple
 from math import isclose, dist
 #
 # package imports
-from steelpy.ufo.process.elements.boundary import get_node_boundary
-
+from steelpy.ufo.process.boundary import get_node_boundary
+import steelpy.utils.io_module.text as common
 
 #
 #
@@ -75,7 +75,7 @@ class NodeBasic(Mapping):
         output += "\n"
         output += f"{33 * space}NODES\n"
         output += "\n"
-        output += (f"Node {12 * space} x  [{lenght}] {4 * space} y  [{lenght}] {4 * space} z  [{lenght}] ")
+        output += (f"Name{12 * space} Title{12 * space} x  [{lenght}] {4 * space} y  [{lenght}] {4 * space} z  [{lenght}]")
         output += "\n"
         output += "{:}\n".format(80 * ".")
         output += "\n"
@@ -98,13 +98,18 @@ class NodeBasic(Mapping):
     # ----------------------------------
     #
     def get_coordinates(self, coordinates):
-        """ return [x, y, z, boundary]"""
-        if isinstance(coordinates, (list, tuple)):
+        """ return [x, y, z, boundary, title]"""
+        # coordinates already defined
+        if isinstance(coordinates,  (CoordCartesian, CoordCylindrical, CoordSpherical)):
+            coordinates = check_point_list(coordinates, unit_flag=False)
+        # new coordinates 
+        elif isinstance(coordinates, (list, tuple)):
             coordinates = check_point_list(coordinates)
         elif isinstance(coordinates, dict):
             coordinates = check_point_dic(coordinates)
         else:
             raise Exception('Node input format not valid')
+        #
         return coordinates
 
     #
@@ -112,6 +117,7 @@ class NodeBasic(Mapping):
         """ """
         #create a new point
         while True:
+            #self.get_number()
             node_number = next(self.get_number())
             try:
                 self._labels.index(node_number)
@@ -119,9 +125,15 @@ class NodeBasic(Mapping):
                 break
         #
         self.__setitem__(node_number, coordinates)
-        #
+        # TODO : check if this hack works
         try:
             node_id = coordinates.name
+            try:
+                1 / node_id
+            except ZeroDivisionError:
+                node_id = node_number
+            except TypeError:
+                pass
         except AttributeError:
             node_id = node_number
         #
@@ -131,7 +143,7 @@ class NodeBasic(Mapping):
     def get_point_name(self, coordinates,
                        tol: float = 0.01, rel_tol: float = 1e-6) -> int:
         """
-        tol: absolte tolerance in metres (0.010 m default)
+        tol: absolute tolerance in metres (0.010 m default)
         """
         # get index of x coord location in existing database
         coord = self.get_coordinates(coordinates)
@@ -338,7 +350,7 @@ def find_node_data(word_in: str) -> str:
     """
     Identify beam data from user
     """
-    _key: dict = {"number": r"\b(number|mesh)\b",
+    key: dict = {"number": r"\b(number|mesh)\b",
                   "name": r"\b(name|label)\b",
                   "elements": r"\b(element|member|item(s)?)\b",
                   "group": r"\b(group|set)(s)?\b",
@@ -348,8 +360,8 @@ def find_node_data(word_in: str) -> str:
                   "x": r"\b(x)\b",
                   "coordinates": r"coordinates"}
 
-    _match = common.find_keyword(word_in, _key)
-    return _match
+    match = common.find_keyword(word_in, key)
+    return match
 
 
 @functools.lru_cache(maxsize=2048)
@@ -357,7 +369,7 @@ def find_element_data(word_in: str) -> str:
     """
     Identify beam data from user
     """
-    _key: dict = {"number": r"\b(number|mesh)\b",
+    key: dict = {"number": r"\b(number|mesh)\b",
                   "name": r"\b(name|label)\b",
                   "connectivity": r"\b(connectivity|node(s)?|joint(s)?)\b",
                   "material": r"\b(material)\b",
@@ -367,8 +379,8 @@ def find_element_data(word_in: str) -> str:
                   # "boundary": r"\b(boundar(y|ies))\b",
                   "type": r"type"}
 
-    _match = common.find_keyword(word_in, _key)
-    return _match
+    match = common.find_keyword(word_in, key)
+    return match
 
 
 #
@@ -410,42 +422,25 @@ class CoordCartesian(NamedTuple):
     x: float
     y: float
     z: float
-    name: int | str
+    name: int
     number: int
     index: int
     boundary: tuple | None
-    #system: str = "cartesian"
+    title: str | int | None
     #
     #
     @property
     def system(self):
         return "cartesian"
     #
-    #sets: List[Tuple]
-    #
-    #def get_coordinates(self, units:str='metre'):
-    #    """
-    #    """
-    #    return "{:14.0f} {: 14.5f} {: 14.5f} {: 14.5f}".format(self.number,
-    #                                                           self.x, self.y, self.z)
-    #
-    #@property
-    #def boundary(self) -> Tuple:
-    #    """
-    #    """
-    #    return self.boundaries[self.number]
-    #
-    #@boundary.setter
-    #def boundary(self, value: List) -> None:
-    #    """
-    #    """
-    #    self.boundaries[self.number] = value
     #
     # ----------------------------------
     #
     def __str__(self) -> str:
-        return "{:12d} {: 12.5f} {: 12.5f} {: 12.5f}\n" \
-            .format(self.name, self.x, self.y, self.z)
+        #step = " "
+        return "{:<16d} {:13s} {: 12.5f} {: 12.5f} {: 12.5f}\n" \
+               .format(self.name, str(self.title),
+                       self.x, self.y, self.z)
 
     def __eq__(self, other) -> bool:
         """
@@ -503,7 +498,7 @@ class CoordCylindrical(NamedTuple):
     number: int
     index: int
     boundaries: tuple
-    #system: str = "cylindrical"
+    title: str | int | None
     #
     @property
     def system(self):
@@ -519,7 +514,7 @@ class CoordSpherical(NamedTuple):
     number: int
     index: int
     boundaries: tuple
-    #system: str = "spherical"
+    title: str | int | None
     #
     @property
     def system(self):
@@ -555,7 +550,6 @@ class NodePoint:
     title: str | None
     index: int | None
     boundary: tuple | None
-
     #
     def system(self):
         """ """
@@ -566,64 +560,91 @@ class NodePoint:
         else:
             return CoordCartesian(x=self.x, y=self.y, z=self.z,
                                   name=self.name, number=self.number,
-                                  index=self.index, boundary=self.boundary)
+                                  index=self.index, boundary=self.boundary,
+                                  title=self.title)
 
 
 #
 # --------------------------------------------------------
 #
-def check_point_list(data: list|tuple, steps: int = 3) -> list:
-    """ [x, y, z, boundary] """
-    new_data = [0] * steps
-    #temp = []
-    #for x in range(steps):
-    #    try:
-    #        try:
-    #            temp.append(data[x].value)
-    #        except AttributeError:
-    #            temp.append(data[x])
-    #    except IndexError:
-    #        temp.append(0.0)
-    #
+def check_point_list(data:list|tuple, steps:int = 5,
+                     coord: int = 3, unit_flag: bool = True) -> list:
+    """ [x, y, z, boundary, title] """
+    new_data = [0] * coord
     data = list(data)
     #
-    # check for boundary
-    if isinstance(data[-1], (list, tuple, dict, str)):
-        new_data.append(get_node_boundary(fixity=data[-1]))
-        data.pop(-1)
-    else:
-        new_data.append(None)
+    new = [None, None]
+    idx = []
+    for x, item in enumerate(data):
+        if isinstance(item, (list, tuple, dict)):
+            new[0] = get_node_boundary(fixity=item)
+            idx.append(x)
+        elif isinstance(item, str):
+            try:
+                new[0] = get_node_boundary(fixity=item)
+                idx.append(x)
+            except IOError:
+                continue
+            #    new[1] = item
+            #idx.append(x)
+    # remove redundant items
+    for x in reversed(idx):
+        data.pop(x)
     #
-    for x in range(steps):
+    # check x,y,z
+    idx = []
+    for x in range(coord):
         try:
             try:
                 new_data[x] = data[x].value
             except AttributeError:
+                if unit_flag:
+                    raise IOError('units missing')
                 new_data[x] = data[x]
-                #raise IOError('units miising')
+            idx.append(x)
         except IndexError:
             #temp.append(0.0)
             pass
+    # remove redundant items
+    for x in reversed(idx):
+        data.pop(x)
     #
-    return new_data
+    #title
+    if data:
+        new[1] = data[-1]
+    #
+    return [*new_data, *new]
 
 
 #
 def check_point_dic(data) -> list:
-    """ """
-    new_data = [0, 0, 0, None]
+    """[x, y, z, boundary, title]"""
+    new_data = [0, 0, 0, None, None]
     for key, item in data.items():
         if re.match(r"\b(x)\b", str(key), re.IGNORECASE):
-            new_data[0] = item.value
-            
+            try:
+                new_data[0] = item.value
+            except AttributeError:
+                raise IOError('units missing')
+        
         elif re.match(r"\b(y)\b", str(key), re.IGNORECASE):
-            new_data[1] = item.value
-            
+            try:
+                new_data[1] = item.value
+            except AttributeError:
+                raise IOError('units missing')
+        
         elif re.match(r"\b(z)\b", str(key), re.IGNORECASE):
-            new_data[2] = item.value
-            
+            try:
+                new_data[2] = item.value
+            except AttributeError:
+                raise IOError('units missing')
+        
         elif re.match(r"\b(boundar(y|ies))\b", str(key), re.IGNORECASE):
-            new_data[3] = get_node_boundary(fixity=item.value)      
+            new_data[3] = get_node_boundary(fixity=item)
+        
+        elif re.match(r"\b(title)\b", str(key), re.IGNORECASE):
+            new_data[4] = item
+            
     return new_data
 #
 

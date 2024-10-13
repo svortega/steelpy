@@ -11,7 +11,7 @@ import re
 
 # package imports
 from steelpy.utils.sqlite.main import ClassBasicSQL
-#from steelpy.process.units.units import Units
+#from steelpy.utils.units.units import Units
 from steelpy.utils.sqlite.utils import create_connection #, create_table
 import numpy as np
 

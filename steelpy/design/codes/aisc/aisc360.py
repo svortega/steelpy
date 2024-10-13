@@ -9,7 +9,7 @@
 # package imports
 #from iLift.codes.AISC360.July2016.AISC360_16 import *
 #from iLift.codes.AISC360.print_report import *
-#from iLift.codes.process.process import SummaryResults
+#from iLift.codes.utils.utils import SummaryResults
 #
 #
 #

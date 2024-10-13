@@ -10,7 +10,7 @@ from collections.abc import Mapping
 #
 from steelpy.sections.inmemory.main import SectionIM
 from steelpy.sections.sqlite.main import SectionSQL
-#from .process.operations import SectionBasic
+from steelpy.sections.utils.operations import get_section
 
 
 # ---------------------------------
@@ -38,9 +38,10 @@ class Section(Mapping):
     # -----------------------------------------------
     #
     def __setitem__(self, shape_name: str | int,
-                    properties: str|list) -> None:
+                    properties: str|list|dict) -> None:
         """
         """
+        properties = get_section(properties)
         self._sections[shape_name] = properties  
     
     def __getitem__(self, shape_name: str | int):

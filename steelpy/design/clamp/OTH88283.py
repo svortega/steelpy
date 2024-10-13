@@ -1187,7 +1187,7 @@ class OTH88283:
                     - 2 * x / _Py * (_fo * _Dt))        
         #
         # Find first root (Note that it may not be the minimum
-        # use 'full' to find all roots, but process is slow)
+        # use 'full' to find all roots, but utils is slow)
         #self.Search = 'FAST'
         # Find Pc
         self.Pc = GoalSeeker(function, 

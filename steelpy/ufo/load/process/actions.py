@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
@@ -10,12 +10,11 @@ from typing import NamedTuple
 
 # package imports
 #
-#from steelpy.process.units.main import Units
+#from steelpy.utils.units.main import Units
 from steelpy.utils.io_module.text import match_line
-# steelpy.f2uModel.load.process
-from .operations import (get_BeamLoad_list_units, 
-                         check_list_number, 
-                         get_BeamLoad_dic)
+# steelpy.f2uModel.load.utils
+from .beam.utils import get_BeamLoad_list_units
+from .utils import check_list_number
 
 #
 #

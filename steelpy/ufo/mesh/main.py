@@ -11,23 +11,19 @@ import time
 #
 
 # package imports
-from steelpy.ufo.process.main import ufoBasicModel, ModelClassBasic
+from steelpy.ufo.process.main import ModelClassBasic # ufoBasicModel, 
 from steelpy.ufo.load.main import MeshLoad
 from steelpy.ufo.mesh.sqlite.main import MeshSQL
-#from steelpy.ufo.mesh.sqlite.nodes import NodeSQL
-#from steelpy.ufo.mesh.sqlite.elements import ElementsSQL
-#from steelpy.ufo.mesh.sqlite.boundary import BoundarySQL
 from steelpy.ufo.mesh.process.main import Ke_matrix, Kg_matrix, Km_matrix, Kt_matrix
 from steelpy.ufo.plot.main import PlotMesh
 #
-from steelpy.ufo.process.elements.sets import Groups
-from steelpy.ufo.process.elements.nodes import node_renumbering
+from steelpy.ufo.process.sets import Groups
+from steelpy.ufo.process.node import node_renumbering
 #
 from steelpy.sections.main import Section
 from steelpy.material.main import Material
 #
 from steelpy.utils.dataframe.main import DBframework
-#from steelpy.utils.io_module.inout import check_input_file
 from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.sqlite.main import ClassBasicSQL
 #
@@ -109,7 +105,6 @@ class Mesh(ClassBasicSQL):
     def __setitem__(self, name: int|str, title: str) -> None:
         """
         """
-        #
         try:
             self._labels.index(name)
             raise Exception(f' mesh {name} already exist')
@@ -129,18 +124,9 @@ class Mesh(ClassBasicSQL):
         """
         try:
             self._labels.index(name)
-            #conn = create_connection(self.db_file)
-            #with conn:
-            #    item = self._pull_data(conn, name)
-            #return node
-            #print('--> mesh')
-            #return MeshItem(name=name,
-            #                component=item[0],
-            #                sql_file=self.db_file)
             return self._item[name]
         except ValueError:
-            raise IndexError(f' mesh : {name} not valid')        
-        #1 / 0
+            raise IndexError(f' mesh : {name} not valid')
     #
     #
     # --------------------------------------------
@@ -268,55 +254,34 @@ class MeshItem(MeshSQL):
         #
     #
     #
-    #
-    #def _get_file(self, name: str):
-    #    """ """
-    #    #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    #    filename = name + ".db"
-    #    path = os.path.abspath(filename)
-    #    #self.db_file = path
-    #    #directory = os.path.dirname(path)
-    #    #
-    #    #self.db_file:str = component + "_f2u.db"
-    #    #if mesh_type != "ttt": #"inmemory":
-    #    try: # remove file if exist
-    #        os.remove(path)
-    #    except FileNotFoundError:
-    #        pass
-    #    #
-    #    return path
-    #
-    #
     # --------------------
     # Mesh items
     # -------------------- 
     #
-    def node(self, values:None|list|tuple=None,
+    def node(self, values:None|list|tuple|dict = None,
               df=None):
         """
         """
-        #supports = self._boundaries.support()
-        #if values:
-        if isinstance(values, (list,tuple)):
-            if isinstance(values[0], (list,tuple)):
-                for value in values:
-                    self._nodes[value[0]] = value[1:]
-                    #try:
-                    #    if isinstance(value[4], str):
-                    #        supports[value[0]] = value[4]
-                    #    else:
-                    #        supports[value[0]] = value[4:]
-                    #except IndexError:
-                    #    pass
-            else:
-                self._nodes[values[0]] = values[1:]
-                #try:
-                #    if isinstance(values[4], str):
-                #        supports[values[0]] = values[4]
-                #    else:
-                #        supports[values[0]] = values[4:]
-                #except IndexError:
-                #    pass
+        if values:
+            if isinstance(values, dict):
+                mname = values['name']
+                if isinstance(mname, (list | tuple)):
+                    db = DBframework()
+                    dfnew = db.DataFrame(values)
+                    self._nodes.df = dfnew
+                else:
+                    mname = values.pop('name')
+                    self._nodes[mname] = values
+            
+            elif isinstance(values, (list,tuple)):
+                if isinstance(values[0], (list,tuple)):
+                    for value in values:
+                        self._nodes[value[0]] = value[1:]
+                elif isinstance(values[0], dict):
+                    for value in values:
+                        self._nodes[value['name']] = value
+                else:
+                    self._nodes[values[0]] = values[1:]
         #
         # dataframe input
         try:

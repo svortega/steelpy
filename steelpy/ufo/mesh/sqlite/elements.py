@@ -18,6 +18,7 @@ from steelpy.ufo.mesh.sqlite.beam import BeamSQL
 from steelpy.ufo.mesh.sqlite.utils import get_connectivity, get_elements
 from steelpy.utils.sqlite.main import ClassBasicSQL
 from steelpy.utils.sqlite.utils import create_connection, create_table
+from steelpy.ufo.process.element import get_element, find_element_type
 #from steelpy.utils.dataframe.main import DBframework
 #
 #
@@ -32,13 +33,9 @@ class ElementsSQL(ClassBasicSQL):
         """
         """
         super().__init__(db_file)
-        #self.db_file = db_file
-        #self._plane = plane
         self._component = component
-        #
         self._beams = BeamSQL(db_file=db_file,
                               component=component)
-                              #plane=self._plane)
     #
     #
     @property
@@ -68,20 +65,10 @@ class ElementsSQL(ClassBasicSQL):
         return [item[0] for item in items]
     #
     #
-    #@property
-    #def plane(self) -> NamedTuple:
-    #    """ """
-    #    return self._plane
-    #
-    #@plane.setter
-    #def plane(self, plane: NamedTuple):
-    #    """ """
-    #    self._plane = plane
-    #    self._beams._plane = self._plane
-    #
     # ---------------------------------
     #
-    def __setitem__(self, element_name: int|str, parameters: list) -> None:
+    def __setitem__(self, element_name: int|str,
+                    parameters: list|tuple|dict) -> None:
         """
         element_name
         parameters = [element_type, nodei..n,
@@ -92,6 +79,8 @@ class ElementsSQL(ClassBasicSQL):
             self._labels.index(element_name)
             raise Exception('element {:} already exist'.format(element_name))
         except ValueError:
+            #
+            parameters = get_element(parameters)
             element_type = parameters[0]
             #
             concept_id = parameters[6:]
@@ -372,18 +361,21 @@ class ElementsSQL(ClassBasicSQL):
     @df.setter
     def df(self, df):
         """nodes in dataframe format"""
+        #df = get_element_df(df)
+        columns = list(df.columns)
+        for key in columns:
+            if re.match(r"\b((element(s)?(_|-|\s*)?)?type)\b", key, re.IGNORECASE):
+                df['type'] = df[key].apply(lambda x: find_element_type(x))
+                break      
+        #
+        group = df.groupby("type")
+        #
         try:
-            columns = list(df.columns)
-            group = df.groupby("type", sort=False)
-            for memb_type, elements in group:
-                if re.match(r"\b(beam(s)?)\b", memb_type, re.IGNORECASE):
-                    elements.drop(['node_3', 'node_4'], axis=1, inplace=True)
-                    self._beams.df = elements
-                else:
-                    raise NotImplemented(f"element type {memb_type}")            
-            #self._nodes.df =df
-        except AttributeError:
-            raise IOError('Node df not valid')    
+            group = group.get_group("beam")
+            self._beams.df = group
+        except KeyError:
+            raise IOError('Element df not valid') 
+#  
 #
 #
 class ElementType(Mapping):

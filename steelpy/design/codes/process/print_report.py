@@ -8,7 +8,7 @@ from typing import List
 #
 
 # package imports
-#from steelpy.process.io_module.text import search_line
+#from steelpy.utils.io_module.text import search_line
 
 #
 #

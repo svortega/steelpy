@@ -9,13 +9,14 @@ from dataclasses import dataclass
 from collections import namedtuple
 from typing import NamedTuple
 import math
-#import re
+import re
 #
 #
 # package imports
 #
-from steelpy.sections.utils.shape.utils import ShapeProperty
-from steelpy.sections.utils.shape.stress import BeamStress, ShapeStressBasic
+from steelpy.sections.utils.shape.utils import (ShapeProperty, get_sect_list,
+                                                get_prop_dict)
+from steelpy.sections.utils.shape.stress import ShapeStressBasic # BeamStress
 #
 #from steelpy.utils.dataframe.main import DBframework
 #
@@ -618,3 +619,55 @@ class TubularBasic(ShapeStressBasic):
                 'diameter': self.d,
                 'wall_thickness': self.t}
 #
+#
+#
+class TubDim(NamedTuple):
+    """ """
+    shape:str
+    d:float
+    tw:float
+    FAvy:float
+    FAvz:float
+    shear_stress:str
+    build:str|None
+    compactness:str|None
+    title:str|None
+#
+def get_tub_section(parameters: list|tuple|dict)->list:
+    """Return : [diameter, thickness,
+                 FAvy, FAvz, shear_stress,
+                 build, compactness, title]"""
+    if isinstance(parameters,(list,tuple)):
+        prop = get_sect_list(parameters, number= 8, step= 2)
+    elif isinstance(parameters, dict):
+        prop = get_sect_dict(parameters)
+    else:
+        raise IOError('Section data not valid')
+    #
+    prop = ['Tubular', *prop]
+    return TubDim(*prop)
+#
+#
+def get_sect_dict(parameters: dict,
+                  number:int = 8, step:int=2)->list:
+    """Return : [diameter, thickness,
+                 FAvy, FAvz, shear_stress,
+                 build, compactness, title]"""
+    # basic information
+    section = [None] * step
+    #
+    for key, item in parameters.items():
+        if re.match(r"\b(d(iamet(ro|er|re))?(y)?)\b", key, re.IGNORECASE):
+            try:
+                section[0] = item.value
+            except AttributeError:
+                raise IOError("units required")
+
+        elif re.match(r"\b((w(all)?(_|\s*)?)?t(hickness|hk)?)\b", key, re.IGNORECASE):
+            try:
+                section[1] = item.value
+            except AttributeError:
+                raise IOError("units required")
+    #
+    section.extend(get_prop_dict(parameters))
+    return section

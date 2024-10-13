@@ -25,7 +25,7 @@ from steelpy.utils.sqlite.main import ClassMainSQL
 #
 class MeshSQL(ClassMainSQL, ufoBasicModel):
     """
-    mesh[beam_name] = [number, element1, element2, elementn]
+    mesh[beam_name] = [number, element1, element2, element]
     """
     def __init__(self, component:str|int,
                  name:str|None = None,
@@ -54,7 +54,7 @@ class MeshSQL(ClassMainSQL, ufoBasicModel):
 #
 class UFOmain(ufoBasicModel):
     """
-    mesh[beam_name] = [number, element1, element2, elementn]
+    mesh[beam_name] = [number, element1, element2, element]
     """
     __slots__ = ['_name', 'db_file', '_component', #'_plane', '_df', 
                  'data_type', '_build']

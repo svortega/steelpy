@@ -11,8 +11,8 @@ from typing import Iterable
 import re
 #
 # package imports
-from ..process.mechanical import MaterialElastic, Curve #, MaterialIsotropic
-from ..process.operations import get_isomat_prop, get_isomat_prop_df, find_mat_type
+from ..utils.mechanical import MaterialElastic, Curve #, MaterialIsotropic
+from ..utils.operations import get_isomat_prop, get_isomat_prop_df, find_mat_type
 #
 #
 class MaterialIM(Mapping):

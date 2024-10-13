@@ -3,19 +3,184 @@
 #
 # Python stdlib imports
 from __future__ import annotations
+from array import array
 from collections.abc import Mapping
 import re
 #
 # package imports
 # 
-from steelpy.ufo.load.process.nodes import (NodeLoadMaster,
+from steelpy.ufo.load.process.node import (NodeLoadBasic,
                                             get_nodal_load,
                                             PointNode)
+from steelpy.utils.dataframe.main import DBframework
 
 
 # ---------------------------------
 #
-class NodeLoadItemIM(Mapping):
+#
+class NodeLoadMaster(NodeLoadBasic):
+    """
+    FE Node Load class
+    
+    NodeLoad
+        |_ name
+        |_ number
+        |_ type
+        |_ complex
+        |_ point [x, y, z, mx, my, mz]
+        |_ acceleration [th[0], th[1], th[2],..., th[n]]
+        |_ displacement [th[0], th[1], th[2],..., th[n]]
+        |_ mass
+    
+    **Parameters**:  
+      :number:  integer internal number 
+      :name:  string node external name
+    """
+    __slots__ = ['_labels', '_title', '_complex', '_load_id', '_system',
+                 '_type', '_fx', '_fy', '_fz', '_mx', '_my', '_mz']
+
+    def __init__(self, load_type:str) -> None:
+        """
+        """
+        super().__init__()
+        #
+        self._labels: list = []
+        self._title: list = []
+        self._complex: array = array("I", [])
+        self._load_id: list = []
+        self._system: array = array("I", [])        
+        # real
+        self._type = load_type
+        self._fx: array = array('f', [])
+        self._fy: array = array('f', [])
+        self._fz: array = array('f', [])
+        self._mx: array = array('f', [])
+        self._my: array = array('f', [])
+        self._mz: array = array('f', [])
+    #
+    #
+    def __getitem__(self, node_name: int|str) -> list:
+        """
+        """
+        idx_list: list = [x for x, _item in enumerate(self._labels)
+                          if _item == node_name]
+        #
+        points: list = []
+        if self._type in ['load']:
+            for idx in idx_list:
+                points.append(PointNode(self._fx[idx], self._fy[idx], self._fz[idx],
+                                        self._mx[idx], self._my[idx], self._mz[idx],
+                                        self._labels[idx], self._title[idx], self._load_id[idx],
+                                        self._system[idx], self._complex[idx], self._type))
+        
+        elif self._type in ['displacement']:
+            for idx in idx_list:
+                points.append(DispNode(self._fx[idx], self._fy[idx], self._fz[idx],
+                                       self._mx[idx], self._my[idx], self._mz[idx],
+                                       self._labels[idx], self._title[idx], self._load_id[idx],
+                                       self._system[idx], self._complex[idx], self._type))
+        
+        elif self._type in ['mass']:
+            raise NotImplementedError()
+        
+        else:
+            raise IOError(f'load type: {self._type} not valid')
+            
+        return points
+    #
+    #
+    def __delitem__(self, node_name: int|str) -> None:
+        """
+        """
+        indexes = [i for i, x in enumerate(self._labels)
+                   if x == node_name]
+        indexes.sort(reverse=True)
+        for _index in indexes:
+            self._fx.pop(_index)
+            self._fy.pop(_index)
+            self._fz.pop(_index)
+            self._mx.pop(_index)
+            self._my.pop(_index)
+            self._mz.pop(_index)
+            #
+            self._labels.pop(_index)
+            self._title.pop(_index)
+            self._system.pop(_index)
+            self._complex.pop(_index)
+    #
+    #
+    @property
+    def df(self):
+        """nodes in dataframe format"""
+        db = DBframework()
+        # TODO : merge nodes
+        #title = []
+        data = {'load_name': self._load_id,
+                'load_type': ['basic' for item in self._labels],
+                'load_id': [idx + 1 for idx, item in enumerate(self._labels)],
+                'load_system': self._system, #['global' if item == 0 else 'local'
+                           #for item in self._system],
+                'load_comment': self._title,
+                'node_name':self._labels, 
+                'Fx':self._fx, 'Fy':self._fy, 'Fz':self._fz, 
+                'Mx':self._mx, 'My':self._my, 'Mz':self._mz}
+        #
+        # beam point case
+        try:
+            data.update({'L1': self._L1})
+        except AttributeError:
+            pass
+        #
+        # beam node load conversion
+        try:
+            data.update({'element_name': self._beam})
+        except AttributeError:
+            pass
+        #      
+        #
+        df_nload = db.DataFrame(data=data, index=None)
+        #df = df[['load_name', 'load_type', 'load_id', 'load_system', 'load_comment',
+        #         'node_name', 'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']]          
+        return df_nload
+
+    @df.setter
+    def df(self, values):
+        """nodes in dataframe format"""
+        #update
+        self._labels.extend(values.node_name.tolist())
+        self._load_id.extend(values.load_name.tolist())
+        self._title.extend(values.load_title.tolist())
+        self._system.extend([1 if item in ['local', 'member', 1] else 0
+                             for item in values.system.tolist()])
+        self._complex.extend([0 for item in values.system.tolist()])
+        #
+        self._fx.extend(values.Fx.tolist())
+        self._fy.extend(values.Fy.tolist())
+        self._fz.extend(values.Fz.tolist())
+        self._mx.extend(values.Mx.tolist())
+        self._my.extend(values.My.tolist())
+        self._mz.extend(values.Mz.tolist())
+        #
+        # beam point case
+        try:
+            self._L1.extend(values.L1.tolist())
+        except AttributeError:
+            pass
+        #
+        # beam node load conversion
+        try:
+            self._beam.extend(values.element_name.tolist())
+        except AttributeError:
+            pass
+        #
+        #print('nodes df out')
+    
+#
+#
+# ---------------------------------
+#
+#
+class NodeLoadItemIM(NodeLoadBasic):
     __slots__ = ['_title', '_labels', '_type', '_number',
                  '_f2u_points', #'_load_name',
                  '_load', '_displacement', '_mass', '_node']
@@ -23,10 +188,10 @@ class NodeLoadItemIM(Mapping):
     def __init__(self, load_name, load_title, points) -> None:
         """
         """
+        super().__init__()
+        #
         self._labels = []
         self._type = []
-        #self._load_name = load_name
-        #self._number = []
         #
         self._node = NodeItemIM(load_name=load_name,
                                 load_title=load_title)
@@ -68,18 +233,18 @@ class NodeLoadItemIM(Mapping):
             raise IOError(f"Point {node_name} not found")
 
     #
-    def __contains__(self, value) -> bool:
-        return value in self._labels
+    #def __contains__(self, value) -> bool:
+    #    return value in self._labels
 
-    def __len__(self) -> int:
-        return len(self._labels)
+    #def __len__(self) -> int:
+    #    return len(self._labels)
 
-    def __iter__(self):
-        """
-        """
-        items = list(dict.fromkeys(self._labels))
-        #items = list(set(self._labels))
-        return iter(items)
+    #def __iter__(self):
+    #    """
+    #    """
+    #    items = list(dict.fromkeys(self._labels))
+    #    #items = list(set(self._labels))
+    #    return iter(items)
 
     #
     def __str__(self, units: str = "si") -> str:
@@ -89,17 +254,6 @@ class NodeLoadItemIM(Mapping):
         return output
     #
     #
-    #def get_number(self, start:int=1):
-    #    """
-    #    """
-    #    try:
-    #        n = max(self._number) + 1
-    #    except ValueError:
-    #        n = start
-    #    #
-    #    while True:
-    #        yield n
-    #        n += 1
     #
     @property
     def load(self):
@@ -254,7 +408,7 @@ class NodeLoadIM(NodeLoadMaster):
         super().__init__(load_type)
         self._load_name = load_name
         self._load_title = load_title
-        self._system_flag: int = 0 # Global system
+        #self._system_flag: int = 0 # Global system
 
     #
     def __setitem__(self, node_name: int|str,

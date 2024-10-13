@@ -7,14 +7,15 @@ from __future__ import annotations
 #from array import array
 from dataclasses import dataclass
 from collections import namedtuple
-#from typing import NamedTuple
+from typing import NamedTuple
 import math
-#import re
+import re
 #
 
 # package imports
 from steelpy.sections.utils.shape.stress import BeamStress, ShapeStressBasic
-from steelpy.sections.utils.shape.utils import ShapeProperty
+from steelpy.sections.utils.shape.utils import (ShapeProperty, get_sect_list,
+                                                get_prop_dict)
 #
 #
 #
@@ -129,7 +130,7 @@ class IbeamBasic(ShapeStressBasic):
     Notes
     ----------
     Uses formulas from:
-    1.- Formulas for stress, strain and strucutral matrices [W.D. Pilkey]
+    1.- Formulas for stress, strain and structural matrices [W.D. Pilkey]
     2.- Roark's formulas for stress and strain [7th Edition]
     3.- Wikipedia
 
@@ -1150,11 +1151,52 @@ class IbeamBasic(ShapeStressBasic):
     #
 #
 #
+class Idimension(NamedTuple):
+    """ """
+    shape:str
+    d:float
+    tw:float
+    bf:float
+    tf:float
+    bfb:float
+    tfb:float
+    r:float
+    FAvy:float
+    FAvz:float
+    shear_stress:str
+    build:str|None
+    compactness:str|None
+    title:str|None
 #
-def get_Isection(parameters: list):
+def get_Isection(parameters: list|tuple|dict)->NamedTuple:
+    """Return : [shape type,
+                 d, tw, bf, tf, bfb, tfb, r,
+                 FAvy, FAvz, shear_stress,
+                 build, compactness, title] """
+    if isinstance(parameters,(list,tuple)):
+        prop = get_sect_list(parameters, number= 13, step= 7)
+    elif isinstance(parameters, dict):
+        prop = get_sect_dict(parameters, number= 13, step= 7)
+    else:
+        raise IOError('Section data not valid')
+    #
+    # bfb
+    if not prop[4]:
+        prop[4] = prop[2]
+    # tfb
+    if not prop[5]:
+        prop[5] = prop[3]
+    # r
+    if not prop[6]:
+        prop[6] = 0.0
+    #
+    prop = ["I section", *prop]
+    return Idimension(*prop)
+#
+def get_sect_listX(parameters: list|tuple)->list:
     """ [d, tw, bf, tf, bfb, tfb, r, title] """
     # basic information
-    section = parameters[:4] # d, tw, bf, tf
+    section = parameters[:4]  # d, tw, bf, tf
     # check if str title at the end
     if isinstance(parameters[-1], str):
         title = parameters.pop()
@@ -1163,31 +1205,96 @@ def get_Isection(parameters: list):
     #
     # check if root radius
     if len(parameters) == 4:
-        section.append(parameters[2]) # bfb
-        section.append(parameters[3]) # tfb
-        section.append(0)             # root radius
-        
+        section.append(parameters[2])  # bfb
+        section.append(parameters[3])  # tfb
+        section.append(0)  # root radius
+
     elif len(parameters) == 5:
         r = parameters.pop()
-        section.append(parameters[2]) # bfb
-        section.append(parameters[3]) # tfb
-        section.append(r)             # root radius
-        
+        section.append(parameters[2])  # bfb
+        section.append(parameters[3])  # tfb
+        section.append(r)  # root radius
+
     elif len(parameters) == 6:
-        section.append(parameters[4]) # bfb
-        section.append(parameters[5]) # tfb        
-        section.append(0)             # root radius
-    
+        section.append(parameters[4])  # bfb
+        section.append(parameters[5])  # tfb
+        section.append(0)  # root radius
+
     elif len(parameters) == 7:
-        section.append(parameters[4]) # bfb
-        section.append(parameters[5]) # tfb        
-        section.append(parameters[6]) # root radius    
-        
+        section.append(parameters[4])  # bfb
+        section.append(parameters[5])  # tfb
+        section.append(parameters[6])  # root radius
+
     else:
-        #if len(parameters) != 7:
+        # if len(parameters) != 7:
         raise IOError('Error Ibeam input data ')
     #
     section.append(title)
-    #  
     return section
-
+#
+def get_sect_dict(parameters: dict,
+                  number:int, step:int)->list:
+    """Return : [d, tw, bf, tf, bfb, tfb, r,
+                 FAvy, FAvz, shear_stress,
+                 build, compactness, title] """
+    # basic information
+    section = [None] * step
+    #
+    for key, item in parameters.items():
+        # h
+        if re.match(r"\b(h(eight)?|d(epth)?)\b", key, re.IGNORECASE):
+            try:
+                section[0] = item.value
+            except AttributeError:
+                raise IOError("units required")
+        # tw
+        elif re.match(r"\b(t(hickness|hk)?(_|-|\s*)?w(eb)?)\b", key, re.IGNORECASE):
+            try:
+                section[1] = item.value
+            except AttributeError:
+                raise IOError("units required")
+        # bf[t]
+        elif re.match(r"\b((b(ase)?|w(idth)?)(_|-|\s*)?f(lange)?((_|-|\s*)?t(op)?)?)\b", key, re.IGNORECASE):
+            try:
+                section[2] = item.value
+            except AttributeError:
+                raise IOError("units required")
+        # tf[t]
+        elif re.match(r"\b(t(hickness|hk)?(_|-|\s*)?f(lange)?((_|-|\s*)?t(op)?)?)\b", key, re.IGNORECASE):
+            try:
+                section[3] = item.value
+            except AttributeError:
+                raise IOError("units required")
+        # bfb
+        elif re.match(r"\b((b(ase)?|w(idth)?)(_|-|\s*)?f(lange)?(_|-|\s*)?b(ottom)?)\b", key, re.IGNORECASE):
+            try:
+                section[4] = item.value
+            except AttributeError:
+                raise IOError("units required")
+        # tfb
+        elif re.match(r"\b(t(hickness|hk)?(_|-|\s*)?f(lange)?(_|-|\s*)?b(ottom)?)\b", key, re.IGNORECASE):
+            try:
+                section[5] = item.value
+            except AttributeError:
+                raise IOError("units required")
+        # r
+        elif re.match(r"\b(r(oot)?(_|-|\s*)?(r(adius|atio)?)?)\b", key, re.IGNORECASE):
+            try:
+                section[6] = item.value
+            except AttributeError:
+                raise IOError("units required")
+        #
+    #
+    # bfb
+    if not section[4]:
+        section[4] = section[2]
+    # tfb
+    if not section[5]:
+        section[5] = section[3]
+    # r
+    if not section[6]:
+        section[6] = 0.0
+    #
+    #base = get_prop_dict(parameters)
+    section.extend(get_prop_dict(parameters))
+    return section

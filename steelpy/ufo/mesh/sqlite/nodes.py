@@ -6,16 +6,16 @@ from __future__ import annotations
 #from collections.abc import Mapping
 from itertools import chain, count
 #from math import isclose, dist
-from typing import NamedTuple
+#from typing import NamedTuple
 import re
 
 # package imports
 from steelpy.utils.math.operations import zeros, to_matrix
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #
-from steelpy.ufo.process.elements.nodes import NodePoint, NodeBasic
-from steelpy.ufo.process.elements.boundary import BoundaryItem
-from steelpy.ufo.mesh.sqlite.boundary import (push_boundary, push_boundary_node)
+from steelpy.ufo.process.node import NodePoint, NodeBasic
+from steelpy.ufo.process.boundary import BoundaryItem, get_node_boundary
+from steelpy.ufo.mesh.sqlite.boundary import push_boundary, push_boundary_node
 #
 from steelpy.utils.dataframe.main import DBframework
 
@@ -82,41 +82,38 @@ class NodeSQL(NodeBasic):
     #
     # ---------------------------------
     #
-    def __setitem__(self, node_number: int,
-                    coordinates: tuple|list|dict[str, float]) -> None:
+    def __setitem__(self, name: int|str,
+                    coordinates: tuple|list|dict) -> None:
         """
         """
-        if not isinstance(node_number, int):
+        #
+        if not isinstance(name, int):
             raise IOError('node id must me an integer')
         #
         try:
-            self._labels.index(node_number)
+            self._labels.index(name)
             raise Exception(f' warning node {node_number} already exist')
         except ValueError:
             data = self.get_coordinates(coordinates)
             coord = data[:3]
             fixity = data[3]
-            #
-            try:
-                node_id = coordinates.name
-            except AttributeError:
-                node_id = node_number
+            if (node_title := data[4]) is None:
+                node_title = name
+            #node_number = self.get_number()
             #
             conn = create_connection(self.db_file)
             with conn:
                 bid = None
                 if fixity:
                     mesh_id = self._component
-                    bid = push_node_boundary(conn, node_id,
+                    bid = push_node_boundary(conn, name,
                                              mesh_id, fixity)
                 
                 self._push_node(conn,
-                                node_number=node_number,
-                                node_name=node_id, 
+                                node_name=name, 
                                 coordinates=coord,
-                                boundary=bid)
-                #conn.commit()
-
+                                boundary=bid,
+                                node_title=node_title)
     #
     def __getitem__(self, node_number: int) -> tuple:
         """
@@ -164,10 +161,11 @@ class NodeSQL(NodeBasic):
         create_table(conn, table)
     #
     #
-    def _push_node(self, conn, node_number: int,
+    def _push_node(self, conn, 
                    node_name: int | str,
                    coordinates: list|tuple,
-                   boundary: int|None = None):
+                   boundary: int|None = None,
+                   node_title: str|None = None):
         """
         Create a new project into the projects table
         node_number: int
@@ -182,7 +180,7 @@ class NodeSQL(NodeBasic):
         #
         # -------------------------------------------
         #
-        query = (node_number, self._component, node_name,
+        query = (node_name, self._component, node_title,
                  idx, boundary)
         table = 'INSERT INTO Node(name, mesh_id, \
                                   title, idx, boundary_id) \
@@ -313,10 +311,37 @@ class NodeSQL(NodeBasic):
         """get node name based on title"""
         conn = create_connection(self.db_file)
         with conn:
-            name = pull_node_name(conn, title,
-                                  self._component)
+            name = pull_node_by_title(conn, title,
+                                      self._component)
         return name
     #
+    def get_number(self, start: int = 1):
+        """
+        """
+        conn = create_connection(self.db_file)
+        with conn:
+            #number = pull_node_rows(conn, self._component)
+            #
+            query = (self._component, )
+            table = 'SELECT max(number) from Node WHERE mesh_id = ?;'
+            cur = conn.cursor()
+            cur.execute(table, query)
+            records = cur.fetchone()
+        #
+        if (idx := max(records)) == None:
+            idx = 0
+        #
+        #if not number:
+        #    return 1
+        #else:
+        #    number = [item[0] for item in number]
+        #    return max(number) + 1
+        #return idx + 1
+        #
+        n = idx + 1
+        while True:
+            yield n
+            n += 1        
     #
     # ---------------------------------
     #
@@ -472,7 +497,6 @@ class NodeSQL(NodeBasic):
     @df.setter
     def df(self, df):
         """ """
-        1 / 0
         columns = list(df.columns)
         header = {}
         for key in columns:
@@ -481,76 +505,97 @@ class NodeSQL(NodeBasic):
             
             elif re.match(r"\b(x(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
                 header[key] = 'x'
-                try:
-                    df[key] = df[key].apply(lambda x: x.value)
-                except AttributeError:
-                    pass
             
             elif re.match(r"\b(y(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
-                header[key] = 'y'
-                try:
-                    df[key] = df[key].apply(lambda x: x.value)
-                except AttributeError:
-                    pass                
+                header[key] = 'y'              
             
             elif re.match(r"\b(z(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
                 header[key] = 'z'
-                try:
-                    df[key] = df[key].apply(lambda x: x.value)
-                except AttributeError:
-                    pass                
             
-            #elif re.match(r"\b(title)\b", key, re.IGNORECASE):
-            #    #header.append(key)
-            #    header[key] = 'title'
+            elif re.match(r"\b(r(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
+                header[key] = 'r'
+            
+            elif re.match(r"\b(theta(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
+                header[key] = 'theta'
+            
+            elif re.match(r"\b(phi(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
+                header[key] = 'phi'
+            
+            elif re.match(r"\b(boundary)\b", key, re.IGNORECASE):
+                header[key] = 'boundary'
+            
+            elif re.match(r"\b(title)\b", key, re.IGNORECASE):
+                header[key] = 'title'
         #
-        #df.rename(columns=header, inplace=True)
         #
         nodes = df[header.keys()].copy()
-        #nodes[["x", "y", "z"]] = df[coord].values.tolist()
         nodes['mesh_id'] = self._component
-        nodes['type'] = self._system
-        nodes[['r', 'theta', 'phi']] = None
+        nodes['system'] = self._system
+        if self._system == 'cartesian':
+            nodes[['r', 'theta', 'phi']] = None
+            # converting units
+            for key in ['x', 'y', 'z']:
+                try:
+                    nodes[key] = nodes[key].apply(lambda x: x.value)
+                except KeyError:
+                    # TODO : maybe 2D flag if z? 
+                    nodes[key] = 0.0
+                except AttributeError:
+                    raise IOError('units missing')
+        else:
+            raise NotImplementedError
+        # TODO : fix boundary
+        if 'boundary' in nodes:
+            fixities = {nodes['name'][x]: get_node_boundary(item)
+                        if item else None
+                        for x, item in enumerate(nodes['boundary'])}
+            conn = create_connection(self.db_file)
+            with conn:
+                blist = []
+                for key, item in fixities.items():
+                    if not item:
+                        blist.append(None)
+                        continue
+                    blist.append(push_node_boundary(conn, node_id=int(key),
+                                                     mesh_id=self._component,
+                                                     fixity=item))
+            nodes['boundary_id'] = blist
+        else:
+            nodes['boundary_id'] = None
         #
         nodes.rename(columns=header, inplace=True)
         #
-        #for row in nodes.itertuples():
-        #    coordinates = self._get_coordinates([])
-        #    self._labels.append(node_name)
         #
-        conn = create_connection(self.db_file)
-        #
-        # get row number
-        query = (self._component, )
-        table = 'SELECT max(number) from Node WHERE component_id = ?;'
-        cur = conn.cursor()
-        if (idx := max(cur.execute(table, query))[0]) == None:
-            idx = 0
-        #
+        idx = next(self.get_number()) - 1
         nodes['idx'] = [item + idx for item in list(nodes.index)]
         #
+        conn = create_connection(self.db_file)
         with conn:
-            nodes.to_sql('Node', conn,
-                         index_label=['name', 'mesh_id', 'type',
-                                      'x', 'y', 'z', 'r',
-                                      'theta', 'phi', 'idx'], 
-                         if_exists='append', index=False)
+            cols = ['name', 'mesh_id',
+                    'title', 'idx', 'boundary_id']
+            nodes[cols].to_sql('Node', conn,
+                               index_label=cols, 
+                               if_exists='append', index=False)
+            #
+            node_id = pull_node_rows(conn, component=self._component)
+            node_id = {item[1]: item[0] for item in node_id}
+            #
+            cols = ['node_id', 'system',
+                    'x', 'y', 'z',
+                    'r', 'theta', 'phi']
+            nodes['node_id'] = [node_id[item] for item in list(nodes.name)]
+            nodes[cols].to_sql('NodeCoordinate', conn,
+                               index_label=cols, 
+                               if_exists='append', index=False)
         #
-        #
-        #self._labels.extend(nodes['name'].tolist())
+        #print('-->')
         #
 #
 #
 #
-def pull_node(conn, node_name:int, component: int, item:str='*'):
+def pull_node(conn, node_name:int|str, component: int, item:str='*'):
     """ """
-    #with conn:
     data = pull_node_item(conn, node_name, component, item)
-    #system = get_coordinate_system(data[3])
-    #return system(x=data[4], y=data[5], z=data[6],
-    #              name=node_name, number=data[0],
-    #              index=data[10])
-    #
     boundary = pull_node_boundary(conn,
                                   node_name=node_name,
                                   component=component)
@@ -558,11 +603,11 @@ def pull_node(conn, node_name:int, component: int, item:str='*'):
     node = NodePoint(*data, boundary=boundary)
     return node.system()
 #
-def pull_node_item(conn, node_name, component, item):
+def pull_node_item(conn, node_name:int|str, component: int, item:str='*'):
     """ """
     project = (node_name, component)
     table = f'SELECT NodeCoordinate.{item}, \
-                   Node.title, Node.idx \
+                     Node.title, Node.idx \
             FROM Node, NodeCoordinate \
             WHERE Node.number =  NodeCoordinate.node_id\
             AND Node.name = ? \
@@ -576,17 +621,6 @@ def pull_node_boundary(conn, node_name: int|str,
                        component: int, item:str="*"):
     """
     """
-    #
-    #project = (node_name, component, )
-    #table = 'SELECT NodeBoundary.{:} \
-    #         FROM Node, NodeBoundary \
-    #         WHERE Node.number = NodeBoundary.node_id \
-    #         AND Node.name = ? \
-    #         AND Node.component_id = ?'.format(item)
-    #cur = conn.cursor()
-    #cur.execute(table, project)
-    #data = cur.fetchone()
-    #
     data = pull_boundary(conn, component,
                          node_name, item)
     
@@ -626,7 +660,7 @@ def pull_boundary(conn, component: int,
     data = cur.fetchall()
     return data
 #
-def pull_node_number(conn, node_name:int,
+def pull_node_number(conn, node_name:int|str,
                      component: int):
     """ """
     project = (node_name, component)
@@ -658,8 +692,8 @@ def pull_node_index(conn, component: int):
     records = cur.fetchall()
     return records
 #
-def pull_node_name(conn, node_title: int|str,
-                   component: int,):
+def pull_node_by_title(conn, node_title: int|str,
+                       component: int,):
     """ """
     project = (node_title, component)
     table = f'SELECT name FROM Node \

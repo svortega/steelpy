@@ -11,7 +11,7 @@ from dataclasses import dataclass
 #import re
 
 # package imports
-#from steelpy.process.math.vector import Vector
+#from steelpy.utils.math.vector import Vector
 from steelpy.trave.beam.pilkey.utils.operations import SingularFunction
 from steelpy.trave.beam.pilkey.chapter11.table3 import TableBasic, e_values
 

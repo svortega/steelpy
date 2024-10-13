@@ -9,7 +9,7 @@ import re
 #
 
 # package imports
-from .process.operations import find_mat_type, get_isomat_prop #, get_isomat_prop_df
+from .utils.operations import get_mat_dict, get_mat_list, get_mat_df
 from .sqlite.isotropic import MaterialSQL
 from .inmemory.isotropic import MaterialIM
 
@@ -47,24 +47,17 @@ class Material(Mapping):
         [name, elastic, Fy, Fu, E, G, Poisson, density, alpha, title(optional)]
         """
         # get material type
-        if isinstance(properties, str):
-            material_type = find_mat_type(properties)
-            properties = []
+        #if isinstance(properties, str):
+        #    material_type = find_mat_type(properties)
+        #    properties = []
+        if isinstance(properties, dict):
+            properties = get_mat_dict(properties)
+        elif isinstance(properties, (list, tuple)):
+            properties = get_mat_list(properties)
         else:
-            material_type = find_mat_type(properties[0])
-            properties = properties[1:]
+            raise IOError(f' material input not recognised')
         #
-        # set material default plastic
-        if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
-            raise NotImplementedError('--> Mat type not yet implemented')
-        
-        elif re.match(r"\b(elastic|linear(\_elastic)?)\b", material_type, re.IGNORECASE):
-            properties = get_isomat_prop(properties)
-        
-        else:
-            raise IOError(f' material type {material_type} not recognised')
-        #
-        self._material[material_name] = [material_type, *properties]
+        self._material[material_name] = properties
 
     #
     def __getitem__(self, material_name: str):
@@ -155,27 +148,15 @@ class Material(Mapping):
         """ """
         try:
             columns = list(df.columns)
+            df = get_mat_df(df)
             #
-            #header = {}
-            #for key in columns:
-            #    if re.match(r"\b(id|name|material(s)?)\b", key, re.IGNORECASE):
-            #        header[key] = 'name'
-            #    
-            #    elif re.match(r"\b(type)\b", key, re.IGNORECASE):
-            #        header[key] = 'type'
-            #    
-            #    elif re.match(r"\b(title)\b", key, re.IGNORECASE):
-            #        header[key] = 'title'
-            #    #
-            #    
+            # -----------------------------------
             #
             group = df.groupby("type")
-            #
             # Elastic type
             try:
                 elastic = group.get_group("elastic")
-                # df = df.drop_duplicates(['name'], keep='first')
-                self._material.elastic(df=elastic)
+                self._material._elastic.df = elastic
             except KeyError:
                 # nonlin = group.get_group("plastic")
                 raise IOError('Material type not valid')

@@ -88,7 +88,7 @@ class WaveLoadItemIM(WaveLoadItem):
         #
         self.df(data=df_bload)
         #
-        print('# End process')
+        print('# End utils')
     #
     #
     def get_beam_load(self, wname, wload):

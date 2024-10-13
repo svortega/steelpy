@@ -6,17 +6,17 @@
 from __future__ import annotations
 #from array import array
 from dataclasses import dataclass
-#from typing import NamedTuple, List, Union
+#from typing import NamedTuple
 import re
 #
 #
 # package imports
 #
 from steelpy.sections.sqlite.utils import SectionMainSQL
-from steelpy.sections.utils.shape.utils import get_sect_properties
+from steelpy.sections.utils.operations import get_sect_properties
 from steelpy.sections.utils.shape.solid import (CircleSolid,
                                                 RectangleSolid,
-                                                TrapeziodSolid)
+                                                TrapezoidSolid)
 #
 #
 # ----------------------------------------
@@ -29,94 +29,57 @@ class SolidSectionSQL(SectionMainSQL):
     
     def __init__(self, component, db_file:str):
         """ """
-        #super().__init__()
-        #
         self.db_file = db_file
-        # push data to sqlite table
-        #
         super().__init__(component=component,
                          db_file=self.db_file)
     #
     #
     def __setitem__(self, shape_name: int|str, parameters: list) -> None:
         """
-        parameters = [node1, node2, material, section, roll_angle]
+        parameters : [circular bar, d, FAvy, FAvz, shear_stress, build, compactness, title]
+                     [rectangle bar, h, b, FAvy, FAvz, shear_stress, build, compactness, title],
+                     [trapezoid bar, h, b, a, FAvy, FAvz, shear_stress, build, compactness, title]
         """
         try:
             self._labels.index(shape_name)
             raise Exception('element {:} already exist'.format(shape_name))
         except ValueError:
-            shape_type = parameters.pop(0)
-            #self._labels.append(shape_name)
-            #self._title.append('NULL')
-            #mnumber = next(self.get_number())
-            #self._number.append(mnumber)
+            shape_type = parameters.shape
             #
-            d = parameters[0]
-            FAvy = 1
-            FAvz = 1
-            shear_stress:str = 'maximum'
-            build:str = 'welded'            
-            compactness = None
-            #
-            if re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
-                #self._type.append('round')
-                #self._wb.append(0)
-                #self._wt.append(0)
-                #
-                section = (shape_name, 
-                           "Circular Bar",  # shape type
-                           d, None,         # diameter, wall_thickess
-                           None, None, # height, web_thickness
-                           None, None, # top_flange_width, top_flange_thickness
-                           None, None, # bottom_flange_width, bottom_flange_thickness
-                           None,       # root radius
-                           FAvy, FAvz,
-                           shear_stress, build,
-                           compactness,
-                           None,)     # title
-
-            elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
-                #self._type.append('rectangle')
-                w = parameters[1]
-                #self._wb.append(parameters[1])
-                #self._wt.append(parameters[1])
-                #
+            if re.match(r"\b((solid(_|-|\s*)?)?circular|round((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
                 section = (shape_name,
-                           "Rectangle",   # shape type
-                           None, None,    # diameter, wall_thickess
-                           d, None,       # height, web_thickness
-                           w, None,       # top_flange_width, top_flange_thickness
-                           w, None,       # bottom_flange_width, bottom_flange_thickness
-                           None,       # root radius
-                           FAvy, FAvz,
-                           shear_stress, build,
-                           compactness,
-                           None,)     # title
+                           "Circular Bar",        # shape type
+                           parameters.d, None,   # diameter, wall_thickness
+                           None, None,            # height, web_thickness
+                           None, None,            # top_flange_width, top_flange_thickness
+                           None, None,            # bottom_flange_width, bottom_flange_thickness
+                           None,                  # root radius
+                           *parameters[4:])       # FAvy, FAvz, shear_stress, build, compactness, title
 
-            elif re.match(r"\b((solid|bar(\_)?)?trapezoid)\b", shape_type, re.IGNORECASE):
-                #self._type.append('trapeziod')
-                wb = parameters[1]
-                wt = parameters[2]
-                #self._wb.append(parameters[1])
-                #self._wt.append(parameters[2])
+            elif re.match(r"\b((solid(_|-|\s*)?)?square|rectangle((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
                 section = (shape_name,
-                           "trapezoid",   # shape type
-                           None, None,    # diameter, wall_thickess
-                           d, None,       # height, web_thickness
-                           wb, None,       # top_flange_width, top_flange_thickness
-                           wt, None,       # bottom_flange_width, bottom_flange_thickness
-                           None,       # root radius
-                           FAvy, FAvz,
-                           shear_stress, build,
-                           compactness,
-                           None,)     # title)                 
+                           "Rectangle Bar",           # shape type
+                           None, None,                # diameter, wall_thickness
+                           parameters.h, None,        # height, web_thickness
+                           parameters.b, None,        # top_flange_width, top_flange_thickness
+                           parameters.b, None,        # bottom_flange_width, bottom_flange_thickness
+                           None,                      # root radius
+                           *parameters[4:])           # FAvy, FAvz, shear_stress, build, compactness, title
+
+            elif re.match(r"\b((solid(_|-|\s*)?)?trapezoid((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
+                section = (shape_name,
+                           "Trapezoid Bar",           # shape type
+                           None, None,                # diameter, wall_thickness
+                           parameters.h, None,       # height, web_thickness
+                           parameters.b, None,       # top_flange_width, top_flange_thickness
+                           parameters.a, None,       # bottom_flange_width, bottom_flange_thickness
+                           None,                      # root radius
+                           *parameters[4:])           # FAvy, FAvz, shear_stress, build, compactness, title
 
             else:
                 raise Exception(f" section type {shape_type} not recognized")
             #
             number = self.push_section(section)
-            #self._number.append(number)
     #
     def __getitem__(self, shape_name: str | int):
         """
@@ -131,21 +94,21 @@ class SolidSectionSQL(SectionMainSQL):
         shape_type = self._type[index]
         row = self.get_section(shape_name)
         
-        if re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
+        if re.match(r"\b((solid(_|-|\s*)?)?circular|round((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
             d = row[3]
             return CircleSolid(name=shape_name, d=d)
 
-        elif re.match(r"\b((solid|bar(\_)?)?rectangle)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b((solid(_|-|\s*)?)?square|rectangle((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
             d = row[5]
             wb = row[7]
             return RectangleSolid(name=shape_name, depth=d, width=wb)
 
-        elif re.match(r"\b((solid|bar(\_)?)?trapezoid)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b((solid(_|-|\s*)?)?trapezoid((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
             d = row[5]
             wb = row[7]
             wt = row[9]            
             c = abs(wt - wb) / 2.0
-            return TrapeziodSolid(name=shape_name, depth=d, width=wb, a=wt, c=c)
+            return TrapezoidSolid(name=shape_name, depth=d, width=wb, a=wt, c=c)
 
         else:
             raise Exception(f" section type {shape_type} not recognized")
@@ -156,8 +119,8 @@ class SolidSectionSQL(SectionMainSQL):
 class RectangleSQLite(SectionMainSQL):
     __slots__ = ['_properties', 'name', 'number', 'db_file']
 
-    def __init__(self, name:Union[str, int],
-                 d: Union[float, Units], w: Union[float, Units],
+    def __init__(self, name:str|int,
+                 d: float, w: float,
                  db_file:str,
                  build:str = 'welded',
                  shear_stress:str = 'maximum',
@@ -210,27 +173,6 @@ class RectangleSQLite(SectionMainSQL):
         self.update_item(item='top_flange_width', value=value[0])
         self.push_property()
     #
-    #def __setattr__(self, shape_type:str, value:Union[Units,float]):
-    #    """ """
-    #    value = get_sect_properties([value])
-    #    if re.match (r"\b(d(epth)?|h(eight)?)\b", shape_type, re.IGNORECASE):
-    #        self.update_item(item='height', value=value[0])
-    #        self.push_property()
-    #    elif re.match (r"\b(w(idth)?)\b", shape_type, re.IGNORECASE):
-    #        self.update_item(item='top_flange_width', value=value[0])
-    #        self.push_property()
-    #    else:
-    #        # in python3+ you can omit the arguments to super:
-    #        super().__setattr__(shape_type, value[0])
-    #
-    #def __getattr__(self, shape_type:str):
-    #    """ """
-    #    if re.match (r"\b(d(epth)?|h(eight)?)\b", shape_type, re.IGNORECASE):
-    #        return self.get_item(item="height")
-    #    elif re.match (r"\b(w(idth)?)\b", shape_type, re.IGNORECASE):
-    #        return self.get_item(item="top_flange_width")
-    #    else:
-    #        raise AttributeError(shape_type)
 #
 #
 @dataclass

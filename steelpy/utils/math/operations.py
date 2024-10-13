@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from numbers import Integral
 
 # package imports
-#from steelpy.process.math.vector import Vector
+#from steelpy.utils.math.vector import Vector
 import numpy as np
 
 # --------------------

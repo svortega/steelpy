@@ -828,7 +828,7 @@ class CombTypes:
     # operations
     #
     # -----------------------------
-    # load process
+    # load utils
     #
     def load(self):
         """ convert to beam load"""

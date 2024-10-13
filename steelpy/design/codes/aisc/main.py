@@ -17,7 +17,7 @@ from steelpy.codes.aisc.aisc335 import AISC_335_89
 #from iLift.codes.EN1993.EN1993_6 import EN1993_6
 from steelpy.sections.stress import Stress, BeamStress, PlateStress
 from steelpy.process.load.actions import Actions
-#from iLift.codes.process.process import CodeResults
+#from iLift.codes.utils.utils import CodeResults
 
 
 #

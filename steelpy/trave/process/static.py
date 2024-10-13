@@ -416,7 +416,7 @@ class StaticSolverX:
         return dfbool.astype('bool'), dfjbc.astype('float64')
     #
     # -----------------------------------------------------------
-    # Post-process
+    # Post-utils
     # -----------------------------------------------------------
     #    
 #

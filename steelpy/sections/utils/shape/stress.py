@@ -190,7 +190,7 @@ class ShapeStressBasic:
             tau_x = self.torsional_stress(Mt=actions.Mx)
         #
         # ----------------------------------------------
-        # stress process 
+        # stress utils
         stress_out = BeamStress(sigma_x, sigma_y, sigma_z, 
                                 tau_x, tau_y, tau_z, coord)
         #

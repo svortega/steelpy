@@ -15,7 +15,7 @@ import re
 from steelpy.utils.units.main import Units
 from steelpy.utils.sqlite.main import ClassMainSQL
 #
-#from steelpy.metocean.wave.regular.process.bsotm import BSOTM
+#from steelpy.metocean.wave.regular.utils.bsotm import BSOTM
 from steelpy.metocean.hydrodynamic.main import HydroProperty
 from steelpy.metocean.process.criteria import HydroCriteria
 

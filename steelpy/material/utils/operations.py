@@ -3,445 +3,96 @@
 #
 # Python stdlib imports
 from __future__ import annotations
+import re
 
 # package imports
 import steelpy.utils.io_module.text as common
 from steelpy.utils.units.buckingham import Number
 #from steelpy.utils.units.main import Units
-
+from steelpy.utils.dataframe.main import DBframework
+#
 # --------------------------------------------------------------------
-#                            Modify material
+#                          Material Operations
 # --------------------------------------------------------------------
 #
-def material_set_mean(materials, fy_mod:float=1.10):
-    """
-    """
-    print('    * Modifiying materials Fy by {:}'.format(fy_mod))
-    # increase Fy to mean
-    for mat in materials.values():
-        mat.Fy = mat.Fy * fy_mod
+def get_mat_dict(prop:dict)->list:
+    """"""
+    material_type = None
+    matkeys = list(property.keys())
+    for key in matkeys:
+        if re.match(r"\b((mat(erial)?(_)?)?type)\b", key, re.IGNORECASE):
+            material_type = find_mat_type(property[key])
+            prop.pop(key)
+            break
     #
-    #return materials
-    #
-#
-#
-# material section
-#
-def new_materialXX(materials, new_mat, 
-                   material_name:str|int='name',
-                   material_id:int|None=None):
-    """
-    Add new material to exisitng fe model materail
-    """
-    print('    * Adding new materials by {:}'.format(material_id))
-    #
-    #
-    if not material_id:
-        _mat_list = [_mat.number for _mat in materials.values()]
-        material_id = max(_mat_list)
-    
-    for _mat in new_mat.values():
-        if material_name != 'name':
-            material_id = int(float(_mat.number))
-            _mat_name = 'new_material_' + str(_mat.number)
-            #material_id = _mat.number
+    if material_type:
+        #property.pop(material_type)
+        if material_type == 'elastic':
+            # [Fy, Fu, E, G, poisson, density, alpha]
+            prop = [None] * 7
+            for key, item in prop.items():
+                print(key)
+                if re.match(r"\b((fy|yield|smys)(\s*strength|stress)?)\b", key, re.IGNORECASE):
+                    prop[0] = item
+                elif re.match(r"\b((fu|u(ltimate)?\s*t(ensile)|smts)(\s*strength|stress)?)\b", key, re.IGNORECASE):
+                    prop[1] = item
+                elif re.match(r"\b((E(lastic)?|young(\'s)?|tensile)(\s*modulus)?)\b", key, re.IGNORECASE):
+                    prop[2] = item
+                elif re.match(r"\b(g|shear\s*modulus)\b", key, re.IGNORECASE):
+                    prop[3] = item
+                elif re.match(r"\b(poisson(\s*ration)?|nu|u03BD)\b", key, re.IGNORECASE):
+                    prop[4] = item
+                elif re.match(r"\b(density|rho|\u03C1)\b", key, re.IGNORECASE):
+                    prop[5] = item
+                elif re.match(r"\b(termal\s*expansion|alpha|u03B1)\b", key, re.IGNORECASE):
+                    prop[6] = item
+            # update units
+            prop = get_isomat_prop(prop)
         else:
-            _mat_name = _mat['name']
-            material_id += 1
-        
-        #materials[_mat_name] = material.Material(_mat_name, material_id)
-        materials[_mat_name] = 'Plastic'
-        materials[_mat_name].number = material_id
-        materials[_mat_name].Fy = float(_mat['Fy'])
-        materials[_mat_name].E = float(_mat['E'])
-        materials[_mat_name].poisson = float(_mat['poisson'])
-        materials[_mat_name].density = float(_mat['density'])
-        #materials[_mat_name].type = 'Plastic'
-
-        if materials[_mat_name].Fy == 0:
-            materials[_mat_name].type = 'Elastic'
-        
-        try:
-            materials[_mat_name].Fu = _mat['Fu']
-        except KeyError:
-            pass
-    #
-    #
-    #return materials
-    #
-
-
-#
-# Jelly section
-def add_mod_material(material_type, materials, elements, sets,
-                     _member_no, _group_no, _factor,
-                     material_id:int|None=None):
-    """
-    Create new material with modified elastic modulus and assing it to
-    defined elements\n
-    
-    Input :\n
-    materials  : materials in fe model\n
-    elements   : elements in fe model\n
-    sets       : sets in fe model\n
-    _member_no : list with member's fe number\n
-    _group_no  : list with set's fe number\n
-    _factor    : factor to modify Elastic modulus (E = E/factor)\n
-    """
-    # print('    * Adding new jelly materials')
-    #
-    #
-    _new_mat = []
-    _member_items = []
-
-    # find member's material
-    for _item in _member_no:
-        try:
-            _new_mat.append(elements[_item].material[0].name.lower())
-            _member_items.append(_item)
-        except KeyError:
-            continue
-
-    # find member's material in groups
-    for _set_no in _group_no:
-        # Find materials
-        for _item in sets[int(_set_no)].items:
-            try:
-                _new_mat.append(elements[_item].material[0].name.lower())
-                _member_items.append(_item)
-            except KeyError:
-                continue
-    #
-    mat_name = {}
-    #mat_number = {}
-    #material_id = 0
-    for key, _mat in materials.items():
-        #mat_number[_mat.number] = key
-        mat_name[str(_mat.name.lower())] = key
-    #
-    if not material_id:
-        _mat_list = [_mat.number for _mat in materials.values()]
-        material_id = max(_mat_list)    
-
-    # filter materials
-    _new_mat = list(set(_new_mat))
-
-    # create new modify materials
-    _mat_residual = []
-    for _mat in _new_mat:
-        _mat_name = mat_name[_mat]
-        material_id += 1
-        
-        if material_type == 'jelly':
-            _new_name = materials[_mat_name].name + '_jelly_' + str(material_id)
-            materials[_new_name] = material.Material(_new_name, material_id)
-            #
-            # jelly set Fy to zero
-            materials[_new_name].Fy = 0  # materials[_mat].Fy
-            # Jelly modify Emodulus
-            materials[_new_name].E = materials[_mat_name].E / float(_factor)
-            materials[_new_name].type = 'Elastic'
-        #
-        elif material_type == 'reinforced':
-            _new_name = materials[_mat_name].name + '_reinforced_' + str(_mat_name)
-            materials[_new_name] = material.Material(_new_name, material_id)
-            #
-            # reinforced set Fy value
-            if materials[_mat_name].Fy == 0:
-                materials[_new_name].Fy = materials[_mat_name].E
-            else:
-                materials[_new_name].Fy =  materials[_mat_name].Fy  * float(_factor)
-            # reinforced mofify Emodulus
-            materials[_new_name].E = materials[_mat_name].E * float(_factor)
-            materials[_new_name].type = 'Plastic'
-        #
-        else:
-            print('  *** error material type {:} not recognized'.format(material_type))
-            print('      process terminated')
-            sys.exit()
-        #
-        materials[_new_name].alpha = materials[_mat_name].alpha
-        materials[_new_name].density = materials[_mat_name].density
-        materials[_new_name].poisson = materials[_mat_name].poisson
-        
-        #
-        _mat_residual.append([_mat, _new_name])
-
-    # update materials
-    for _item in _member_items:
-
-        for _mat in _mat_residual:
-
-            if _mat[0] == elements[_item].material[0].name.lower():
-                elements[_item].material[0] = materials[_mat[1]]
-    # 
-    #
-    #return materials, elements
-    #print('-->')
-    #
-#
-#
-def update_material_name(materials, _units,
-                         renumber:bool=True):
-    """
-    Note:
-    N/m^2  without conversion result is: g/(m*s^2)
-    """
-    #
-    #
-    print('    * Updating Material')
-    #
-    try:
-        base_units = units.Number(1, dims=_units[5])
-    except:
-        _input = _units[4] + '/' + _units[0] + '^2'
-        base_units = units.Number(1, dims=_input)
-    #
-    if renumber:
-        i = 0
-        for _mat in materials.values():
-            i += 1
-            _grade = round(_mat.Fy / (base_units.value * 1000.0))
-            _mat.get_name(i, _grade)
+            raise IOError(f'Material type {material_type} not valid')
     else:
-        for _mat in materials.values():
-            _grade = round(_mat.Fy / (base_units.value * 1000.0))
-            _mat.get_name(_mat.number, _grade)        
-#
-#
-# --------------------------------------------------------------------
-#
-def get_material_step(_member, _buckets):
-    """
-    """
-    for x in range(1, len(_member.material)):
-        _material_step = _member.material[x]
-        # second loop of bucket sections in steps
-        for _new_material in  _buckets[_material_step.Fy].values():
-            if _new_material.equal(_material_step):
-                _member.material[x] = _new_material
-                break
-#
-def simplify_material(materials, _element):
-    """
-    """
-    print('    * simplifying Material')
-    _buckets = get_buckets(materials)
-    _duplicated = filter_bucket(_buckets)
-    
-    for _material in materials.values():
-        for _new_material in _buckets[_material.Fy].values():
-            if _material.number == _new_material.number:
-                for _member_name in _material.concepts:
-                    _member = _element[_member_name] 
-                    get_material_step(_member, _buckets)
-            
-            elif _material.equal(_new_material):
-                for _member_name in _material.concepts:
-                    _member = _element[_member_name]
-                    _new_material.elements.append(_member_name)
-                    _member.material[0] = _new_material
-                    get_material_step(_member, _buckets)
+        raise IOError('Material type not valid')
     #
-    # remove duplicated sections
-    for _member_name in _duplicated:
-        del materials[_member_name]    
+    return [material_type, *prop]
 #
-def get_buckets(materials):
-    """
-    """
-    _bucket = {}
-    for key, _material in materials.items():
-        try:
-            _bucket[_material.Fy].update({key: _material})
-        except KeyError:
-            _bucket[_material.Fy] = {}
-            _bucket[_material.Fy].update({key: _material})
-    return _bucket
+def get_mat_list(prop:list|tuple)->list:
+    """"""
+    material_type = find_mat_type(prop[0])
+
+    if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
+        raise NotImplementedError('--> Mat type not yet implemented')
+
+    elif re.match(r"\b(elastic|linear((_)?elastic)?)\b", material_type, re.IGNORECASE):
+        prop = get_isomat_prop(prop[1:])
+
+    else:
+        raise IOError(f' material type {material_type} not recognised')
+
+    return [material_type, *prop]
 #
-def filter_bucket(_bucket):
-    """
-    """
-    _duplicated = []
-    for _Fy, _items in _bucket.items():
-        _dummy = copy.copy(_items)
-        _to_delete = []
-        for _mat_id, _material in _items.items():
-            # remove self material
-            try:
-                del _dummy[_mat_id]
-            except KeyError:
-                continue
-            # find duplicated
-            for _item_name, _item in _dummy.items():
-                if _material.equal(_item):
-                    _to_delete.append(_item_name)
-        
-        _duplicated.extend(_to_delete)
-        for _item_no in _to_delete:
-            try:
-                del _items[_item_no]
-            except KeyError:
-                continue
+def get_mat_df(df:DBframework.DataFrame)->DBframework.DataFrame:
+    """"""
+    columns = list(df.columns)
+    for key in columns:
+        print(key)
+        if re.match(r"\b((mat(erial)?(_)?)?type)\b", key, re.IGNORECASE):
+            #print('-->')
+            df['type'] = df[key].apply(lambda x: find_mat_type(x))
+            break
     #
-    _duplicated = list(set(_duplicated))
-    return _duplicated
-#
-#
-#
-# --------------------------------------------------------------------
-#                            Modify material
-# --------------------------------------------------------------------
-#
-def set_mean_material(geometry, factor:int):
-    """
-    Set existing materail's yield sstrength to its mean value
-    """
-    material_set_mean(geometry.materials, factor)
-    #return _geometry
-#
-def add_new_materialXX(structure, foundation, _mat_name, _mat_number):
-    """
-    Add new materail to the fe model\n
-    
-    Input:\n
-    structure  : fe model _structure
-    _mat_name : list with new material's name\n
-    material_id   : list with new material's fe number\n
-    """
-    #
-    
-    # find material number
-    _mat_list = [_mat.number for _mat in structure.materials.values()]
-    # check if soil springs
+    group = df.groupby("type")
+    # Elastic type
     try:
-    #if model['soil']:
-        _mat_list.extend([_mat.number for _mat in foundation.materials.values()])
-    except AttributeError:
-        pass
-    # find maximum load number
-    material_id = max(_mat_list)
+        elastic = group.get_group("elastic")
+        newdf = get_isomat_prop_df(elastic)
+        #self._material.elastic(df=elastic)
+    except KeyError:
+        # nonlin = group.get_group("plastic")
+        raise IOError('Material type not valid')
     #
-    if _mat_name:
-        _type = 'name'
-        new_material(structure.materials,
-                     _mat_name, _type, material_id)
-
-    if _mat_number:
-        _type = 'number'
-        new_material(structure.materials,
-                     _mat_number, _type)
-
-    #return _structure
+    return newdf
 #
-def update_materialXX(geometry, _mat_name, _mat_number):
-    """
-    Update existing material of the fe model
-    """
-    if _mat_name:
-        _type = 'name'
-        material_update(geometry.materials,
-                        _mat_name, _type)
-    #
-    if _mat_number:
-        _type = 'number'
-        material_update(geometry.materials,
-                        _mat_number, _type)
-        #
-    #return geometry
-#
-def add_modified_material(_type, geometry, foundation,
-                          member_list, group_list):
-    """
-    Create new material with modified properties and assing it to
-    defined elements\n
-    
-    Input :\n
-    _type      : jelly, reinforced
-    geometry   : fe model geometry
-    member_list : list with elements's fe number\n
-    group_list  : list with set's fe number\n
-    _factor    : factor to modify Elastic modulus (E = E/factor)\n
-    """
-
-    print('    * Adding new {:} materials'.format(_type))
-    
-    # find material number
-    _mat_list = [_mat.number for _mat in geometry.materials.values()]
-    # check if soil springs
-    try:
-        #if foundation.materials:
-        _matsoil = foundation.materials
-        _mat_list.extend([_mat.number for _mat in _matsoil.values()])
-    except AttributeError:
-        pass
-    # find maximum load number
-    material_id = max(_mat_list)
-    
-    for _member_list in member_list:
-        _factor = _member_list[1]
-        _group_no = []
-
-        add_mod_material(_type,
-                         geometry.materials,
-                         geometry.elements,
-                         geometry.sets,
-                         _member_list[0],
-                         _group_no,
-                         _factor, material_id)
-    #
-    # find material number
-    _mat_list.extend([_mat.number for _mat in geometry.materials.values()])
-    material_id = max(_mat_list)
-    
-    for _group_list in group_list:
-        _factor = _group_list[1]
-        _member_no = []
-
-        add_mod_material(_type,
-                         geometry.materials,
-                         geometry.elements,
-                         geometry.sets,
-                         _member_no,
-                         _group_list[0],
-                         _factor, material_id)
-
-    #return geometry
-#
-#
-#
-def find_mass_piramid_material(geometry):
-    """
-    """
-    #
-    material = geometry.materials
-    _list_mat = []
-    _members = []
-    for key, _mat in material.items():
-        if _mat.name == 'mass_pyramid':
-            _mat.type = 'Elastic'
-            _list_mat.append(key)
-            _members.extend(_mat.elements)
-    #
-    check_out = []
-    if _members:
-        # create new group
-        _group = femodel.Groups('mass_pyramid', 1)
-        _group.items = _members
-        _new_sets = {'mass_pyramid':_group}
-        add_new_groups(geometry.sets, _new_sets,
-                       name='mass_pyramid')
-        #
-        check_out.append('\n')
-        check_out.append("'{:} Mass Piramid Material Modified\n".format(50 * " "))
-        check_out.extend(formatting.print_column_num(_list_mat))        
-    #
-    return check_out
-#
-# --------------------------------------------------------------------
-#                            Material
-# --------------------------------------------------------------------
-#
+# -----------------------------
 #
 def find_isomat_item(word_in:str):
     """
@@ -454,7 +105,6 @@ def find_isomat_item(word_in:str):
             "stiffness": r"\b(stiffness|k)\b",
             "density": r"\b(density|rho|\u03C1)\b",
             "spring": r"\b(spring)\b",
-            "type": r"\b(type)\b",
             "damping": r"\b(damping)\b",
             "G": r"\b(g|shear\s*modulus)\b",
             "name": r"\b(name[s]?|id|nom(bre)?[s]?|navn)\b",
@@ -467,14 +117,12 @@ def find_isomat_item(word_in:str):
     match = common.find_keyword(word_in, key)
     return match
 #
-# 
-#
 def find_mat_type(word_in:str):
     """
     """
     key = {"elastic": r"\b(elastic|iso(tropic)?|linear)\b",
-            "plastic": r"\b(plastic)\b",
-            "curve": r"\b(curve|spring|py|tz|qz)\b"}
+           "plastic": r"\b(plastic)\b",
+           "curve": r"\b(curve|spring|py|tz|qz)\b"}
     match = common.find_keyword(word_in, key)
     return match
 #
@@ -571,8 +219,11 @@ def get_isomat_prop(properties):
         try:
             set_prop[x] = properties[x].convert(set_units[x]).value
         except AttributeError:
-            set_prop[x] = properties[x]
-            raise IOError("units required")
+            if properties[x]:
+                set_prop[x] = properties[x]
+                raise IOError("units required")
+            else:
+                pass
         except IndexError:
             pass
     # check if Fu
@@ -582,41 +233,36 @@ def get_isomat_prop(properties):
 #
 def get_isomat_prop_df(df):
     """ """
-    #units = Units()
-
+    #
+    columns = list(df.columns)
+    header = {item:find_isomat_item(item) for item in columns}
+    df.rename(columns=header, inplace=True)
+    #
     try:
         df["Fy"] = df["Fy"].apply(lambda x: x.convert('megapascal').value)
-    
     except AttributeError:
-        pass
-    
+        raise IOError("units required")
     except KeyError:
         df["Fy"] = 280_000_000 #* units.Pa
 
     try:
         df["Fu"] = df["Fu"].apply(lambda x: x.convert('pascal').value)
-    
     except AttributeError:
-        pass
-    
+        raise IOError("units required")
     except KeyError:
         df["Fu"] = df["Fy"]/0.75
 
     try:
         df["E"] = df["E"].apply(lambda x: x.convert('pascal').value)
-    
     except AttributeError:
-        pass
-    
+        raise IOError("units required")
     except KeyError:
         df["E"] = 205_000_000_000 #* units.Pa
 
     try:
         df["G"] = df["G"].apply(lambda x: x.convert('pascal').value)
-    
     except AttributeError:
-        pass
-    
+        raise IOError("units required")
     except KeyError:
         df["G"] = 80_770_000_000 #* units.Pa
 
@@ -627,19 +273,15 @@ def get_isomat_prop_df(df):
 
     try:
         df["density"] = df["density"].apply(lambda x: x.convert('kilogram/metre^3').value)
-    
     except AttributeError:
-        pass
-    
+        raise IOError("units required")
     except KeyError:
         df["density"] = 7850 #* units.kilogram/units.metre**3
 
     try:
         df["alpha"] = df["alpha"].apply(lambda x: x.convert('kelvin').value)
-    
     except AttributeError:
-        pass
-    
+        raise IOError("units required")
     except KeyError:
         df["alpha"] = 1.2E-5 #* units.kelvin
 
@@ -654,4 +296,453 @@ def get_isomat_prop_df(df):
         df["type"] = "elastic"
 
     return df[["name", "type", "Fy", "Fu", "E", "G", "poisson", "density", "alpha"]]
+#
+# --------------------------------------------------------------------
+#                       Modify material - Legacy
+# --------------------------------------------------------------------
+#
+def material_set_mean(materials, fy_mod: float = 1.10):
+    """
+    """
+    print('    * Modifiying materials Fy by {:}'.format(fy_mod))
+    # increase Fy to mean
+    for mat in materials.values():
+        mat.Fy = mat.Fy * fy_mod
+    #
+    # return materials
+    #
+
+
+#
+#
+# material section
+#
+def new_materialXX(materials, new_mat,
+                   material_name: str | int = 'name',
+                   material_id: int | None = None):
+    """
+    Add new material to exisitng fe model materail
+    """
+    print('    * Adding new materials by {:}'.format(material_id))
+    #
+    #
+    if not material_id:
+        _mat_list = [_mat.number for _mat in materials.values()]
+        material_id = max(_mat_list)
+
+    for _mat in new_mat.values():
+        if material_name != 'name':
+            material_id = int(float(_mat.number))
+            _mat_name = 'new_material_' + str(_mat.number)
+            # material_id = _mat.number
+        else:
+            _mat_name = _mat['name']
+            material_id += 1
+
+        # materials[_mat_name] = material.Material(_mat_name, material_id)
+        materials[_mat_name] = 'Plastic'
+        materials[_mat_name].number = material_id
+        materials[_mat_name].Fy = float(_mat['Fy'])
+        materials[_mat_name].E = float(_mat['E'])
+        materials[_mat_name].poisson = float(_mat['poisson'])
+        materials[_mat_name].density = float(_mat['density'])
+        # materials[_mat_name].type = 'Plastic'
+
+        if materials[_mat_name].Fy == 0:
+            materials[_mat_name].type = 'Elastic'
+
+        try:
+            materials[_mat_name].Fu = _mat['Fu']
+        except KeyError:
+            pass
+    #
+    #
+    # return materials
+    #
+
+
+#
+# Jelly section
+def add_mod_material(material_type, materials, elements, sets,
+                     _member_no, _group_no, _factor,
+                     material_id: int | None = None):
+    """
+    Create new material with modified elastic modulus and assing it to
+    defined elements\n
+
+    Input :\n
+    materials  : materials in fe model\n
+    elements   : elements in fe model\n
+    sets       : sets in fe model\n
+    _member_no : list with member's fe number\n
+    _group_no  : list with set's fe number\n
+    _factor    : factor to modify Elastic modulus (E = E/factor)\n
+    """
+    # print('    * Adding new jelly materials')
+    #
+    #
+    _new_mat = []
+    _member_items = []
+
+    # find member's material
+    for _item in _member_no:
+        try:
+            _new_mat.append(elements[_item].material[0].name.lower())
+            _member_items.append(_item)
+        except KeyError:
+            continue
+
+    # find member's material in groups
+    for _set_no in _group_no:
+        # Find materials
+        for _item in sets[int(_set_no)].items:
+            try:
+                _new_mat.append(elements[_item].material[0].name.lower())
+                _member_items.append(_item)
+            except KeyError:
+                continue
+    #
+    mat_name = {}
+    # mat_number = {}
+    # material_id = 0
+    for key, _mat in materials.items():
+        # mat_number[_mat.number] = key
+        mat_name[str(_mat.name.lower())] = key
+    #
+    if not material_id:
+        _mat_list = [_mat.number for _mat in materials.values()]
+        material_id = max(_mat_list)
+
+        # filter materials
+    _new_mat = list(set(_new_mat))
+
+    # create new modify materials
+    _mat_residual = []
+    for _mat in _new_mat:
+        _mat_name = mat_name[_mat]
+        material_id += 1
+
+        if material_type == 'jelly':
+            _new_name = materials[_mat_name].name + '_jelly_' + str(material_id)
+            materials[_new_name] = material.Material(_new_name, material_id)
+            #
+            # jelly set Fy to zero
+            materials[_new_name].Fy = 0  # materials[_mat].Fy
+            # Jelly modify Emodulus
+            materials[_new_name].E = materials[_mat_name].E / float(_factor)
+            materials[_new_name].type = 'Elastic'
+        #
+        elif material_type == 'reinforced':
+            _new_name = materials[_mat_name].name + '_reinforced_' + str(_mat_name)
+            materials[_new_name] = material.Material(_new_name, material_id)
+            #
+            # reinforced set Fy value
+            if materials[_mat_name].Fy == 0:
+                materials[_new_name].Fy = materials[_mat_name].E
+            else:
+                materials[_new_name].Fy = materials[_mat_name].Fy * float(_factor)
+            # reinforced mofify Emodulus
+            materials[_new_name].E = materials[_mat_name].E * float(_factor)
+            materials[_new_name].type = 'Plastic'
+        #
+        else:
+            print('  *** error material type {:} not recognized'.format(material_type))
+            print('      utils terminated')
+            sys.exit()
+        #
+        materials[_new_name].alpha = materials[_mat_name].alpha
+        materials[_new_name].density = materials[_mat_name].density
+        materials[_new_name].poisson = materials[_mat_name].poisson
+
+        #
+        _mat_residual.append([_mat, _new_name])
+
+    # update materials
+    for _item in _member_items:
+
+        for _mat in _mat_residual:
+
+            if _mat[0] == elements[_item].material[0].name.lower():
+                elements[_item].material[0] = materials[_mat[1]]
+    #
+    #
+    # return materials, elements
+    # print('-->')
+    #
+
+
+#
+#
+def update_material_name(materials, _units,
+                         renumber: bool = True):
+    """
+    Note:
+    N/m^2  without conversion result is: g/(m*s^2)
+    """
+    #
+    #
+    print('    * Updating Material')
+    #
+    try:
+        base_units = units.Number(1, dims=_units[5])
+    except:
+        _input = _units[4] + '/' + _units[0] + '^2'
+        base_units = units.Number(1, dims=_input)
+    #
+    if renumber:
+        i = 0
+        for _mat in materials.values():
+            i += 1
+            _grade = round(_mat.Fy / (base_units.value * 1000.0))
+            _mat.get_name(i, _grade)
+    else:
+        for _mat in materials.values():
+            _grade = round(_mat.Fy / (base_units.value * 1000.0))
+            _mat.get_name(_mat.number, _grade)
+        #
+
+
+#
+# --------------------------------------------------------------------
+#
+def get_material_step(_member, _buckets):
+    """
+    """
+    for x in range(1, len(_member.material)):
+        _material_step = _member.material[x]
+        # second loop of bucket sections in steps
+        for _new_material in _buckets[_material_step.Fy].values():
+            if _new_material.equal(_material_step):
+                _member.material[x] = _new_material
+                break
+
+
+#
+def simplify_material(materials, _element):
+    """
+    """
+    print('    * simplifying Material')
+    _buckets = get_buckets(materials)
+    _duplicated = filter_bucket(_buckets)
+
+    for _material in materials.values():
+        for _new_material in _buckets[_material.Fy].values():
+            if _material.number == _new_material.number:
+                for _member_name in _material.concepts:
+                    _member = _element[_member_name]
+                    get_material_step(_member, _buckets)
+
+            elif _material.equal(_new_material):
+                for _member_name in _material.concepts:
+                    _member = _element[_member_name]
+                    _new_material.elements.append(_member_name)
+                    _member.material[0] = _new_material
+                    get_material_step(_member, _buckets)
+    #
+    # remove duplicated sections
+    for _member_name in _duplicated:
+        del materials[_member_name]
+    #
+
+
+def get_buckets(materials):
+    """
+    """
+    _bucket = {}
+    for key, _material in materials.items():
+        try:
+            _bucket[_material.Fy].update({key: _material})
+        except KeyError:
+            _bucket[_material.Fy] = {}
+            _bucket[_material.Fy].update({key: _material})
+    return _bucket
+
+
+#
+def filter_bucket(_bucket):
+    """
+    """
+    _duplicated = []
+    for _Fy, _items in _bucket.items():
+        _dummy = copy.copy(_items)
+        _to_delete = []
+        for _mat_id, _material in _items.items():
+            # remove self material
+            try:
+                del _dummy[_mat_id]
+            except KeyError:
+                continue
+            # find duplicated
+            for _item_name, _item in _dummy.items():
+                if _material.equal(_item):
+                    _to_delete.append(_item_name)
+
+        _duplicated.extend(_to_delete)
+        for _item_no in _to_delete:
+            try:
+                del _items[_item_no]
+            except KeyError:
+                continue
+    #
+    _duplicated = list(set(_duplicated))
+    return _duplicated
+
+
+#
+#
+#
+# --------------------------------------------------------------------
+#                     Modify material - Legacy
+# --------------------------------------------------------------------
+#
+def set_mean_material(geometry, factor: int):
+    """
+    Set existing materail's yield sstrength to its mean value
+    """
+    material_set_mean(geometry.materials, factor)
+    # return _geometry
+
+
+#
+def add_new_materialXX(structure, foundation, _mat_name, _mat_number):
+    """
+    Add new materail to the fe model\n
+
+    Input:\n
+    structure  : fe model _structure
+    _mat_name : list with new material's name\n
+    material_id   : list with new material's fe number\n
+    """
+    #
+
+    # find material number
+    _mat_list = [_mat.number for _mat in structure.materials.values()]
+    # check if soil springs
+    try:
+        # if model['soil']:
+        _mat_list.extend([_mat.number for _mat in foundation.materials.values()])
+    except AttributeError:
+        pass
+    # find maximum load number
+    material_id = max(_mat_list)
+    #
+    if _mat_name:
+        _type = 'name'
+        new_material(structure.materials,
+                     _mat_name, _type, material_id)
+
+    if _mat_number:
+        _type = 'number'
+        new_material(structure.materials,
+                     _mat_number, _type)
+
+    # return _structure
+
+
+#
+def update_materialXX(geometry, _mat_name, _mat_number):
+    """
+    Update existing material of the fe model
+    """
+    if _mat_name:
+        _type = 'name'
+        material_update(geometry.materials,
+                        _mat_name, _type)
+    #
+    if _mat_number:
+        _type = 'number'
+        material_update(geometry.materials,
+                        _mat_number, _type)
+        #
+    # return geometry
+
+
+#
+def add_modified_material(_type, geometry, foundation,
+                          member_list, group_list):
+    """
+    Create new material with modified properties and assing it to
+    defined elements\n
+
+    Input :\n
+    _type      : jelly, reinforced
+    geometry   : fe model geometry
+    member_list : list with elements's fe number\n
+    group_list  : list with set's fe number\n
+    _factor    : factor to modify Elastic modulus (E = E/factor)\n
+    """
+
+    print('    * Adding new {:} materials'.format(_type))
+
+    # find material number
+    _mat_list = [_mat.number for _mat in geometry.materials.values()]
+    # check if soil springs
+    try:
+        # if foundation.materials:
+        _matsoil = foundation.materials
+        _mat_list.extend([_mat.number for _mat in _matsoil.values()])
+    except AttributeError:
+        pass
+    # find maximum load number
+    material_id = max(_mat_list)
+
+    for _member_list in member_list:
+        _factor = _member_list[1]
+        _group_no = []
+
+        add_mod_material(_type,
+                         geometry.materials,
+                         geometry.elements,
+                         geometry.sets,
+                         _member_list[0],
+                         _group_no,
+                         _factor, material_id)
+    #
+    # find material number
+    _mat_list.extend([_mat.number for _mat in geometry.materials.values()])
+    material_id = max(_mat_list)
+
+    for _group_list in group_list:
+        _factor = _group_list[1]
+        _member_no = []
+
+        add_mod_material(_type,
+                         geometry.materials,
+                         geometry.elements,
+                         geometry.sets,
+                         _member_no,
+                         _group_list[0],
+                         _factor, material_id)
+
+    # return geometry
+
+
+#
+def find_mass_pyramid_material(geometry):
+    """
+    """
+    #
+    material = geometry.materials
+    _list_mat = []
+    _members = []
+    for key, _mat in material.items():
+        if _mat.name == 'mass_pyramid':
+            _mat.type = 'Elastic'
+            _list_mat.append(key)
+            _members.extend(_mat.elements)
+    #
+    check_out = []
+    if _members:
+        # create new group
+        _group = femodel.Groups('mass_pyramid', 1)
+        _group.items = _members
+        _new_sets = {'mass_pyramid': _group}
+        add_new_groups(geometry.sets, _new_sets,
+                       name='mass_pyramid')
+        #
+        check_out.append('\n')
+        check_out.append("'{:} Mass Piramid Material Modified\n".format(50 * " "))
+        check_out.extend(formatting.print_column_num(_list_mat))
+        #
+    return check_out
 #

@@ -7,11 +7,14 @@ from __future__ import annotations
 #from array import array
 from dataclasses import dataclass
 from collections import namedtuple
+from typing import NamedTuple
 import math
+import re
 #
 
 # package imports
-from steelpy.sections.utils.shape.utils import ShapeProperty
+from steelpy.sections.utils.shape.utils import (ShapeProperty, get_sect_list,
+                                                get_sect_dict, ShapeDim)
 from steelpy.sections.utils.shape.stress import ShapeStressBasic
 
 #
@@ -478,4 +481,19 @@ class ChannelBasic(ShapeStressBasic):
         """Hydrodynamic diametre"""
         return math.hypot(self.d, self.b)    
 #    
+#
+#
+def get_Csection(parameters: list|tuple|dict)->NamedTuple:
+    """Return : [shape, d/h, tw, b, tb, r,
+                 FAvy, FAvz, shear_stress,
+                 build, compactness, title] """
+    if isinstance(parameters,(list,tuple)):
+        prop = get_sect_list(parameters, number= 11, step= 5)
+    elif isinstance(parameters, dict):
+        prop = get_sect_dict(parameters, number= 11, step= 5)
+    else:
+        raise IOError('Section data not valid')
+    #
+    prop = ['Channel', *prop]
+    return ShapeDim(*prop)
 #

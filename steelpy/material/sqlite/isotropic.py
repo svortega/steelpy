@@ -5,7 +5,7 @@
 # Python stdlib imports
 from __future__ import annotations
 #from array import array
-from collections.abc import Mapping
+#from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import NamedTuple
 import re
@@ -14,12 +14,12 @@ import re
 # package imports
 from steelpy.utils.units.main import Units
 from steelpy.utils.sqlite.main import ClassBasicSQL
-#from ..process.operations import
-from ..process.print_report import print_isomat
+#from ..utils.operations import
+from ..utils.print_report import print_isomat
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #
-from ..process.operations import get_isomat_prop, get_isomat_prop_df
-from ..process.mechanical import MaterialItem 
+from ..utils.operations import get_isomat_prop, get_isomat_prop_df
+from ..utils.mechanical import MaterialItem
 #
 from steelpy.utils.dataframe.main import DBframework
 #
@@ -185,14 +185,8 @@ class MaterialSQL(MatBasicSQL):
             if isinstance(values, list):
                 for item in values:
                     material_name = item[0]
-                    #material_type = "elastic"
-                    #self._labels.append(material_name)
-                    #self._type.append(material_type)
-                    #mat_number = next(self.get_number())
-                    #self._number.append(mat_number)
-                    #self.__setitem__(item[0], item[1:])
                     properties = get_isomat_prop(item[1:])
-                    self._elastic[material_name] = properties # [material_name, *properties]
+                    self._elastic[material_name] = properties
             
             else:
                 raise IOError('material input not valid')
@@ -204,13 +198,6 @@ class MaterialSQL(MatBasicSQL):
             group = df.groupby("type")
             elastic = group.get_group("elastic")
             elastic = get_isomat_prop_df(elastic)
-            #elastic = elastic.drop_duplicates(['name'])
-            #
-            #self._labels.extend(elastic.name)
-            #self._type.extend(elastic.type)
-            #material_id = [next(self.get_number()) for _ in elastic.name]
-            #self._number.extend(material_id)
-            #
             self._elastic.df = elastic
         except AttributeError:
             pass
@@ -233,8 +220,6 @@ class MaterialType:
         """
         self._cls_type = cls_type
         self._item_type = mat_type
-        #self._labels = cls._labels
-        #self._type = cls._type
         self._component = cls._component
         self.db_file = cls.db_file
         
@@ -242,9 +227,6 @@ class MaterialType:
                     properties:list[str|float]) -> None:
         """
         """
-        #self._labels.append(material_name)
-        #self._type.append(self._item_type)
-        # set material master
         conn = create_connection(self.db_file)
         with conn:
             push_material(conn, material_name,
@@ -297,7 +279,7 @@ def push_material(conn, material_name: str|int,
 #
 class GetMaterial(NamedTuple):
     """ Linear Material Data"""
-    name:Union[int,str]
+    name:int|str
     type:str
     E:float
     Fy:float
@@ -462,7 +444,7 @@ class GetMaterialSQL:
         return self.cls._title[self.index]
 
     @name.setter
-    def name(self, name: Union[str, int]):
+    def name(self, name: str|int):
         """ """
         self.cls._title[self.index] = name
     #
@@ -648,7 +630,7 @@ class MaterialElasticSQL(MatBasicSQL):
         dfel['material_id'] = [mat_name[item] for item in df.name]
         #dfel['material_id'] = dfel['material_id'].astype(int)
         with conn:
-            dfel.to_sql('MatElastoPlastic', conn,
+            dfel.to_sql('MaterialElastic', conn,
                         index_label=['material_id',
                                      'Fy', 'Fu', 'E', 'G',
                                      'poisson', 'density' , 'alpha'], 

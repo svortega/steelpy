@@ -588,7 +588,7 @@ class MainPipe:
                           - factor * (x / Py) *  foDt)
         #
         # Find first root (Note that it may not be the minimum
-        # use 'full' to find all roots, but process is slow)
+        # use 'full' to find all roots, but utils is slow)
         #self.Search = 'FAST'
         # Find Pc
         sigmaP = sigma_u.convert('megapascal').value*10

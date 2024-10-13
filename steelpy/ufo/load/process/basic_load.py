@@ -12,8 +12,8 @@ from typing import NamedTuple
 import re
 #
 # package imports
-# TODO: wrape pandas
-import pandas as pd
+#from steelpy.ufo.load.process.utils import find_load_type
+from steelpy.utils.dataframe.main import DBframework
 #
 #
 #
@@ -31,6 +31,10 @@ class BasicLoad(NamedTuple):
 #
 class BasicLoadMain(Mapping):
     
+    def __init__(self):
+        """
+        """
+        pass
     #
     # -----------------------------------------------
     #    
@@ -64,16 +68,13 @@ class BasicLoadMain(Mapping):
 #
 #
 class LoadCaseBasic(BasicLoadMain):
-    #__slots__ = ['_labels', '_title','_number', 'gravity']
+    __slots__ = ['_labels', '_title','_number', 'gravity']
     
     def __init__(self):
         """
         """
-        #self._labels: list = []
-        #self._title: list[str] = []
-        #self._number: array = array("I", [])
+        super().__init__()
         self.gravity = 9.80665  # m/s^2
-        #1 / 0
     #
     # -----------------------------------------------
     #
@@ -112,12 +113,7 @@ class LoadCaseBasic(BasicLoadMain):
             output += "\n"
         # print('---')
         return output
-    #
-    #def __delitem__(self, load_name: str|int):
-    #    """
-    #    """
-    #    load_name = str(load_name)
-    #    del self._basic[load_name]    
+    #   
     #
     # -----------------------------------------------
     #
@@ -130,93 +126,98 @@ class LoadCaseBasic(BasicLoadMain):
     #
     # -----------------------------------------------
     #
+    def _set_load(self, values, steps: int):
+        """ """
+        columns = list(values.keys())
+        for key in columns:
+            if re.match(r"\b(load(s)?((_|-|\s*)?id|name)?)\b", key, re.IGNORECASE):
+                values['load'] = check_column(values[key], steps=steps)
+                for x, load_name in enumerate(values['load']):
+                    load_title = f"{load_name}_{x + 1}"
+                    try:
+                        self.__setitem__(load_name, load_title)
+                    except Warning:
+                        pass
+                break
+        #
+        #db = DBframework()
+        #dfnew = db.DataFrame(data=values)        
+        return values
+    #
     #
     def node(self, values:tuple|list|None=None,
              df=None):
         """ """
-        # Input data for specific basic node load 
-        if isinstance(values, (list, tuple)):
-            if isinstance(values[0], (list, tuple, dict)):
-                for item in values:
-                    if isinstance(item, dict):
-                        load_name = item['load']
-                        nodeid = item['node']
-                    elif isinstance(item, (list, tuple)):
-                        nodeid = item.pop(1)
-                        load_name = item.pop(0)
+        if values:
+            # Input data for specific basic node load
+            if isinstance(values, dict):
+                nodeid = values['node']
+                if isinstance(nodeid, (list, tuple)):
+                    nitems = len(nodeid)
+                    values = self._set_load(values, steps=nitems)
+                    db = DBframework()
+                    dfnew = db.DataFrame(data=values)                    
                     #
+                    basic = dfnew.groupby(['load'])
+                    for x, load_name in enumerate(basic.groups):
+                        load = basic.get_group((load_name,)) #.copy()
+                        bload = self.__getitem__(load_name)
+                        bload._node.df = load                    
+                else:
+                    load_name = values['load']
                     try:
                         self.__setitem__(load_name, load_name)
                     except Warning:
                         pass
                     #
                     bload = self.__getitem__(load_name)
-                    bload._node[nodeid] = item
-            else:
-                load_name = values[0]
-                try:
-                    self.__setitem__(load_name, load_name)
-                except Warning:
-                    pass
-                #
-                bload = self.__getitem__(load_name)
-                nodeid = values[1]
-                bload._node[nodeid] = values[2:]
-        
-        elif isinstance(values, dict):
-            load_name = values['load']
-            try:
-                self.__setitem__(load_name, load_name)
-            except Warning:
-                pass
-            #
-            bload = self.__getitem__(load_name)
-            #
-            nodeid = values['node']
-            if isinstance(nodeid, (list, tuple)):
-                for item in nodeid:
                     bload._node[nodeid] = values
-            else:
-                bload._node[nodeid] = values
+            
+            elif isinstance(values, (list, tuple)):
+                if isinstance(values[0], (list, tuple, dict)):
+                    for item in values:
+                        if isinstance(item, dict):
+                            load_name = item['load']
+                            nodeid = item['node']
+                            load = item
+                        elif isinstance(item, (list, tuple)):
+                            load_name = item[0]
+                            nodeid = item[1]
+                            load = item[2:]
+                            #nodeid = item.pop(1)
+                            #load_name = item.pop(0)
+                        #
+                        try:
+                            self.__setitem__(load_name, load_name)
+                        except Warning:
+                            pass
+                        #
+                        bload = self.__getitem__(load_name)
+                        bload._node[nodeid] = load
+                else:
+                    load_name = values[0]
+                    try:
+                        self.__setitem__(load_name, load_name)
+                    except Warning:
+                        pass
+                    #
+                    bload = self.__getitem__(load_name)
+                    nodeid = values[1]
+                    bload._node[nodeid] = values[2:]
         #
         #
         # dataframe input
         try:
             columns = list(df.columns)
-            header = {}
-            for key in columns:
-                if re.match(r"\b(id|name|load(s)?)\b", key, re.IGNORECASE):
-                    header[key] = 'name'
-                    
-                elif re.match(r"\b(type)\b", key, re.IGNORECASE):
-                    header[key] = 'type'
-                
-                elif re.match(r"\b(title|comment)\b", key, re.IGNORECASE):
-                    header[key] = 'title'
-                #
-                elif re.match(r"\b(node(s)?(\_)?(name|id)?)\b", key, re.IGNORECASE):
-                    header[key] = 'node'                 
-                #
-                # Load 
-                header = read_point(key, header)
-                #
-                # Displacement/mass
-                header = read_dispmass(key, header)
-            #
-            node_load = df[header.keys()].copy()
-            node_load.rename(columns=header, inplace=True)            
+            nodeid = df['node']
+            bitems = len(nodeid)
+            values = self._set_load(df, steps=bitems)
             #
             # Set basic load if doesn't exist
-            basic = node_load.groupby(['name'])
+            basic = values.groupby(['load'])
             for x, load_name in enumerate(basic.groups):
-                #load_title = f"{load_name}_{x + 1}"
-                try:
-                    self.__setitem__(load_name, load_name)
-                except Warning:
-                    pass
-                #
                 bload = self.__getitem__(load_name)
-                nload = basic.get_group(load_name)
+                nload = basic.get_group((load_name,))
                 bload._node.df = nload
             # End loop, return none cos no specific load_name
             #1 / 0
@@ -226,103 +227,76 @@ class LoadCaseBasic(BasicLoadMain):
         #
         #
         return self._nodes
-
     #
     #
     def beam(self, values:tuple|list|dict|None=None,
              df=None):
         """ """
-        if isinstance(values, (list, tuple)):
-            if isinstance(values[0], (list, tuple, dict)):
-                for item in values:
-                    if isinstance(item, dict):
-                        load_name = item['load']
-                        beamid = item['beam']
-                    elif isinstance(item, (list, tuple)):
-                        beamid = item.pop(1)
-                        load_name = item.pop(0)
-                    
-                    #load_name = item[0]
+        if values:
+            if isinstance(values, dict):
+                beamid = values['beam']
+                if isinstance(beamid, (list, tuple)):
+                    bitems = len(beamid)
+                    values = self._set_load(values, steps=bitems)
+                    db = DBframework()
+                    dfnew = db.DataFrame(data=values)                    
+                    #
+                    basic = dfnew.groupby(['load'])
+                    for x, load_name in enumerate(basic.groups):
+                        load = basic.get_group((load_name,)) #.copy()
+                        bload = self.__getitem__(load_name)
+                        bload._beam.df = load
+                else:
+                    load_name = values['load']
                     try:
                         self.__setitem__(load_name, load_name)
                     except Warning:
                         pass
-                    #
+                    bload = self.__getitem__(load_name)                    
+                    bload._beam[beamid] = values
+            elif isinstance(values, (list, tuple)):
+                if isinstance(values[0], (list, tuple, dict)):
+                    for item in values:
+                        if isinstance(item, dict):
+                            load_name = item['load']
+                            beamid = item['beam']
+                            load =  item
+                        elif isinstance(item, (list, tuple)):
+                            load_name = item[0]
+                            beamid = item[1]
+                            load =  item[2:]
+                            #beamid = item.pop(1)
+                            #load_name = item.pop(0)
+                        # check if basic load name exist
+                        try:
+                            self.__setitem__(load_name, load_name)
+                        except Warning:
+                            pass
+                        # push beam load data
+                        bload = self.__getitem__(load_name)
+                        bload._beam[beamid] = load
+                else:
+                    load_name = values[0]
+                    try:
+                        self.__setitem__(load_name, load_name)
+                    except Warning:
+                        pass
                     bload = self.__getitem__(load_name)
-                    #beamid = item[1]
-                    bload._beam[beamid] = item
-            else:
-                load_name = values[0]
-                try:
-                    self.__setitem__(load_name, load_name)
-                except Warning:
-                    pass
-                bload = self.__getitem__(load_name)
-                beamid = values[1]
-                bload._beam[beamid] = values[2:]
-        
-        elif isinstance(values, dict):
-            load_name = values['load']
-            try:
-                self.__setitem__(load_name, load_name)
-            except Warning:
-                pass
-            bload = self.__getitem__(load_name)
-            beamid = values['beam']
-            if isinstance(beamid, (list, tuple)):
-                for item in beamid:
-                    bload._beam[item] = values
-            else:
-                bload._beam[beamid] = values    
+                    beamid = values[1]
+                    bload._beam[beamid] = values[2:]        
         #
         # dataframe input
         try:
             columns = list(df.columns)
-            header = {}
-            for key in columns:
-                if re.match(r"\b(id|name|load(s)?)\b", key, re.IGNORECASE):
-                    header[key] = 'name'
-                    
-                elif re.match(r"\b(type)\b", key, re.IGNORECASE):
-                    header[key] = 'type'
-                
-                elif re.match(r"\b(title|comment)\b", key, re.IGNORECASE):
-                    header[key] = 'title'
-                #
-                elif re.match(r"\b(beam(s)?(\_)?(name|id)?)\b", key, re.IGNORECASE):
-                    header[key] = 'beam'
-                #
-                # Load
-                #
-                elif re.match(r"\b(a|L(0|p))\b", key, re.IGNORECASE):
-                    header[key] = 'L0'
-                
-                elif re.match(r"\b(b|L1)\b", key, re.IGNORECASE):
-                    header[key] = 'L1'
-                #
-                # Point
-                #
-                header = read_point(key, header)
-                #
-                # Line
-                #
-                header = read_line(key, header)
-            #
-            beam_load = df[header.keys()].copy()
-            beam_load.rename(columns=header, inplace=True)
-            #
+            beamid = df['beam']
+            bitems = len(beamid)
+            values = self._set_load(df, steps=bitems)
             # Set basic load if doesn't exist
-            basic = beam_load.groupby(['name'])
+            basic = values.groupby(['load'])
             for x, load_name in enumerate(basic.groups):
-                load_title = f"{load_name}_{x + 1}"
-                try:
-                    self.__setitem__(load_name, load_title)
-                except Warning:
-                    pass
-                #
+                load = basic.get_group((load_name,)) #.copy()
                 bload = self.__getitem__(load_name)
-                loadx = basic.get_group(load_name).copy()
-                bload._beam.df = loadx
+                bload._beam.df = load            
             #
             return 
         except AttributeError:
@@ -330,20 +304,27 @@ class LoadCaseBasic(BasicLoadMain):
         #
         #print('beam load')
         return self._beams
-    #    
-    #
-
+#  
+#
+def check_column(col: list|tuple|str|int, steps: int) -> list:
+    """ """
+    if isinstance(col, (list, tuple)):
+        if len(col) != steps:
+            raise IOError(f'items {len(col)} <> {steps}')
+        return col
+    else:
+        return [col for _ in range(steps)]
+# 
 #
 #
 class LoadTypeBasic(BasicLoadMain):
     __slots__ = ['name', 'title', 'number', 
                  '_node', '_beam', '_selfweight']
-    #def __init__(self, name: str | int, number: int, title: str):
-    #    """
-    #    """
-    #    self.name = name
-    #    self.number = number
-    #    self.title = title
+    
+    def __init__(self):
+        """
+        """
+        super().__init__()
     #
     def __setitem__(self, load_name: str | int,
                     properties: list[float]) -> None:
@@ -424,184 +405,87 @@ class LoadTypeBasic(BasicLoadMain):
     #
     # -----------------------------------------------
     #
+    #
     def node(self, values:tuple|list|None=None,
              df=None):
         """ Nodal load"""
-        # Input data for specific basic node load 
-        if isinstance(values, (list, tuple)):
-            try:
-                nodal = self._node
-            except AttributeError:
-                raise IOError('Basic Load name is required')
-            #
-            if isinstance(values[0], (list, tuple)):
-                for value in values:
-                    #load = [self.name] + value[1:]
-                    nodal[value[0]] = value[1:]
-            else:
-                #load = [self.name] + values[1:]
-                nodal[values[0]] = values[1:]
-        #
+        if values:
+            # Input data for specific basic node load
+            if isinstance(values, dict):
+                nodeid = values['node']
+                if isinstance(nodeid, (list, tuple)):
+                    db = DBframework()
+                    dfnew = db.DataFrame(data=values)
+                    dfnew['load'] = self.name
+                    self._node.df = dfnew
+                else:
+                    self._node[nodeid] = values
+            elif isinstance(values, (list, tuple, dict)):
+                if isinstance(values[0], (list, tuple, dict)):
+                    for item in values:
+                        if isinstance(item, dict):
+                            nodeid = item['node']
+                            load = item
+                        elif isinstance(item, (list, tuple)):
+                            nodeid = item[0]
+                            load = item[1:]
+                        #
+                        self._node[nodeid] = load
+                else:
+                    self._node[values[0]] = values[1:]
         #
         # dataframe input
         try:
             columns = list(df.columns)
-            1 / 0
+            df['load'] = self.name
+            self._node.df = df            
         except AttributeError:
             pass
-        #
         #
         return self._node
     #
     #
-    def beam(self, values:tuple|list|None=None,
+    def beam(self, values:tuple|list|dict|None=None,
              df=None):
         """ beam loading """
-        if isinstance(values, (list, tuple)):
-            if isinstance(values[0], (list, tuple)):
-                for value in values:
-                    #try:
-                    #    self._f2u_beams[value[0]]
-                    #except KeyError:
-                    #    raise IOError(f"beam {value[0]} not found")
-                    #
-                    self._beam[value[0]] = value[1:]
-            else:
-                #try:
-                #    self._f2u_beams[values[0]]
-                #except KeyError:
-                #    raise IOError(f"beam {values[0]} not found")
-                #
-                self._beam[values[0]] = values[1:]
+        if values:
+            if isinstance(values, dict):
+                beamid = values['beam']
+                if isinstance(beamid, (list, tuple)):
+                    db = DBframework()
+                    dfnew = db.DataFrame(data=values)
+                    dfnew['load'] = self.name
+                    self._beam.df = dfnew
+                else:
+                    self._beam[beamid] = values
+            elif isinstance(values, (list, tuple)):
+                if isinstance(values[0], (list, tuple, dict)):
+                    for item in values:
+                        if isinstance(item, dict):
+                            beamid = item['beam']
+                            load =  item
+                        elif isinstance(item, (list, tuple)):
+                            beamid = item[0]
+                            load =  item[1:]
+                        #
+                        self._beam[beamid] = load
+                else:
+                    self._beam[values[0]] = values[1:]
         # dataframe input
         try:
             columns = list(df.columns)
-            header = {}
-            for key in columns:
-                if re.match(r"\b(id|name|load(s)?)\b", key, re.IGNORECASE):
-                    header[key] = 'name'
-                    
-                elif re.match(r"\b(type)\b", key, re.IGNORECASE):
-                    header[key] = 'type'
-                
-                elif re.match(r"\b(title|comment)\b", key, re.IGNORECASE):
-                    header[key] = 'title'
-                #
-                elif re.match(r"\b(beam(s)?(\_)?(name|id)?)\b", key, re.IGNORECASE):
-                    header[key] = 'beam'
-                #
-                # Load
-                #
-                elif re.match(r"\b(a|L(0|p))\b", key, re.IGNORECASE):
-                    header[key] = 'L0'
-                
-                elif re.match(r"\b(b|L1)\b", key, re.IGNORECASE):
-                    header[key] = 'L1'
-                #
-                # Point
-                #
-                header = read_point(key, header)
-                #
-                # Line
-                #
-                header = read_line(key, header)
-            #
-            beam_load = df[header.keys()].copy()
-            beam_load.rename(columns=header, inplace=True)
-            #
-            #
-            # Set basic load if doesn't exist
-            basic = beam_load.groupby(['name'])
-            for x, load_name in enumerate(basic.groups):
-                load_title = f"{load_name}_{x + 1}"
-                try:
-                    self.__setitem__(load_name, load_title)
-                except Warning:
-                    pass
-                #
-                bload = self.__getitem__(load_name)
-                loadx = basic.get_group(load_name).copy()
-                bload._beam.df = loadx
-                #
-            #
+            df['load'] = self.name
+            self._beam.df = df
             return 
         except AttributeError:
             pass
         #
-        #print('beam load')
-        #1 / 0
         return self._beam
     #    
     #
     # -----------------------------------------------
     #
+    #
 
-#
-#
-def read_point(key, header):
-    """ """
-    if re.match(r"\b(fx)\b", key, re.IGNORECASE):
-        header[key] = 'fx'
-    
-    elif re.match(r"\b(fy)\b", key, re.IGNORECASE):
-        header[key] = 'fy'
-    
-    elif re.match(r"\b(fz)\b", key, re.IGNORECASE):
-        header[key] = 'fz'
-    
-    elif re.match(r"\b(mx)\b", key, re.IGNORECASE):
-        header[key] = 'mx'
-    
-    elif re.match(r"\b(my)\b", key, re.IGNORECASE):
-        header[key] = 'my'
-    
-    elif re.match(r"\b(mz)\b", key, re.IGNORECASE):
-        header[key] = 'mz'
-    #
-    return header
-#
-def read_dispmass(key, header):
-    """ """
-    if re.match(r"\b(x)\b", key, re.IGNORECASE):
-        header[key] = 'x'
-    
-    elif re.match(r"\b(y)\b", key, re.IGNORECASE):
-        header[key] = 'y'
-    
-    elif re.match(r"\b(z)\b", key, re.IGNORECASE):
-        header[key] = 'z'
-    
-    elif re.match(r"\b(rx)\b", key, re.IGNORECASE):
-        header[key] = 'rx'
-    
-    elif re.match(r"\b(ry)\b", key, re.IGNORECASE):
-        header[key] = 'ry'
-    
-    elif re.match(r"\b(rz)\b", key, re.IGNORECASE):
-        header[key] = 'rz'
-    #
-    return header
-#
-def read_line(key, header):
-    """ """
-    if re.match(r"\b(qx0)\b", key, re.IGNORECASE):
-        header[key] = 'qx0'
-    
-    elif re.match(r"\b(qy0)\b", key, re.IGNORECASE):
-        header[key] = 'qy0'
-    
-    elif re.match(r"\b(qz0)\b", key, re.IGNORECASE):
-        header[key] = 'qz0'
-    
-    elif re.match(r"\b(qx1)\b", key, re.IGNORECASE):
-        header[key] = 'qx1'
-    
-    elif re.match(r"\b(qy1)\b", key, re.IGNORECASE):
-        header[key] = 'qy1'
-    
-    elif re.match(r"\b(qz1)\b", key, re.IGNORECASE):
-        header[key] = 'qz1'
-    #
-    return header
 #
 #

@@ -11,8 +11,8 @@ from dataclasses import dataclass
 #
 from steelpy.sections.utils.shape.main import SectionMain
 from steelpy.utils.sqlite.utils import create_connection #, create_table
-from steelpy.sections.utils.shape.utils import ShapeProperty, get_sect_prop_df
-#from steelpy.sections.utils.shape.main import ShapeGeometry #, get_shape
+from steelpy.sections.utils.operations import get_sect_prop_df
+from steelpy.sections.utils.shape.utils import ShapeProperty
 from steelpy.sections.utils.shape.stress import ShapeStressBasic
 from steelpy.utils.dataframe.main import DBframework
 #

@@ -11,7 +11,7 @@ from datetime import datetime as dt
 
 # package imports
 from steelpy.trave.process.dynamic import eigen, trnsient
-#from steelpy.trave.process.solution import UnSolver
+#from steelpy.trave.utils.solution import UnSolver
 from steelpy.trave.process.static import StaticSolver
 from steelpy.trave.postprocess.main import PostProcess
 #

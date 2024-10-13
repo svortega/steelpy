@@ -10,7 +10,7 @@ from typing import Union, ClassVar
 from steelpy.design.codes.api.wsd_22ed import APIwsd22ed
 from steelpy.design.beam.process import BeamDesignParameters, CodeResults
 #from steelpy.f2uModel.load.operations.actions import Actions
-#from steelpy.f2uModel.sections.process.stress import BeamStress
+#from steelpy.f2uModel.sections.utils.stress import BeamStress
 import steelpy.design.codes.process.print_report as print_report
 
 #

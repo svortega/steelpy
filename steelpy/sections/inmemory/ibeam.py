@@ -50,14 +50,14 @@ class Ibeam(ShapeBasic):
             mnumber = next(self.get_number())
             self._number.append(mnumber)
             #
-            self._d.append(parameters[0])
-            self._tw.append(parameters[1])
-            self._bft.append(parameters[2])
-            self._tft.append(parameters[3])
-            self._bfb.append(parameters[4])
-            self._tfb.append(parameters[5])
-            self._r.append(parameters[6])
-            self._title.append(parameters[7])
+            self._d.append(parameters.d)
+            self._tw.append(parameters.tw)
+            self._bft.append(parameters.bf)
+            self._tft.append(parameters.tf)
+            self._bfb.append(parameters.bfb)
+            self._tfb.append(parameters.tfb)
+            self._r.append(parameters.r)
+            self._title.append(parameters.title)
             #            
     #
     def __getitem__(self, shape_name: str | int):

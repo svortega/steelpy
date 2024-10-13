@@ -8,7 +8,7 @@ from dataclasses import dataclass
 # from typing import NamedTuple
 
 # package imports
-from steelpy.ufo.process.elements.nodes import CoordCartesian as Point
+from steelpy.ufo.process.node import CoordCartesian as Point
 
 # from point import Point
 # from euclid import Point3 as Point
@@ -253,13 +253,13 @@ class DistancePointLine3D:
         Calculate the scalar distance and direction (beam member 'X' distance) Pa occurs
         from each line segment end point.
         """
-        self.p1 = Point(*p1, name="p1", number=1, index=0, boundary=None)
-        self.p2 = Point(*p2, name="p2", number=2, index=1, boundary=None)
+        self.p1 = Point(*p1, name="p1", number=1, index=0, boundary=None, title=None)
+        self.p2 = Point(*p2, name="p2", number=2, index=1, boundary=None, title=None)
 
     #
     def point(self, Pb: list[float]) -> None:
         """ """
-        self.Pb = Point(*Pb, name="Pb", number=3, index=2, boundary=None)
+        self.Pb = Point(*Pb, name="Pb", number=3, index=2, boundary=None, title=None)
         # return self.dist
 
     #
@@ -275,7 +275,8 @@ class DistancePointLine3D:
         self.Pa = Point(self.p1.x + u * (self.p2.x - self.p1.x),
                         self.p1.y + u * (self.p2.y - self.p1.y),
                         self.p1.z + u * (self.p2.z - self.p1.z),
-                        name="Pa", number=4, index=3, boundary=None)
+                        name="Pa", number=4, index=3,
+                        boundary=None, title=None)
         #
         # self.Pmem1 = self.Pa
         self.dist = round(self.Pa.distance(self.Pb), 8)
@@ -322,9 +323,11 @@ class DistancePointLine3D:
             self.uv = Point((self.Pa.x - self.Pb.x) / self.dist,
                             (self.Pa.y - self.Pb.y) / self.dist,
                             (self.Pa.z - self.Pb.z) / self.dist,
-                            name="uv", number=5)
+                            name="uv", number=5, index=4,
+                            boundary=None, title=None)
         else:
-            self.uv = Point(0.0, 0.0, 0.0, name="uv", number=5, index=4, boundary=None)
+            self.uv = Point(0.0, 0.0, 0.0, name="uv", number=5, index=4,
+                            boundary=None, title=None)
 
     #
     def is_on_segment(self, Pb: list[float], tol: float = 0.05) -> bool:

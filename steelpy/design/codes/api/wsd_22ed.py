@@ -7,7 +7,7 @@ import math
 from typing import NamedTuple, Tuple
 
 # package imports
-#from steelpy.codes.process.process import ChapterResults, SummaryResults
+#from steelpy.codes.utils.utils import ChapterResults, SummaryResults
 
 #
 #

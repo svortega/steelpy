@@ -16,7 +16,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 #
 from steelpy.utils.dataframe.main import DBframework
-#from steelpy.metocean.process.beamhydro import BeamMorisonWave
+#from steelpy.metocean.utils.beamhydro import BeamMorisonWave
 from steelpy.utils.math.operations import linstep
 #
 
