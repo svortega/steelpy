@@ -205,7 +205,7 @@ basic[3].beam.point = {'fx': -5000 * units.kN,  # beam point axial load
 print(basic)
 #
 #for load_name, lcase in basic.items():
-#    # Beam line load process
+#    # Beam line load utils
 #    for bname, loads in lcase.beam.items():
 #        #line_load.items():
 #        beam_item = beam[bname]
