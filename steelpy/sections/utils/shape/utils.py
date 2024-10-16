@@ -206,13 +206,13 @@ def get_sect_dict(parameters: dict,
             except AttributeError:
                 raise IOError("units required")
         # b
-        if re.match(r"\b(b(ase)?|w(idth)?((_|-|\s*)?f(lange)?)?)\b", key, re.IGNORECASE):
+        if re.match(r"\b((b(ase)?|w(idth)?)(_|-|\s*)?(f(lange)?)?)\b", key, re.IGNORECASE):
             try:
                 section[2] = item.value
             except AttributeError:
                 raise IOError("units required")
         # bt
-        elif re.match(r"\b(t(hickness|hk)?(_|-|\s*)?b(ase)?|f(lange)?)\b", key, re.IGNORECASE):
+        elif re.match(r"\b(t(hickness|hk)?(_|-|\s*)?(b(ase)?|f(lange)?))\b", key, re.IGNORECASE):
             try:
                 section[3] = item.value
             except AttributeError:

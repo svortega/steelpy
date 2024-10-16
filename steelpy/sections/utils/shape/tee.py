@@ -8,12 +8,13 @@ from __future__ import annotations
 from collections import namedtuple
 from dataclasses import dataclass
 import math
-#import re
+import re
 #
 #
 # package imports
 from steelpy.sections.utils.shape.utils import (ShapeProperty, get_sect_list,
-                                                get_sect_dict, ShapeDim)
+                                                get_sect_dict, ShapeDim,
+                                                get_prop_dict)
 from steelpy.sections.utils.shape.stress import ShapeStressBasic
 #
 #
@@ -80,7 +81,7 @@ class TeeBasic(ShapeStressBasic):
     tw: float
     b: float
     tb: float
-    #shape:str = 'T Section'
+    r:float = 0.0
     #
     # --------------------------------------------
     @property
@@ -416,3 +417,21 @@ def get_Tsection(parameters: list|tuple|dict)->list:
     #
     prop = ['Tee', *prop]
     return ShapeDim(*prop)
+#
+#
+def get_Tsect_dict(parameters: list|tuple|dict):
+    """ """
+    section = get_sect_dict(parameters, number= 11, step= 5)
+    #section.extend(get_prop_dict(parameters))
+    name = 'Tee'
+    for key, item in parameters.items():
+        if re.match(r"\b((section|shape)?(_|-|\s*)?(name|id))\b", key, re.IGNORECASE):
+            name = item
+            break
+    properties = TeeBasic(name=name,
+                          d=section[0], tw=section[1],
+                          b=section[2], tb=section[3],
+                          r=section[4])
+    return section, properties._properties(poisson=0.30)
+#
+#

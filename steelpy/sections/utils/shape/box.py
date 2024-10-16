@@ -84,7 +84,7 @@ class BoxBasic(ShapeStressBasic):
     tw: float
     b: float
     tb: float
-    #shape:str = 'box'
+    r:float = 0.0
     #
     # --------------------------------------------
     @property
@@ -406,5 +406,19 @@ def get_box_section(parameters: list|tuple|dict)->list:
     prop = ['Box', *prop]
     return ShapeDim(*prop)
 #
-#   
+#
+def get_BoxSect_dict(parameters: list|tuple|dict):
+    """ """
+    section = get_sect_dict(parameters, number= 11, step= 5)
+    #section.extend(get_prop_dict(parameters))
+    name = 'Box'
+    for key, item in parameters.items():
+        if re.match(r"\b((section|shape)?(_|-|\s*)?(name|id))\b", key, re.IGNORECASE):
+            name = item
+            break
+    properties = BoxBasic(name=name,
+                          d=section[0], tw=section[1],
+                          b=section[2], tb=section[3],
+                          r=section[4])
+    return section, properties._properties(poisson=0.30) 
 #

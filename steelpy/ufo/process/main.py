@@ -70,12 +70,10 @@ class ufoBasicModel:
             if isinstance(values, dict):
                 sname = values['name']
                 if isinstance(sname, (list | tuple)):
-                    1 / 0
                     db = DBframework()
-                    # df = db.DataFrame(values)
-                    self._sections.df = db.DataFrame(values)
+                    newdf = db.DataFrame(values)
+                    self._sections.df = newdf
                 else:
-                    sname = values.pop('name')
                     self._sections[sname] = values
             elif isinstance(values, (list, tuple)):
                 if isinstance(values[0], (list, tuple)):
@@ -93,73 +91,7 @@ class ufoBasicModel:
         try:
             #df.columns
             columns = list(df.columns)
-            header = {}
-            for key in columns:
-                if re.match(r"\b(id|name|section(s)?)\b", key, re.IGNORECASE):
-                    header[key] = 'name'
-                
-                elif re.match(r"\b(type)\b", key, re.IGNORECASE):
-                    header[key] = 'type'
-                
-                elif re.match(r"\b(title)\b", key, re.IGNORECASE):
-                    header[key] = 'title'
-                #
-                # tubular
-                #
-                elif re.match(r"\b(d(iamet(er|re))?)\b", key, re.IGNORECASE):
-                    header[key] = 'diameter'
-                
-                elif re.match(r"\b((wall(_|\s*)?)?t(hickness)?(_|-|\s*)?(w)?)\b", key, re.IGNORECASE):
-                    header[key] = 'wall_thickness'
-                #
-                # PG/box/tee/channel
-                #
-                elif re.match(r"\b(height)\b", key, re.IGNORECASE):
-                    header[key] = 'height'
-                
-                elif re.match(r"\b(web_thickness)\b", key, re.IGNORECASE):
-                    header[key] = 'web_thickness'
-                
-                elif re.match(r"\b((top(_|\s*)?flange(_|\s*)?)?width)\b", key, re.IGNORECASE):
-                    header[key] = 'top_flange_width'
-                
-                elif re.match(r"\b(top(_|\s*)?flange(_|\s*)?thickness)\b", key, re.IGNORECASE):
-                    header[key] = 'top_flange_thickness'
-                
-                elif re.match(r"\b(bottom(_|\s*)?flange(_|\s*)?width)\b", key, re.IGNORECASE):
-                    header[key] = 'bottom_flange_width'
-                
-                elif re.match(r"\b(bottom(_|\s*)?flange(_|\s*)?thickness)\b", key, re.IGNORECASE):
-                    header[key] = 'bottom_flange_thickness'
-                
-                elif re.match(r"\b(fillet(_|\s*)?radius)\b", key, re.IGNORECASE):
-                    header[key] = 'fillet_radius'
-                #
-                # ops
-                #
-                elif re.match(r"\b(SA(_|\s*)?inplane)\b", key, re.IGNORECASE):
-                    header[key] = 'SA_inplane'
-                
-                elif re.match(r"\b(SA(_|\s*)?outplane)\b", key, re.IGNORECASE):
-                    header[key] = 'SA_outplane'
-                
-                elif re.match(r"\b(shear(_|\s*)?stress)\b", key, re.IGNORECASE):
-                    header[key] = 'shear_stress'
-                
-                elif re.match(r"\b(build)\b", key, re.IGNORECASE):
-                    header[key] = 'build'
-                
-                elif re.match(r"\b(compactness)\b", key, re.IGNORECASE):
-                    header[key] = 'compactness'                
-            #
-            #
-            sect = df[header.keys()].copy()
-            sect.rename(columns=header, inplace=True)#
-            #
-            if not 'title' in sect:
-                sect['title'] = None
-            #
-            self._sections.df = sect
+            self._sections.df = df
         except AttributeError:
             pass
         #

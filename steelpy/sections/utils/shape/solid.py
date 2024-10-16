@@ -1152,7 +1152,7 @@ def get_solid_section(shape:str, parameters: list|tuple|dict)->list:
     if isinstance(parameters,(list,tuple)):
         prop = get_sect_list(parameters, number= 9, step=3)
     elif isinstance(parameters, dict):
-        prop = get_sect_dict(parameters)
+        prop, sect = get_SolidSect_dict(shape, parameters)
     else:
         raise IOError('Section data not valid')
     #
@@ -1184,57 +1184,71 @@ def get_solid_section(shape:str, parameters: list|tuple|dict)->list:
     return SolidDim(*section)
 #
 #
-def get_sect_dict(parameters: dict,
-                  number:int = 9, step:int=3)->list:
-    """Return : [diameter/height, base, a,
+def get_SolidSect_dict(shape:str, parameters: dict,
+                  number:int = 9, step:int=4)->list:
+    """Return : [diameter/height, base, a, c,
                  FAvy, FAvz, shear_stress,
                  build, compactness, title]"""
     # basic information
     section = [None] * step
-    #section[step+0] = 1.0       # FAvy
-    #section[step+1] = 1.0       # FAvz
-    #section[step+2] = 'maximum' # shear_stress
-    #section[step+3] = 'welded'  # build
+    name = 'Solid'
     #
-    #matkeys = list(parameters.keys())
     for key, item in parameters.items():
-        if re.match(r"\b(d(iamet(re|er)?)?|h(eight)?|depth)\b", key, re.IGNORECASE):
+        if re.match(r"\b(d(iamet(re|er)|epth)?|h(eight)?)\b", key, re.IGNORECASE):
             try:
                 section[0] = item.value
             except AttributeError:
                 raise IOError("units required")
-        #elif re.match(r"\b(h(eight)?|depth)\b", key, re.IGNORECASE):
-        #    try:
-        #        section[1] = item.value
-        #    except AttributeError:
-        #        raise IOError("units required")
+
         elif re.match(r"\b(b(ase)?)\b", key, re.IGNORECASE):
             try:
                 section[1] = item.value
             except AttributeError:
                 raise IOError("units required")
+        
         elif re.match(r"\b(a)\b", key, re.IGNORECASE):
             try:
                 section[2] = item.value
             except AttributeError:
                 raise IOError("units required")
-        #elif re.match(r"\b(c)\b", key, re.IGNORECASE):
-        #    try:
-        #        section[3] = item.value
-        #    except AttributeError:
-        #        raise IOError("units required")
-        #elif re.match(r"\b(SA(_|\s*)?inplane)\b", key, re.IGNORECASE):
-        #    section[step] = item
-        #elif re.match(r"\b(SA(_|\s*)?outplane)\b", key, re.IGNORECASE):
-        #    section[step+1] = item
-        #elif re.match(r"\b(shear(_|\s*)?stress)\b", key, re.IGNORECASE):
-        #    section[step+2] = item
-        #elif re.match(r"\b(build)\b", key, re.IGNORECASE):
-        #    section[step+3] = item
-        #elif re.match(r"\b(compactness)\b", key, re.IGNORECASE):
-        #    section[step+4] = item
-        #elif re.match(r"\b(title)\b", key, re.IGNORECASE):
-        #    section[step+5] = item
+        
+        elif re.match(r"\b(c)\b", key, re.IGNORECASE):
+            try:
+                section[3] = item.value
+            except AttributeError:
+                raise IOError("units required")        
+
+        elif re.match(r"\b((section|shape)?(_|-|\s*)?(name|id))\b", key, re.IGNORECASE):
+            name = item
+    #
+    #
+    match shape:
+        case 'Rectangle bar':
+            if not section[1]:
+                section[1] = section[0]
+            properties = RectangleSolid(name=name,
+                                        depth=section[0],
+                                        width=section[1])
+        case 'Trapezoid bar':
+            if not section[1]:
+                section[1] = section[0]
+                #section[2] = section[0]
+                properties = RectangleSolid(name=name,
+                                            depth=section[0],
+                                            width=section[1])
+            else:
+                if not section[2]:
+                    section[2] = section[1]
+                if not section[3]:
+                    section[3] = 0
+                properties = TrapezoidSolid(name=name,
+                                            depth=section[0],
+                                            width=section[1],
+                                            a=section[2],
+                                            c=section[3])
+        case 'Circular bar':
+            properties = CircleSolid(name=name,
+                                     d=section[0])
     #
     section.extend(get_prop_dict(parameters))
-    return section
+    return section, properties._properties(poisson=0.30)

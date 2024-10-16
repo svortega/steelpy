@@ -20,15 +20,30 @@ material["MAT345"] = ['elastic', 345.0 * units.MPa]
 #
 # -----------------------------------
 # Define sections
-section = concept[10].section()
 # Caisson
-section["T1350x40"] = ['Tubular', 1350 * units.mm, 40 * units.mm]
-section["T1350x25"] = ['Tubular', 1350 * units.mm, 25 * units.mm]
-section["T1350x15"] = ['Tubular', 1350 * units.mm, 15 * units.mm]
+#section = concept[10].section()
+concept[10].section({'type':'tubular',
+                     'name':["T1350x40","T1350x25","T1350x15"],
+                     'd':1350 * units.mm,
+                     'tw':[40 * units.mm, 25 * units.mm, 15 * units.mm]})
+# Caisson
+#section["T1350x40"] = ['Tubular', 1350 * units.mm, 40 * units.mm]
+#section["T1350x25"] = ['Tubular', 1350 * units.mm, 25 * units.mm]
+#section["T1350x15"] = ['Tubular', 1350 * units.mm, 15 * units.mm]
 # stub member
-section["T559x16"] = ['Tubular', 559 * units.mm, 15.9 * units.mm]
-section["T610x16"] = ['Tubular', 610 * units.mm, 15.9 * units.mm]
+concept[10].section({'type':'tubular',
+                     'name':["T559x16", "T610x16"],
+                     'd':[559 * units.mm, 610 * units.mm],
+                     'tw':[15.9 * units.mm, 15.9 * units.mm]})
+#section["T559x16"] = ['Tubular', 559 * units.mm, 15.9 * units.mm]
+#section["T610x16"] = ['Tubular', 610 * units.mm, 15.9 * units.mm]
+#
+concept[10].section({'type':'Circular bar',
+                     'name': [20, 30],
+                     'd': [100*units.mm, 200*units.mm]})
+#
 # jacket
+section = concept[10].section()
 section["T800x30"] = ['Tubular', 800 * units.mm, 30 * units.mm]
 section["T900x35"] = ['Tubular', 900 * units.mm, 35 * units.mm]
 section["T100x25"] = ['Tubular', 100 * units.mm, 25 * units.mm]

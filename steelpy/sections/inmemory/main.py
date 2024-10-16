@@ -83,6 +83,7 @@ class SectionIM(SectionMain):
     @property
     def df(self):
         """ """
+        1/0
         db = DBframework()
         #header = ['number', 'name', 'title', 'type', 
         #          'diameter', 'wall_thickness',
@@ -134,6 +135,7 @@ class SectionIM(SectionMain):
     @df.setter
     def df(self, df):
         """ """
+        1/0
         super().df(df)
         # Update data keeping
         self._type.extend(df['type'].tolist())

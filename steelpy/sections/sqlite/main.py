@@ -5,7 +5,7 @@
 # Python stdlib imports
 from __future__ import annotations
 #from collections.abc import Mapping
-#import re
+import re
 #
 #
 # package imports
@@ -19,6 +19,7 @@ from .box import BoxSQL
 from .ibeam import IbeamSQL
 from .solid import SolidSectionSQL
 #
+from steelpy.sections.utils.operations import get_sect_df
 from steelpy.sections.sqlite.utils import SectionMainSQL
 #from steelpy.utils.dataframe.main import DBframework
 #
@@ -159,64 +160,74 @@ class SectionSQL(SectionMainSQL):
         create_table(conn, table)
     #
     #
+    # -----------------------------------------------
+    #
+    @property
+    def df(self):
+        """ raw data for dataframe"""
+        1/0
+        #return self._sections.df
 
+    @df.setter
+    def df(self, df):
+        """ """
+        sectdf, propdf = get_sect_df(df)
+        sectdf['mesh_id'] = self._component
+        # Section
+        header = ['name', 'mesh_id',
+                  'SA_inplane', 'SA_outplane',
+                  'shear_stress', 'build',
+                  'compactness', 'title']
+        conn = create_connection(self.db_file)
+        with conn:
+            sectdf[header].to_sql('Section', conn,
+                                  index_label=header,
+                                  if_exists='append', index=False)
+        # Section
+        with conn:
+            rows = get_sections(conn, component=self._component)
+            sectid = {item[1]: item[0] for item in rows}
+        #
+        # SectionGeometry
+        sectdf['section_id'] = sectdf['name'].apply(lambda x: sectid[x])
+        header = ['section_id', 'type',
+                  'diameter', 'wall_thickness',
+                  'height', 'web_thickness',
+                  'top_flange_width', 'top_flange_thickness',
+                  'bottom_flange_width', 'bottom_flange_thickness',
+                  'fillet_radius']
+        conn = create_connection(self.db_file)
+        with conn:
+            sectdf[header].to_sql('SectionGeometry', conn,
+                                  index_label=header,
+                                  if_exists='append', index=False)
+        #
+        # SectionProperty
+        propdf['section_id'] = propdf['name'].apply(lambda x: sectid[x])
+        header = ['section_id',
+                  'area', 'Zc', 'Yc',
+                  'Iy', 'Zey', 'Zpy', 'ry', 
+                  'Iz', 'Zez', 'Zpz', 'rz',
+                  'J', 'Cw',
+                  'alpha_sy', 'alpha_sz']
+        conn = create_connection(self.db_file)
+        with conn:
+            propdf[header].to_sql('SectionProperty', conn,
+                                  index_label=header,
+                                  if_exists='append', index=False)
+        #
+#
+def get_sections(conn, component: int):
+    """
+    """
+    query = (component, )
+    table = "SELECT * from Section \
+             WHERE mesh_id = ?;"
+    cur = conn.cursor()
+    cur.execute(table, query)
+    row = cur.fetchall()
+    return row
 #
 #
-#
-def get_shapeSQL(shape_type, geometry):
-    """ """
-    if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
-        shape = TubularQSL()
-        return TubularQSL(#name=geometry[0], 
-                          diameter=geometry[3], thickness=geometry[4]) 
-
-    #elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b", shape_type, re.IGNORECASE):
-    #    return self._solid[shape_name]
-    elif re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
-        d = geometry[3]
-        return CircleBasic(d=d)
-
-    elif re.match(r"\b((solid|bar(\_)?)?square|rectangle)\b", shape_type, re.IGNORECASE):
-        d = geometry[3]
-        wb = geometry[7]
-        return RectangleBasic(#name=geometry[0],
-                              depth=d, width=wb)
-
-    elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
-        d = geometry[5]
-        wb = geometry[7]
-        wt = geometry[9]            
-        c = abs(wt - wb) / 2.0
-        return Trapeziod(#name=geometry[0],
-                         depth=d, width=wb, a=wt, c=c)    
-    
-    elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
-        return IbeamBasic(#name=geometry[0], 
-                          d=geometry[5], tw=geometry[6],
-                          bft=geometry[7], tft=geometry[8],
-                          bfb=geometry[9], tfb=geometry[10])
-    
-    elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-        return BoxBasic(#name=geometry[0], 
-                        d=geometry[5], tw=geometry[6],
-                        b=geometry[7], tb=geometry[8])
-    
-    elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-        return ChannelBasic(#name=geometry[0], 
-                            d=geometry[5], tw=geometry[6],
-                            b=geometry[7], tb=geometry[8])
-    
-    elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-        return TeeBasic(#name=geometry[0], 
-                        d=geometry[5], tw=geometry[6],
-                        b=geometry[7], tb=geometry[8])
-    
-    elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-        return AngleBasic(#name=geometry[0], 
-                          d=geometry[5], tw=geometry[6],
-                          b=geometry[7], r=0)
-    
-    else:
-        raise IOError(f' Section type {shape_type} not recognised')
 
 

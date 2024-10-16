@@ -21,33 +21,6 @@ from steelpy.sections.utils.shape.stress import ShapeStressBasic # BeamStress
 #from steelpy.utils.dataframe.main import DBframework
 #
 #
-#def find_tubular_dimensions(line_in: str) -> str:
-#    """
-#    """
-#    _key = {"diameter": r"\b(d(iamet(ro|er|re))?(y)?)\b",
-#            "thickness": r"\b((w(all)?(\_)?)?t(hickness|hk)?)\b"}
-#
-#    keyWord, line_out, _match = search_line(line_in, _key)
-#    return keyWord
-#
-#
-#
-#
-#def get_compactness(diameter: float, thickness: float) -> str:
-#    """
-#    """
-#    dt = diameter / thickness
-#    if dt > 80.0:
-#        compactness = 'slender'
-#        
-#    elif dt > 60.0:
-#        compactness = 'noncompact'
-#        
-#    else:
-#        compactness = 'compact'
-#        
-#    return compactness
-#
 #
 #-------------------------------------------------
 #
@@ -151,10 +124,9 @@ class TubularPoint(NamedTuple):
 #
 @dataclass(slots=True)
 class TubularBasic(ShapeStressBasic):
-    #name:str | int
+    """ """
     diameter:float
     thickness:float
-    #shape:str = 'tubular'
     #
     # --------------------------------------------
     @property
@@ -638,24 +610,24 @@ def get_tub_section(parameters: list|tuple|dict)->list:
                  FAvy, FAvz, shear_stress,
                  build, compactness, title]"""
     if isinstance(parameters,(list,tuple)):
-        prop = get_sect_list(parameters, number= 8, step= 2)
+        sect = get_sect_list(parameters, number= 8, step= 2)
     elif isinstance(parameters, dict):
-        prop = get_sect_dict(parameters)
+        sect, prop = get_TubSect_dict(parameters)
     else:
         raise IOError('Section data not valid')
     #
-    prop = ['Tubular', *prop]
-    return TubDim(*prop)
+    sect = ['Tubular', *sect]
+    return TubDim(*sect)
 #
 #
-def get_sect_dict(parameters: dict,
-                  number:int = 8, step:int=2)->list:
+def get_TubSect_dict(parameters: dict,
+                     number:int = 8, step:int=2)->list:
     """Return : [diameter, thickness,
                  FAvy, FAvz, shear_stress,
                  build, compactness, title]"""
     # basic information
     section = [None] * step
-    #
+    name = 'Tub'
     for key, item in parameters.items():
         if re.match(r"\b(d(iamet(ro|er|re))?(y)?)\b", key, re.IGNORECASE):
             try:
@@ -663,11 +635,16 @@ def get_sect_dict(parameters: dict,
             except AttributeError:
                 raise IOError("units required")
 
-        elif re.match(r"\b((w(all)?(_|\s*)?)?t(hickness|hk)?)\b", key, re.IGNORECASE):
+        elif re.match(r"\b((w(all)?(_|-|\s*)?)?t(hickness|hk)?(_|-|\s*)?(w(all)?)?)\b", key, re.IGNORECASE):
             try:
                 section[1] = item.value
             except AttributeError:
                 raise IOError("units required")
+        
+        elif re.match(r"\b((section|shape)?(_|-|\s*)?(name|id))\b", key, re.IGNORECASE):
+            name = item
     #
     section.extend(get_prop_dict(parameters))
-    return section
+    properties = TubularBasic(name=name,
+                              diameter=section[0], thickness=section[1])
+    return section, properties._properties(poisson=0.30)

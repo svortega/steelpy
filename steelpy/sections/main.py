@@ -206,59 +206,6 @@ class Section(Mapping):
     def df(self, df):
         """ """
         self._sections.df = df
-        #1 / 0
-        ## TODO: define if drop
-        ##df = df.drop_duplicates(['name'], keep='first')
-        #group = df.groupby("type", sort=False)
-        #for shape_type, section in group:
-        #    if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b",
-        #                shape_type, re.IGNORECASE):
-        #        # Bottom Flange
-        #        try:
-        #            section['bottom_flange_width'] =  section.apply(lambda x: x['top_flange_width']
-        #                                                            if x['bottom_flange_width']== ""
-        #                                                            else x['bottom_flange_width'], axis=1)
-        #        except KeyError:
-        #            section['bottom_flange_width'] = section['top_flange_width']
-        #        #
-        #        try:
-        #            section['bottom_flange_thickness'] =  section.apply(lambda x: x['top_flange_thickness']
-        #                                                            if x['bottom_flange_thickness']== ""
-        #                                                            else x['bottom_flange_thickness'], axis=1)
-        #        except KeyError:
-        #            section['bottom_flange_thickness'] = section['top_flange_thickness']                
-        #        #
-        #        try:
-        #            section['fillet_radius'] =  section.apply(lambda x: float(0.0)
-        #                                                            if x['fillet_radius']== ""
-        #                                                            else x['fillet_radius'], axis=1)
-        #        except KeyError:
-        #            section['fillet_radius'] = float(0.0)                
-        #        #
-        #        self._sections._ibeam.df= section
-        #    
-        #    elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-        #        self._sections._tee.df= section
-        #    
-        #    elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
-        #        self._sections._tubular.df= section
-        #    
-        #    elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapeziod|circular|round)\b",
-        #                   shape_type, re.IGNORECASE):
-        #        self._sections._solid.df= section
-        #    
-        #    elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-        #        self._sections._box.df= section
-        #    
-        #    elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-        #        self._sections._channel.df= section
-        #    
-        #    elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-        #        self._sections._angle.df= section
-        #    
-        #    else:
-        #        raise Exception(" section item {:} not recognized".format(shape_type))
-        #   
 #    
 # ---------------------------------
 #

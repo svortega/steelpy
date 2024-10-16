@@ -81,7 +81,7 @@ class ChannelBasic(ShapeStressBasic):
     tw: float
     b: float
     tb: float
-    #shape:str = 'Channel'
+    r:float = 0.0
     #
     # --------------------------------------------
     @property
@@ -496,4 +496,20 @@ def get_Csection(parameters: list|tuple|dict)->NamedTuple:
     #
     prop = ['Channel', *prop]
     return ShapeDim(*prop)
+#
+#
+def get_Csect_dict(parameters: list|tuple|dict):
+    """ """
+    section = get_sect_dict(parameters, number= 11, step= 5)
+    name = 'Box'
+    for key, item in parameters.items():
+        if re.match(r"\b((section|shape)?(_|-|\s*)?(name|id))\b", key, re.IGNORECASE):
+            name = item
+            break
+    properties = ChannelBasic(name=name,
+                              d=section[0], tw=section[1],
+                              b=section[2], tb=section[3],
+                              r=section[4])
+    return section, properties._properties(poisson=0.30)
+#
 #

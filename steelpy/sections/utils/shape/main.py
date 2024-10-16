@@ -135,10 +135,10 @@ class SectionMain(ShapeBasic):
         if re.match(r"\b(tub(ular)?|pipe)\b", shape_type, re.IGNORECASE):
             return self._tubular[shape_name]
 
-        elif re.match(r"\b((solid|bar(\_)?)?square|rectangle|trapezoid|circular|round)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b((solid|bar(_|-|\s*)?)?square|rectangle|trapezoid|circular|round)\b", shape_type, re.IGNORECASE):
             return self._solid[shape_name]
         
-        elif re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b(i((_|-|\s*)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b", shape_type, re.IGNORECASE):
             return self._ibeam[shape_name]
         
         elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
@@ -157,114 +157,7 @@ class SectionMain(ShapeBasic):
             raise IOError(f' Section type {shape_type} not recognised')
     # 
     #
-    # -----------------------------------------------
-    #
-    @property
-    def df(self):
-        """ """
-        db = DBframework()
-        #header = ['number', 'name', 'title', 'type', 
-        #          'diameter', 'wall_thickness',
-        #          'height', 'web_thickness',
-        #          'top_flange_width', 'top_flange_thickness',
-        #          'bottom_flange_width', 'bottom_flange_thickness',
-        #          'fillet_radius',
-        #          'SA_inplane', 'SA_outplane',
-        #          'shear_stress', 'build', 'compactness']
-        #
-        number = [x + 1 for x, item in enumerate(self._labels)]
-        #
-        datadf = {'number': number,
-                  'name' : self._labels,
-                  'title' : self._title,
-                  'type': self._type, 
-                  'diameter': [None for item in self._labels],
-                  'wall_thickness': [None for item in self._labels],
-                  'height': [None for item in self._labels],
-                  'web_thickness': [None for item in self._labels],
-                  'top_flange_width': [None for item in self._labels],
-                  'top_flange_thickness': [None for item in self._labels],
-                  'bottom_flange_width': [None for item in self._labels],
-                  'bottom_flange_thickness': [None for item in self._labels],
-                  'fillet_radius': [None for item in self._labels],
-                  'SA_inplane': [1.0 for item in self._labels],
-                  'SA_outplane': [1.0 for item in self._labels],
-                  'shear_stress': ['maximum' for item in self._labels],
-                  'build': ['welded' for item in self._labels],
-                  'compactness': [None for item in self._labels]}        
-        #
-        #sec_df = db.DataFrame(data)
-        #
-        #for row in sec_df.itertuples():
-        #    section = self.__getitem__(shape_name=row.name)
-        #    data = section._data_df()
-        #    sec_df[data.keys()].iloc[row.Index] =  data.values()
-        #    #for key, item in data.items():
-        #    #    sec_df[key].iloc[row.Index] = item
-        #
-        for idx, name in enumerate(self._labels):
-            section = self.__getitem__(shape_name=name)
-            data = section._data_df()
-            for key, item in data.items():
-                datadf[key][idx] = item
-        #
-        return db.DataFrame(datadf)
-    #
-    @df.setter
-    def df(self, df):
-        """ """
-        #1 / 0
-        #
-        group = df.groupby("type", sort=False)
-        for shape_type, section in group:
-            if re.match(r"\b(i((\_)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg)\b",
-                        shape_type, re.IGNORECASE):
-                # Bottom Flange
-                try:
-                    section['bottom_flange_width'] =  section.apply(lambda x: x['top_flange_width']
-                                                                    if x['bottom_flange_width']== ""
-                                                                    else x['bottom_flange_width'], axis=1)
-                except KeyError:
-                    section['bottom_flange_width'] = section['top_flange_width']
-                #
-                try:
-                    section['bottom_flange_thickness'] =  section.apply(lambda x: x['top_flange_thickness']
-                                                                    if x['bottom_flange_thickness']== ""
-                                                                    else x['bottom_flange_thickness'], axis=1)
-                except KeyError:
-                    section['bottom_flange_thickness'] = section['top_flange_thickness']                
-                #
-                try:
-                    section['fillet_radius'] =  section.apply(lambda x: float(0.0)
-                                                                    if x['fillet_radius']== ""
-                                                                    else x['fillet_radius'], axis=1)
-                except KeyError:
-                    section['fillet_radius'] = float(0.0)                
-                #
-                self._ibeam.df= section
-            
-            elif re.match(r"\b(t(ee)?)\b", shape_type, re.IGNORECASE):
-                self._tee.df= section
-            
-            elif re.match(r"\b(tub(ular)?|pipe|chs)\b", shape_type, re.IGNORECASE):
-                self._tubular.df= section
-            
-            elif re.match(r"\b((solid|bar(\_)?)?rectangle|trapezoid|circular|round)\b",
-                           shape_type, re.IGNORECASE):
-                self._solid.df= section
-            
-            elif re.match(r"\b(b(ox)?|rhs|shs)\b", shape_type, re.IGNORECASE):
-                self._box.df= section
-            
-            elif re.match(r"\b(c(hannel)?)\b", shape_type, re.IGNORECASE):
-                self._channel.df= section
-            
-            elif re.match(r"\b(l|angle)\b", shape_type, re.IGNORECASE):
-                self._angle.df= section
-            
-            else:
-                raise Exception(" section item {:} not recognized".format(shape_type))
-    #     
+
 #
 #
 #-------------------------------------------------

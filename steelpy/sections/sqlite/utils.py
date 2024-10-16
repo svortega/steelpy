@@ -227,7 +227,7 @@ class SectionItemSQLXX(SectionMainSQL):
         """
         Shear Stress: MAXIMUM / AVERAGE
         section = (name, title, type,
-                   diameter, wall_thickess,
+                   diameter, wall_thickness,
                    height, web_thickness,
                    top_flange_width, top_flange_thickness,
                    bottom_flange_width, bottom_flange_thickness,

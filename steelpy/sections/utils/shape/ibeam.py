@@ -1174,24 +1174,24 @@ def get_Isection(parameters: list|tuple|dict)->NamedTuple:
                  FAvy, FAvz, shear_stress,
                  build, compactness, title] """
     if isinstance(parameters,(list,tuple)):
-        prop = get_sect_list(parameters, number= 13, step= 7)
+        sect = get_sect_list(parameters, number= 13, step= 7)
     elif isinstance(parameters, dict):
-        prop = get_sect_dict(parameters, number= 13, step= 7)
+        sect, prop = get_Isect_dict(parameters, number= 13, step= 7)
     else:
         raise IOError('Section data not valid')
     #
     # bfb
-    if not prop[4]:
-        prop[4] = prop[2]
+    if not sect[4]:
+        sect[4] = sect[2]
     # tfb
-    if not prop[5]:
-        prop[5] = prop[3]
+    if not sect[5]:
+        sect[5] = sect[3]
     # r
-    if not prop[6]:
-        prop[6] = 0.0
+    if not sect[6]:
+        sect[6] = 0.0
     #
-    prop = ["I section", *prop]
-    return Idimension(*prop)
+    sect = ["I section", *sect]
+    return Idimension(*sect)
 #
 def get_sect_listX(parameters: list|tuple)->list:
     """ [d, tw, bf, tf, bfb, tfb, r, title] """
@@ -1232,13 +1232,14 @@ def get_sect_listX(parameters: list|tuple)->list:
     section.append(title)
     return section
 #
-def get_sect_dict(parameters: dict,
-                  number:int, step:int)->list:
+def get_Isect_dict(parameters: dict,
+                   number:int=13, step:int=7)->list:
     """Return : [d, tw, bf, tf, bfb, tfb, r,
                  FAvy, FAvz, shear_stress,
                  build, compactness, title] """
     # basic information
     section = [None] * step
+    name = 'Ibeam'
     #
     for key, item in parameters.items():
         # h
@@ -1283,6 +1284,9 @@ def get_sect_dict(parameters: dict,
                 section[6] = item.value
             except AttributeError:
                 raise IOError("units required")
+        
+        elif re.match(r"\b((section|shape)?(_|-|\s*)?(name|id))\b", key, re.IGNORECASE):
+            name = item        
         #
     #
     # bfb
@@ -1297,4 +1301,9 @@ def get_sect_dict(parameters: dict,
     #
     #base = get_prop_dict(parameters)
     section.extend(get_prop_dict(parameters))
-    return section
+    properties = IbeamBasic(name=name,
+                            d=section[0], tw=section[1],
+                            bft=section[2], tft=section[3],
+                            bfb=section[4], tfb=section[5],
+                            root_radius=section[6])
+    return section, properties._properties(poisson=0.30)
