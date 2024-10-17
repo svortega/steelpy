@@ -138,9 +138,6 @@ class Material(Mapping):
     @property
     def df(self):
         """Data frame format"""
-        #df = DBframework()
-        #matlin = self._material._elastic._getdata()
-        #return df(matlin)
         return self._material._elastic.df
     #
     @df.setter
@@ -149,9 +146,6 @@ class Material(Mapping):
         try:
             columns = list(df.columns)
             df = get_mat_df(df)
-            #
-            # -----------------------------------
-            #
             group = df.groupby("type")
             # Elastic type
             try:

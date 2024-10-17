@@ -18,6 +18,9 @@ concept[10] = 'Frame_Concept_1'
 material = concept[10].material()
 material["MAT345"] = ['elastic', 345.0 * units.MPa]
 #
+#
+print(material.df)
+#
 # -----------------------------------
 # Define sections
 # Caisson
@@ -51,6 +54,8 @@ section["T100x25"] = ['Tubular', 100 * units.mm, 25 * units.mm]
 #section = [["T800x30", 'Tubular', 800 * units.mm, 30 * units.mm],
 #          ["T900x35", 'Tubular', 900 * units.mm, 35 * units.mm],
 #          ["T100x25", 'Tubular', 100 * units.mm, 25 * units.mm]]
+#
+print(section.df)
 #
 # -----------------------------------
 # define Elevations

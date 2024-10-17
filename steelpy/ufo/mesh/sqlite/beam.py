@@ -19,8 +19,8 @@ from math import dist
 #
 #
 # package imports
-from steelpy.sections.sqlite.utils import ShapeGeometrySQL #, get_section
-from steelpy.sections.utils.shape.main import ShapeGeometry #, get_shape
+from steelpy.sections.sqlite.utils import ShapeGeometrySQL
+from steelpy.sections.utils.operations import ShapeGeometry
 from steelpy.material.sqlite.isotropic import  get_materialSQL
 from steelpy.ufo.mesh.sqlite.nodes import pull_node
 from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
@@ -36,8 +36,7 @@ from steelpy.ufo.process.beam import BeamBasic, BeamItemBasic
 from steelpy.ufo.mesh.process.brotation import unitvec_0, unitvec_1
 from steelpy.ufo.process.element import get_beam_df
 from steelpy.utils.sqlite.utils import create_connection
-#
-#import numpy as np
+
 #
 #
 class BeamSQL(BeamBasic):
@@ -408,14 +407,7 @@ class BeamItemSQL(BeamItemBasic):
             data = get_element_data(conn, self.name,
                                     element_type='beam', 
                                     component=self._component)
-            
-            #sect =  self._pull_section_section(conn, data[5],
-            #                                   component=self._component)
             query = (data[5], self._component, )
-            #table = f'SELECT Section.* FROM Section \
-            #            WHERE Section.name = ? \
-            #            AND component_id = ?'
-            #
             table = f"SELECT Section.*, SectionGeometry.* \
                       FROM Section, SectionGeometry, Component \
                       WHERE Section.name = ? \
@@ -425,15 +417,10 @@ class BeamItemSQL(BeamItemBasic):
             cur = conn.cursor()
             cur.execute(table, query)
             row = cur.fetchone()
-            #
-            #get_section(conn, section_name=data[5],
-            #            component=self._component)
         #
         geometry = [*row[1:3], *row[11:]]
-        #
-        shape = ShapeGeometry(shape_type=geometry[2],
-                              geometry=geometry)        
-        #
+        shape = ShapeGeometry(section_type=geometry[2],
+                              geometry=geometry)
         sect =  ShapeGeometrySQL(number=row[0], 
                                  name=row[1],
                                  geometry=shape,

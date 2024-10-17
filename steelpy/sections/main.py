@@ -129,15 +129,6 @@ class Section(Mapping):
         self._sections._default = shape_name
 
     #
-    def get_propertiesX(self):
-        """
-        """
-        summary = {}
-        for key, item in self._sections.items():
-            item.push_property()
-            # item.properties
-            # summary[key] = item._get_properties()
-        # return summary
     #
     def get_item_by_number(self, shape_name: str | int):
         """
@@ -156,6 +147,7 @@ class Section(Mapping):
     def tubular(self, values:None|list=None,
                 df=None):
         """Tubular section"""
+        1/0
         if values:
             if isinstance(values, list):
                 #self._sections.tubular
@@ -185,15 +177,6 @@ class Section(Mapping):
         #print("here")
         return self._sections._tubular
     #
-    #
-    ##
-    #def push_df(self, values):
-    #    """ """
-    #    for item in values:
-    #        try:
-    #            self._sections[item[0]] = item[1:]
-    #        except IOError:
-    #            continue
     #
     # -----------------------------------------------
     #

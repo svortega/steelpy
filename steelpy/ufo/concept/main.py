@@ -53,10 +53,7 @@ class Concept(ModelClassBasic):
             raise Exception('Concept {:} already exist'.format(name))
         except ValueError:
             self._labels.append(name)
-            #self._item.append(name)
-            #
             self._mesh[name] = title
-            #
             self._item[name] = ConceptItem(component=name,
                                            title=title,
                                            mesh=self._mesh[name], 
@@ -68,13 +65,6 @@ class Concept(ModelClassBasic):
         try:
             self._labels.index(name)
             return self._item[name]
-            #
-            #
-            #return Concepts(name=name,
-            #                title=parameters, 
-            #                materials=self._mesh[name]._materials,
-            #                sections=self._mesh[name]._sections,
-            #                properties= self._properties)            
         except ValueError:
             raise IndexError(f' Concept {name} not valid')
     #
@@ -84,7 +74,6 @@ class Concept(ModelClassBasic):
     #    
     def mesh(self):
         """ Meshing"""
-        #1 / 0
         for name in self._labels:
             self._item[name].mesh()
 #

@@ -1153,6 +1153,7 @@ def get_solid_section(shape:str, parameters: list|tuple|dict)->list:
         prop = get_sect_list(parameters, number= 9, step=3)
     elif isinstance(parameters, dict):
         prop, sect = get_SolidSect_dict(shape, parameters)
+        prop = [*prop[:3], *prop[4:]]
     else:
         raise IOError('Section data not valid')
     #

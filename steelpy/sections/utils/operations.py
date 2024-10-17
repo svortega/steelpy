@@ -16,6 +16,16 @@ from steelpy.sections.utils.shape.tee import get_Tsection, get_Tsect_dict
 from steelpy.sections.utils.shape.angle import get_Lsection, get_Lsect_dict
 from steelpy.sections.utils.shape.solid import get_solid_section, get_SolidSect_dict
 
+#from steelpy.sections.utils.operations import get_sect_properties
+from steelpy.sections.utils.shape.tubular import TubularBasic
+from steelpy.sections.utils.shape.solid import RectangleSolid, CircleSolid, TrapezoidSolid
+from steelpy.sections.utils.shape.ibeam import IbeamBasic, get_Isection
+from steelpy.sections.utils.shape.box import BoxBasic
+from steelpy.sections.utils.shape.channel import ChannelBasic
+from steelpy.sections.utils.shape.tee import TeeBasic
+from steelpy.sections.utils.shape.angle import AngleBasic
+#
+#
 from steelpy.utils.dataframe.main import DBframework
 
 #
@@ -341,4 +351,54 @@ def get_sect_df(df):
     #
     return sectdf, propdf
 #
+#
+# ---------------------------------
+#
+#
+def ShapeGeometry(section_type: str | int, geometry: list):
+    """ """
+    section_type = find_sect_type(section_type)
+    match section_type:
+        case 'Tubular':
+            return TubularBasic(name=geometry[0],
+                                diameter=geometry[3],
+                                thickness=geometry[4])
+        case 'I section':
+            return IbeamBasic(name=geometry[0],
+                              d=geometry[5], tw=geometry[6],
+                              bft=geometry[7], tft=geometry[8],
+                              bfb=geometry[9], tfb=geometry[10])
+        case 'Box':
+            return BoxBasic(name=geometry[0],
+                            d=geometry[5], tw=geometry[6],
+                            b=geometry[7], tb=geometry[8])
+        case 'Channel':
+            return ChannelBasic(name=geometry[0],
+                                d=geometry[5], tw=geometry[6],
+                                b=geometry[7], tb=geometry[8])
+        case 'Tee':
+            return TeeBasic(name=geometry[0],
+                            d=geometry[5], tw=geometry[6],
+                            b=geometry[7], tb=geometry[8])
+        case 'Angle':
+            return AngleBasic(name=geometry[0],
+                              d=geometry[5], tw=geometry[6],
+                              b=geometry[7], r=0)
+        case 'Circular bar':
+            d = geometry[5]
+            return CircleSolid(name=geometry[0], d=d)
+        case 'Rectangle bar':
+            d = geometry[5]
+            wb = geometry[7]
+            return RectangleSolid(name=geometry[0], depth=d, width=wb)
+        case 'Trapezoid bar':
+            d = geometry[5]
+            wb = geometry[7]
+            wt = geometry[9]
+            c = abs(wt - wb) / 2.0
+            return TrapezoidSolid(name=geometry[0], depth=d, width=wb, a=wt, c=c)
+        case 'General section':
+            raise NotImplementedError()
+        case _:
+            raise IOError(f' Section type {section_type} not recognised')
 #

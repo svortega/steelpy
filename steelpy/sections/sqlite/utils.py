@@ -390,6 +390,100 @@ def get_propertyX(conn, component_name):
 #
 # -----------------------------------------------
 #
+#
+#
+def get_sections(conn, component: int) -> list:
+    """
+    [name, number, mesh_id,
+     SA_inplane, SA_outplane,
+     shear_stress, build, compactness, title]
+    """
+    query = (component, )
+    table = "SELECT * from Section \
+             WHERE mesh_id = ?;"
+    cur = conn.cursor()
+    cur.execute(table, query)
+    rows = cur.fetchall()
+    rows = [[item[1], item[0], *item[3:]]
+            for item in rows]    
+    return rows
+#
+def get_properties(conn, component: int,
+                    section_name: int|str|None = None) -> list:
+    """
+    [section_id, number,
+    area, Zc, Yc,
+    Iy, Zey, Zpy, ry,
+    Iz, Zez, Zpz, rz,
+    J, Cw, 
+    alpha_sy, alpha_sz
+    """
+    query = (component, )
+    table = "SELECT Section.name, SectionProperty.*\
+             from Section, SectionProperty \
+             WHERE Section.mesh_id  = ? \
+             AND Section.number = SectionProperty.section_id ;"
+    
+    if section_name:
+        query = (section_name, component, )
+        table.join('AND Section.name = ?')
+    
+    cur = conn.cursor()
+    cur.execute(table, query)
+    rows = cur.fetchall()
+    rows = [[item[0], item[1], *item[3:]]
+            for item in rows]
+    return rows
+#
+def get_geometry(conn, component: int,
+                 section_name: int|str|None = None) -> list:
+    """ """
+    query = (component, )
+    table = f"SELECT Section.name, SectionGeometry.* \
+              FROM Section, SectionGeometry \
+              WHERE Section.mesh_id  = ? \
+              AND Section.number = SectionGeometry.section_id ;"
+    if section_name:
+        query = (section_name, component, )
+        table.join('AND Section.name = ?')
+    #
+    cur = conn.cursor()
+    cur.execute(table, query)
+    rows = cur.fetchall()
+    rows = [[item[0], item[1], *item[3:]]
+            for item in rows]
+    return rows
+    
+#
+def get_section_df(conn, component: int) -> list:
+    """
+    [section_id, type, diameter, wall_thickness,
+    height, web_thickness,
+    top_flange_width, top_flange_thickness,
+    bottom_flange_width, bottom_flange_thickness,
+    fillet_radius,
+    SA_inplane, SA_outplane,
+    shear_stress, build, compactness, title,
+    area, Zc, Yc,
+    Iy, Zey, Zpy, ry,
+    Iz, Zez, Zpz, rz,
+    J, Cw, 
+    alpha_sy, alpha_sz]
+    """
+    sect = get_sections(conn, component)
+    sect = {item[0]: item[2:] for item in sect}
+    #
+    prop = get_properties(conn, component)
+    prop = {item[0]: item[2:] for item in prop}
+    #
+    geom = get_geometry(conn, component)
+    #
+    out = [[item[0], *item[2:], *sect[item[0]], *prop[item[0]]]
+           for item in geom]
+    #
+    return out
+#
+#
 # def get_properties(self):
 #    """
 #    """

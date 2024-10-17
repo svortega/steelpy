@@ -20,8 +20,11 @@ from .ibeam import IbeamSQL
 from .solid import SolidSectionSQL
 #
 from steelpy.sections.utils.operations import get_sect_df
-from steelpy.sections.sqlite.utils import SectionMainSQL
-#from steelpy.utils.dataframe.main import DBframework
+from steelpy.sections.sqlite.utils import (SectionMainSQL,
+                                           get_sections,
+                                           get_section_df)
+
+from steelpy.utils.dataframe.main import DBframework
 #
 #
 #
@@ -67,41 +70,7 @@ class SectionSQL(SectionMainSQL):
         with conn:         
             self._new_table()
     #
-    #
-    # def push_sections(self):
-    #    """
-    #    """
-    #    conn = create_connection(self.bd_file)
-    #    with conn:
-    #        for key, section in self._sections.items():
-    #            sect_number = self._push_section_table(conn, section)
-    #            section.number = sect_number
-    #            self._push_property_table(conn, section)
-    #        conn.commit()
-    #
-    # def _push_property_table(self, conn, section):
-    #    """ """
-    #    project = (section.number, *section.properties)
-    #    sql = 'INSERT INTO  SectionProperty(number, area, Zc, Yc,\
-    #                                        Iy, Zey, Zpy, ry,\
-    #                                        Iz, Zez, Zpz, rz,\
-    #                                        J, Cw)\
-    #                                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
-    #    cur = conn.cursor()
-    #    cur.execute(sql, project)
-    #
-    # def _push_section_table(self, conn, section) -> int:
-    #    """
-    #    """
-    #    project = section._get_section_table()
-    #    sql = 'INSERT INTO  Section(name, title, type, diameter, wall_thickness,\
-    #                                    height, web_thickness,\
-    #                                    top_flange_width, top_flange_thickness,\
-    #                                    bottom_flange_width, bottom_flange_thickness)\
-    #                                    VALUES(?,?,?,?,?,?,?,?,?,?,?)'
-    #    cur = conn.cursor()
-    #    cur.execute(sql, project)
-    #    return cur.lastrowid
+    # -----------------------------------------------
     #
     def _new_table(self) -> None:
         """ """
@@ -159,14 +128,30 @@ class SectionSQL(SectionMainSQL):
         
         create_table(conn, table)
     #
-    #
     # -----------------------------------------------
     #
     @property
     def df(self):
         """ raw data for dataframe"""
-        1/0
-        #return self._sections.df
+        conn = create_connection(self.db_file)
+        with conn:        
+            data = get_section_df(conn, component=self._component)
+        db =  DBframework()
+        header = ['name', 'type',
+                  'diameter', 'wall_thickness',
+                  'height', 'web_thickness',
+                  'top_flange_width', 'top_flange_thickness',
+                  'bottom_flange_width', 'bottom_flange_thickness',
+                  'fillet_radius',
+                  'SA_inplane', 'SA_outplane',
+                  'shear_stress', 'build', 'compactness', 'title',
+                  'area[m^2]', 'Zc[m]', 'Yc[m]',
+                  'Iy[m^4]', 'Zey[m^3]', 'Zpy[m^3]', 'ry[m]',
+                  'Iz[m^4]', 'Zez[m^3]', 'Zpz[m^3]', 'rz[m]',
+                  'J[m^4]', 'Cw[m^6]', 
+                  'alpha_sy', 'alpha_sz']
+        df = db.DataFrame(data=data, columns=header)
+        return df
 
     @df.setter
     def df(self, df):
@@ -186,7 +171,7 @@ class SectionSQL(SectionMainSQL):
         # Section
         with conn:
             rows = get_sections(conn, component=self._component)
-            sectid = {item[1]: item[0] for item in rows}
+            sectid = {item[0]: item[1] for item in rows}
         #
         # SectionGeometry
         sectdf['section_id'] = sectdf['name'].apply(lambda x: sectid[x])
@@ -216,18 +201,7 @@ class SectionSQL(SectionMainSQL):
                                   index_label=header,
                                   if_exists='append', index=False)
         #
-#
-def get_sections(conn, component: int):
-    """
-    """
-    query = (component, )
-    table = "SELECT * from Section \
-             WHERE mesh_id = ?;"
-    cur = conn.cursor()
-    cur.execute(table, query)
-    row = cur.fetchall()
-    return row
-#
+
 #
 
 

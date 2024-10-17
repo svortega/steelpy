@@ -203,7 +203,7 @@ def update_Fu(geometry, foundation, Fu_update):
                             mat = geometry.materials[_Fu['name']]
                             memb.material[x] = mat
                             break
-    #
+#
 #
 #
 # -----------------------------

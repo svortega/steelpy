@@ -629,7 +629,7 @@ def get_TubSect_dict(parameters: dict,
     section = [None] * step
     name = 'Tub'
     for key, item in parameters.items():
-        if re.match(r"\b(d(iamet(ro|er|re))?(y)?)\b", key, re.IGNORECASE):
+        if re.match(r"\b(d(iamet(ro|er|re))?)\b", key, re.IGNORECASE):
             try:
                 section[0] = item.value
             except AttributeError:
