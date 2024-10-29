@@ -86,7 +86,6 @@ class SolidSectionSQL(SectionMainSQL):
         """
         try:
             index = self._labels.index(shape_name)
-            #number = self._number[index]
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
 

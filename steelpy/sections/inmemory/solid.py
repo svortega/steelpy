@@ -47,30 +47,32 @@ class SolidSection(ShapeBasic):
             self._labels.index(shape_name)
             raise Exception('element {:} already exist'.format(shape_name))
         except ValueError:
-            shape_type = parameters.pop(0)
+            shape_type = parameters.shape
             self._labels.append(shape_name)
             self._title.append('NULL')
             mnumber = next(self.get_number())
             self._number.append(mnumber)
             #
-            self._d.append(parameters[0])
-            if re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
-                self._type.append('round')
+            if re.match(r"\b((solid(_|-|\s*)?)?circular|round((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
+                self._type.append("Circular Bar")
+                self._d.append(parameters.d)
                 self._wb.append(0)
                 self._wt.append(0)
 
-            elif re.match(r"\b((solid|bar(\_)?)?square|rectangle)\b", shape_type, re.IGNORECASE):
-                self._type.append('rectangle')
-                self._wb.append(parameters[1])
-                self._wt.append(parameters[1])
+            elif re.match(r"\b((solid(_|-|\s*)?)?square|rectangle((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
+                self._type.append("Rectangle Bar")
+                self._d.append(parameters.h)
+                self._wb.append(parameters.b)
+                self._wt.append(parameters.b)
 
-            elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
-                self._type.append('trapeziod')
-                self._wb.append(parameters[1])
-                try:
-                    self._wt.append(parameters[2])
-                except IndexError:
-                    raise IOError('Trapeziod section data missing')
+            elif re.match(r"\b((solid(_|-|\s*)?)?trapezoid((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
+                self._type.append("Trapezoid Bar")
+                self._d.append(parameters.h)
+                self._wb.append(parameters.b)
+                #try:
+                self._wt.append(parameters.a)
+                #except IndexError:
+                #    raise IOError('Trapeziod section data missing')
 
             else:
                 raise Exception(f" section type {shape_type} not recognized")
@@ -86,15 +88,18 @@ class SolidSection(ShapeBasic):
 
         shape_type = self._type[index]
 
-        if re.match(r"\b((solid|bar(\_)?)?circular|round)\b", shape_type, re.IGNORECASE):
-            return CircleSolid(d=self._d[index])
+        if re.match(r"\b((solid(_|-|\s*)?)?circular|round((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
+            return CircleSolid(name=shape_name, d=self._d[index])
 
-        elif re.match(r"\b((solid|bar(\_)?)?square|rectangle)\b", shape_type, re.IGNORECASE):
-            return RectangleSolid(depth=self._d[index], width=self._wb[index])
+        elif re.match(r"\b((solid(_|-|\s*)?)?square|rectangle((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
+            return RectangleSolid(name=shape_name,
+                                  depth=self._d[index],
+                                  width=self._wb[index])
 
-        elif re.match(r"\b((solid|bar(\_)?)?trapeziod)\b", shape_type, re.IGNORECASE):
+        elif re.match(r"\b((solid(_|-|\s*)?)?trapezoid((_|-|\s*)?bar)?)\b", shape_type, re.IGNORECASE):
             c = abs(self._wt[index] - self._wb[index]) / 2.0
-            return TrapezoidSolid(depth=self._d[index],
+            return TrapezoidSolid(name=shape_name,
+                                  depth=self._d[index],
                                   width=self._wb[index],
                                   a=self._wt[index], c=c)
 

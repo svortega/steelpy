@@ -91,9 +91,9 @@ class TubularIM(ShapeBasic):
             mnumber = next(self.get_number())
             self._number.append(mnumber)
             #
-            self._d.append(parameters[0])
-            self._tw.append(parameters[1])
-            self._type.append('tubular')
+            self._d.append(parameters.d)
+            self._tw.append(parameters.tw)
+            self._type.append('Tubular')
     #
     def __getitem__(self, shape_name: str | int):
         """
@@ -103,8 +103,9 @@ class TubularIM(ShapeBasic):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        return TubularBasic(#name=self._labels[index],
-                            diameter=self._d[index], thickness=self._tw[index])
+        return TubularBasic(name=self._labels[index],
+                            diameter=self._d[index],
+                            thickness=self._tw[index])
     #
     @property
     def df(self):

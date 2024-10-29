@@ -14,12 +14,14 @@ from __future__ import annotations
 # package imports
 #
 from steelpy.ufo.load.concept.beam import BeamLoadItemIM
+from steelpy.ufo.load.concept.combination import LoadCombConcept
 from steelpy.sections.main import SectionIM
 from steelpy.sections.utils.operations import get_section
 from steelpy.material.main import MaterialIM
 from steelpy.trave.beam.operation import BeamBasic
 from steelpy.utils.dataframe.main import DBframework
 #
+from steelpy.material.utils.operations import get_mat_properties
 # 
 #
 class Beam:
@@ -44,9 +46,11 @@ class Beam:
         self._basic = BeamLoadItemIM(load_name="beam", 
                                      load_title="beam",
                                      component=self.name)
+        self._basic._load.local_system()
+        #
+        self._combination = LoadCombConcept(basic_load=self._basic )
         #
         self._db = DBframework()
-        self._basic._load.local_system()
         self._Pdelta = True
     #
     #
@@ -72,27 +76,29 @@ class Beam:
     def section(self):
         """
         """
-        return self._sections['beam']
+        return self._sections['beam_sect']
 
     @section.setter
-    def section(self, properties):
+    def section(self, properties:list|tuple|dict):
         """
         section_type : select beam's cross-section shape (tubular/rectangular,I_section)
         """
         properties = get_section(properties)
-        self._sections["beam"] = properties
+        self._sections["beam_sect"] = properties
     #
     @property
     def material(self):
         """
         """
-        return self._materials['beam']
+        return self._materials['beam_mat']
 
     @material.setter
-    def material(self, value):
+    def material(self, properties:list|tuple|dict):
         """
         """
-        self._materials['beam'] = value
+        # [elastic, Fy, Fu, E, G, poisson, density, alpha]
+        properties = get_mat_properties(properties)
+        self._materials['beam_mat'] = properties
     #
     # -----------------------------------------------------
     #
@@ -167,7 +173,7 @@ class Beam:
     @property
     def load_combination(self):
         """load combination"""
-        return self.load.combination
+        return self._combination
 
     @load_combination.setter
     def load_combination(self, value:list|dict):
@@ -175,13 +181,13 @@ class Beam:
         
         if isinstance(value, dict):
             for key, item in value.items():
-                self.load.combination[key] = item
+                self._combination[key] = item
         else:
-            if isinstance(value[0], list):
+            if isinstance(value[0], (list,tuple)):
                 for item in value:
-                    self.load.combination[item[0]] = item[1]
+                    self._combination[item[0]] = item[1]
             else:    
-                self.load.combination[value[0]] = value[1]
+                self._combination[value[0]] = value[1]
     #
     #
     # -----------------------------------------------------

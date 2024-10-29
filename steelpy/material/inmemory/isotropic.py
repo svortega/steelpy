@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2009 stdlib
+# Copyright (c) 2009 steelpy
 # 
 #
 #
@@ -35,7 +35,7 @@ class MaterialIM(Mapping):
     def __setitem__(self, material_name:str|int,
                     properties:list[str|float]) -> None:
         """
-        [name, elastic, Fy, Fu, E, G, Poisson, density, alpha, title(optional)]
+        [elastic, Fy, Fu, E, G, Poisson, density, alpha, title(optional)]
         """
         try:
             self._labels.index(material_name)
@@ -47,28 +47,13 @@ class MaterialIM(Mapping):
             mat_number = next(self.get_number())
             self._number.append(mat_number)
             #
-            #
-            # get material type
-            if isinstance(properties, str):
-                material_type = find_mat_type(properties)
-                properties = []
-            else:
-                material_type = find_mat_type(properties[0])
-                properties = properties[1:]            
-            #
-            #
+            # set material
             if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
-                raise Exception('--> Mat type No ready')
-                #self._material[mat_number] = CurveIsotropic(material_name, *properties[1:])
+                raise NotImplementedError('material type not implemented')
             elif re.match(r"\b(elastic|linear|isotropic)\b", material_type, re.IGNORECASE):
-                properties = get_isomat_prop(properties)
-                self._elastic[material_name] = [material_name, *properties]
-                #self._material[mat_number] = MaterialIsotropic(material_name, *properties[1:])
+                self._elastic[material_name] = properties[1:] # [mat_number, *properties[1:]]
             else:
-                raise IOError(' material type {:} not recognised'
-                              .format(material_type))
-            #
-            #self._material[material_name] = [material_type, *properties]
+                raise IOError(f' material type {material_type} not valid')
         #
         self._default = material_name
     

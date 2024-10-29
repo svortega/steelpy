@@ -20,7 +20,7 @@ beam.L = 28*units.ft
 #
 # set section
 #beam.section = ['Rectangle', 200 * units.mm, 100 * units.mm]
-#beam.section = ['trapeziod', 200 * units.mm, 100 * units.mm, 150 * units.mm]
+#beam.section = ['trapezoid', 200 * units.mm, 100 * units.mm, 150 * units.mm]
 #beam.section = ['Circular', 500 * units.mm]
 #beam.section = ['Tubular', 500 * units.mm, 25 * units.mm]
 #beam.section = ['ub', 253.5*units.mm, 8.60*units.mm,
@@ -32,13 +32,22 @@ beam.L = 28*units.ft
 #beam.section = ['channel', 250 * units.mm, 6 * units.mm, 150 * units.mm, 12 * units.mm]
 #beam.section = ['Angle', 150 * units.mm, 6 * units.mm, 150 * units.mm, 6 * units.mm]
 #
-beam.section = ['ub', 351*units.mm, 8.64*units.mm,
-                204.0*units.mm, 15.10*units.mm]
+#beam.section = ['ub', 351*units.mm, 8.64*units.mm,
+#                204.0*units.mm, 15.10*units.mm]
 #
-#print(beam.section)
+beam.section = {'type':'ub',
+                'h':351*units.mm,
+                'tw':8.64*units.mm,
+                'bf':204.0*units.mm,
+                'tf':15.10*units.mm,
+                #'bfb': 304.0 * units.mm,
+                #'tfb': 15.10 * units.mm
+                }
+print(beam.section)
 #
 #
-beam.material = ['elastic', 275.0 * units.MPa]
+beam.material = {'type':'elastic',
+                 'Fy':275.0 * units.MPa}
 print(beam.material)
 #
 #
@@ -104,15 +113,15 @@ beam.P = {#'L1':4.5*units.m,
 #beam.q = {'qz1':15*units.kN/units.m, 'qz2':15*units.kN/units.m,
 #          'name': 'selfweight_z'}
 #
-#beam.q = {'qy':0.20 * units.kip / units.ft,
-#          'name': 'AISC_C-C2.2'}
+beam.q = {'qy':0.20 * units.kip / units.ft,
+          'name': 'AISC_C-C2.2'}
 #
 #beam.load[1].line = {'qy1':9*units.kN/units.m, 'qz1':-9*units.kN/units.m}
 #
 #print(beam.load)
 #
 # TODO: fix combination
-#beam.load_combination = ['AISC_C-C2.2', 1.0]
+beam.load_combination = ['AISC_C-C2.2', 1.0]
 #beam.load_combination = ['AISC_C-C2.3', 1.0]
 #
 #beam.load_combination = {'point_1': 0.50, 'point_2': 0.75, 'point_3': 1.0}
@@ -122,12 +131,12 @@ beam.P = {#'L1':4.5*units.m,
 #Mx =  -90*units.kip*units.inch
 #print(Mx.convert('newton*metre'))
 #
-#reactions = beam.reactions()
-#print(reactions)
+reactions = beam.reactions()
+print(reactions)
 #
 #
-#forces = beam.response()
-#print(forces)
+forces = beam.response()
+print(forces)
 #
 #
 #force_grp = (forces.groupby(['load_name', 'component_name',

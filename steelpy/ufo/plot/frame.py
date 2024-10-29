@@ -18,6 +18,8 @@ import matplotlib.pyplot as plt
 #import matplotlib.cm as cm
 from matplotlib.widgets import RadioButtons, CheckButtons
 import matplotlib.cbook as cbook
+#from pipenv.patched.safety.util import active_color_if_needed
+
 #
 
 #from steelpy.utils.units.main import Units
@@ -125,12 +127,11 @@ class PlotFrame(PlotBasic):
     def __init__(self, figsize:tuple = (10, 10)):
         """
         """
-        #self._mesh = mesh
-        #self.figsize = figsize
         super().__init__(figsize)
     #
     #
-    def frame(self, nodes, elements, supports, f_size:float = 10):
+    def frame(self, nodes, elements, supports,
+              f_size:float = 10):
         """ """
         def callback(label):
             """ """
@@ -141,12 +142,6 @@ class PlotFrame(PlotBasic):
             fig.canvas.draw()
         #
         beams = elements.beam()
-        #nodes = self._cls._nodes
-        #lims = nodes.get_maxmin()
-        #
-        #mbc = self._cls._boundaries
-        #supports = mbc.supports()
-        #supports = mbc._nodes
         #
         lims = nodes.get_maxmin()
         fig, ax = self.init_frame(elements, lims)
@@ -160,20 +155,24 @@ class PlotFrame(PlotBasic):
         axcolor = 'lightgoldenrodyellow'
         rax = plt.axes([0.05, 0.7, 0.15, 0.15], facecolor=axcolor)
         lines_by_label = {'Node': s2, 'Element': s3, 'Supports': s4}
+        labels = list(lines_by_label.keys())
+        fontsize = [15 for item in labels]
+        edgecolor = ['k' for item in labels]
+        facecolor = ['chartreuse' for item in labels]
+        alpha = [0.20 for item in labels]
+        actives = [False for item in labels]
         #
         check = CheckButtons(ax=rax,
-                             labels=lines_by_label.keys(),
-                             actives=[False for l in lines_by_label.values()])
-        #
-        for r in check.rectangles:
-            r.set_facecolor("chartreuse") 
-            r.set_edgecolor("k")
-            r.set_alpha(0.2)        
+                             labels=labels,
+                             actives=actives,
+                             label_props={#'color': ['red', 'orange'],
+                                          'fontsize': fontsize},
+                             frame_props={'edgecolor': edgecolor,
+                                          'facecolor': facecolor},
+                             check_props={'color': alpha})
         #
         check.on_clicked(callback)
-        #
         plt.show()
-        #else:
         return ax        
         
     #
@@ -681,7 +680,7 @@ def add_materials(beams, materials, fig, ax,
     n_lines = len(matgrp)
     cm = plt.cm.bwr(np.linspace(0, 1, n_lines))    
     #
-    # Plot beam with colour accroding to material
+    # Plot beam with colour according to material
     #
     marker = '.'
     lg = []
@@ -737,11 +736,12 @@ def add_materials(beams, materials, fig, ax,
     #
     ax.table(cellText=Fy,
              #rowLabels=mname, 
-             rowColours=cm, 
+             #rowColours=cm,
              colLabels=columns,
              colWidths=colratios, 
              loc='right')
     #
+    #1/0
     #
     return ax
 #
@@ -750,7 +750,7 @@ def add_sections(beams, sections, fig, ax,
                  l_width:float = 2):
     """ """
     #
-    sectdata = [[str(key), str(sec.type)]
+    sectdata = [[str(key), sec.shape]
                 for key, sec in sections.items()]
     #
     secgrp = defaultdict(list)

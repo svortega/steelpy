@@ -104,7 +104,7 @@ class ShapeStressBasic:
         """
         # -------------------------------------------------
         #            Shear Stress Calculation
-        I = self.I
+        I = self.Inertia
         #coord =  self.section_coordinates()
         #
         # Q area shear stress

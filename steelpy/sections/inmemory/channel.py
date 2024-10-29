@@ -49,10 +49,10 @@ class Channel(ShapeBasic):
             mnumber = next(self.get_number())
             self._number.append(mnumber)
             #
-            self._d.append(parameters[0])
-            self._tw.append(parameters[1])
-            self._b.append(parameters[2])
-            self._tb.append(parameters[3])
+            self._d.append(parameters.d)
+            self._tw.append(parameters.tw)
+            self._b.append(parameters.b)
+            self._tb.append(parameters.tb)
     #
     def __getitem__(self, shape_name: str | int):
         """
@@ -62,7 +62,7 @@ class Channel(ShapeBasic):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        return ChannelBasic(#name=self._labels[index], 
+        return ChannelBasic(name=self._labels[index],
                             d=self._d[index], tw=self._tw[index],
                             b=self._b[index], tb=self._tb[index])
 # 

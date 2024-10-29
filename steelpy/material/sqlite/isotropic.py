@@ -97,6 +97,7 @@ class MaterialSQL(MatBasicSQL):
     def __setitem__(self, material_name: str|int,
                     properties: list[str|float]) -> None:
         """
+        [elastic, Fy, Fu, E, G, poisson, density, alpha]
         """
         try:
             self._labels.index(material_name)
@@ -110,7 +111,6 @@ class MaterialSQL(MatBasicSQL):
             #
             # set material
             if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
-                #self._material[material_name]
                 raise NotImplementedError('material type not implemented')
             elif re.match(r"\b(elastic|linear|isotropic)\b", material_type, re.IGNORECASE):
                 self._elastic[material_name] = properties[1:] # [mat_number, *properties[1:]]

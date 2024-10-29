@@ -147,12 +147,21 @@ class IbeamBasic(ShapeStressBasic):
     bfb: float
     tfb: float
     root_radius:float = 0
-    shape:str = 'I section'
+    #shape:str = 'I section'
     #
     # --------------------------------------------
-    #@property
-    #def shape(self):
-    #    return 'I section'
+    @property
+    def shape(self):
+        #
+        #self.shape = 'Symmetrical I section'
+        #
+        if self.bft != self.bfb:
+            return'I section asymmetrical'
+        #
+        if self.tft != self.tfb:
+            self.shape = 'I section asymmetrical'
+        #
+        return 'I section'
     #
     # --------------------------------------------
     #
@@ -160,25 +169,25 @@ class IbeamBasic(ShapeStressBasic):
         """
         """
         #
-        self.shape = 'Symmetrical I section'
+        #self.shape = 'Symmetrical I section'
         #
-        try:
-            if self.bft != self.bfb:
-                self.shape = 'Asymmetrical I section'
-        except AttributeError:
-            try:
-                self.bfb = self.bft
-            except AttributeError:
-                self.bft = self.bfb
+        #try:
+        #    if self.bft != self.bfb:
+        #        self.shape = 'Asymmetrical I section'
+        #except AttributeError:
+        #    try:
+        #        self.bfb = self.bft
+        #    except AttributeError:
+        #        self.bft = self.bfb
         #
-        try:
-            if self.tft != self.tfb:
-                self.shape = 'Asymmetrical I section'
-        except AttributeError:
-            try:
-                self.tfb = self.tft
-            except AttributeError:
-                self.tft = self.tfb        
+        #try:
+        #    if self.tft != self.tfb:
+        #        self.shape = 'Asymmetrical I section'
+        #except AttributeError:
+        #    try:
+        #        self.tfb = self.tft
+        #    except AttributeError:
+        #        self.tft = self.tfb        
         #
         #
         #-------------------------------------------------   
@@ -253,7 +262,7 @@ class IbeamBasic(ShapeStressBasic):
         #-------------------------------------------------
         #               Section Properties
         #-------------------------------------------------
-        Iy, Iz = self.I
+        Iy, Iz = self.Inertia
         #   Second Moment of Area about Mayor Axis
         #Iy = (self.bft * self.tft**3 / 12.0
         #      + (self.bft * self.tft 
@@ -263,10 +272,12 @@ class IbeamBasic(ShapeStressBasic):
         #         * (_hw + self.tfb / 2.0 + self.tft - Zc)**2)
         #      + self.tw * _hw**3 / 12.0 
         #      + self.tw * _hw * (_hw / 2.0 + self.tft - Zc)**2)
+        #
         #   Second Moment of Area of Compression Flange about Mayor Axis
-        _Iy_ft = (self.bft * self.tft**3 / 12.0 + 
-                  (self.bft * self.tft
-                   * (Zc - self.tft / 2.0)**2 ))
+        #_Iy_ft = (self.bft * self.tft**3 / 12.0 + 
+        #          (self.bft * self.tft
+        #           * (Zc - self.tft / 2.0)**2 ))
+        #
         #   Elastic Modulus about Mayor Axis
         if Zc >= (self.d - Zc):
             Zey = Iy / Zc
@@ -310,18 +321,18 @@ class IbeamBasic(ShapeStressBasic):
         SFz = Zpz / Zez
         #-------------------------------------------------
         #   Product of inertia
-        _Iyz = 0
-        Jx = Iy + Iz
-        rp = (Jx / area)**0.50
+        #_Iyz = 0
+        #Jx = Iy + Iz
+        #rp = (Jx / area)**0.50
         
         # warping statical moment at point s on cross-section
-        Sws = _ho * self.bft**2 * self.tft / 16.0
+        #Sws = _ho * self.bft**2 * self.tft / 16.0
         # normalized warping function at point s on cross-section
-        Wns = _ho * self.bft / 4.0
+        #Wns = _ho * self.bft / 4.0
         #
         #-------------------------------------------------
         #
-        Zc = self.d * 0.50 - Zc
+        Zc = round(self.d * 0.50 - Zc, 6)
         #
         Asy, Asz = self.alpha_s(poisson=poisson)
         #
@@ -336,63 +347,7 @@ class IbeamBasic(ShapeStressBasic):
         ---------
         R = Radio
         """
-        if 'symmetrical' in self.shape.lower():
-            b = self.bfb
-            b1 = self.tw
-            t = self.tfb
-            d = self.d
-            ry = self.ry
-        
-            # shear area
-            warea = self.area
-        
-            # extreme fibre distances c
-            c = d/2.0
-            self.c = c
-        
-            c1 = d - c
-            self.c1 = c1
-        
-            # centroidal radius
-            #R = R
-            # R = orad - c1
-            self.R = R
-        
-            # Shift of neutral axis from neutral axis
-            e = (c *((R/c)- ((2.0*(t/c + (1 - t/c)*(b1/b))) 
-                                 / ((math.log(((R/c)**2 + (R/c + 1)*(t/c) - 1.0) 
-                                              / ((R/c)**2 - (R/c - 1.0)*(t/c) - 1.0))) 
-                                    + ((b1/b)*math.log((R/c - t/c + 1.0) 
-                                                         /(R/c + t/c - 1.0)))))))
-            self.e = e
-            # where
-            Ic = self.Iy
-        
-            # stress factors Ki
-            self.ki = ((Ic / (warea * c**2 * (R/c - 1.0))) 
-                       * ((1.0 - e / c) / (e / c)))
-        
-            # stress factors Ko
-            self.ko = ((Ic / (warea * c**2 * (R/c + 1.0))) 
-                       * ((1.0 + e / c) / (e / c)))
-        
-            # Modulus of rigidity factor (section 8.10)
-            nai = c - e    # neautral axis inner fiber
-            nao = c1 + e   # neautral axis outer fiber
-        
-            D1 = nai - t
-            D2 = nai 
-            t1 = b1
-            t2 = b
-            r = ry
-        
-            self.F = ((1 + (((3*(D2**2 - D1**2)*D1)/(2.0*D2**3)) * (t2/t1 - 1.0)))
-                      * (4*D2**2 / (10*r**2)))
-            #
-            # Shear factor (section 8.1 equ 8.1-13)
-            self.tau_y = radial_shear_factor(d, b1, t, t, c, c1, R, e)
-        
-        else:
+        if 'asymmetrical' in self.shape.lower():
             b = self.bfb
             t = self.tfb
             b1 = self.bft
@@ -466,6 +421,63 @@ class IbeamBasic(ShapeStressBasic):
             #
             #R, _F, e, c, c1, _ki, _ko, _shearFactor
             self.tau_y = radial_shear_factor(d, b1, t, t1, c, c1, R, e)
+        #
+        #if 'symmetrical' in self.shape.lower():
+        else:
+            b = self.bfb
+            b1 = self.tw
+            t = self.tfb
+            d = self.d
+            ry = self.ry
+        
+            # shear area
+            warea = self.area
+        
+            # extreme fibre distances c
+            c = d/2.0
+            self.c = c
+        
+            c1 = d - c
+            self.c1 = c1
+        
+            # centroidal radius
+            #R = R
+            # R = orad - c1
+            self.R = R
+        
+            # Shift of neutral axis from neutral axis
+            e = (c *((R/c)- ((2.0*(t/c + (1 - t/c)*(b1/b))) 
+                                 / ((math.log(((R/c)**2 + (R/c + 1)*(t/c) - 1.0) 
+                                              / ((R/c)**2 - (R/c - 1.0)*(t/c) - 1.0))) 
+                                    + ((b1/b)*math.log((R/c - t/c + 1.0) 
+                                                         /(R/c + t/c - 1.0)))))))
+            self.e = e
+            # where
+            Ic = self.Iy
+        
+            # stress factors Ki
+            self.ki = ((Ic / (warea * c**2 * (R/c - 1.0))) 
+                       * ((1.0 - e / c) / (e / c)))
+        
+            # stress factors Ko
+            self.ko = ((Ic / (warea * c**2 * (R/c + 1.0))) 
+                       * ((1.0 + e / c) / (e / c)))
+        
+            # Modulus of rigidity factor (section 8.10)
+            nai = c - e    # neautral axis inner fiber
+            nao = c1 + e   # neautral axis outer fiber
+        
+            D1 = nai - t
+            D2 = nai 
+            t1 = b1
+            t2 = b
+            r = ry
+        
+            self.F = ((1 + (((3*(D2**2 - D1**2)*D1)/(2.0*D2**3)) * (t2/t1 - 1.0)))
+                      * (4*D2**2 / (10*r**2)))
+            #
+            # Shear factor (section 8.1 equ 8.1-13)
+            self.tau_y = radial_shear_factor(d, b1, t, t, c, c1, R, e)    
     #
     #
     def compactness(self, material: str):
@@ -943,7 +955,7 @@ class IbeamBasic(ShapeStressBasic):
         """ Elastic Neutral Centre """
         _hw = (self.d - self.tft - self.tfb)
         #-------------------------------------------------
-        Yc = 0
+        Yc = 0.0
         #   Elastic Neutral Centre 
         Zc = ((self.bft * self.tft**2 / 2.0
                + self.bfb * self.tfb 
@@ -958,7 +970,7 @@ class IbeamBasic(ShapeStressBasic):
         return axis(Yc, Zc)
     #
     @property
-    def I(self):
+    def Inertia(self):
         """Moments of inertia"""
         #
         Yc, Zc = self.centroid
@@ -1018,8 +1030,10 @@ class IbeamBasic(ShapeStressBasic):
     #
     def _dimension(self) -> str:
         """ """
-        out = "{:32s}{:1.4E} {:1.4E} {:1.4E}\n".format(self.shape, self.d, self.bft, self.bfb)
-        out += "{:48s}{:1.4E} {:1.4E} {:1.4E}\n".format("", self.tw, self.tft, self.tfb)
+        out = ("{:32s}{:1.4E} {:1.4E} {:1.4E}\n"
+               .format(self.shape, self.d, self.bft, self.bfb))
+        out += ("{:48s}{:1.4E} {:1.4E} {:1.4E}\n"
+                .format("", self.tw, self.tft, self.tfb))
         out += "{:70s}{:1.4E}\n".format("", self.r)
         return  out
     #    
@@ -1027,38 +1041,32 @@ class IbeamBasic(ShapeStressBasic):
     def _shape(self):
         """
         """
-        _section = []
-        if 'symmetrical' in self.shape.lower():
-            _section.append("{:2s}+   bf    +{:33s}{:1.3E} {:1.3E}  {:1.3E} {:1.3E}\n"
-                            .format("", "", 
-                                    self.d, 
-                                    self.tw, 
-                                    self.bft, 
-                                    self.tft))
-            _section.append("+ +====+====+ tf\n")
-            _section.append("{:}| tw\n".format(7*" ")) 
-            _section.append("d{:6s}|{:6s}Z\n".format("", ""))
-            _section.append("{:7s}|{:6s}^\n".format("", ""))
-            _section.append("+ +====+====+ + > Y\n")
-            _section.append("{:2s}+   bf    +\n".format(""))            
+        section = []
+        if 'asymmetrical' in self.shape.lower():
+            section.append("{:4s}+ bft +{:11s}{:}\n"
+                            .format("", "", self.name))
+            section.append("+   +==+==+ tft{:7s}{:1.3E} {:1.3E}\n"
+                            .format("", self.bft, self.tft))
+            section.append("{:7s}|\n".format(""))
+            section.append("d{:6s}| tw {:10s}{:1.3E} {:1.3E}\n"
+                           .format("", "", self.d, self.tw))
+            section.append("{:7s}|{:6s}\n".format("", ""))
+            section.append("+ +====+====+ tfb {:4s}{:1.3E} {:1.3E}\n"
+                           .format("", self.bfb, self.tfb))
+            section.append("{:2s}+   bfb   +\n".format(""))
         else:
-            _section.append("{:4s}+ bft +{:34s}{:1.3E} {:1.3E}  {:1.3E} {:1.3E}\n"
-                            .format("","", 
-                                    self.d, 
-                                    self.tw, 
-                                    self.bft, 
-                                    self.tft))
-            _section.append("+   +==+==+{:55s}{:1.3E} {:1.3E}\n"
-                            .format("", 
-                                    self.bfb, 
-                                    self.tfb))
-            _section.append("{:7s}|\n".format("")) 
-            _section.append("d{:6s}|{:6s}Z\n".format("", ""))
-            _section.append("{:7s}|{:6s}^\n".format("", ""))
-            _section.append("+ +====+====+ + > Y\n")
-            _section.append("{:2s}+   bfb   +\n".format(""))
-        
-        return _section
+            section.append("{:2s}+   bf    +{:10s}{:}\n"
+                           .format("", "", self.name))
+            section.append("+ +====+====+ tf{:7s}{:1.3E} {:1.3E}\n"
+                           .format("", self.bft, self.tft))
+            section.append("{:7s}|\n".format(""))
+            section.append("d{:6s}| tw{:12s}{:1.3E} {:1.3E}\n"
+                           .format("", "", self.d, self.tw))
+            section.append("{:7s}|{:9s}\n".format("", ""))
+            section.append("+ +====+====+ tf\n")
+            section.append("{:2s}+   bf    +\n".format(""))
+        #
+        return section
     #
     #
     def print_file(self, file_name):
@@ -1100,6 +1108,8 @@ class IbeamBasic(ShapeStressBasic):
         """Hydrodynamic diametre"""
         return math.hypot(self.d, max(self.bft, self.bfb))   
     #
+    #
+    # --------------------------------------------
     #
     #def __getattr__(self, attr):
     #    """
@@ -1149,6 +1159,21 @@ class IbeamBasic(ShapeStressBasic):
     #            raise AttributeError(f"Variable {attr} not found")
     #
     #
+    def __str__(self) -> str:
+        """
+        :return:
+        """
+        check_out = self._shape()
+        #check_out.append("{:12s} {:10s} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E}"
+        #          .format(self.name, self.shape, self.d, self.tw, self.bft, self.tft,
+        #                  self.bfb, self.tfb,self.r))
+        #check_out.append("{:>65} {:1.4E} {:1.4E}\n"
+        #                 .format("", self.bfb, self.tfb))
+        #
+        #return ("{:12s} {:10s} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E}"
+        #          .format(self.name, self.shape, self.d, self.tw, self.bft, self.tft,
+        #                  self.bfb, self.tfb,self.r))
+        return "".join(check_out)
 #
 #
 class Idimension(NamedTuple):
@@ -1306,4 +1331,4 @@ def get_Isect_dict(parameters: dict,
                             bft=section[2], tft=section[3],
                             bfb=section[4], tfb=section[5],
                             root_radius=section[6])
-    return section, properties._properties(poisson=0.30)
+    return section, properties._properties(poisson=0.0)

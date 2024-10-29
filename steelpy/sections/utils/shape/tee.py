@@ -13,8 +13,8 @@ import re
 #
 # package imports
 from steelpy.sections.utils.shape.utils import (ShapeProperty, get_sect_list,
-                                                get_sect_dict, ShapeDim,
-                                                get_prop_dict)
+                                                get_sect_dict, ShapeDim)
+                                                #get_prop_dict)
 from steelpy.sections.utils.shape.stress import ShapeStressBasic
 #
 #
@@ -272,12 +272,12 @@ class TeeBasic(ShapeStressBasic):
         #   Elastic Neutral Centre 
         Zc = ((self.d**2 * self.tw + C * self.tb**2)
               / (2 * (self.b*self.tb + D2*self.tw)))
-        Yc = 0
+        Yc = 0.0
         #
         return axis(Yc, Zc)
     #
     @property
-    def I(self):
+    def Inertia(self):
         """Seconf modemnt of inertia"""
         Yc, Zc = self.centroid
         C = self.b - self.tw
@@ -401,7 +401,31 @@ class TeeBasic(ShapeStressBasic):
     @property
     def Dh(self):
         """Hydrodynamic diametre"""
-        return self.d   
+        return self.d
+    #
+    #
+    def _shape(self):
+        """
+        """
+        section = []
+        section.append("{:2s}+   bf    +{:10s}{:}\n"
+                       .format("", "", self.name))
+        section.append("+ +====+====+ tf{:7s}{:1.3E} {:1.3E}\n"
+                       .format("", self.b, self.tb))
+        section.append("{:7s}|\n".format(""))
+        section.append("d{:6s}| tw{:12s}{:1.3E} {:1.3E}\n"
+                       .format("", "", self.d, self.tw))
+        section.append("{:7s}|{:9s}\n".format("", ""))
+        section.append("+{:6s}+\n".format(""))
+        #section.append("{:2s}+   bf    +\n".format(""))
+        return section
+    #
+    def __str__(self) -> str:
+        """
+        :return:
+        """
+        check_out = self._shape()
+        return "".join(check_out)
 #
 #
 def get_Tsection(parameters: list|tuple|dict)->list:
@@ -432,6 +456,6 @@ def get_Tsect_dict(parameters: list|tuple|dict):
                           d=section[0], tw=section[1],
                           b=section[2], tb=section[3],
                           r=section[4])
-    return section, properties._properties(poisson=0.30)
+    return section, properties._properties(poisson=0.0)
 #
 #

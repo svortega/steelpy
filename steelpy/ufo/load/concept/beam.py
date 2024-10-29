@@ -16,17 +16,16 @@ import re
 from ..concept.node import NodeLoadIM
 
 from steelpy.ufo.load.process.beam.beam import LineBeam, PointBeam
-from steelpy.ufo.load.process.beam.main import BeamTypeBasic, BeamLineBasic, BeamPointBasic
+from steelpy.ufo.load.process.beam.main import (BeamTypeBasic,
+                                                BeamLineBasic,
+                                                BeamPointBasic)
 
 #from steelpy.utils.units.buckingham import Number
 from steelpy.utils.dataframe.main import DBframework
 #from steelpy.utils.math.operations import trnsload
 
-from steelpy.ufo.load.process.beam.utils import (get_BeamLoad_dic,
-                                                 get_BeamLoad_list_units,
-                                                 get_BeamLine_dic,  
-                                                 #get_BeamPoint_load,
-                                                 get_BeamLine_load)
+from steelpy.ufo.load.process.beam.utils import (get_beam_point_load,
+                                                 get_beam_line_load)
 from steelpy.ufo.load.process.beam.main import BeamLoadBasic
 #
 #
@@ -277,14 +276,8 @@ class BeamDistributedIM(BeamLineBasic):
     #
     def _get_line(self, line_load: list|dict):
         """ get line load in beam local system"""
-        
-        if isinstance(line_load, (list, tuple)):
-            try:
-                udl = get_BeamLoad_list_units(line_load.copy())
-            except AttributeError:
-                udl = get_BeamLine_load(line_load)
-        elif isinstance(line_load, dict):
-            udl = get_BeamLine_dic(line_load)
+        #[type, qx1,qy1,qz1,qt1,qx2,qy2,qz2,qt2,L0,L1, tile]
+        udl = get_beam_line_load(line_load)
         #
         load_type = udl.pop(0)
         title = udl.pop()
@@ -449,15 +442,8 @@ class BeamPointIM(BeamPointBasic):
     # TODO : chekc if works for dict
     def _get_point(self, point_load: list|dict):
         """ get point load in beam local system"""
-        # update inputs
-        if isinstance(point_load, (list, tuple)):
-            try:
-                point = get_BeamLoad_list_units(point_load.copy())
-            except AttributeError:
-                point = get_BeamNode_load(point_load)            
-        # update inputs
-        elif isinstance(point_load, dict):
-            point = get_BeamLoad_dic(point_load)       
+        # [type, Fx, Fy, Fz, Mx, My, Mz, L0, title]
+        point = get_beam_point_load(point_load)
         #
         load_type = point.pop(0)
         title = point.pop() 

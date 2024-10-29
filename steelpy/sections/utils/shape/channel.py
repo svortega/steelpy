@@ -152,7 +152,7 @@ class ChannelBasic(ShapeStressBasic):
         # -------------------------------------------------
         #               Section Properties
         # -------------------------------------------------
-        Iy, Iz = self.I
+        Iy, Iz = self.Inertia
         #   Second Moment of Area about Mayor Axis
         #Iy = (self.b * self.d ** 3 - _C * _D2 ** 3) / 12.0
         #   Elastic Modulus about Mayor Axis
@@ -191,6 +191,9 @@ class ChannelBasic(ShapeStressBasic):
         rp = math.sqrt(Jx / area)
         #
         alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
+        #
+        # restart
+        Zc = round(0.50 * self.d - Zc, 6)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
@@ -297,7 +300,7 @@ class ChannelBasic(ShapeStressBasic):
     # --------------------------------------------
     #
     @property
-    def I(self):
+    def Inertia(self):
         """Second moment of inertia"""
         b = self.b - 0.50 * self.tw
         h = self.d - self.tb
@@ -479,7 +482,31 @@ class ChannelBasic(ShapeStressBasic):
     @property
     def Dh(self):
         """Hydrodynamic diametre"""
-        return math.hypot(self.d, self.b)    
+        return math.hypot(self.d, self.b)
+    #
+    #
+    def _shape(self):
+        """
+        """
+        section = []
+        section.append("{:2s}+    b    +{:10s}{:}\n"
+                       .format("", "", self.name))
+        section.append("+ +=========+ tb{:7s}{:1.3E} {:1.3E}\n"
+                       .format("", self.b, self.tb))
+        section.append("  ||{:7s}\n".format(""))
+        section.append("d || tw{:16s}{:1.3E} {:1.3E}\n"
+                       .format("", self.d, self.tw))
+        section.append("  ||{:7s}\n".format(""))
+        section.append("+ +=========+ tb\n")
+        section.append("{:2s}+    b    +\n".format(""))
+        return section
+    #
+    def __str__(self) -> str:
+        """
+        :return:
+        """
+        check_out = self._shape()
+        return "".join(check_out)
 #    
 #
 #
@@ -510,6 +537,6 @@ def get_Csect_dict(parameters: list|tuple|dict):
                               d=section[0], tw=section[1],
                               b=section[2], tb=section[3],
                               r=section[4])
-    return section, properties._properties(poisson=0.30)
+    return section, properties._properties(poisson=0.0)
 #
 #

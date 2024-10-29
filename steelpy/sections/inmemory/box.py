@@ -49,11 +49,11 @@ class Box(ShapeBasic):
             mnumber = next(self.get_number())
             self._number.append(mnumber)
             #
-            self._d.append(parameters[0])
-            self._tw.append(parameters[1])
+            self._d.append(parameters.d)
+            self._tw.append(parameters.tw)
             #
-            self._b.append(parameters[2])
-            self._tb.append(parameters[3])
+            self._b.append(parameters.b)
+            self._tb.append(parameters.tb)
     #
     def __getitem__(self, shape_name: str | int):
         """

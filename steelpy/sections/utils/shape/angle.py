@@ -93,7 +93,7 @@ class AngleBasic(ShapeStressBasic):
         # -------------------------------------------------
         #
         Yc, Zc = self.centroid
-        Iy, Iz = self.I
+        Iy, Iz = self.Inertia
         #
         # Simmetric angle
         if math.isclose(self.d, self.b):
@@ -410,7 +410,7 @@ class AngleBasic(ShapeStressBasic):
         1 / 0
     #
     @property
-    def I(self):
+    def Inertia(self):
         """Second moment of inertia"""
         # Simmetric angle
         if math.isclose(self.d, self.b):
@@ -571,6 +571,30 @@ class AngleBasic(ShapeStressBasic):
     def Dh(self):
         """Hydrodynamic diametre"""
         return math.hypot(self.d, self.b)
+    #
+    #
+    def _shape(self):
+        """
+        """
+        section = []
+        section.append("{:25s}{:}\n".format("", "", self.name))
+        section.append("+ +\n")
+        section.append("  ||{:7s}\n".format(""))
+        section.append("d || tw{:16s}{:1.3E} {:1.3E}\n"
+                       .format("", self.d, self.tw))
+        section.append("  ||{:7s}\n".format(""))
+        section.append("+ +=========+ tb{:7s}{:1.3E} {:1.3E}\n"
+                       .format("", self.b, self.tw))
+
+        section.append("{:2s}+    b    +\n".format(""))
+        return section
+    #
+    def __str__(self) -> str:
+        """
+        :return:
+        """
+        check_out = self._shape()
+        return "".join(check_out)
 #
 #
 #
@@ -601,6 +625,6 @@ def get_Lsect_dict(parameters: list|tuple|dict):
                             d=section[0], tw=section[1],
                             b=section[2], tb=section[3],
                             r=section[4])
-    return section, properties._properties(poisson=0.30)
+    return section, properties._properties(poisson=0.0)
 #
 #

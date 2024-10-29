@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 # Python stdlib imports
@@ -118,7 +118,8 @@ def get_vnorm(n1, n2):
     return vector.normalized()    
 #
 #
-def plot_circle(ax, moments, coord):
+def plot_circle(ax, moments:list, coord:list,
+                factor:float=1.0):
     """ """
     x, y, z = coord
     Mx, My, Mz = moments
@@ -126,39 +127,41 @@ def plot_circle(ax, moments, coord):
     theta = np.linspace(np.pi/2., 4*np.pi/2.)
     # Mx
     if Mx:
-        r = Mx*0.10
+        r = Mx*factor
         xc = np.zeros_like(theta) + x # x=0
         yc = r*np.cos(theta) + y # y - y0 = r*cos(theta)
         zc = r*np.sin(theta) + z # z - z0 = r*sin(theta)
         ax.plot(xc, yc, zc)
         # arrow heads
-        get_arrow(ax, xc, yc, zc, color="b")
+        ax = get_arrow(ax, xc, yc, zc, color="b")
     # My
     if My:
-        r = My*0.10    
+        r = My*factor
         yc = np.zeros_like(theta) + y
         zc = r*np.cos(theta) + z
         xc = r*np.sin(theta) + x
         ax.plot(xc, yc, zc, color="b")
         # arrow heads
-        get_arrow(ax, xc, yc, zc, color="b")    
+        ax = get_arrow(ax, xc, yc, zc, color="b")
     # Mz
     if Mz:
-        r = Mz*0.10    
+        r = Mz*factor
         zc = np.zeros_like(theta) + z
         yc = r*np.cos(theta) + y 
         xc = r*np.sin(theta) + x
         ax.plot(xc, yc, zc, color="b")
         # arrow heads
-        get_arrow(ax, xc, yc, zc, color="b")
+        ax = get_arrow(ax, xc, yc, zc, color="b")
     #
+    return ax
 #
 def get_arrow(ax, xc, yc, zc, color):
     """ """
     a = Arrow3D([xc[-2], xc[-1]], [yc[-2], yc[-1]], 
                 [zc[-2], zc[-1]], mutation_scale=10, 
                 lw=2, arrowstyle="->", color=color)
-    ax.add_artist(a)     
+    ax.add_artist(a)
+    return ax
 #
 #
 #

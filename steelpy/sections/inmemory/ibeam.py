@@ -40,7 +40,16 @@ class Ibeam(ShapeBasic):
     #
     def __setitem__(self, shape_name: int|str, parameters: list) -> None:
         """
-        parameters = [node1, node2, material, section, roll_angle]
+        Parameters
+        ----------
+        d   : Section Height
+        tw  : Web thickness
+        bf  : flange base (top)
+        tf  : flange thickness (top)
+        bfb : Bottom flange base
+        tfb : Bottom flange thickness
+        r   : root radius
+        title:
         """
         try:
             self._labels.index(shape_name)
@@ -68,7 +77,7 @@ class Ibeam(ShapeBasic):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        return IbeamBasic(#name=self._labels[index], 
+        return IbeamBasic(name=self._labels[index],
                           d=self._d[index], tw=self._tw[index],
                           bft=self._bft[index], tft=self._tft[index],
                           bfb=self._bfb[index], tfb=self._tfb[index], 

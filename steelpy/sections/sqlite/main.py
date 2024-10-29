@@ -102,7 +102,8 @@ class SectionSQL(SectionMainSQL):
                     top_flange_thickness DECIMAL,\
                     bottom_flange_width DECIMAL,\
                     bottom_flange_thickness DECIMAL,\
-                    fillet_radius DECIMAL);"
+                    fillet_radius DECIMAL,\
+                    web_orientation);"
         create_table(conn, table)
         #
         # Section Properties
@@ -142,7 +143,7 @@ class SectionSQL(SectionMainSQL):
                   'height', 'web_thickness',
                   'top_flange_width', 'top_flange_thickness',
                   'bottom_flange_width', 'bottom_flange_thickness',
-                  'fillet_radius',
+                  'fillet_radius', 'web_orientation', 
                   'SA_inplane', 'SA_outplane',
                   'shear_stress', 'build', 'compactness', 'title',
                   'area[m^2]', 'Zc[m]', 'Yc[m]',
@@ -193,7 +194,7 @@ class SectionSQL(SectionMainSQL):
                   'area', 'Zc', 'Yc',
                   'Iy', 'Zey', 'Zpy', 'ry', 
                   'Iz', 'Zez', 'Zpz', 'rz',
-                  'J', 'Cw',
+                  'J', 'Cw', 
                   'alpha_sy', 'alpha_sz']
         conn = create_connection(self.db_file)
         with conn:

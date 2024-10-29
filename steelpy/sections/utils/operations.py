@@ -80,7 +80,7 @@ def get_section(properties:tuple|list|dict)->list:
 def find_sect_type(word_in:str):
     """
     """
-    key = {"I section": r"\b(i((_|-|\s*)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg|asb)\b",
+    key = {"I section": r"\b((i((_|-|\s*)?beam|section)?|w|m|s|hp|ub|uc|he|ipe|pg|asb)(_|-|\s*)?(asymmetrical)?)\b",
            "Tee": r"\b(t(ee)?((_|-|\s*)?section)?)\b",
            "Tubular": r"\b(tub(ular)?|pipe|chs((_|-|\s*)?section)?)\b",
            "Box": r"\b(b(ox)?|rhs|shs((_|-|\s*)?section)?)\b",
@@ -335,7 +335,7 @@ def get_sect_df(df):
               'height', 'web_thickness',
               'top_flange_width', 'top_flange_thickness',
               'bottom_flange_width', 'bottom_flange_thickness',
-              'fillet_radius',
+              'fillet_radius', #'web_orientation', 
               'SA_inplane', 'SA_outplane',
               'shear_stress', 'build', 'compactness', 'title']
     db = DBframework()
@@ -346,8 +346,9 @@ def get_sect_df(df):
               'Iy', 'Zey', 'Zpy', 'ry', 
               'Iz', 'Zez', 'Zpz', 'rz',
               'J', 'Cw',
-              'alpha_sy', 'alpha_sz']
+              'alpha_sy', 'alpha_sz', 'density']
     propdf = db.DataFrame(data=newprop, columns=header)
+    propdf.drop(columns=['alpha_sy', 'alpha_sz', 'density'])
     #
     return sectdf, propdf
 #

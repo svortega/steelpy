@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2018-2020 steelpy
+# Copyright (c) 2009 steelpy
 
 
 # Python stdlib imports
@@ -8,7 +8,7 @@
 #
 
 # package imports
-from steelpy.process.io_module.text import search_line
+#from steelpy.process.io_module.text import search_line
 
 #
 def print_header_ellipse():

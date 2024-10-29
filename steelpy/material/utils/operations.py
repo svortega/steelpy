@@ -15,14 +15,28 @@ from steelpy.utils.dataframe.main import DBframework
 #                          Material Operations
 # --------------------------------------------------------------------
 #
-def get_mat_dict(prop:dict)->list:
-    """"""
+def get_mat_properties(properties:list|tuple|dict)->list:
+    """
+    [elastic, Fy, Fu, E, G, poisson, density, alpha]
+    """
+    if isinstance(properties, dict):
+        properties = get_mat_dict(properties)
+    elif isinstance(properties, (list, tuple)):
+        properties = get_mat_list(properties)
+    else:
+        raise IOError(f' material input not recognised')
+    return properties
+#
+def get_mat_dict(properties:dict)->list:
+    """
+    [elastic, Fy, Fu, E, G, poisson, density, alpha]
+    """
     material_type = None
-    matkeys = list(property.keys())
+    matkeys = list(properties.keys())
     for key in matkeys:
         if re.match(r"\b((mat(erial)?(_)?)?type)\b", key, re.IGNORECASE):
-            material_type = find_mat_type(property[key])
-            prop.pop(key)
+            material_type = find_mat_type(properties[key])
+            properties.pop(key)
             break
     #
     if material_type:
@@ -30,8 +44,8 @@ def get_mat_dict(prop:dict)->list:
         if material_type == 'elastic':
             # [Fy, Fu, E, G, poisson, density, alpha]
             prop = [None] * 7
-            for key, item in prop.items():
-                print(key)
+            for key, item in properties.items():
+                #print(key)
                 if re.match(r"\b((fy|yield|smys)(\s*strength|stress)?)\b", key, re.IGNORECASE):
                     prop[0] = item
                 elif re.match(r"\b((fu|u(ltimate)?\s*t(ensile)|smts)(\s*strength|stress)?)\b", key, re.IGNORECASE):
@@ -56,7 +70,9 @@ def get_mat_dict(prop:dict)->list:
     return [material_type, *prop]
 #
 def get_mat_list(prop:list|tuple)->list:
-    """"""
+    """
+    [elastic, Fy, Fu, E, G, poisson, density, alpha]
+    """
     material_type = find_mat_type(prop[0])
 
     if re.match(r"\b(curve)\b", material_type, re.IGNORECASE):
@@ -74,7 +90,7 @@ def get_mat_df(df:DBframework.DataFrame)->DBframework.DataFrame:
     """"""
     columns = list(df.columns)
     for key in columns:
-        print(key)
+        #print(key)
         if re.match(r"\b((mat(erial)?(_)?)?type)\b", key, re.IGNORECASE):
             #print('-->')
             df['type'] = df[key].apply(lambda x: find_mat_type(x))

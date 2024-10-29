@@ -21,7 +21,7 @@ from steelpy.utils.dataframe.main import DBframework
 #
 def get_beam_line_load(load:list|tuple|dict) -> list:
     """
-    line = [qx1,qy1,qz1,qt1,qx2,qy2,qz2,qt2,L0,L1, tile]
+    [line, qx1,qy1,qz1,qt1,qx2,qy2,qz2,qt2,L0,L1, tile]
     """
     #print('--->')
     if isinstance(load, UDL):
@@ -44,8 +44,8 @@ def get_beam_line_load(load:list|tuple|dict) -> list:
 #
 def get_beam_point_load(load:list|tuple|dict) -> list:
     """
-    point = [Fx, Fy, Fz, Mx, My, Mz, L0, title]
-    mass = [x, y, z, mx, my, mz, L0, title]
+    [point,Fx, Fy, Fz, Mx, My, Mz, L0, title]
+    [mass, x, y, z, mx, my, mz, L0, title]
     """
     #print('--->')
     if isinstance(load, PLoad):
@@ -520,7 +520,7 @@ def get_BeamLine_dic(data: dict)->list:
         elif re.match(r"\b((qz|out(_|-|\s*)?plane)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
             new_data[2] = item.convert("newton/metre").value
             
-        elif re.match(r"\b(qt(orsion)?|mx(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
+        elif re.match(r"\b((qt(orsion)?|mx)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
             new_data[3] = item.convert("newton/metre").value
         #
         # End 2
@@ -533,15 +533,15 @@ def get_BeamLine_dic(data: dict)->list:
         elif re.match(r"\b((qz|out(_|-|\s*)?plane)(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
             new_data[6] = item.convert("newton/metre").value           
         
-        elif re.match(r"\b(qt(orsion)?|mx(_|-|\s*)?(2|end)?)\b", key, re.IGNORECASE):
+        elif re.match(r"\b((qt(orsion)?|mx)(_|-|\s*)?(2|end)?)\b", key, re.IGNORECASE):
             new_data[7] = item.convert("newton/metre").value            
         #
         # L0, L2
         elif re.match(r"\b((l|d(istance)?)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-            new_data[8] = item.value
+            new_data[8] = item.convert("metre").value
         
         elif re.match(r"\b((l|d(istance)?)(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
-            new_data[9] = item.value
+            new_data[9] = item.convert("metre").value
         #
         # Comment
         elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
@@ -644,7 +644,7 @@ def get_BeamPoint_dic(data: dict)->list:
                 new_data[5] = item.convert("newton*metre").value
             #
             elif re.match(r"\b((l|d(istance)?)(_)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[6] = item.value
+                new_data[6] = item.convert("metre").value
             
             elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
                 new_data[7] = item
@@ -675,7 +675,7 @@ def get_BeamPoint_dic(data: dict)->list:
             #    new_data[5] = item.convert("newton*metre").value
             #
             elif re.match(r"\b((l|d(istance)?)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[6] = item.value
+                new_data[6] = item.convert("metre").value
             
             elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
                 new_data[7] = item

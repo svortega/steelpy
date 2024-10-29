@@ -117,15 +117,15 @@ class BoxBasic(ShapeStressBasic):
         Yc = 0
         # -------------------------------------------------
         #   Shear Centre 
-        SCz = 0
-        SCy = 0
+        #SCz = 0
+        #SCy = 0
         # -------------------------------------------------
         #   Warping Constant Cw
         Cw = 0
         # -------------------------------------------------
         #               Section Properties
         # -------------------------------------------------
-        Iy, Iz = self.I
+        Iy, Iz = self.Inertia
         #   Second Moment of Area about Mayor Axis
         #Iy = ((self.b * self.d ** 3 - _bi * _hi ** 3) / 12.0)
         #   Elastic Modulus about Mayor Axis
@@ -275,7 +275,7 @@ class BoxBasic(ShapeStressBasic):
     # --------------------------------------------
     #
     @property
-    def I(self):
+    def Inertia(self):
         """Second moment of inertia"""
         hi = self.d - 2 * self.tb
         bi = self.b - 2 * self.tw        
@@ -389,6 +389,30 @@ class BoxBasic(ShapeStressBasic):
     def Dh(self):
         """Hydrodynamic diametre"""
         return math.hypot(self.d, self.b)
+    #
+    #
+    def _shape(self):
+        """
+        """
+        section = []
+        section.append("{:2s}+    b    +{:10s}{:}\n"
+                       .format("", "", self.name))
+        section.append("+ +=========+ tb{:7s}{:1.3E} {:1.3E}\n"
+                       .format("", self.b, self.tb))
+        section.append("  ||{:7s}||\n".format(""))
+        section.append("d ||{:7s}|| tw{:7s}{:1.3E} {:1.3E}\n"
+                       .format("", "", self.d, self.tw))
+        section.append("  ||{:7s}||{:9s}\n".format("", ""))
+        section.append("+ +=========+ tb\n")
+        section.append("{:2s}+    b    +\n".format(""))
+        return section
+    #
+    def __str__(self) -> str:
+        """
+        :return:
+        """
+        check_out = self._shape()
+        return "".join(check_out)
 #
 #
 #
@@ -420,5 +444,5 @@ def get_BoxSect_dict(parameters: list|tuple|dict):
                           d=section[0], tw=section[1],
                           b=section[2], tb=section[3],
                           r=section[4])
-    return section, properties._properties(poisson=0.30) 
+    return section, properties._properties(poisson=0.0) 
 #

@@ -123,11 +123,14 @@ def nodeload(ax, nodes, nload, scale:float = 1.0):
     #
     # utils
     #
+    df_nload[['Fx', 'Fy', 'Fz','Mx', 'My', 'Mz']].astype(float).fillna(0.0, inplace=True)
+    #
     colmax = df_nload[['Fx', 'Fy', 'Fz']].abs().max()
     df_nload[['Fxnorm', 'Fynorm', 'Fznorm']] = df_nload[['Fx', 'Fy', 'Fz']].apply(lambda x: x/colmax.max(), axis=0)
     colmax = df_nload[['Mx', 'My', 'Mz']].abs().max()
     df_nload[['Mxnorm', 'Mynorm', 'Mznorm']] = df_nload[['Mx', 'My', 'Mz']].apply(lambda x: x/colmax.max(), axis=0)
-    df_nload.fillna(0, inplace=True)
+    #
+    #df_nload.fillna(0.0, inplace=True)
     #
     #df_nload.set_index('node_name')
     grpnload = df_nload.groupby(['load_name', 'load_level', 'load_id',
@@ -149,15 +152,18 @@ def nodeload(ax, nodes, nload, scale:float = 1.0):
         x, y, z = node[:3]
         for nload in  nloads.itertuples():
             # nodal force
-            force = [ item * scale for item in nload[20:]]
+            # select correct force items
+            force = [ item * scale for item in nload[11:17]]
             if any(force[:3]):
                 Fx, Fy, Fz = force[:3]
                 ax.quiver(x, y, z, Fx, Fy, Fz, color='r')
             # nodal moment
             if any(force[3:]):
+                #1 / 0  # select correct force items
                 Mx, My, Mz = [item*4 for item in force[3:6]]
                 #Mx, My, Mz = force[3:]
-                plot_circle(ax, [Mx, My, Mz], [x, y, z])
+                ax = plot_circle(ax, [Mx, My, Mz], [x, y, z],
+                                 factor=10.0)
     #
     #for key, nloads in nload._node._load.items():
     #    node = nodes[key]
@@ -226,23 +232,27 @@ def beamlineload(ax, beams, nodes, lineload,
         normalized = get_vnorm(n1, n2)
         #
         for lload in line.itertuples():
-            force = [item * scale for item in lload[15:]]
-            L0 = lload.L0
-            L1 = lload.L1
+            # select correct force items
+            force = [item * scale for item in lload[7:17]]
+            L0 = force[0] # lload.L0
+            L1 = force[5] # lload.L1
             # qy
-            if any([force[1], force[4]]):
-                q0, q1 = force[1], force[4]
+            q0, q1 = force[2], force[7]
+            if any([q0, q1]):
+                #q0, q1 = force[1], force[4]
                 x, y, z = get_line_coord('y', n1, n2, q0, q1, L0, L1, normalized)
                 plot_lload(ax, x,y,z,
                            color= 'palegreen',
                            edgecolor= 'lightgrey')
             # qz
-            if any([force[2], force[5]]):
-                q0, q1 = force[2], force[5]
+            q0, q1 = force[3], force[8]
+            if any([q0, q1]):
+                #q0, q1 = force[2], force[5]
                 x, y, z = get_line_coord('z', n1, n2, q0, q1, L0, L1, normalized)
                 plot_lload(ax, x,y,z,
                            color= 'lightsalmon',
-                           edgecolor= 'lightgrey')     
+                           edgecolor= 'lightgrey')
+            # TODO : qx and qt
     #
     #for bname, line in lineload.items():
     #    try:
@@ -301,7 +311,8 @@ def beampointload(ax, beams, nodes, pointload,
         normalized = get_vnorm(n1, n2)
         #
         for pload in point.itertuples():
-            force = [ item * scale for item in pload[14:]]
+            # select correct force items
+            force = [ item * scale for item in pload[8:14]]
             x = n1.x + normalized[0] * pload.L0
             y = n1.y + normalized[1] * pload.L0
             z = n1.z + normalized[2] * pload.L0

@@ -61,6 +61,7 @@ class ShapeProperty(NamedTuple):
     alpha_sy: float = 0
     alpha_sz: float = 0
     #
+    desity: float = 7850 # kg/m^3
     #
     @property
     def Asy(self):
@@ -80,11 +81,11 @@ class ShapeProperty(NamedTuple):
         """ """
         #print('--->')
         output = "{:1.4e} {:1.4e} {:1.4e} {:1.4e} {:1.4e} {:1.4e}\n"\
-            .format(self.area, self.Iy, self.Iz, self.Zc, self.ry, 1)
+            .format(self.area, self.Iy, self.Iz, self.Zc, self.ry, self.J)
         output += "{:25s} {:1.4e} {:1.4e} {:1.4e} {:1.4e} {:1.4e}\n"\
             .format("", self.Sy, self.Sz, 1, self.rz, self.Cw)
         output += "{:25s} {:1.4e} {:1.4e} {:1.4e} {:1.4e}\n"\
-            .format("", self.Zy, self.Zz, 1, self.area*0)
+            .format("", self.Zy, self.Zz, 1, self.area*self.desity)
         return output
 #
 #

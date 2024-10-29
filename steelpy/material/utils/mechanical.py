@@ -13,7 +13,6 @@ from typing import NamedTuple
 # package imports
 from steelpy.utils.units.main import Units
 from ..utils.print_report import print_isomat
-#from ..utils.operations import get_isomat_prop_df
 #
 from steelpy.utils.dataframe.main import DBframework
 
@@ -33,7 +32,7 @@ class MaterialItem:
     density: float
     alpha: float
     title: str|None = None
-    type: str = "isotropic"
+    type: str = "Isotropic"
     #component: float|str | None = None
     #
     def __str__(self) -> str:
@@ -41,8 +40,8 @@ class MaterialItem:
         :return:
         """
         #return print_isomat(self)
-        return ("{:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E}\n"
-                  .format(self.Fy, self.Fu, self.E, self.poisson,
+        return ("{:12s} {:10s} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E} {:1.4E}"
+                  .format(str(self.name), self.type, self.Fy, self.Fu, self.E, self.poisson,
                           self.density, self.G))
 #
 #
@@ -423,6 +422,7 @@ class MaterialElastic(Mapping):
     def __setitem__(self, material_name: int|str,
                     properties: list[str|float]) -> None:
         """
+        [elastic, Fy, Fu, E, G, Poisson, density, alpha]
         """
         try:
             self._labels.index(material_name)
@@ -434,7 +434,7 @@ class MaterialElastic(Mapping):
             self._number.append(material_id)
             self._grade.append(-1)
             #
-            self._title.append(properties.pop(0))
+            #self._title.append(properties.pop(0))
             # set properties with default when value missing
             self._Fy.append(properties[0]) # Pa
             self._Fu.append(properties[1]) # Pa
@@ -443,6 +443,7 @@ class MaterialElastic(Mapping):
             self._poisson.append(properties[4])
             self._density.append(properties[5]) # kg/m^3
             self._alpha.append(properties[6])   # K
+            self._title.append(material_name)
             #
             #index = self._labels.index(material_id)
             #self._Fy[index] = properties[0]
@@ -452,16 +453,19 @@ class MaterialElastic(Mapping):
         """
         try:
             index = self._labels.index(material_id)
-            #return GetMaterial(self, material_id)
-            return MaterialItem(name=self._labels[index], number=self._number[index],
-                                Fy=self._Fy[index], Fu=self._Fu[index],
-                                E=self._E[index], G=self._G[index],
-                                poisson=self._poisson[index], density=self._density[index],
+            return MaterialItem(name=self._labels[index],
+                                number=self._number[index],
+                                Fy=self._Fy[index],
+                                Fu=self._Fu[index],
+                                E=self._E[index],
+                                G=self._G[index],
+                                poisson=self._poisson[index],
+                                density=self._density[index],
                                 alpha=self._alpha[index])
         except ValueError:
             raise IndexError('   *** material {:} does not exist'.format(material_id))        
     #
-    def get_number(self, start:int=1)-> Iterable[int]:
+    def get_number(self, start:int=1)-> iter[int]:
         """
         """
         try:

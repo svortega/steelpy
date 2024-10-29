@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009-2023 fem2ufo
+# Copyright (c) 2009 steelpy
 #
 from __future__ import annotations
 # Python stdlib imports
@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 class PlotMain:
     __slots__ = ['_cls', '_frame', '_load']
     
-    def __init__(self, cls, figsize):
+    def __init__(self, cls, figsize:tuple)->None:
         """
         """
         self._cls = cls
@@ -53,16 +53,14 @@ class PlotMain:
 class PlotConcept(PlotMain):
     __slots__ = ['_cls', '_frame', '_load']
     
-    def __init__(self, cls, figsize):
+    def __init__(self, cls, figsize:tuple)->None:
         """
         """
-        #self._cls = mesh
-        #self._frame = PlotFrame(figsize=figsize)
         super().__init__(cls, figsize)
     #
     #
     #
-    def frame(self, show=True):
+    def frame(self, show:bool =True):
         """ plot mesh element, nodes & boundary"""
         #print('--')
         elements = self._cls._elements
@@ -82,15 +80,12 @@ class PlotConcept(PlotMain):
 class PlotMesh(PlotMain):
     __slots__ = ['_cls', '_frame', '_load']
     
-    def __init__(self, cls, figsize):
+    def __init__(self, cls, figsize:tuple)->None:
         """
         """
-        #self._mesh = mesh
-        #self._frame = PlotFrame(figsize=figsize)
-        #self._load = PlotLoad(mesh=self._mesh, figsize=figsize)
         super().__init__(cls, figsize)
     #
-    def frame(self, show=True):
+    def frame(self, show:bool=True):
         """ plot mesh element, nodes & boundary"""
         #print('--')
         elements = self._cls._elements
@@ -107,15 +102,10 @@ class PlotMesh(PlotMain):
         else:
             return ax
     #
-    #def load(self):
-    #    """ """
-    #    return self._load
     #
     #
 #
 #
-#
-# Load
 #
 #
 #

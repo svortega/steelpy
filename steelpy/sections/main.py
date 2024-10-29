@@ -78,12 +78,13 @@ class Section(Mapping):
         output = "\n"
         output += "{:}\n".format(80 * "_")
         output += "\n"
-        output += f"{30 * space}SECTION PROPERTIES REPORT{15 * space}UNITS [{unit_sec}]\n"
+        output += f"{30 * space}SECTION PROPERTIES REPORT{15 * space}UNITS [{units}]\n"
         output += "\n"
-        output += f"{48 * space}Web{14 * space}Flanges\n"
-        output += (f"Member Name{5 * space}Type{6 * space}Diametre{3 * space}Thickness"
-                   f"{2 * space}Height{5 * space}Top Width{2 * space}Bot Width\n")
-        output += f"{48 * space}Thickness{2 * space}Top Thick{2 * space}Bot Thick\n"
+        output += f"{48 * space}-- WEB --  ------ FLANGE ------\n"
+        output += f"{37 * space}Wall{7 * space}{11 * space}-- TOP --{2 * space}-BOTTOM -\n"
+        output += (f"Name{12 * space}Type{6 * space}Diameter{3 * space}Thickness"
+                   f"{2 * space}Height{5 * space}Width{6 * space}Width\n")
+        output += f"{48 * space}Thickness{2 * space}Thickness{2 * space}Thickness\n"
         output += f"{70 * space}Fillet\n"
         output += "{:}\n".format(80 * ".")
         output += "\n"

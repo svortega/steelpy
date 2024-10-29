@@ -144,13 +144,20 @@ class TrapezoidBasic(ShapeStressBasic):
         return alpha_s, alpha_s
     #
     @property
-    def d(self):
+    def d(self)->float:
         return self.depth
     #
     @property
-    def Dh(self):
-        """Hydrodynamic diametre"""
+    def Dh(self)->float:
+        """Hydrodynamic diameter"""
         return math.hypot(self.d, self.width)
+    #
+    def __str__(self) -> str:
+        """
+        :return:
+        """
+        check_out = self._shape()
+        return "".join(check_out)
 #
 #
 @dataclass(slots=True)
@@ -206,16 +213,16 @@ h   |     |   Z
     # --------------------------------------------
     #
     @property
-    def shape(self):
-        return 'rectangle'    
+    def shape(self)->str:
+        return 'Rectangle'
     #
     @property
-    def a(self):
+    def a(self)->float:
         """ """
         return self.width
     #
     @property
-    def c(self):
+    def c(self)->float:
         """ """
         return abs(self.a - self.width) / 2.0 
     #
@@ -228,16 +235,16 @@ h   |     |   Z
         area = self.width * self.depth
         #-------------------------------------------------
         #   Elastic Neutral Centre 
-        Zc = 0 # self.depth / 2.0
-        Yc = 0 # self.width / 2.0
+        Zc = 0.0 
+        Yc = 0.0 
         #-------------------------------------------------
         #   Plastic Neutral Centre 
-        Zp = 0
-        Yp = 0
+        #Zp = 0
+        #Yp = 0
         #-------------------------------------------------
         #   Shear Centre 
-        SCz = 0 * self.depth
-        SCy = 0 * self.width
+        #SCz = 0 * self.depth
+        #SCy = 0 * self.width
         #-------------------------------------------------
         #   Warping Constant Cw
         Cw = 0
@@ -344,7 +351,7 @@ h   |     |   Z
     #
     #
     @property
-    def I(self):
+    def Inertia(self):
         """Moments of inertia"""
         #   Second Moment of Area about Mayor Axis
         Iy = self.width*self.depth**3 / 12.0
@@ -413,16 +420,17 @@ h   |     |   Z
     def _shape(self):
         """
         """
-        _section = []
-        _section.append("+   +-----+{:35s}{:1.3E} {:1.3E}\n"
-                        .format("", self.d.convert('millimetre').value, 
-                                self.w.convert('millimetre').value))
-        _section.append("    |     |\n")
-        _section.append("d   |     |   Z\n")
-        _section.append("    |     |   ^\n")
-        _section.append("+   +-----+   + > Y\n")
-        _section.append("    +  w  +\n")
-        return _section
+        section = []
+        section.append("+   +-----+{:11s}{:}\n"
+                        .format("", self.name))
+        section.append("    |     |\n")
+        section.append("d   |     |{:11s}{:1.3E}\n"
+                       .format("", self.depth))
+        section.append("    |     |\n")
+        section.append("+   +-----+{:11s}{:1.3E}\n"
+                       .format("", self.width))
+        section.append("    +  w  +\n")
+        return section
     #
     #
     def section_coordinates(self):
@@ -513,8 +521,8 @@ class TrapezoidSolid(TrapezoidBasic):
     # --------------------------------------------
     #
     @property
-    def shape(self):
-        return 'trapezoid'   
+    def shape(self)->str:
+        return 'Trapezoid'
     #
     def _properties(self, poisson: float):
         """
@@ -543,14 +551,15 @@ class TrapezoidSolid(TrapezoidBasic):
         area = 0.50 * depth * (a + width)
         #-------------------------------------------------
         #   Elastic Neutral Centre 
-        Zc = (depth / 3.0 * ((2 * a + width) / (a + width)))
+        #Zc = (depth / 3.0 * ((2 * a + width) / (a + width)))
         #
         #
         #
         #Yc =  ((2*width**2 + 2*a*width - c*width
         #        - 2*c*a - a**2)/(3*(a + width)))
         #
-        Yc = max(width, a) * 0.50
+        Zc = (depth / 3.0 * ((a + 2 * width) / (a + width)))
+        Yc = (0.250 * (a + width))
         #
         #-------------------------------------------------
         #   Plastic Neutral Centre 
@@ -573,7 +582,9 @@ class TrapezoidSolid(TrapezoidBasic):
         Iy = (depth**3 / (36.0 * (a + width))
               * (a**2 + 4 * a * width + width**2))
         #   Elastic Modulus about Mayor Axis
-        Zey = Iy / Zc
+        #Zc1 = (depth / 3.0 * ((a + 2 * width) / (a + width)))
+        Zc2 = self.depth - Zc
+        Zey = Iy / min(Zc, Zc2)
         #   Plastic Modulus about Mayor Axis
         #Zpy = (depth**2/(12*(a + width))
         #       * (a**2 + 4* a*width + width**2))
@@ -646,8 +657,8 @@ class TrapezoidSolid(TrapezoidBasic):
         #self.Yc =  Yc # - max(a, width) * 0.50
         #self.Zc =  Zc
         #
-        Yc = 0.50 * max(a, width) - Yc
-        Zc = 0.50 * self.depth - Zc
+        Yc = round(0.25 * (a + width) - Yc, 6)
+        Zc = round(0.50 * self.depth - Zc, 6)
         #
         #
         alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
@@ -753,7 +764,7 @@ class TrapezoidSolid(TrapezoidBasic):
     #
     #
     @property
-    def I(self):
+    def Inertia(self):
         """Moments of inertia"""
         depth = self.depth
         width = self.width
@@ -793,8 +804,8 @@ class TrapezoidSolid(TrapezoidBasic):
     #
     def _dimension(self) -> str:
         """ Print section dimensions"""
-        output = "{:<8s}{:>24}{:1.4e} {:1.4e} {:1.4e}\n"\
-            .format("BarTrapz", " ", self.depth, self.a, self.width)
+        output = "{:<8s}{:>23}{:1.4e} {:1.4e} {:1.4e}\n"\
+            .format(self.shape, " ", self.depth, self.a, self.width)
         #output += "{:15s}{:<8s}\n".format("", "Trapzd")
         #output += "{:67} {:1.4e}\n".format("", self.width)
         return output
@@ -805,6 +816,23 @@ class TrapezoidSolid(TrapezoidBasic):
     #    output += "{:12s}{:<12s}{:40s} {:1.4E}\n".format("", self.type.capitalize(), "", self.a)
     #    output += "{:>64} {:1.4E}\n".format("", self.width)
     #    return output
+    #
+    def _shape(self):
+        """
+        """
+        section = []
+        section.append("     +  a  +{:10s}{:}\n"
+                       .format("", self.name))
+        section.append("+    +-----+{:10s}{:1.3E}\n"
+                        .format("", self.a))
+        section.append("     |     |\n")
+        section.append("h   |       |{:9s}{:1.3E}\n"
+                       .format("", self.depth))
+        section.append("   |         |\n")
+        section.append("+  +---------+{:8s}{:1.3E}\n"
+                       .format("", self.width))
+        section.append("   +    b    +\n")
+        return section
     #
     #
     def section_coordinates(self):
@@ -872,7 +900,7 @@ class CircleSolid(ShapeStressBasic):
     # --------------------------------------------
     #
     @property
-    def shape(self):
+    def shape(self)->str:
         return 'Circular'
     #
     # --------------------------------------------
@@ -888,8 +916,8 @@ class CircleSolid(ShapeStressBasic):
         area = math.pi * R**2
         #-------------------------------------------------
         #   Elastic Neutral Centre 
-        Zc = 0 # self.d / 2.0
-        Yc = 0
+        Zc = 0.0
+        Yc = 0.0
         #-------------------------------------------------
         #   Shear Centre 
         _SCz = 0
@@ -902,7 +930,7 @@ class CircleSolid(ShapeStressBasic):
         #-------------------------------------------------
         #   Second Moment of Area about Mayor Axis
         #Iy = math.pi * R**4 / 4.0
-        Iy, Iz = self.I
+        Iy, Iz = self.Inertia
         #   Elastic Modulus about Mayor Axis
         Zey = math.pi * R**3 / 4.0
         #   Plastic Modulus about Mayor Axis
@@ -989,12 +1017,12 @@ class CircleSolid(ShapeStressBasic):
     # --------------------------------------------
     #
     @property
-    def r(self):
+    def r(self)->float:
         """radious"""
         return self.d * 0.50
     #
     @property
-    def I(self):
+    def Inertia(self):
         """Moments of inertia"""
         R = self.d * 0.50
         Iy = math.pi * R**4 / 4.0
@@ -1117,11 +1145,30 @@ class CircleSolid(ShapeStressBasic):
     #
     #
     @property
-    def Dh(self):
+    def Dh(self)->float:
         """Hydrodynamic diametre"""
         return self.d     
     #
     #
+    def _shape(self):
+        """
+        """
+        section = []
+        section.append("+     .  +  .{:10s}{:}\n".format("", self.name))
+        section.append("    .         .\n")
+        section.append("   .           .\n")
+        section.append("d +             +{:6s}{:1.3E}\n".format("", self.d))
+        section.append("   .           .\n")
+        section.append("    .         .\n")
+        section.append("+     .  +  .\n")
+        return section
+    #
+    def __str__(self) -> str:
+        """
+        :return:
+        """
+        check_out = self._shape()
+        return "".join(check_out)
 #
 #
 #
@@ -1140,7 +1187,7 @@ class SolidDim(NamedTuple):
     title:str|None
     #
     @property
-    def d(self):
+    def d(self)->float:
         """"""
         return self.h
 #
@@ -1252,4 +1299,4 @@ def get_SolidSect_dict(shape:str, parameters: dict,
                                      d=section[0])
     #
     section.extend(get_prop_dict(parameters))
-    return section, properties._properties(poisson=0.30)
+    return section, properties._properties(poisson=0.0)

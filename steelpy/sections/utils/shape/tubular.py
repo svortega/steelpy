@@ -145,12 +145,10 @@ class TubularBasic(ShapeStressBasic):
         area = (math.pi / 4.
                 * (diameter ** 2 - (diameter - 2 * thickness) ** 2))
         # Centroid
-        #Zc = diameter / 2.0
-        #Yc = diameter / 2.0
-        Yc, Zc = self.centroid
+        Yc, Zc = 0, 0 # self.centroid
         # Shear centre
-        SCz = diameter * 0
-        SCy = diameter * 0
+        #SCz = diameter * 0
+        #SCy = diameter * 0
         # -------------------------------------------------
         #               Section Properties
         # -------------------------------------------------
@@ -159,7 +157,7 @@ class TubularBasic(ShapeStressBasic):
         #Iy = (math.pi / 64.0
         #      * (diameter ** 4 - (diameter - 2 * thickness) ** 4))
         #Iz = Iy
-        Iy, Iz = self.I
+        Iy, Iz = self.Inertia
         #
         #   Elastic Modulus about Mayor Axis
         #   --------------------------------------
@@ -176,8 +174,8 @@ class TubularBasic(ShapeStressBasic):
         rz = ry
         # -------------------------------------------------
         # Shear Factor
-        SFy = Zpy / Zey
-        SFz = SFy
+        #SFy = Zpy / Zey
+        #SFz = SFy
         # -------------------------------------------------
         #   Warping Constant Cw
         Cw = 0 * Iy
@@ -186,12 +184,13 @@ class TubularBasic(ShapeStressBasic):
         J = 2 * Iy
         # -------------------------------------------------
         #   Polar Moment of Inertia
-        Ip = (math.pi / 32.0
-              * (diameter ** 4 - (diameter - 2 * thickness) ** 4))
+        #Ip = (math.pi / 32.0
+        #      * (diameter ** 4 - (diameter - 2 * thickness) ** 4))
+        #
         #   Product of inertia
-        _Iyz = 0
-        Jx = 2 * Iy
-        rp = (Jx / area) ** 0.50
+        #_Iyz = 0
+        #Jx = 2 * Iy
+        #rp = (Jx / area) ** 0.50
         #
         # -------------------------------------------------
         #
@@ -297,7 +296,7 @@ class TubularBasic(ShapeStressBasic):
     # --------------------------------------------
     #
     @property
-    def I(self):
+    def Inertia(self):
         """Moments of inertia"""
         #   Second Moment of Area about Mayor Axis
         #   --------------------------------------
@@ -307,11 +306,11 @@ class TubularBasic(ShapeStressBasic):
         return axis(Iy, Iy)        
         
     #
-    @property
-    def centroid(self):
-        """ Elastic Neutral Centre """
-        Zc = self.diameter / 2.0
-        return axis(Zc, Zc)
+    #@property
+    #def centroid(self):
+    #    """ Elastic Neutral Centre """
+    #    Zc = self.diameter / 2.0
+    #    return axis(Zc, Zc)
     #
     def Qb(self):
         """
@@ -545,12 +544,12 @@ class TubularBasic(ShapeStressBasic):
         d : Diametre
         """
         return self.diameter
-    @d.setter
-    def d(self, value):
-        """
-        d : Diametre
-        """
-        self.diameter = value
+    #@d.setter
+    #def d(self, value):
+    #    """
+    #    d : Diametre
+    #    """
+    #    self.diameter = value
     #
     @property
     def t(self):
@@ -558,12 +557,12 @@ class TubularBasic(ShapeStressBasic):
         t : wall thickness
         """
         return self.thickness
-    @t.setter
-    def t(self, value):
-        """
-        t : wall thickness
-        """
-        self.thickness = value
+    #@t.setter
+    #def t(self, value):
+    #    """
+    #    t : wall thickness
+    #    """
+    #    self.thickness = value
     #
     @property
     def tw(self):
@@ -571,12 +570,12 @@ class TubularBasic(ShapeStressBasic):
         tw : wall thickness
         """
         return self.thickness
-    @t.setter
-    def tw(self, value):
-        """
-        tw : wall thickness
-        """
-        self.thickness = value    
+    #@t.setter
+    #def tw(self, value):
+    #    """
+    #    tw : wall thickness
+    #    """
+    #    self.thickness = value
     #     
     #
     @property
@@ -590,6 +589,27 @@ class TubularBasic(ShapeStressBasic):
         return {'type': self.shape,
                 'diameter': self.d,
                 'wall_thickness': self.t}
+    #
+    #
+    def _shape(self):
+        """
+        """
+        section = []
+        section.append("+     .  +  .{:10s}{:}\n".format("", self.name))
+        section.append("    ..       .. tw{:5s}{:1.3E}\n".format("", self.tw))
+        section.append("   ..         ..\n")
+        section.append("d ..     +     ..{:6s}{:1.3E}\n".format("", self.d))
+        section.append("   ..          ..\n")
+        section.append("    ..        ..\n")
+        section.append("+     .  +  .\n")
+        return section
+    #
+    def __str__(self) -> str:
+        """
+        :return:
+        """
+        check_out = self._shape()
+        return "".join(check_out)
 #
 #
 #
@@ -647,4 +667,4 @@ def get_TubSect_dict(parameters: dict,
     section.extend(get_prop_dict(parameters))
     properties = TubularBasic(name=name,
                               diameter=section[0], thickness=section[1])
-    return section, properties._properties(poisson=0.30)
+    return section, properties._properties(poisson=0.0)

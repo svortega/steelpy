@@ -9,7 +9,7 @@ import re
 #
 
 # package imports
-from .utils.operations import get_mat_dict, get_mat_list, get_mat_df
+from .utils.operations import get_mat_properties, get_mat_df
 from .sqlite.isotropic import MaterialSQL
 from .inmemory.isotropic import MaterialIM
 
@@ -44,19 +44,10 @@ class Material(Mapping):
     def __setitem__(self, material_name: str | int,
                     properties: tuple|list|dict[str, float]|str) -> None:
         """
-        [name, elastic, Fy, Fu, E, G, Poisson, density, alpha, title(optional)]
+        [elastic, Fy, Fu, E, G, Poisson, density, alpha, title(optional)]
         """
         # get material type
-        #if isinstance(properties, str):
-        #    material_type = find_mat_type(properties)
-        #    properties = []
-        if isinstance(properties, dict):
-            properties = get_mat_dict(properties)
-        elif isinstance(properties, (list, tuple)):
-            properties = get_mat_list(properties)
-        else:
-            raise IOError(f' material input not recognised')
-        #
+        properties = get_mat_properties(properties)
         self._material[material_name] = properties
 
     #

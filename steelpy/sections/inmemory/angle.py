@@ -47,12 +47,12 @@ class Angle(ShapeBasic):
             mnumber = next(self.get_number())
             self._number.append(mnumber)
             #
-            self._d.append(parameters[0])
-            self._tw.append(parameters[1])
-            self._b.append(parameters[2])
+            self._d.append(parameters.d)
+            self._tw.append(parameters.tw)
+            self._b.append(parameters.b)
             try:
-                self._r.append(parameters[3]*0.50)
-            except ValueError:
+                self._r.append(parameters.r*0.50)
+            except TypeError:
                 self._r.append(0.50 * (self._tw[-1] / math.sqrt(2.0)))
     #
     def __getitem__(self, shape_name: str | int):
@@ -63,7 +63,7 @@ class Angle(ShapeBasic):
         except ValueError:
             raise Exception(f" section name {shape_name} not found")
         #
-        return AngleBasic(#name=self._labels[index], 
+        return AngleBasic(name=self._labels[index],
                           d=self._d[index], tw=self._tw[index],
                           b=self._b[index], r=self._r[index])
 #
