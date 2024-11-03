@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019 steelpy
+# Copyright (c) 2009 steelpy
 #
 # 
 # Python stdlib imports
@@ -8,7 +8,7 @@ from collections.abc import Mapping
 #from collections import defaultdict
 from collections import defaultdict
 #from dataclasses import dataclass
-from typing import NamedTuple
+#from typing import NamedTuple
 #from math import prod
 
 # package imports
@@ -79,7 +79,7 @@ class LoadCombSQL(LoadCombinationBasic):
             self._index = self._labels.index(load_name)
             return self._combination[load_name]
         except ValueError:
-            raise IOError("load combination {:} not defined".format(load_name))
+            raise KeyError(f"load combination {load_name} not defined")
     #
     def _new_table(self, conn):
         """ """

@@ -199,6 +199,19 @@ def find_NodeLoad_item(word_in:str) -> str:
     except IOError:
         return find_load_item(word_in)
 #
+def find_NodeLoad_type(word_in:str) -> str:
+    """ """
+    key = {"name": r"\b(id|name|load(s)?)\b",
+           "type": r"\b((load(_|-|\s*)?)?type)\b",
+           "title": r"\b(title|comment)\b",
+           "node": r"\b(node(s)?(_|-|\s*)?(name|id)?)\b"}
+    
+    try:
+        match = common.find_keyword(word_in, key)
+        return match
+    except IOError:
+        return find_load_type(word_in)
+#
 #
 #
 def find_load_type(word_in:str) -> str:
@@ -279,48 +292,80 @@ def get_NodaLoad_df(df: DBframework.DataFrame,
         flag_system = 'local'     
     #
     columns = list(df.columns)
-    header = {key: find_NodeLoad_item(key)
-              for key in columns}
     #
-    #
-    df.rename(columns=header, inplace=True)
-    df['type'] = df['type'].apply(lambda x: find_load_type(x))
-    df['system'] = flag_system
-    #
-    grpload = df.groupby(['type', 'node'])
-    newgrp = defaultdict(list)
-    for key, items in grpload:
-        nload = items.to_dict(orient='split', index=False)
+    # node load input by load item
+    try:
+        header = {key: find_NodeLoad_item(key)
+                  for key in columns}
+        df.rename(columns=header, inplace=True)
+        df['type'] = df['type'].apply(lambda x: find_load_type(x))
+        df['system'] = flag_system
         #
-        if re.match(r"\b(force)\b", key[0], re.IGNORECASE):
-            temp = []
-            for load in nload['data']:
-                #  [force, fx, fy, fz, mx, my, mz, title]
-                data = dict(zip(nload['columns'], load))
-                force = get_NodeForce_dic(data)
-                temp.append([data['name'], data['system'], key[1], *force, None])
-            newgrp['force'].extend(temp)
-        
-        elif re.match(r"\b(displacement)\b", key[0], re.IGNORECASE):
-            temp = []
-            for load in nload['data']:
-                #  [displacement, x, y, z, rx, ry, rz, title]
-                data = dict(zip(nload['columns'], load))
-                force = get_NodeDisp_dic(data)
-                temp.append([data['name'], data['system'], key[1], *force, None])
-            newgrp['displacement'].extend(temp)
-        
-        elif re.match(r"\b(mass)\b", key[0], re.IGNORECASE):
-            temp = []
-            for load in nload['data']:
-                #  [mass, x, y, z, rx, ry, rz, title]
-                data = dict(zip(nload['columns'], load))
-                force = get_NodeMass_dic(data)
-                temp.append([data['name'], data['system'], key[1], *force, None])
-            newgrp['mass'].extend(temp)
-        
-        else:
-            raise IOError(f'node load type {key[0]} not available')        
+        grpload = df.groupby(['type', 'node'])
+        newgrp = defaultdict(list)
+        for key, items in grpload:
+            nload = items.to_dict(orient='split', index=False)
+            #
+            if re.match(r"\b(force)\b", key[0], re.IGNORECASE):
+                temp = []
+                for load in nload['data']:
+                    #  [force, fx, fy, fz, mx, my, mz, title]
+                    data = dict(zip(nload['columns'], load))
+                    force = get_NodeForce_dic(data)
+                    temp.append([data['name'], data['system'], key[1], *force, None])
+                newgrp['force'].extend(temp)
+            
+            elif re.match(r"\b(displacement)\b", key[0], re.IGNORECASE):
+                temp = []
+                for load in nload['data']:
+                    #  [displacement, x, y, z, rx, ry, rz, title]
+                    data = dict(zip(nload['columns'], load))
+                    force = get_NodeDisp_dic(data)
+                    temp.append([data['name'], data['system'], key[1], *force, None])
+                newgrp['displacement'].extend(temp)
+            
+            elif re.match(r"\b(mass)\b", key[0], re.IGNORECASE):
+                temp = []
+                for load in nload['data']:
+                    #  [mass, x, y, z, rx, ry, rz, title]
+                    data = dict(zip(nload['columns'], load))
+                    force = get_NodeMass_dic(data)
+                    temp.append([data['name'], data['system'], key[1], *force, None])
+                newgrp['mass'].extend(temp)
+            
+            else:
+                raise IOError(f'node load type {key[0]} not available')
+    # node input by type
+    except re.PatternError:
+        header = {key: find_NodeLoad_type(key)
+                  for key in columns}
+        df.rename(columns=header, inplace=True)
+        #
+        newgrp = defaultdict(list)
+        grpforce = df.groupby(['name', 'node'])        
+        for key, items in grpforce:
+            for item in items.itertuples():
+                try: #  [force, fx, fy, fz, mx, my, mz, title]
+                    data = item.force
+                    force = get_NodeLoad_list_units(['force', *data])
+                    newgrp['force'].append([item.name, flag_system, item.node, *force, None])
+                except AttributeError:
+                    pass
+                
+                try: #  [mass, x, y, z, rx, ry, rz, title]
+                    data = item.mass
+                    force = get_NodeLoad_list_units(['mass', *data])
+                    newgrp['mass'].append([item.name, flag_system, item.node, *force, None])                    
+                except AttributeError:
+                    pass
+                
+                try: #  [displacement, x, y, z, rx, ry, rz, title]
+                    data = item.displacement
+                    force = get_NodeLoad_list_units(['displacement', *data])
+                    newgrp['displacement'].append([item.name, flag_system, item.node, *force, None])                    
+                except AttributeError:
+                    pass
+        #
     #
     #
     db = DBframework()

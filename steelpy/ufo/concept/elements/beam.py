@@ -14,6 +14,8 @@ from steelpy.ufo.process.node import NodePoint
 from steelpy.ufo.mesh.process.brotation import Rmatrix2
 from steelpy.utils.units.main import Units
 #
+from steelpy.sections.utils.shape.main import is_section
+from steelpy.material.utils.operations import is_material
 #
 #
 @dataclass
@@ -280,49 +282,106 @@ class ConceptBeam(Mapping):
         #self._eccentricities: List = []
         #self._releases: List = []        
     #   
+    # -------------------------------------------
     #
-    #
-    def __setitem__(self, element_name: int|str, 
-                    parameters: list[float]|dict[str,float]) -> None:
+    def _get_data(self, parameters:list|tuple|dict)-> list:
         """
-        farg = [name, connectivity, material, section, type, group]
+        parameters: node1, node2, material, section
+        output = [connectivity, material, section ]
+        """
+        #
+        #output = [None] * 3
+        #
+        # set connectivity
+        # end 1
+        try:
+            node_1 = self.f2u_points.get_point_name(parameters[0])
+        except IOError:
+            node_1 = self.f2u_points.get_new_point(parameters[0])
+        # end 2
+        try:
+            node_2 = self.f2u_points.get_point_name(parameters[1])
+        except IOError:
+            node_2 = self.f2u_points.get_new_point(parameters[1])
+        #
+        #
+        material = self.f2u_materials.default
+        section = self.f2u_sections.default
+        for item in parameters[2:]:
+            if is_material(item):
+                material = item.name
+            elif is_section(item):
+                section = item.name
+            elif isinstance(item, str):
+                try:
+                    material = self.f2u_materials[item].name
+                except KeyError:
+                    try:
+                        section = self.f2u_sections[item].name
+                    except KeyError:
+                        raise IOError(f' beam input data {item} not valid')
+            else:
+                raise IOError(f' beam input data {item} not valid')
+        #
+        # Checks
+        if not material:
+            raise IOError('material missing')
+        
+        if not section:
+            raise IOError('section missing')
+        #
+        conn = [node_1, node_2]
+        return [conn, material, section]
+    #
+    def __setitem__(self, name: int|str,
+                    parameters: list|tuple|dict) -> None:
+        """
+        nmae : beam name
+        parameters = connectivity, material, section
         """
         try:
-            index = self._labels.index(element_name)
-            raise Exception(f'{element_name} already exist')
+            index = self._labels.index(name)
+            raise Exception(f'beam {name} already exist')
         except ValueError:
             # default
-            self._labels.append(element_name)
-            index = self._labels.index(element_name)
+            self._labels.append(name)
+            index = self._labels.index(name)
             self._type.append(self._beam_type)
             #
             self._roll_angle.append(0.0)
             self._number.append(index)
+            #
+            values =self._get_data(parameters)
+            self._connectivity.append(values[0])
+            self._materials.append(values[1])
+            self._sections.append(values[2])
+            #
             # set connectivity
-            try:
-                node_1 = self.f2u_points.get_point_name(parameters[0])
-            except IOError:
-                node_1 = self.f2u_points.get_new_point(parameters[0])
-
-            try:
-                node_2 = self.f2u_points.get_point_name(parameters[1])
-            except IOError:
-                node_2 = self.f2u_points.get_new_point(parameters[1])
+            #try:
+            #    node_1 = self.f2u_points.get_point_name(parameters[0])
+            #except IOError:
+            #    node_1 = self.f2u_points.get_new_point(parameters[0])
             #
-            self._connectivity.append([node_1, node_2])
+            #try:
+            #    node_2 = self.f2u_points.get_point_name(parameters[1])
+            #except IOError:
+            #    node_2 = self.f2u_points.get_new_point(parameters[1])
+            #
+            #self._connectivity.append([node_1, node_2])
+            #
             # set blank data
-            self._sections.append(-1)
-            self._materials.append(-1)
+            #self._sections.append(-1)
+            #self._materials.append(-1)
             #
-            # set deafult material, section
-            if self.f2u_materials.default:
-                self._materials[index] = self.f2u_materials.default
-            #
-            if self.f2u_sections.default:
-                self._sections[index] = self.f2u_sections.default
+            # set default material
+            #if self.f2u_materials.default:
+            #    self._materials[index] = self.f2u_materials.default
+            # set default section
+            #if self.f2u_sections.default:
+            #    self._sections[index] = self.f2u_sections.default
             #
             self._segment.append(0)
-            self._step_label.append(element_name)
+            self._step_label.append(name)
             self._mesh.append(-1)
             # to be defined
             #self._properties.append(-1)
@@ -347,6 +406,7 @@ class ConceptBeam(Mapping):
         except ValueError:
             raise IndexError(' ** element {:} does not exist'.format(element_name))
     #
+    # -------------------------------------------
     #
     def __iter__(self):
         """
@@ -406,6 +466,7 @@ class ConceptBeam(Mapping):
         labels = list(dict.fromkeys(self._labels))
         return len(labels)
     #
+    # -------------------------------------------
     #
     #@property
     #def direction_cosines(self) -> ClassVar:
@@ -437,6 +498,7 @@ class ConceptBeam(Mapping):
     #    """
     #    return self._f2u_releases
     #
+    # -------------------------------------------
     #
     def _duplicate_element(self, index) -> int:
         """
@@ -460,6 +522,7 @@ class ConceptBeam(Mapping):
         self._number= [index for index, _ in enumerate(self._labels)]
         return step
     #
+    # -------------------------------------------
     #
     @property
     def df(self):
@@ -493,7 +556,8 @@ class ConceptBeam(Mapping):
         else: # node, point
             1/0
     #
-    #print('-->')
+    # -------------------------------------------
+    #
 #
 #
 def alphaNumOrder(string):

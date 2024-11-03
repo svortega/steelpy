@@ -311,7 +311,7 @@ class BeamLineBasic(BeamLoadBasic):
     #
     # -----------------------------------------------
     #
-    # TODO : chekc if works for dict
+    # TODO : check if works for dict
     def _get_line(self, line_load: list|tuple|dict):
         """ get line load in beam local system"""
         #
@@ -345,7 +345,7 @@ class BeamPointBasic(BeamLoadBasic):
     #
     # -----------------------------------------------
     #
-    # TODO : chekc if works for dict
+    # TODO : check if works for dict
     def _get_point(self, load: list|dict):
         """ get point load in beam local system"""
         point = get_beam_point_load(load)

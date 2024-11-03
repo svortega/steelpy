@@ -15,17 +15,31 @@ import re
 #
 #from steelpy.sections.utils.shape.stress import BeamStress
 #from steelpy.utils.dataframe.main import DBframework
-#import numpy as np
 #
 #
 # ----------------------------------------
 #      Standard Section Profiles
 # ----------------------------------------
 #
-#
-#
-#
-#
+class ShapeDim(NamedTuple):
+    """ """
+    shape:str
+    d:float
+    tw:float
+    b:float
+    tb:float
+    r: float
+    #
+    FAvy:float
+    FAvz:float
+    shear_stress:str
+    build:str|None
+    compactness:str|None
+    title:str|None
+    #
+    @property
+    def h(self) -> float:
+        return self.d
 #
 #
 class ShapeProperty(NamedTuple):
@@ -140,6 +154,7 @@ class SectionPropertyXX(NamedTuple):
             .format(self.area*0, self.Sy, self.Sz, self.SCz)        
         return output
 #
+# ----------------------------------------
 #
 def get_sect_list(parameters: list|tuple,
                   number:int = 9, step:int=3)->list:
@@ -234,23 +249,5 @@ def get_sect_dict(parameters: dict,
     section.extend(get_prop_dict(parameters))
     return section
 #
+# ----------------------------------------
 #
-class ShapeDim(NamedTuple):
-    """ """
-    shape:str
-    d:float
-    tw:float
-    b:float
-    tb:float
-    r: float
-    #
-    FAvy:float
-    FAvz:float
-    shear_stress:str
-    build:str|None
-    compactness:str|None
-    title:str|None
-    #
-    @property
-    def h(self) -> float:
-        return self.d

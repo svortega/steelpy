@@ -15,9 +15,12 @@ concept[10] = 'Frame_Concept_1'
 #
 # -----------------------------------
 # define material
-material = concept[10].material()
+material = concept[10].material({'name':'MAT250',
+                                 'type':'linear',
+                                 'Fy': 250.0 * units.MPa})
 material["MAT345"] = ['elastic', 345.0 * units.MPa]
-#
+# set material & section default
+material.default = "MAT345"
 #
 print(material.df)
 #
@@ -49,11 +52,14 @@ concept[10].section({'type':'Circular bar',
 section = concept[10].section()
 section["T800x30"] = ['Tubular', 800 * units.mm, 30 * units.mm]
 section["T900x35"] = ['Tubular', 900 * units.mm, 35 * units.mm]
-section["T100x25"] = ['Tubular', 100 * units.mm, 25 * units.mm]
+section["T1000x25"] = ['Tubular', 1000 * units.mm, 25 * units.mm]
 #
 #section = [["T800x30", 'Tubular', 800 * units.mm, 30 * units.mm],
 #          ["T900x35", 'Tubular', 900 * units.mm, 35 * units.mm],
 #          ["T100x25", 'Tubular', 100 * units.mm, 25 * units.mm]]
+#
+# set section default
+section.default = "T1350x40"
 #
 print(section.df)
 #
@@ -103,12 +109,9 @@ spoint["sp4"].restrain = 'pinned'
 # Start beam modelling
 elements = concept[10].element()
 beam = elements.beam()
-# set material & section default
-material.default = "MAT345"
 #
 # Define Caisson from bottom to top
 #
-section.default = "T1350x40"
 #beam["bm12"] = elevation[6], elevation[5]
 #beam["bm12"].step[1].length = 7.0 * units.m
 #beam["bm12"].step[1].section = section["T1350x40"]
@@ -128,11 +131,11 @@ section.default = "T1350x40"
 ##
 beam["bm3"] = elevation[3], elevation[2]
 beam["bm3"].step[1].length = 1.5 * units.m
-beam["bm3"].step[1].section = section["T1350x40"]
+beam["bm3"].step[1].section = section["T1000x25"]
 beam["bm3"].step[2].length = 9.0 * units.m
-beam["bm3"].step[2].section = section["T1350x40"]
+beam["bm3"].step[2].section = section["T900x35"]
 beam["bm3"].step[3].length = 20.5 * units.m
-beam["bm3"].step[3].section = section["T1350x40"]
+beam["bm3"].step[3].section = section["T800x30"]
 ##
 #section.default = "T1350x40"
 #beam["bm27"] = elevation[2], elevation[1]
@@ -140,10 +143,11 @@ beam["bm3"].step[3].section = section["T1350x40"]
 #beam["bm27"].step[1].section = section["T1350x40"]
 #
 # Stub members
-section.default = "T1350x40"
-beam["bm14"] = elevation[2], point[22]
-section.default = "T1350x40"
-beam["bm15"] = elevation[3], point[33]
+#section.default = "T559x16"
+beam["bm14"] = elevation[2], point[22], material["MAT250"] , "T559x16" 
+#
+#section.default = "T610x16"
+beam["bm15"] = elevation[3], point[33], section["T610x16"]
 #beam["bm16"] = elevation[4], point[44]
 #beam["bm17"] = elevation[5], point[55]
 #
@@ -158,31 +162,27 @@ basic = load.basic()
 # create new basic load
 basic[1] = 'wave_loading'
 #
+# Noda load
 basic[1].point = elevation[2]
-point_load = basic[1].point
-point_load.load = {'fz': 5000 * units.kN, 'title': "point_F22"}
-point_load.load = {'fz': 5000 * units.kN, 'title': "point_F22"}
-point_load.load = {'mz': 100 * units.kN*units.m, 'title': "point_M22"}
+basic[1].point.load = {'fz': 5000 * units.kN, 'title': "point_F22"}
+basic[1].point.load = {'fz': 5000 * units.kN, 'title': "point_F22"}
+basic[1].point.load = {'mz': 100 * units.kN*units.m, 'title': "point_M22"}
 #
-#
-##basic[1].beam.line_load["snow_2"] = {'qy1': 0 * units.kN / units.m, # in plane triangular load
-##                                     'qy2':-2 * units.kN / units.m} # from node to node
-## trapezoidal out plane load
+# beam load 
 basic[1].beam = beam["bm3"]
 basic[1].beam.global_system()
-#basic[1].beam.global_system # reset load coord system global
-#beam_load = basic[1].beam["bm3"]
+# beam linear trapezoidal load
 basic[1].beam.line = {'qy1': 2 * units.kN / units.m, # start load value
                       'qy2': 4 * units.kN / units.m, # end load value
                       'd1': 0.5 * units.m, # load start 0.5m from node 1
                       'd2': 1.0 * units.m, # load end 1m from node 2
                       'title': "snow_3"}
-#
+# beam point load
 basic[1].beam.point = {'Fx': 10 * units.kN,
                        'L': 0.0 * units.m,
                        'title': 'snow_4'}
 #
-#
+# new basic load
 basic[3] = 'crane load'
 basic[3].beam = beam["bm3"]
 basic[3].beam.point = {'fx': -5000 * units.kN,  # beam point axial load

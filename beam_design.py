@@ -121,7 +121,11 @@ beam.q = {'qy':0.20 * units.kip / units.ft,
 #print(beam.load)
 #
 # TODO: fix combination
-beam.load_combination = ['AISC_C-C2.2', 1.0]
+beam.load_combination = {'name': 'comb_1',
+                         'basic': 'AISC_C-C2.2',
+                         'factor': 1.0}
+#
+#beam.load_combination = ['AISC_C-C2.2', 1.0]
 #beam.load_combination = ['AISC_C-C2.3', 1.0]
 #
 #beam.load_combination = {'point_1': 0.50, 'point_2': 0.75, 'point_3': 1.0}
@@ -131,8 +135,8 @@ beam.load_combination = ['AISC_C-C2.2', 1.0]
 #Mx =  -90*units.kip*units.inch
 #print(Mx.convert('newton*metre'))
 #
-reactions = beam.reactions()
-print(reactions)
+#reactions = beam.reactions()
+#print(reactions)
 #
 #
 forces = beam.response()

@@ -85,21 +85,10 @@ def check_element(conn, element_name: int|str, component: int):
                        WHERE name = ? \
                        AND mesh_id = ? ;"
     cur = conn.cursor()
-    #if isinstance(element_name, str):
-    #    cur.execute (f"SELECT * FROM Element \
-    #                   WHERE name = '{element_name}';")
-    #else:
-    #    cur.execute (f"SELECT * FROM Element\
-    #                   WHERE name = {element_name};")
-    #
     cur.execute(table, query)
     row = cur.fetchone()
     if not row:
-        raise IOError(f'Element {element_name} not found')
-    #try:
-    #    beam_number = beam[0]
-    #except TypeError:
-    #    raise IOError(f"Beam {beam_name} not found")    
+        raise IOError(f'Element {element_name} not found')    
     return row
 #
 #

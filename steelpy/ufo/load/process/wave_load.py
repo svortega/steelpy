@@ -14,7 +14,7 @@ from typing import NamedTuple
 #
 # package imports
 #
-from steelpy.ufo.load.process.basic_load import BasicLoadMain
+#from steelpy.ufo.load.process.basic_load import BasicLoadMain
 from steelpy.ufo.load.concept.beam import BeamIMMaster
 
 #
@@ -72,56 +72,56 @@ class WaveLoadItem(BeamIMMaster):
 #
 #
 #
-class HydroLoad(BasicLoadMain):
-    
-    def __init__(self, plane: NamedTuple) -> None:
-        """
-        """
-        #super().__init__()
-        #
-        self._labels: list[str|int] = []
-        self._title: list[str] = []
-        self._number: array = array("I", [])        
-        self._hydro: dict = {}        
-        #
-        #self._plane = plane
-        #self._condition = WaveLoadItemSQL(db_file=self.db_file)
-        #
-    #
-    #
-    #
-    # -----------------------------------------------
-    #
-    def __setitem__(self, load_name:int|str, load_title:str) -> None:
-        """
-        """
-        try:
-            self._labels.index(load_name)
-            raise Warning(f'    *** warning load name {load_name} already exist')
-        except ValueError:
-            self._labels.append(load_name)
-            self._title.append(load_title)
-            self._number.append(load_id)
-            #
-            #self._basic[load_name] = LoadTypeSQL(name=load_name,
-            #                                     number=load_id,
-            #                                     title=load_title,
-            #                                     plane=self._plane, 
-            #                                     bd_file=self.db_file)
-            #self._basic[load_name] = [load_title, load_id]
-    #           
-    def __getitem__(self, load_name: str|int):
-        """
-        """
-        try:
-            #load_name = load_name
-            index = self._labels.index(load_name)
-            #return self._basic[load_name]
-            return LoadTypeSQL(load_name=load_name,
-                               plane=self._plane, 
-                               bd_file=self.db_file)
-        except ValueError:
-            raise IOError("load case not defined")    
+#class HydroLoad(BasicLoadMain):
+#    
+#    def __init__(self, plane: NamedTuple) -> None:
+#        """
+#        """
+#        #super().__init__()
+#        #
+#        self._labels: list[str|int] = []
+#        self._title: list[str] = []
+#        self._number: array = array("I", [])        
+#        self._hydro: dict = {}        
+#        #
+#        #self._plane = plane
+#        #self._condition = WaveLoadItemSQL(db_file=self.db_file)
+#        #
+#    #
+#    #
+#    #
+#    # -----------------------------------------------
+#    #
+#    def __setitem__(self, load_name:int|str, load_title:str) -> None:
+#        """
+#        """
+#        try:
+#            self._labels.index(load_name)
+#            raise Warning(f'    *** warning load name {load_name} already exist')
+#        except ValueError:
+#            self._labels.append(load_name)
+#            self._title.append(load_title)
+#            self._number.append(load_id)
+#            #
+#            #self._basic[load_name] = LoadTypeSQL(name=load_name,
+#            #                                     number=load_id,
+#            #                                     title=load_title,
+#            #                                     plane=self._plane, 
+#            #                                     bd_file=self.db_file)
+#            #self._basic[load_name] = [load_title, load_id]
+#    #           
+#    def __getitem__(self, load_name: str|int):
+#        """
+#        """
+#        try:
+#            #load_name = load_name
+#            index = self._labels.index(load_name)
+#            #return self._basic[load_name]
+#            return LoadTypeSQL(load_name=load_name,
+#                               plane=self._plane, 
+#                               bd_file=self.db_file)
+#        except ValueError:
+#            raise IOError("load case not defined")    
 #
 #
 #

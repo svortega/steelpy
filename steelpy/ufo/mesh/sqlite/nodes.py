@@ -670,6 +670,8 @@ def pull_node_number(conn, node_name:int|str,
     cur = conn.cursor()
     cur.execute(table, project)
     record = cur.fetchone()
+    if not record:
+        raise IOError(f'node {node_name} not found')
     return record[0]
 #
 def pull_node_rows(conn, component: int):

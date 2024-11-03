@@ -11,6 +11,8 @@ from steelpy.utils.units.buckingham import Number
 #from steelpy.utils.units.main import Units
 from steelpy.utils.dataframe.main import DBframework
 #
+from steelpy.material.utils.mechanical import MaterialItem
+#
 # --------------------------------------------------------------------
 #                          Material Operations
 # --------------------------------------------------------------------
@@ -220,7 +222,12 @@ def update_Fu(geometry, foundation, Fu_update):
                             memb.material[x] = mat
                             break
 #
-#
+def is_material(item)->bool:
+    """ """
+    if isinstance(item, MaterialItem):
+        return True
+    else:
+        return False
 #
 # -----------------------------
 #

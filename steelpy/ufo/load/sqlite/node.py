@@ -702,9 +702,9 @@ def push_node_load(conn, load_name: str|int,
     load_title = node_load.pop(-1)
     #
     node_id, load_id = pull_load_specs(conn,
-                                      node_name,
-                                      load_name,
-                                      component=component)
+                                       node_name,
+                                       load_name,
+                                       component=component)
     #
     # TODO: load type
     basic = pull_basic(conn, load_name=load_name)

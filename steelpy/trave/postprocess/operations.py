@@ -388,6 +388,12 @@ class MainProcess:
         """
         start_time = time.time()
         #
+        Klocal = 'Ke_local'
+        Kglobal = 'Ke'
+        if Pdelta:
+            Klocal = 'Kt_local'
+            Kglobal = 'Kt'            
+        #
         ndgrp = df_ndisp.groupby(['load_name', 'mesh_name',
                                   'load_level',  'load_system'])
         #
@@ -450,8 +456,9 @@ class MainProcess:
                 #
                 # convert beam end-node disp to force [F = Kd] in global system
                 #FUan = element.Ke_local @ nd_local
-                kt_local = element.Kt_local(plane2d, nd_global)
-                FUtn = kt_local @ nd_local
+                #kt_local = element.Kt_local(plane2d, nd_global)
+                k_local = getattr(element, Klocal)(plane2d, nd_global)
+                FUtn = k_local @ nd_local
                 #
                 #TODO: confirm change reactions sign
                 eq = NodeGenRespEq(nd_local, self._plane)
@@ -533,7 +540,9 @@ class MainProcess:
                 # ---------------------------------------------
                 # convert beam end-node disp to force [F = Kd] in global system
                 #
-                gnforce = element.Ke_global(plane2d) @ nd_global
+                k_global = getattr(element, Kglobal)(plane2d, nd_global)
+                gnforce = k_global @ nd_global
+                #gnforce = element.Ke_global(plane2d) @ nd_global
                 #
                 # ---------------------------------------------
                 #

@@ -12,6 +12,7 @@ from typing import NamedTuple
 
 
 # package imports
+#
 # Bending 
 #
 #from steelpy.trave.beam.pilkey.chapter11.table2C import BeamBendingSupports
@@ -24,6 +25,7 @@ from steelpy.trave.beam.pilkey.chapter11.table3 import BendingGE
 #                                                         Point, Moment)
 from steelpy.trave.beam.pilkey.chapter11.table3B import (Trapezoidal,
                                                          Point, Moment)
+#
 # Torsion
 from steelpy.trave.beam.pilkey.chapter14.table_C import BTOpenSupports
 from steelpy.trave.beam.pilkey.chapter14.table_A import TorsionOpenGE
@@ -33,13 +35,14 @@ from steelpy.trave.beam.pilkey.chapter12.table_2t import (TBarConcentrated,
                                                           TBarDistributed,
                                                           BTBarSupports,
                                                           TorsionBarGE)
+#
 # Axial
 from steelpy.trave.beam.pilkey.chapter12.table_2axial import (PBarConcentrated,
                                                               PBarDistributed,
                                                               PBarSupports,
                                                               AxialBarGE)
 #
-from steelpy.utils.math.operations import linspace, linstep
+from steelpy.utils.math.operations import linspace #, linstep
 from steelpy.utils.dataframe.main import DBframework
 #
 #from steelpy.trave.beam.roark.chapter10.table103 import (TOpenConcentrated,
@@ -459,7 +462,8 @@ class BeamBasic:
         Dataframe [load_name, load_title, load_type, load_system,
                    element_name, x, Fx, Mx, Fy, Fz]
         """
-        Lsteps = linspace(start=0, stop=self.L, num=steps+1, endpoint=True)
+        Lsteps = linspace(start=0, stop=self.L,
+                          num=steps+1, endpoint=True)
         #Lsteps = linstep(d=d, L=self.L, steps=steps)
         #
         # -----------------------------------------------------

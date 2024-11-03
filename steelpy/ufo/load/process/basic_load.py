@@ -12,6 +12,7 @@ from typing import NamedTuple
 import re
 #
 # package imports
+import steelpy.utils.io_module.text as common
 #from steelpy.ufo.load.process.utils import find_load_type
 from steelpy.utils.dataframe.main import DBframework
 #
@@ -29,12 +30,13 @@ class BasicLoad(NamedTuple):
     member_load: dict
 #
 #
-class BasicLoadMain(Mapping):
+class BasicLoadRoot(Mapping):
+    __slots__ = ['gravity']
     
     def __init__(self):
         """
         """
-        pass
+        self.gravity = 9.80665  # m/s^2
     #
     # -----------------------------------------------
     #    
@@ -48,33 +50,6 @@ class BasicLoadMain(Mapping):
     
     def __contains__(self, value):
         return value in self._labels
-    #
-    # -----------------------------------------------
-    #
-    def get_number(self, start:int=1):
-        """
-        """
-        try:
-            n = max(self._number) + 1
-        except ValueError:
-            n = start
-        #
-        while True:
-            yield n
-            n += 1
-    #
-    #
-    #  
-#
-#
-class LoadCaseBasic(BasicLoadMain):
-    __slots__ = ['_labels', '_title','_number', 'gravity']
-    
-    def __init__(self):
-        """
-        """
-        super().__init__()
-        self.gravity = 9.80665  # m/s^2
     #
     # -----------------------------------------------
     #
@@ -113,7 +88,44 @@ class LoadCaseBasic(BasicLoadMain):
             output += "\n"
         # print('---')
         return output
+    #     
+    # -----------------------------------------------
+    #
+    @property
+    def g(self):
+        """"""
+        return self.gravity
+
+    #    
+    # -----------------------------------------------
+    #
+    def get_number(self, start:int=1):
+        """
+        """
+        try:
+            n = max(self._number) + 1
+        except ValueError:
+            n = start
+        #
+        while True:
+            yield n
+            n += 1
+    #
+    #
+    # -----------------------------------------------
+    #    
     #   
+#
+#
+class BasicLoadCase(BasicLoadRoot):
+    __slots__ = ['_labels', '_title','_number', 'gravity']
+    
+    def __init__(self):
+        """
+        """
+        super().__init__()
+        #self.gravity = 9.80665  # m/s^2
+    #  
     #
     # -----------------------------------------------
     #
@@ -209,18 +221,30 @@ class LoadCaseBasic(BasicLoadMain):
         # dataframe input
         try:
             columns = list(df.columns)
-            nodeid = df['node']
-            bitems = len(nodeid)
-            values = self._set_load(df, steps=bitems)
+            header = {key: find_bload_item(key)
+                      for key in columns}
+            df.rename(columns=header, inplace=True)
+            #nodeid = df['node']
+            #bitems = len(nodeid)
+            #values = self._set_load(df, steps=bitems)
+            #
+            columns = list(df.columns)
+            #if not 'title' in columns:
+            #    df['title'] = df['load']
             #
             # Set basic load if doesn't exist
-            basic = values.groupby(['load'])
+            basic = df.groupby(['load'])
             for x, load_name in enumerate(basic.groups):
+                # TODO : title
+                load_title = f"{load_name}_{x + 1}"
+                try:
+                    self.__setitem__(load_name, load_title)
+                except Warning:
+                    pass
+                #
                 bload = self.__getitem__(load_name)
                 nload = basic.get_group((load_name,))
                 bload._node.df = nload
-            # End loop, return none cos no specific load_name
-            #1 / 0
             return
         except AttributeError:
             pass
@@ -265,8 +289,6 @@ class LoadCaseBasic(BasicLoadMain):
                             load_name = item[0]
                             beamid = item[1]
                             load =  item[2:]
-                            #beamid = item.pop(1)
-                            #load_name = item.pop(0)
                         # check if basic load name exist
                         try:
                             self.__setitem__(load_name, load_name)
@@ -288,12 +310,22 @@ class LoadCaseBasic(BasicLoadMain):
         # dataframe input
         try:
             columns = list(df.columns)
-            beamid = df['beam']
-            bitems = len(beamid)
-            values = self._set_load(df, steps=bitems)
+            header = {key: find_bload_item(key)
+                      for key in columns}
+            df.rename(columns=header, inplace=True)            
+            #beamid = df['beam']
+            #bitems = len(beamid)
+            #values = self._set_load(df, steps=bitems)
             # Set basic load if doesn't exist
-            basic = values.groupby(['load'])
+            basic = df.groupby(['load'])
             for x, load_name in enumerate(basic.groups):
+                # TODO : title
+                load_title = f"{load_name}_{x + 1}"
+                try:
+                    self.__setitem__(load_name, load_title)
+                except Warning:
+                    pass
+                #
                 load = basic.get_group((load_name,)) #.copy()
                 bload = self.__getitem__(load_name)
                 bload._beam.df = load            
@@ -304,20 +336,44 @@ class LoadCaseBasic(BasicLoadMain):
         #
         #print('beam load')
         return self._beams
+    #
+    # -----------------------------------------------
+    #
+    @property
+    def df(self):
+        """ """
+        1 / 0
+    
+    @df.setter
+    def df(self, df):
+        """ """
+        columns = list(df.columns)
+        header = {key: find_bload_item(key)
+                  for key in columns}
+        df.rename(columns=header, inplace=True)
+        #
+        # input node
+        try:
+            grpnode = df.groupby('node')
+            for key, item in grpnode:
+                print(key)
+                self.node(df=item)
+        except KeyError:
+            pass        
+        #
+        # input beam
+        try:
+            grpbeam = df.groupby('beam')
+            for key, item in grpbeam:
+                print(key)
+                self.beam(df=item)
+        except KeyError:
+            pass
+        
+    
 #  
 #
-def check_column(col: list|tuple|str|int, steps: int) -> list:
-    """ """
-    if isinstance(col, (list, tuple)):
-        if len(col) != steps:
-            raise IOError(f'items {len(col)} <> {steps}')
-        return col
-    else:
-        return [col for _ in range(steps)]
-# 
-#
-#
-class LoadTypeBasic(BasicLoadMain):
+class BasicLoadType(BasicLoadRoot):
     __slots__ = ['name', 'title', 'number', 
                  '_node', '_beam', '_selfweight']
     
@@ -345,7 +401,6 @@ class LoadTypeBasic(BasicLoadMain):
         """
         try:
             index = self._labels.index(load_name)
-            #load_type = self._type[index]
             return self
         except ValueError:
             raise KeyError(f'   *** Load {load_name} does not exist')
@@ -378,7 +433,7 @@ class LoadTypeBasic(BasicLoadMain):
     # -----------------------------------------------
     #
     #@property
-    def gravity(self, values:list|None=None):
+    def gravityX(self, values:list|None=None):
         """
         The self weight form allows you to specify multipliers to 
         acceleration due to gravity (g) in the X, Y, and Z axes. 
@@ -393,7 +448,7 @@ class LoadTypeBasic(BasicLoadMain):
                 self._selfweight[values[0]] = values[1:]
         return self._selfweight
     
-    def selfweight(self, values:list|None=None):
+    def selfweightX(self, values:list|None=None):
         """
         The self weight form allows you to specify multipliers to 
         acceleration due to gravity (g) in the X, Y, and Z axes. 
@@ -486,6 +541,79 @@ class LoadTypeBasic(BasicLoadMain):
     # -----------------------------------------------
     #
     #
+#
+#
+# ---------------------------------
+#
+#
+def check_column(col: list|tuple|str|int, steps: int) -> list:
+    """ """
+    if isinstance(col, (list, tuple)):
+        if len(col) != steps:
+            raise IOError(f'items {len(col)} <> {steps}')
+        return col
+    else:
+        return [col for _ in range(steps)]
+# 
+#
+# ---------------------------------
+#
+def find_bload_item(word_in:str) -> str:
+    """ """
+    key = {"load": r"\b((basic)?(_|-|\s*)?(load)?(_|-|\s*)?name)\b",
+           "node": r"\b(node(s)?|point(s)?)\b",
+           "beam": r"\b(beam(s)?)\b",
+           #"factor": r"\b((load)?(_|-|\s*)?factor)\b",
+           "title": r"\b(title|comment)\b",}
+    try:
+        match = common.find_keyword(word_in, key)
+        return match
+    except IOError:
+        return word_in
+#
+#
+def get_bload_list(values: list|tuple, steps: int = 3) -> list:
+    """ [name, item, item_id, values] """
+    output = [None] * steps
+    for x, item in enumerate(values):
+        try:
+            output[x] = item
+        except IndexError:
+            pass
+    #
+    output.extend(values[steps:])
+    return output
+#
+#
+def get_bload_dict(values: dict, steps: int = 3) -> list:
+    """ [name, item, item_id, values] """
+    output = [None] * steps
+    valtemp = values.copy()
+    for key, item in values.items():
+        if re.match(r"\b((basic)?(_|-|\s*)?(load)?(_|-|\s*)?name)\b", key, re.IGNORECASE):
+            output[0] = item
+            del valtemp[key]
 
+        elif re.match(r"\b(node(s)?|point(s)?)\b", key, re.IGNORECASE):
+            output[1] = 'node'
+            output[2] = item
+            del valtemp[key]
+            #valtemp
+            
+        elif re.match(r"\b(beam(s)?)\b", key, re.IGNORECASE):
+            output[1] = 'beam'
+            output[2] = item
+            del valtemp[key]
+            #valtemp            
+            
+        #elif re.match(r"\b((load)?(_|-|\s*)?factor)\b", key, re.IGNORECASE):
+        #    output[3] = item
+        #    
+        #elif re.match(r"\b(title|comment)\b", key, re.IGNORECASE):
+        #    output[4] = item
+    #
+    for key, items in valtemp.items():
+        output.extend([key, *items])
+    return output
 #
 #

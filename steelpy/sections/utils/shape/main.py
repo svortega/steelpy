@@ -14,6 +14,14 @@ from collections.abc import Mapping
 # package imports
 from steelpy.sections.utils.operations import find_sect_type
 #
+from steelpy.sections.utils.shape.tubular import TubularBasic
+from steelpy.sections.utils.shape.solid import RectangleSolid, CircleSolid, TrapezoidSolid
+from steelpy.sections.utils.shape.ibeam import IbeamBasic
+from steelpy.sections.utils.shape.box import BoxBasic
+from steelpy.sections.utils.shape.channel import ChannelBasic
+from steelpy.sections.utils.shape.tee import TeeBasic
+from steelpy.sections.utils.shape.angle import AngleBasic
+#
 #
 #
 #-------------------------------------------------
@@ -133,4 +141,30 @@ class SectionMain(ShapeBasic):
 #
 #
 #-------------------------------------------------
-
+#
+#
+def is_section(item)->bool:
+    """ """
+    if isinstance(item, TubularBasic):
+        return True
+    elif isinstance(item, IbeamBasic):
+        return True
+    elif isinstance(item, BoxBasic):
+        return True
+    elif isinstance(item, ChannelBasic):
+        return True
+    elif isinstance(item, TeeBasic):
+        return True
+    elif isinstance(item, AngleBasic):
+        return True
+    elif isinstance(item, RectangleSolid):
+        return True
+    elif isinstance(item, CircleSolid):
+        return True
+    elif isinstance(item, TrapezoidSolid):
+        return True
+    else:
+        return False
+#
+#-------------------------------------------------
+#

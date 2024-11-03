@@ -92,10 +92,9 @@ class BeamItemBasic:
     #@property
     def T(self, plane2D: bool = False):
         """
-        Returns Beam transformation matrix
+        Returns Beam 2D/3D transformation matrix
         """
         Tlg = self.T3D()
-        #Tlg2 = self.T3D2()
         if plane2D:
             Tlg = self._M2D(Tlg)
         return Tlg
@@ -112,30 +111,27 @@ class BeamItemBasic:
     # Stiffness
     #
     #@property
-    def Ke_global(self, plane2D: bool):
-        """
-        Return Beam stiffness matrix in global coordinates
-        """
-        #Tlg =  self.T
-        #Kl = self.K_local
-        #return Tlg.T @ Kl @ Tlg
-        return self.Ke(plane2D)
+    #def Ke_global(self, plane2D: bool):
+    #    """
+    #    Return Beam stiffness matrix in global coordinates
+    #    """
+    #    return self.Ke(plane2D)
     #
     def Ke(self, plane2D: bool, item: None = None):
-        """ Return Beam stiffness matrix in global coordinates """
+        """ Return Beam 2D/3D stiffness matrix in global coordinates """
         Tlg = self.T(plane2D)
         Kl = self.Ke_local(plane2D)
         return Tlg.T @ Kl @ Tlg        
     #
     #@property
-    def Ke_local(self, plane2D: bool):
-        """Return the 2D/3D stiffness matrix in local coordinates """
+    def Ke_local(self, plane2D: bool, item: None = None):
+        """Return Beam 2D/3D stiffness matrix in local coordinates """
         ke = self.Ke3D()
         if plane2D:
             ke = self._M2D(ke)
         return ke
     #
-    def Ke3D(self):
+    def Ke3D(self, item: None = None):
         """Returns the condensed (and expanded) local stiffness matrix for 3D beam"""
         # get material properties
         material = self.material        
@@ -172,7 +168,7 @@ class BeamItemBasic:
     #
     def Kg(self, plane2D: bool, Un: list):
         """
-        Return Beam geometrical stiffness matrix in global coordinates
+        Return Beam geometrical 2D/3D stiffness matrix in global coordinates
         """
         Tb =  self.T
         Kg = self.Kg_local(Un=Un)
@@ -180,14 +176,14 @@ class BeamItemBasic:
     #
     def Kg_local(self, plane2D: bool, Un:list):
         """
-        Return Beam geometrical stiffness matrix in local coordinates
+        Return Beam geometrical 2D/3D stiffness matrix in local coordinates
         """
         kg = self.Kg3D(Un=Un)
         if self._plane.plane2D:
             kg = self._M2D(kg)
         return kg
     #
-    def Kg3D(self, plane2D: bool, Un: list):
+    def Kg3D(self, Un: list):
         """
         Returns the condensed (and expanded) local geometrical stiffness matrix for 3D beam
         """
@@ -236,7 +232,6 @@ class BeamItemBasic:
         """ Return Beam tangent stiffness matrix in global coordinates"""
         Tb = self.T(plane2D)
         Kt = self.Kt_local(plane2D=plane2D, Un=Un)
-        #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
         return Tb.T @ Kt @ Tb
     #
     def Kt_local(self, plane2D: bool, Un:list):
@@ -286,18 +281,20 @@ class BeamItemBasic:
     # Mass
     #
     #@property
-    def Km_global(self, plane2D: bool):
-        """
-        Return Beam mass matrix in global coordinates
-        """
-        #Tlg =  self.T
-        #Km = self.Km_local
-        #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
-        #return Tlg.T @ Km @ Tlg
-        return self.Km(plane2D)
+    #def Km_global(self, plane2D: bool):
+    #    """
+    #    Return Beam 2D/3D mass matrix in global coordinates
+    #    """
+    #    #Tlg =  self.T
+    #    #Km = self.Km_local
+    #    #return (np.transpose(Tlg).dot(Kl)).dot(Tlg)
+    #    #return Tlg.T @ Km @ Tlg
+    #    return self.Km(plane2D)
     #
     def Km(self, plane2D: bool, item: None = None):
-        """ """
+        """
+        Return Beam 2D/3D mass matrix in global coordinates
+        """
         Tlg =  self.T(plane2D)
         Km = self.Km_local
         return Tlg.T @ Km @ Tlg        
@@ -305,14 +302,14 @@ class BeamItemBasic:
     #@property
     def Km_local(self, plane2D: bool):
         """
-        Return Beam mass matrix in local coordinates
+        Return Beam 2D/3D mass matrix in local coordinates
         """
         km = self.Km3D()
         if plane2D:
             km = self._M2D(km)
         return km
     #
-    def Km3D(self):
+    def Km3D(self, item: None = None):
         """ Returns the condensed (and expanded) local mass matrix for 3D beam"""
         # get section properties 
         material = self.material

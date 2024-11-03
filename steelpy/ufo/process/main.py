@@ -62,7 +62,7 @@ class ufoBasicModel:
         return self._materials
     #
     #
-    def section(self, values: None|list|tuple|dict=None,
+    def section(self, values: None|list|tuple|dict = None,
                  df=None):
         """
         """

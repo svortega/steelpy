@@ -12,7 +12,7 @@ import time
 # package imports
 # steelpy.f2uModel
 from steelpy.ufo.load.process.actions import SelfWeight
-from steelpy.ufo.load.process.basic_load import LoadCaseBasic, LoadTypeBasic 
+from steelpy.ufo.load.process.basic_load import BasicLoadCase, BasicLoadType 
 from steelpy.ufo.load.sqlite.beam import BeamLoadItemSQL, BeamLoadGloabalSQL
 from steelpy.ufo.load.sqlite.node import  NodeLoadItemSQL, NodeLoadGlobalSQL
 #
@@ -22,8 +22,9 @@ from steelpy.utils.dataframe.main import DBframework
 #
 #
 #
-class BasicLoadSQL(LoadCaseBasic):
-    __slots__ = ['db_file', '_component']
+class BasicLoadSQL(BasicLoadCase):
+    __slots__ = ['db_file', '_component',
+                 'gravity', '_nodes', '_beams']
 
     #
     def __init__(self, db_file:str, #plane: NamedTuple,
@@ -403,7 +404,7 @@ def pull_FER_data(conn, component: int):
 #      
 #
 #
-class LoadTypeSQL(LoadTypeBasic):
+class LoadTypeSQL(BasicLoadType):
     """
     """
     __slots__ = ['_node', '_beam', '_selfweight', '_component', 

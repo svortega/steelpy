@@ -1,5 +1,5 @@
 # 
-# Copyright (c) 2019-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 # 
 # Python stdlib imports
@@ -7,14 +7,11 @@ from __future__ import annotations
 #from array import array
 from collections.abc import Mapping
 #from collections import defaultdict
-from dataclasses import dataclass
-#from typing import Union, Dict, List, Union
+#from dataclasses import dataclass
 #from math import prod
 
 # package imports
-# steelpy.f2uModel.load
-#import pandas as pd
-from steelpy.utils.dataframe.main import DBframework
+#from steelpy.utils.dataframe.main import DBframework
 from ..process.combination import LoadCombinationBasic
 
 #

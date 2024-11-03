@@ -8,9 +8,10 @@ from array import array
 from collections.abc import Mapping
 #from collections import defaultdict
 #from typing import NamedTuple
+import re
 
 # package imports
-#import pandas as pd
+import steelpy.utils.io_module.text as common
 from steelpy.utils.dataframe.main import DBframework
 
 #
@@ -117,3 +118,100 @@ class LoadCombinationBasic(Mapping):
         df_comb = db.DataFrame(data=dftemp, columns=header, index=None)
         return df_comb 
     #
+    # ----------------------------
+    #
+    @property
+    def df(self):
+        """ """
+        1 / 0
+    
+    @df.setter
+    def df(self, df):
+        """ """
+        df = get_comb_df(df)
+        group = df.groupby("name")
+        for cname, items in group:
+            for item in items.itertuples():
+                #cname =  item.name
+                try:
+                    self.__getitem__(cname)
+                except KeyError:
+                    self.__setitem__(cname, item.title)
+                #
+                if item.basic:
+                    self._combination[cname]._basic[item.basic] = item.factor
+                
+                if item.combination:
+                    self._combination[cname]._combination[item.combination] = item.factor             
+#
+#
+def find_comb_item(word_in:str) -> str:
+    """ """
+    key = {"name": r"\b((load)?(_|-|\s*)?(comb(ination)?)?(_|-|\s*)?name)\b",
+           "basic": r"\b(basic(_|-|\s*)?(load)?)\b",
+           "combination": r"\b((load)?(_|-|\s*)?comb(ination)?(_|-|\s*)?(load)?)\b",
+           "factor": r"\b((load)?(_|-|\s*)?factor)\b",
+           "title": r"\b(title|comment)\b",}
+    match = common.find_keyword(word_in, key)
+    return match    
+#
+#
+def get_comb_df(df:DBframework.DataFrame):
+    """ """
+    try:
+        columns = list(df.columns)
+        header = {key: find_comb_item(key)
+                  for key in columns}
+        #
+        df.rename(columns=header, inplace=True)
+    except AttributeError:
+        raise IOError('Combination df not valid')
+    #
+    columns = list(df.columns)
+    if 'title' not in columns:
+        df['title'] = df['name']
+    #
+    if 'basic' not in columns:
+        df['basic'] = None
+    #
+    if 'combination' not in columns:
+        df['combination'] = None
+    #
+    return df
+#
+def get_comb_list(values: list|tuple, steps: int = 5) -> list:
+    """ [name, type, load_id, factor, title] """
+    output = [None] * steps
+    for x, item in enumerate(values):
+        try:
+            output[x] = item
+        except IndexError:
+            pass
+    #
+    return output
+#
+def get_comb_dict(values: dict, steps: int = 5) -> list:
+    """ [name, type, load_id, factor, title] """
+    output = [None] * steps
+    
+    for key, item in values.items():
+        if re.match(r"\b((load)?(_|-|\s*)?(comb(ination)?)?(_|-|\s*)?name)\b", key, re.IGNORECASE):
+            output[0] = item
+
+        elif re.match(r"\b(basic(_|-|\s*)?(load)?)\b", key, re.IGNORECASE):
+            output[1] = 'basic'
+            output[2] = item
+            
+        elif re.match(r"\b((load)?(_|-|\s*)?comb(ination)?(_|-|\s*)?(load)?)\b", key, re.IGNORECASE):
+            output[1] = 'combination'
+            output[2] = item
+            
+        elif re.match(r"\b((load)?(_|-|\s*)?factor)\b", key, re.IGNORECASE):
+            output[3] = item
+            
+        elif re.match(r"\b(title|comment)\b", key, re.IGNORECASE):
+            output[4] = item
+    
+    return output
+#
+#

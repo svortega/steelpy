@@ -208,50 +208,80 @@ def get_BeamLoad_df(df: DBframework.DataFrame,
         flag_system = 'local'    
     #
     columns = list(df.columns)
-    header = {item:find_BeamLoad_item(item) for item in columns}
-    df.rename(columns=header, inplace=True)
-    df['type'] = df['type'].apply(lambda x: find_load_type(x))
-    #
-    if 'system' not in columns:
-        df['system'] = flag_system
-    #
-    grpload = df.groupby(['type', 'beam'])
-    newgrp = defaultdict(list)
-    for key, items in grpload:
-        bload = items.to_dict(orient='split', index=False)
+    try:
+        header = {item:find_BeamLoad_item(item) for item in columns}
+        df.rename(columns=header, inplace=True)
+        df['type'] = df['type'].apply(lambda x: find_load_type(x))
         #
-        if re.match(r"\b(line)\b", key[0], re.IGNORECASE):
-            # ['type', 'qx1', 'qy1', 'qz1', 'qt1',
-            #  'qx2', 'qy2', 'qz2', 'qt2',
-            #  'L1', 'L2']
-            temp = []
-            #for bname, bload in grpbeam:
-            for load in bload['data']:
-                data = dict(zip(bload['columns'], load))
-                line = get_BeamLine_dic(data)
-                temp.append([data['name'], data['system'], key[1], *line, None])
-            newgrp['line'].extend(temp)
-
-        elif re.match(r"\b(point)\b", key[0], re.IGNORECASE):
-            # ['type', Fx, Fy, Fz, Mx, My, Mz, L0, title]
-            temp = []
-            for load in bload['data']:
-                data = dict(zip(bload['columns'], load))
-                point = get_BeamPoint_dic(data)
-                temp.append([data['name'], data['system'], key[1], *point, None])
-            newgrp['point'].extend(temp)
-            
-        elif re.match(r"\b(mass)\b", key[0], re.IGNORECASE):
-            # ['type', x, y, z, mx, my, mz, L0, title]
-            temp = []
-            for load in bload['data']:
-                data = dict(zip(bload['columns'], load))
-                mass = get_BeamPoint_dic(data)
-                temp.append([data['name'], data['system'], key[1], *mass, None])
-            newgrp['mass'].extend(temp)
-            
-        else:
-            raise NotImplementedError(f'load type {key} not valid')
+        if 'system' not in columns:
+            df['system'] = flag_system
+        #
+        grpload = df.groupby(['type', 'beam'])
+        newgrp = defaultdict(list)
+        for key, items in grpload:
+            bload = items.to_dict(orient='split', index=False)
+            #
+            if re.match(r"\b(line)\b", key[0], re.IGNORECASE):
+                # ['type', 'qx1', 'qy1', 'qz1', 'qt1',
+                #  'qx2', 'qy2', 'qz2', 'qt2',
+                #  'L1', 'L2']
+                temp = []
+                #for bname, bload in grpbeam:
+                for load in bload['data']:
+                    data = dict(zip(bload['columns'], load))
+                    line = get_BeamLine_dic(data)
+                    temp.append([data['name'], data['system'], key[1], *line, None])
+                newgrp['line'].extend(temp)
+    
+            elif re.match(r"\b(point)\b", key[0], re.IGNORECASE):
+                # ['type', Fx, Fy, Fz, Mx, My, Mz, L0, title]
+                temp = []
+                for load in bload['data']:
+                    data = dict(zip(bload['columns'], load))
+                    point = get_BeamPoint_dic(data)
+                    temp.append([data['name'], data['system'], key[1], *point, None])
+                newgrp['point'].extend(temp)
+                
+            elif re.match(r"\b(mass)\b", key[0], re.IGNORECASE):
+                # ['type', x, y, z, mx, my, mz, L0, title]
+                temp = []
+                for load in bload['data']:
+                    data = dict(zip(bload['columns'], load))
+                    mass = get_BeamPoint_dic(data)
+                    temp.append([data['name'], data['system'], key[1], *mass, None])
+                newgrp['mass'].extend(temp)
+                
+            else:
+                raise NotImplementedError(f'load type {key} not valid')
+    except re.PatternError:
+        header = {item:find_BeamLoad_type(item) for item in columns}
+        df.rename(columns=header, inplace=True)
+        #
+        newgrp = defaultdict(list)
+        grpforce = df.groupby(['name', 'beam'])        
+        for key, items in grpforce:
+            for item in items.itertuples():
+                try: #  [qx1,qy1,qz1,qt1,qx2,qy2,qz2,qt2,L0,L1, tile]
+                    data = item.line
+                    force = get_BeamLoad_list_units(['line', *data])
+                    newgrp['line'].append([item.name, flag_system, item.beam, *force, None])
+                except AttributeError:
+                    pass
+                
+                try: # ['type', Fx, Fy, Fz, Mx, My, Mz, L0, title]
+                    data = item.point
+                    force = get_BeamLoad_list_units(['point', *data])
+                    newgrp['point'].append([item.name, flag_system, item.beam, *force, None])
+                except AttributeError:
+                    pass
+                
+                try: # ['type', x, y, z, mx, my, mz, L0, title]
+                    data = item.mass
+                    force = get_BeamLoad_list_units(['mass', *data])
+                    newgrp['mass'].append([item.name, flag_system, item.beam, *force, None])
+                except AttributeError:
+                    pass
+    #
     #
     db = DBframework()
     header = {'line': ['name', 'system',
@@ -763,6 +793,7 @@ def find_load_type(word_in:str) -> str:
     match = common.find_keyword(word_in, key)
     return match
 #
+#
 def find_BeamLoad_item(word_in:str) -> str:
     """ """
     key = {"name": r"\b(id|name|load(s)?)\b",
@@ -776,6 +807,19 @@ def find_BeamLoad_item(word_in:str) -> str:
     except IOError:
         return find_load_item(word_in)
 #
+#
+def find_BeamLoad_type(word_in:str) -> str:
+    """ """
+    key = {"name": r"\b(id|name|load(s)?)\b",
+           "type": r"\b((load(_|-|\s*)?)?type)\b",
+           "title": r"\b(title|comment)\b",
+           "beam": r"\b(beam(s)?(_|-|\s*)?(name|id)?)\b",
+           "system": r"\b(system)\b",}
+    try:
+        match = common.find_keyword(word_in, key)
+        return match
+    except IOError:
+        return find_load_type(word_in)
 #
 #
 def find_load_item(word_in:str) -> str:

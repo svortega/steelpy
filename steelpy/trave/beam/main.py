@@ -224,11 +224,16 @@ class Beam:
     def _getloads(self):
         """get beam loading"""
         bloads = []
+        # basic load
         for item in self._basic._load._line.values():
             bloads.extend(item)
         #
         for item in self._basic._load._point.values():
             bloads.extend(item)
+        # combination
+        for items in self._combination.values():
+            for item in items.combination.values():
+                bloads.extend(item)
         #
         return bloads
     #

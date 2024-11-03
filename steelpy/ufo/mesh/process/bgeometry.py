@@ -181,14 +181,15 @@ def B3D2_Kt(Le:float,
     fac = P / PE
     #
     # Tension
-    if fac > toler:
-        # Positive axial force
-        Kt = Kt_tension(Le=Le, Ax=Ax,
-                        Jx=Jx, Iy=Iy, Iz=Iz,
-                        Emod=Emod, Gmod=Gmod,
-                        Oy=Oy, Oz=Oz, Fb=Fb)
+    # TODO : Check tension is not required
+    #if fac > toler:
+    #    # Positive axial force
+    #    Kt = Kt_tension(Le=Le, Ax=Ax,
+    #                    Jx=Jx, Iy=Iy, Iz=Iz,
+    #                    Emod=Emod, Gmod=Gmod,
+    #                    Oy=Oy, Oz=Oz, Fb=Fb)
     # Compression
-    elif fac < -toler:
+    if fac < -toler:
         # Negative axial force
         Kt = Kt_compression(Le=Le, Ax=Ax,
                             Jx=Jx, Iy=Iy, Iz=Iz,

@@ -180,6 +180,7 @@ def get_sect_df(df):
     df.rename(columns=header, inplace=True)
     df['type'] = df['type'].apply(lambda x: find_sect_type(x))
     #
+    columns = list(df.columns)
     if 'SA_inplane' not in columns:
         df['SA_inplane'] = float(1.0)
     
