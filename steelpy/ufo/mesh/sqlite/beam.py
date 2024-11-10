@@ -10,8 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 #from itertools import chain
 #import math
-from typing import NamedTuple
-from operator import sub, add
+#from typing import NamedTuple
+from operator import sub #, add
 #from operator import itemgetter
 #import os.path
 #from itertools import groupby
@@ -31,27 +31,25 @@ from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            get_node_coord,
                                            get_unitvector, 
                                            update_element_item,
-                                           check_element)
-from steelpy.ufo.process.beam import BeamBasic, BeamItemBasic
-from steelpy.ufo.mesh.process.brotation import unitvec_0, unitvec_1
-from steelpy.ufo.process.element import get_beam_df
-from steelpy.utils.sqlite.utils import create_connection
+                                           check_element,
+                                           get_elements)
 
+from steelpy.ufo.mesh.process.brotation import unitvec_0, unitvec_1
+from steelpy.utils.sqlite.utils import create_connection
+from steelpy.ufo.utils.beam import BeamBasic, BeamItemBasic
+from steelpy.ufo.utils.element import get_beam_df
 #
 #
 class BeamSQL(BeamBasic):
-    __slots__ = ['_title', 'db_file', '_component'] #'_plane',
+    __slots__ = ['_title', 'db_file', '_component']
     
     def __init__(self, db_file:str,
                  component: int) -> None:
-                 #plane: NamedTuple) -> None:
         """
         beam elements
         """
-        super().__init__()
+        super().__init__(component)
         self.db_file = db_file
-        #self._plane = plane
-        self._component = component
     #
     @property
     def _labels(self):
@@ -200,8 +198,17 @@ class BeamSQL(BeamBasic):
     @property
     def df(self):
         """ """
-        print('--->')
-        1 / 0
+        #print('elements df out')
+        conn = create_connection(self.db_file)
+        with conn:
+            data = get_elements(conn,
+                                component=self._component,
+                                element_type='beam')
+        
+        header = ['name', 'type', 'material', 'section',
+                  'node_1', 'node_2', 'node_3', 'node_4',
+                  'roll_angle', 'title']
+        return data[header]
     
     @df.setter
     def df(self, df):
@@ -300,10 +307,9 @@ class BeamSQL(BeamBasic):
 class BeamItemSQL(BeamItemBasic):
     """ """
     __slots__ = ['name', '_releases', 'type',
-                 'db_file', '_component'] # '_plane', 
+                 'db_file', '_component']
     
     def __init__(self, beam_name:int,
-                 #plane: NamedTuple,
                  component: int, 
                  db_file:str) -> None:
         """
@@ -313,11 +319,8 @@ class BeamItemSQL(BeamItemBasic):
             beam = check_element(conn,
                                  element_name=beam_name,
                                  component=component)
-            #if not beam:
-            #    raise IOError(f'beam {beam_name} not found')
         #
         super().__init__(beam_name)
-        #self._plane = plane
         self.db_file = db_file
         self._component = component
         #print('--')
@@ -334,10 +337,6 @@ class BeamItemSQL(BeamItemBasic):
         if (title := data[-1]) == None:
             title = ""
         #
-        #return "{:8d} {:8d} {:8d} {:>12s} {:>12s} {: 6.4f} {:>6.3f} {:>12s}\n"\
-        #       .format(self.name, *self.connectivity,
-        #               self.material, self.section, self.beta,
-        #               self.length, title)
         node1, node2 = self.connectivity
         return "{:>8s} {:>8s} {:>8s} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}\n"\
                .format(str(beam_name), str(node1), str(node2),

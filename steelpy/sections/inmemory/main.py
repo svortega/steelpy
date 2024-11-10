@@ -15,7 +15,7 @@ from .channel import Channel
 from .box import Box
 from .ibeam import Ibeam
 from .solid import SolidSection
-#from ..utils.operations import get_sect_properties
+#
 from steelpy.sections.utils.shape.main import SectionMain
 from steelpy.utils.dataframe.main import DBframework
 
@@ -31,8 +31,8 @@ class SectionIM(SectionMain):
     def __init__(self):
         """
         """
-        #super().__init__()
-        self._default: str | None = None
+        super().__init__()
+        #
         self._labels: list[str|int] = []
         self._number: list[int] = []
         self._title: list[str] = []

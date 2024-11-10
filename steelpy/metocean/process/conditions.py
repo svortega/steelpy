@@ -52,16 +52,19 @@ class HydroCondition(Mapping):
       :number:  integer internal number 
       :name:  string node external name
     """
-    __slots__ = ['db_file', '_properties', '_design', '_criteria']
+    __slots__ = ['db_file', '_properties', '_design',
+                 '_criteria', '_component']
 
     def __init__(self, criteria: str,
-                 properties, db_file: str):
+                 properties,
+                 component:str|int, db_file: str):
         """
         """
         self._criteria = criteria
-        self.db_file = db_file
         self._properties = properties
-        self._design = HydroDesign(self.db_file)
+        self.db_file = db_file
+        self._component = component
+        self._design = HydroDesign(component, self.db_file)
         #
         # create table
         conn = create_connection(self.db_file)

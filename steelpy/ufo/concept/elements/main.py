@@ -5,10 +5,10 @@
 # Python stdlib imports
 from __future__ import annotations
 #import math 
-from itertools import chain
+#from itertools import chain
 #from array import array
 #from collections import OrderedDict
-from collections import Counter
+#from collections import Counter
 from collections.abc import Mapping
 import functools
 import re
@@ -17,7 +17,7 @@ import re
 
 # package imports
 from steelpy.ufo.concept.elements.beam import ConceptBeam
-#
+from steelpy.ufo.utils.element import ElementMain
 #
 #
 #
@@ -46,16 +46,19 @@ def get_node_end(_number_nodes: int, line: int):
 #
 #
 #
-class ConceptElements(Mapping):
+class ConceptElements(ElementMain):
     __slots__ = ['_type', '_labels',
                  '_beams', '_shells', 
                  '_materials', '_sections'] 
 
     
-    def __init__(self, points, materials, sections) -> None:
+    def __init__(self, points, materials, sections,
+                 component:str|int) -> None:
         """
         Manages f2u elements
         """
+        super().__init__(component)
+        #
         self._materials = materials
         self._sections = sections
         #
@@ -67,7 +70,8 @@ class ConceptElements(Mapping):
                                   materials=materials,
                                   sections=sections,
                                   labels=self._labels,
-                                  element_type=self._type)
+                                  element_type=self._type,
+                                  component=component)
     #
     #
     def __setitem__(self, element_name: int, parameters: list) -> None:
@@ -110,11 +114,6 @@ class ConceptElements(Mapping):
             raise IOError(f' element type {element_type} not recognised') 
 
     #
-    def __iter__(self):
-        """
-        """
-        return iter(self._labels)
-
     def __delitem__(self, element_name: str|int) -> None:
         """
         """
@@ -124,11 +123,7 @@ class ConceptElements(Mapping):
         self._type.pop(i)
         del self._beams[element_name]
 
-    def __contains__(self, value) -> bool:
-        return value in self._labels
-
-    def __len__(self) -> float:
-        return len(self._labels)
+    #
     #
     #
     #@property
@@ -148,20 +143,41 @@ class ConceptElements(Mapping):
               df=None):
         """
         """
-        if values:
-            if isinstance(values, list):
-                for item in values:
-                    element_name = item[0]
-                    self._beams[element_name] = item[1:]
-        #
-        # dataframe input
-        try:
-            df.columns
-            self._beams.df = df
-        except AttributeError:
-            pass
-        #
+        items = self._beam(values, df)
+        # default
+        for item in items:
+            self._labels.append(item)
+            self._type.append('beam')
+        #1 / 0
         return self._beams
+    #    if values:
+    #        if isinstance(values, list):
+    #            for item in values:
+    #                element_name = item[0]
+    #                self._beams[element_name] = item[1:]
+    #    #
+    #    # dataframe input
+    #    try:
+    #        df.columns
+    #        self._beams.df = df
+    #    except AttributeError:
+    #        pass
+    #    #
+    #    return self._beams
+    #
+    #
+    #
+    #@property
+    #def df(self):
+    #    """ """
+    #    1/0
+    #
+    #@df.setter
+    #def df(self, df):
+    #    """ """
+    #    1 / 0
+    #
+    #
 #
 #
 class ElementType(Mapping):

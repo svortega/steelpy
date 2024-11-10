@@ -15,15 +15,16 @@ import re
 #
 # package imports
 from steelpy.ufo.mesh.sqlite.beam import BeamSQL
-from steelpy.ufo.mesh.sqlite.utils import get_connectivity, get_elements
-from steelpy.utils.sqlite.main import ClassBasicSQL
+from steelpy.ufo.mesh.sqlite.utils import get_connectivity #, get_elements
+#from steelpy.utils.sqlite.main import ClassBasicSQL
 from steelpy.utils.sqlite.utils import create_connection, create_table
-from steelpy.ufo.process.element import get_element, find_element_type
+from steelpy.ufo.utils.element import get_element #, find_element_type
+from steelpy.ufo.utils.element import ElementMain
 #from steelpy.utils.dataframe.main import DBframework
 #
 #
 #
-class ElementsSQL(ClassBasicSQL):
+class ElementsSQL(ElementMain):
     __slots__ = ['_beams', '_plane', 'db_file', '_component']
     
     def __init__(self, db_file:str,
@@ -32,10 +33,16 @@ class ElementsSQL(ClassBasicSQL):
                  db_system:str="sqlite") -> None:
         """
         """
-        super().__init__(db_file)
-        self._component = component
+        super().__init__(component)
+        #self._component = component
         self._beams = BeamSQL(db_file=db_file,
                               component=component)
+        #
+        self.db_file = db_file
+        # create table
+        conn = create_connection(self.db_file)
+        with conn:
+            self._new_table(conn)
     #
     #
     @property
@@ -119,27 +126,6 @@ class ElementsSQL(ClassBasicSQL):
             raise IOError(f' element type {element_type} not valid')    
     #
     #
-    def __str__(self, units:str="si") -> str:
-        """ """
-        lenght = ' m'
-        space = " "
-        output = "\n"
-        output += "{:}\n".format(80*"_")
-        output += "\n"
-        output += f"{33*space}ELEMENTS\n"
-        output += "\n"
-        output += (f"Element     Node1    Node2 {4*space} Material  Section {4*space}")
-        output += (f"Beta {3*space} Lenght {2*space} Title")
-        output += "\n"
-        output += "{:}\n".format(80*".")
-        output += "\n"
-        for key in self._labels:
-            element = self.__getitem__(key)
-            output += element.__str__()
-            #output += "\n"
-        return output
-    #
-    #
     # ---------------------------------
     # SQL ops      
     #
@@ -206,8 +192,29 @@ class ElementsSQL(ClassBasicSQL):
         #
         if not comp:
             raise IOError(f' element {number} not valid')
+    #
+    #
+    @property
+    def get_connectivities(self):
+        """ """
+        query = (self._component)
+        table = f"SELECT name FROM Element \
+                WHERE mesh_id = ?;"
+        #
+        conn = create_connection(self.db_file)
+        with conn:
+            cur = conn.cursor()
+            cur.execute(table, query)
+            elements = cur.fetchall()
+        #
+        connodes = []
+        for element in elements:
+            connodes.append(get_connectivity(conn, element[0]))
+        conn.close()
+        return connodes
     #    
     #
+    # ---------------------------------
     #
     #def iter_elements(self, arraysize=1000):
     #    """
@@ -238,25 +245,7 @@ class ElementsSQL(ClassBasicSQL):
     #    finally:
     #        conn.close()
     #
-    @property
-    def get_connectivities(self):
-        """ """
-        query = (self._component)
-        table = f"SELECT name FROM Element \
-                WHERE mesh_id = ?;"
-        #
-        conn = create_connection(self.db_file)
-        with conn:
-            cur = conn.cursor()
-            cur.execute(table, query)
-            elements = cur.fetchall()
-        #
-        connodes = []
-        for element in elements:
-            connodes.append(get_connectivity(conn, element[0]))
-        conn.close()
-        return connodes
-    #
+    # ---------------------------------
     #
     def update_item(self, element_id:int,
                     item:str, value:float|int):
@@ -278,103 +267,75 @@ class ElementsSQL(ClassBasicSQL):
         flat = list(chain.from_iterable(connectivities))
         return [k for k, v in Counter(flat).items() if v == 1]
     #
+    # ---------------------------------
+    #
     #@property
     def beam(self, values:None|list=None,
               df=None):
         """
         """
-        if values:
-            if isinstance(values, list):
-                for item in values:
-                    element_name = item[0]
-                    try:
-                        self._labels.index(element_name)
-                        raise Exception('element {:} already exist'.format(element_name))
-                    except ValueError:
-                        element_type = 'beam'
-                        #mnumber = next(self.get_number())
-                        # default
-                        self._labels.append(element_name)
-                        #self._number.append(mnumber)
-                        self._type.append(element_type)
-                        self._beams[element_name] = item[1:]
-        #
-        # dataframe input
-        try:
-            df.columns
-            self._beams.df = df
-        except AttributeError:
-            pass
-        #
+        items = self._beam(values, df)
         return self._beams
-        #return ElementType(item_type='beam',
-        #                   cls_type=self._beams, cls=self)
+    #    if values:
+    #        if isinstance(values, list):
+    #            for item in values:
+    #                element_name = item[0]
+    #                try:
+    #                    self._labels.index(element_name)
+    #                    raise Exception('element {:} already exist'.format(element_name))
+    #                except ValueError:
+    #                    element_type = 'beam'
+    #                    #mnumber = next(self.get_number())
+    #                    # default
+    #                    self._labels.append(element_name)
+    #                    #self._number.append(mnumber)
+    #                    self._type.append(element_type)
+    #                    self._beams[element_name] = item[1:]
+    #    #
+    #    # dataframe input
+    #    try:
+    #        df.columns
+    #        self._beams.df = df
+    #    except AttributeError:
+    #        pass
+    #    #
+    #    return self._beams
+    #    #return ElementType(item_type='beam',
+    #    #                   cls_type=self._beams, cls=self)
     #
-    #
-    def max_bandwidth(self,  jbc):
-        """
-        calculate max bandwidth
-        ------------------------  
-        npi : connectivity end 1
-        npj : connectivity end 2
-        jbc : nodes freedom
-        nel: number of elements
-        if we
-        npi ,npj, jbc, nel
-        """
-        #TODO : plates 
-        ibndm4 = [0]
-        for key in self.self._labels:
-            element = self.__getitem__(key)
-            #idof, jdof = element.DoF
-            #bc1 = jbc[idof]
-            #bc2 = jbc[jdof]
-            nodes = element.connectivity
-            #for node in nodes:
-            bc1 = jbc.loc[nodes[0]].tolist()
-            bc2 = jbc.loc[nodes[1]].tolist()
-            ieqn = bc1 + bc2
-            try:
-                ibndm4.append(max([abs(ieqn1 - ieqn2)
-                                   for x, ieqn1 in enumerate(ieqn) if ieqn1 > 0
-                                   for ieqn2 in ieqn[x+1:] if ieqn2 > 0]))
-            except ValueError:
-                continue
-        #
-        return max(ibndm4) + 1
     #    
     # ---------------------------------
     #
-    @property
-    def df(self):
-        """nodes in dataframe format"""
-        #print('elements df out')
-        conn = create_connection(self.db_file)
-        with conn:        
-            data = get_elements(conn, component=self._component)
-        #
-        header = ['name', 'type', 'material', 'section',
-                  'node_1', 'node_2', 'node_3', 'node_4', 
-                  'roll_angle', 'title']        
-        return data[header]
-
-    @df.setter
-    def df(self, df):
-        """nodes in dataframe format"""
-        #df = get_element_df(df)
-        columns = list(df.columns)
-        for key in columns:
-            if re.match(r"\b((element(s)?(_|-|\s*)?)?type)\b", key, re.IGNORECASE):
-                df['type'] = df[key].apply(lambda x: find_element_type(x))
-                break      
-        #
-        group = df.groupby("type")
-        #
-        try:
-            group = group.get_group("beam")
-            self._beams.df = group
-        except KeyError:
-            raise IOError('Element df not valid') 
+    #@property
+    #def df(self):
+    #    """nodes in dataframe format"""
+    #    #print('elements df out')
+    #    conn = create_connection(self.db_file)
+    #    with conn:
+    #        data = get_elements(conn, component=self._component)
+    #    #
+    #    header = ['name', 'type', 'material', 'section',
+    #              'node_1', 'node_2', 'node_3', 'node_4',
+    #              'roll_angle', 'title']
+    #    return data[header]
+    #
+    #@df.setter
+    #def df(self, df):
+    #    """nodes in dataframe format"""
+    #    #df = get_element_df(df)
+    #    columns = list(df.columns)
+    #    for key in columns:
+    #        if re.match(r"\b((element(s)?(_|-|\s*)?)?type)\b", key, re.IGNORECASE):
+    #            df['type'] = df[key].apply(lambda x: find_element_type(x))
+    #            break
+    #    #
+    #    group = df.groupby("type")
+    #    #
+    #    try:
+    #        group = group.get_group("beam")
+    #        self._beams.df = group
+    #    except KeyError:
+    #        raise IOError('Element df not valid')
 #  
 #
 #

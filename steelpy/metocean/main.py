@@ -13,7 +13,7 @@ import re
 
 # package imports
 from steelpy.utils.units.main import Units
-from steelpy.utils.sqlite.main import ClassMainSQL
+from steelpy.utils.sqlite.main import get_db_file
 #
 #from steelpy.metocean.wave.regular.utils.bsotm import BSOTM
 from steelpy.metocean.hydrodynamic.main import HydroProperty
@@ -22,7 +22,7 @@ from steelpy.metocean.process.criteria import HydroCriteria
 
 #
 #
-class Metocean(ClassMainSQL):
+class Metocean:
     """
     FE Metocean Class
     
@@ -56,7 +56,8 @@ class Metocean(ClassMainSQL):
                  sql_file:str|None = None):
         """
         """
-        super().__init__(name=name, sql_file=sql_file)
+        #super().__init__(name=name, sql_file=sql_file)
+        self.db_file, self._name, self._build = get_db_file(name, sql_file)
         #
         if self._build:
             self._rho_w: float = 1032.0  # kg/m^3
@@ -64,10 +65,12 @@ class Metocean(ClassMainSQL):
             self._rho_w: float = 1032.0 # kg/m^3
             #print('--> existing')
         #
-        self._properties = HydroProperty(db_file=self.db_file)
+        self._properties = HydroProperty(component=self._name,
+                                         db_file=self.db_file)
         #
         self._criteria = HydroCriteria(rho_w= self._rho_w,
-                                       properties=self._properties, 
+                                       properties=self._properties,
+                                       component=self._name,
                                        db_file=self.db_file)
     #
     #

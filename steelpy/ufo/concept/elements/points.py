@@ -9,7 +9,7 @@ from math import isclose, dist
 #from collections.abc import Mapping
 #
 # package imports
-from steelpy.ufo.process.node import NodePoint, NodeBasic
+from steelpy.ufo.utils.node import NodePoint, NodeBasic
 #
 #
 #

@@ -10,17 +10,17 @@ import re
 
 #
 # package imports
+#from steelpy.ufo.process.element import find_element_item
 from steelpy.utils.dataframe.main import DBframework
 
 
 class ufoBasicModel:
-    #__slots__ = ['_name', '_title', ]
+    __slots__ = ['_component']
     
-    #def __init__(self, name:str, title: str) -> None:
-    #    """ """
-    #    self._name = name
-    #    self._title = title    
-    
+    def __init__(self, component:str|int) -> None:
+        """ """
+        self._component = component
+    #   
     # --------------------
     # Common
     # --------------------
@@ -114,10 +114,14 @@ class ufoBasicModel:
         """
         if values:
             if isinstance(values, dict):
+                #columns = list(values.keys())
+                #columns = {item:find_element_item(item)
+                #           for item in columns}
                 ename = values['name']
                 if isinstance(ename, (list | tuple)):
                     db = DBframework()
-                    self._elements.df = db.DataFrame(values)
+                    edf = db.DataFrame(values)
+                    self._elements.df = edf
                 else:
                     sname = values.pop('name')
                     self._elements[sname] = values                
@@ -222,13 +226,13 @@ class ufoBasicModel:
 #
 class ModelClassBasic(Mapping):
     """ """
-    __slots__ = ['_labels']
+    __slots__ = ['_component']
     
     #
-    def __init__(self):
+    def __init__(self, component: str|int):
         """
         """
-        self._labels:list = []
+        self._component = component
     #  
     #
     def __len__(self) -> int:

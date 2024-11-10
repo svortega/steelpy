@@ -4,18 +4,22 @@
 from __future__ import annotations
 # Python stdlib imports
 import math
-from collections.abc import Mapping
+#from collections.abc import Mapping
 from dataclasses import dataclass
 import re
-from operator import sub, add
+from operator import sub #, add
 
 # package imports
-from steelpy.ufo.process.node import NodePoint
+from steelpy.ufo.utils.beam import BeamBasic
+from steelpy.ufo.utils.node import NodePoint
+from steelpy.ufo.utils.element import get_beam_df
 from steelpy.ufo.mesh.process.brotation import Rmatrix2
 from steelpy.utils.units.main import Units
+
 #
 from steelpy.sections.utils.shape.main import is_section
 from steelpy.material.utils.operations import is_material
+from steelpy.utils.dataframe.main import DBframework
 #
 #
 @dataclass
@@ -97,6 +101,24 @@ class ElementConcept:
     #    segment length from start node
     #    """
     #    return self._cls._segment[self.index] * f2u_units.m
+    #
+    #
+    #@property
+    #def connectivity(self):
+    #    """ """
+    #    connodes = self._cls._connectivity[self.index]
+    #    connodes
+    #
+    #
+    def __str__(self) -> str:
+        """ """
+        beam_name = self.name
+        node1, node2 = self._cls._connectivity[self.index]
+        title = ""
+        return "{:>8s} {:>8s} {:>8s} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}\n"\
+               .format(str(beam_name), str(node1), str(node2),
+                       str(self.material.name), str(self.section.name),
+                       self.beta, self.L, title)    
 #
 #
 @dataclass
@@ -241,7 +263,7 @@ class Steps:
 #
 #
 #
-class ConceptBeam(Mapping):
+class ConceptBeam(BeamBasic):
     """
     element[name] = [name, connectivity, material, section, type, group]
     connectivity[number] = [name, node1, node2,..., nodei]
@@ -250,15 +272,18 @@ class ConceptBeam(Mapping):
                  '_sections', '_materials', '_mesh', '_releases',  '_roll_angle', 
                  '_direction_cosines', '_eccentricities', '_offset_index', 
                  '_segment', '_step_label', 
-                 'f2u_points', 'f2u_materials', 'f2u_sections'] # 'f2u_units'
+                 'f2u_points', 'f2u_materials', 'f2u_sections']
 
     
     def __init__(self, beam_type:str,
                  points, materials, sections,
-                 labels, element_type) -> None: # properties
+                 labels, element_type,
+                 component: int) -> None: # properties
         """
         Manages f2u elements
         """
+        super().__init__(component)
+        #
         self.f2u_materials = materials
         self.f2u_sections = sections
         self.f2u_points = points
@@ -351,39 +376,16 @@ class ConceptBeam(Mapping):
             self._roll_angle.append(0.0)
             self._number.append(index)
             #
-            values =self._get_data(parameters)
+            values = self._get_data(parameters)
             self._connectivity.append(values[0])
             self._materials.append(values[1])
             self._sections.append(values[2])
             #
-            # set connectivity
-            #try:
-            #    node_1 = self.f2u_points.get_point_name(parameters[0])
-            #except IOError:
-            #    node_1 = self.f2u_points.get_new_point(parameters[0])
-            #
-            #try:
-            #    node_2 = self.f2u_points.get_point_name(parameters[1])
-            #except IOError:
-            #    node_2 = self.f2u_points.get_new_point(parameters[1])
-            #
-            #self._connectivity.append([node_1, node_2])
-            #
-            # set blank data
-            #self._sections.append(-1)
-            #self._materials.append(-1)
-            #
-            # set default material
-            #if self.f2u_materials.default:
-            #    self._materials[index] = self.f2u_materials.default
-            # set default section
-            #if self.f2u_sections.default:
-            #    self._sections[index] = self.f2u_sections.default
-            #
             self._segment.append(0)
             self._step_label.append(name)
             self._mesh.append(-1)
-            # to be defined
+            #
+            # TODO: to be defined
             #self._properties.append(-1)
             #self._offset_index.append(-1)
             #self._direction_cosines.append(-1)
@@ -408,12 +410,6 @@ class ConceptBeam(Mapping):
     #
     # -------------------------------------------
     #
-    def __iter__(self):
-        """
-        """
-        labels = list(dict.fromkeys(self._labels))
-        return iter(labels)
-
     def __delitem__(self, element_name: str|int) -> None:
         """
         """
@@ -458,13 +454,6 @@ class ConceptBeam(Mapping):
         except ValueError:
             raise KeyError('    *** warning element {:} does not exist'
                            .format(element_name))
-
-    def __contains__(self, value) -> bool:
-        return value in self._labels
-
-    def __len__(self) -> float:
-        labels = list(dict.fromkeys(self._labels))
-        return len(labels)
     #
     # -------------------------------------------
     #
@@ -527,34 +516,45 @@ class ConceptBeam(Mapping):
     @property
     def df(self):
         """ """
-        1/0
+        nodes = list(zip(*self._connectivity))
+        data = {'name': self._labels,
+                'type': self._beam_type,
+                'material': self._materials,
+                'section': self._sections,
+                'node_1': nodes[0],
+                'node_2': nodes[1],
+                'node_3' : None, 
+                'node_4' : None,
+                 'roll_angle': self._roll_angle,
+                 'title': self._step_label,}
+        db = DBframework()
+        membdf = db.DataFrame(data=data)     
+        return membdf
 
     @df.setter
     def df(self, df):
         """ """
-        1 / 0
-        #col = df.columns.tolist()
-        coord = list(filter(lambda v: re.match('coord(inate)?(_)?(x|y|z)(_)?(1|2)',
-                                               v, re.IGNORECASE), df.columns))
+        # clean df
+        df = get_beam_df(df)
+        columns = list(df.columns)
+        coord = list(filter(lambda v: re.match('(x|y|z)(1|2)',
+                                               v, re.IGNORECASE), columns))
 
         if coord:
-            coord1 = list(filter(lambda v: re.match('coord(inate)?(_)?(x|y|z)(_)?1',
-                                                    v, re.IGNORECASE), coord))
-            coord1.sort(key=alphaNumOrder)
-            coord2 = list(set(coord) - set(coord1))
-            coord2.sort(key=alphaNumOrder)
+            coord1 = ['x1', 'y1', 'z1']
+            coord2 = ['x2', 'y2', 'z2']
             #
             for index, row in df.iterrows():
                 member_name = row['name']
-                self.__setitem__(member_name,
-                                 [list(row[coord1].values),
-                                  list(row[coord2].values)])
-                # update element
-                element = self.__getitem__(member_name)
-                element.material = row.material
-                element.section = row.section
+                coord1 = [row['x1'], row['y1'], row['z1']]
+                coord2 = [row['x2'], row['y2'], row['z2']]
+                parameters = [coord1, coord2, row['material'], row['section']]
+                              #row['roll_angle'], row['title']]
+                self.__setitem__(member_name, parameters)
         else: # node, point
             1/0
+        #
+        #print('-->')
     #
     # -------------------------------------------
     #

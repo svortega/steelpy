@@ -60,12 +60,12 @@ class CdCm(NamedTuple):
 class CdCmCoefficients(HydroBasic):
     """
     """
-    __slots__ = ['db_file']
+    __slots__ = ['db_file', '_component']
     
-    def __init__(self, db_file: str):
+    def __init__(self, component: str|int, db_file: str):
         """
         """
-        super().__init__(db_file)
+        super().__init__(component, db_file)
     #
     #
     def __getitem__(self, name: str|int):

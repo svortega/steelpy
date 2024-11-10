@@ -69,15 +69,15 @@ class ShapeBasic(Mapping):
 #-------------------------------------------------
 #
 #
-class SectionMain(ShapeBasic):
-    #__slots__ = ['_labels', '_number', '_title', '_type',
-    #             '_tubular', '_solid', '_ibeam', '_box',
-    #             '_channel', '_tee', '_angle', '_default']
+class SectionMain(Mapping):
+    __slots__ = [#'_labels', '_number', '_title', '_type', 
+                 '_tubular', '_solid', '_ibeam', '_box',
+                 '_channel', '_tee', '_angle', '_default']
 
     def __init__(self):
         """
         """
-        super().__init__()
+        self._default: str | None = None
     #
     def __setitem__(self, shape_name: str | int,
                     properties: list[float] | dict[str, float] | str) -> None:
@@ -138,6 +138,32 @@ class SectionMain(ShapeBasic):
                 raise NotImplementedError('general section error')
             case _:
                 raise IOError(f' Section type {section_type} not recognised')
+    #
+    # -----------------------------------------------
+    #
+    def __len__(self):
+        return len(self._labels)
+
+    def __iter__(self):
+        return iter(self._labels)
+
+    def __contains__(self, value):
+        return value in self._labels
+    #
+    # -----------------------------------------------   
+    #
+    def get_number(self, start: int = 1):
+        """
+        """
+        try:
+            n = max(self._number) + 1
+        except ValueError:
+            n = start
+        #
+        while True:
+            yield n
+            n += 1
+    #    
 #
 #
 #-------------------------------------------------

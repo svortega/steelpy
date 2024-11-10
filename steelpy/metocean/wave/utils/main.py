@@ -15,12 +15,12 @@ from steelpy.utils.sqlite.main import ClassBasicSQL
 @dataclass
 class WaveBasic(ClassBasicSQL):
     """ """
-    #__slots__ = ['db_file']
+    __slots__ = ['db_file', '_component']
     #
-    def __init__(self, db_file: str):
+    def __init__(self, component: str|int, db_file: str):
         """
         """
-        super().__init__(db_file)
+        super().__init__(component, db_file)
     #
     #
     def _push_wave(self, conn, wave_data: list) -> int:

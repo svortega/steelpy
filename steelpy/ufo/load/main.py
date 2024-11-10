@@ -302,7 +302,8 @@ class ConceptLoad(MasterLoad):
     __slots__ = ["_basic", "_combination", '_hydro', '_mass',
                  '_point', '_elements', '_boundaries', '_component']
     
-    def __init__(self, points, elements, boundaries, component: int) -> None:
+    def __init__(self, points, elements, boundaries,
+                 component: int|str) -> None:
         """
         """
         super().__init__(component)

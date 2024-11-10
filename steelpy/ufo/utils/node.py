@@ -10,13 +10,13 @@ from itertools import chain #, count
 from collections import Counter
 from collections import defaultdict
 from collections.abc import Mapping
-import functools
+#import functools
 import re
 from typing import NamedTuple
 from math import isclose, dist
 #
 # package imports
-from steelpy.ufo.process.boundary import get_node_boundary
+from steelpy.ufo.utils.boundary import get_node_boundary
 import steelpy.utils.io_module.text as common
 
 #
@@ -345,7 +345,7 @@ def del_list_inplace(lst, id_to_del):
 #
 #
 #
-@functools.lru_cache(maxsize=2048)
+#@functools.lru_cache(maxsize=2048)
 def find_node_data(word_in: str) -> str:
     """
     Identify beam data from user
@@ -355,34 +355,33 @@ def find_node_data(word_in: str) -> str:
                   "elements": r"\b(element|member|item(s)?)\b",
                   "group": r"\b(group|set)(s)?\b",
                   "boundary": r"\b(boundar(y|ies))\b",
-                  "z": r"\b(z)\b",
-                  "y": r"\b(y)\b",
-                  "x": r"\b(x)\b",
-                  "coordinates": r"coordinates"}
+                  #"z": r"\b(z)\b",
+                  #"y": r"\b(y)\b",
+                  #"x": r"\b(x)\b",
+                  "title": r"\b(title)\b", 
+                  "coordinates": r"\b(coordinates)\b"}
+    try:
+        match = common.find_keyword(word_in, key)
+    except IOError:
+        return find_coord(word_in)
+    return match
+#
+#
+def find_coord(word_in: str) -> str:
+    """ """
+    key: dict = {
+                  "x": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?x)\b",
+                  "y": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?y)\b",
+                  "z": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?z)\b",
+                  #
+                  "r": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?r)\b",
+                  "theta": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?theta)\b",
+                  "phi": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?phi)\b",                
+                  }
 
     match = common.find_keyword(word_in, key)
     return match
-
-
-@functools.lru_cache(maxsize=2048)
-def find_element_data(word_in: str) -> str:
-    """
-    Identify beam data from user
-    """
-    key: dict = {"number": r"\b(number|mesh)\b",
-                  "name": r"\b(name|label)\b",
-                  "connectivity": r"\b(connectivity|node(s)?|joint(s)?)\b",
-                  "material": r"\b(material)\b",
-                  "section": r"\b(geometry|section|shape)\b",
-                  "hinges": r"\b(hinge(s)?)\b",
-                  "group": r"\b(group|set)(s)?\b",
-                  # "boundary": r"\b(boundar(y|ies))\b",
-                  "type": r"type"}
-
-    match = common.find_keyword(word_in, key)
-    return match
-
-
+#
 #
 def get_args(args, items, item_class, item_type):
     """
@@ -647,4 +646,36 @@ def check_point_dic(data) -> list:
             
     return new_data
 #
-
+#
+def get_node_df(df, system: str = 'cartesian'):
+    """ """
+    columns = list(df.columns)
+    header = {item:find_node_data(item) for item in columns}
+    df.rename(columns=header, inplace=True)
+    #
+    df['system'] = system
+    if system == 'cartesian':
+        df[['r', 'theta', 'phi']] = None
+        # converting units
+        for key in ['x', 'y', 'z']:
+            try:
+                df[key] = df[key].apply(lambda x: x.convert('metre').value)
+            except KeyError:
+                # TODO : maybe 2D flag if z? 
+                df[key] = 0.0
+            except AttributeError:
+                raise IOError('units missing')
+    else:
+        raise NotImplementedError
+    #
+    # TODO : fix boundary
+    columns = list(df.columns)
+    if 'boundary' in columns:
+        1 / 0
+        fixities = {df['name'][x]: get_node_boundary(item)
+                    if item else None
+                    for x, item in enumerate(df['boundary'])}  
+    #
+    return df
+#
+#

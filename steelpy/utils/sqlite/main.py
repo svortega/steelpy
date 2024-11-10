@@ -17,57 +17,21 @@ import os
 
 # package imports
 #
-from steelpy.utils.sqlite.utils import create_connection #, create_table
+from steelpy.utils.sqlite.utils import create_connection
 from steelpy.utils.io_module.inout import check_input_file
 
 
-class ClassMainSQL:
-    __slots__ = ['db_file', '_build', '_name']
-    
-    def __init__(self, name:str, sql_file:str):
-        """
-        """
-        self._name = name
-        # TODO: build flag to be defined
-        self._build = True 
-        if sql_file:
-            sql_file = check_input_file(file=sql_file,
-                                        file_extension="db")
-            self.db_file = sql_file
-            #self._build = False
-        elif name:
-            self.db_file = self._get_file(name=name)
-            #self._name = name
-            #conn = create_connection(self.db_file)
-            #with conn:
-            #    self._create_table(conn)
-        else:
-            IOError('SQL file missing')
-    #
-    #
-    def _get_file(self, name: str):
-        """ """
-        filename = name + ".db"
-        path = os.path.abspath(filename)
-        try: # remove file if exist
-            os.remove(path)
-        except PermissionError:
-            raise PermissionError(f'close sqlite {name}')
-        except FileNotFoundError:
-            pass
-        #
-        return path
-#
 #
 #
 #
 class ClassBasicSQL(Mapping):
     """ """
-    __slots__ = ['db_file']
+    __slots__ = ['_component', 'db_file']
     #
-    def __init__(self, db_file: str):
+    def __init__(self, component: str|int, db_file: str):
         """
         """
+        self._component = component
         self.db_file = db_file
         # create table
         conn = create_connection(self.db_file)
@@ -95,5 +59,39 @@ class ClassBasicSQL(Mapping):
         while True:
             n += 1
             yield n
+#
+#
+def get_db_file(name: str|None, sql_file: str|None):
+    """ """
+    #self._name = name
+    # TODO: build flag to be defined
+    build = True 
+    if sql_file:
+        db_file = check_input_file(file=sql_file,
+                                    file_extension="db")
+        build = False
+    elif name:
+        db_file = get_file(name=name)
+        #self._name = name
+        #conn = create_connection(self.db_file)
+        #with conn:
+        #    self._create_table(conn)
+    else:
+        IOError('SQL file missing')
+    #
+    return db_file, name, build
+#
+def get_file(name: str):
+    """ """
+    filename = name + ".db"
+    path = os.path.abspath(filename)
+    try: # remove file if exist
+        os.remove(path)
+    except PermissionError:
+        raise PermissionError(f'close sql file : {name}')
+    except FileNotFoundError:
+        pass
+    #
+    return path
 #
 #

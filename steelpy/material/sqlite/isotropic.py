@@ -27,13 +27,13 @@ from steelpy.utils.dataframe.main import DBframework
 # ----------------------------------------
 #
 class MatBasicSQL(ClassBasicSQL):
-    __slots__ = ['db_file']
+    __slots__ = ['_component', 'db_file']
     
-    def __init__(self, db_file: str) -> None:
+    def __init__(self, component: str|int, db_file: str) -> None:
         """
         db_system: sqlite
         """
-        super().__init__(db_file)
+        super().__init__(component, db_file)
     #
     #
     @property
@@ -85,9 +85,9 @@ class MaterialSQL(MatBasicSQL):
         """
         db_system: sqlite
         """
-        super().__init__(db_file)
+        super().__init__(component, db_file)
         #
-        self._component = component
+        #self._component = component
         #self.db_system = db_system
         self._default: str|None = None
         self._elastic = MaterialElasticSQL(component=self._component,
@@ -507,8 +507,8 @@ class MaterialElasticSQL(MatBasicSQL):
     def __init__(self, component: int, db_file: str):
         """
         """
-        super().__init__(db_file)
-        self._component = component
+        super().__init__(component, db_file)
+        #self._component = component
     #
     #
     def __setitem__(self, name: int|str,

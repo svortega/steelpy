@@ -20,18 +20,20 @@ from steelpy.utils.sqlite.utils import create_table, create_connection
 @dataclass
 class Wave(WaveBasic):
     __slots__ = ['_regular', '_iregular', '_spectrum',
-                 '_rho_w',  '_db_file', '_criteria']
-    # '_labels','_type',
+                 '_rho_w',  'db_file', '_criteria',
+                 '_component']
     
-    def __init__(self, criteria: str, rho_w:float, db_file: str):
+    def __init__(self, criteria: str, rho_w:float,
+                 component: str|int, db_file: str):
         """
         """
-        super().__init__(db_file)
+        super().__init__(component, db_file)
         #
         self._criteria = criteria
         self._rho_w: float = rho_w  # kg / m^3
         #
         self._regular = RegularWave(criteria=self._criteria,
+                                    component=component, 
                                     db_file=self.db_file)
         #
         #self._iregular_wave = WaveIrregular()

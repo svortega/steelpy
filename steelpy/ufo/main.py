@@ -4,14 +4,108 @@
 # Python stdlib imports
 from __future__ import annotations
 #from dataclasses import dataclass
+#import os
+from datetime import datetime as dt
 #
 # package imports
 from steelpy.ufo.mesh.main import Mesh
 from steelpy.ufo.concept.main import Concept
 from steelpy.ufo.properties.main import Properties
-#
-from steelpy.ufo.mesh.sqlite.main import UFOmain
+from steelpy.ufo.utils.main import ufoBasicModel
+from steelpy.utils.sqlite.main import get_db_file
+from steelpy.utils.sqlite.utils import create_connection, create_table
+
 # 
+#
+
+#
+class UFOmain(ufoBasicModel):
+    """
+    mesh[beam_name] = [number, element1, element2, element]
+    """
+    __slots__ = ['_name', 'db_file', '_component',
+                 'data_type', '_build']
+
+    def __init__(self, name:str|int|None = None,
+                 #component:str|int|None = None, 
+                 sql_file:str|None = None):
+        """
+        """
+        #
+        self.db_file, self._name, self._build = get_db_file(name, sql_file)
+        #
+        #if not component:
+        component = self._name
+        #
+        super().__init__(component)
+        self.data_type = "sqlite"         
+        #
+        if self._build:
+            conn = create_connection(self.db_file)
+            with conn:
+                self._new_table(conn)
+                self._component = self._push_data(conn, component)
+    #
+    # --------------------------------------------------
+    #       
+    #
+    #
+    #    
+    #
+    # --------------------------------------------
+    # SQL ops
+    #
+    def _new_table(self, conn) -> None:
+        """ """
+        table = "CREATE TABLE IF NOT EXISTS Component (\
+                    number INTEGER PRIMARY KEY NOT NULL,\
+                    name NOT NULL,\
+                    plane TEXT NOT NULL, \
+                    date TEXT NOT NULL,\
+                    title TEXT);"
+        create_table(conn, table)
+    #
+    #
+    def _push_data(self, conn,
+                   component: str|int|None,
+                   plane: str = '3D', 
+                   title: str|None = None):
+        """ """
+        table = 'INSERT INTO Component(name, plane,\
+                                       date, title)\
+                            VALUES(?,?,?,?)'
+        #
+        date = dt.now().strftime('%Y-%m-%d')
+        data = (component,  plane, date, title)
+        # push
+        cur = conn.cursor()
+        out = cur.execute(table, data)
+        return out.lastrowid
+    #
+    #
+    def _set_type(self, component: str|int,
+                  comp_type: str, title: str|None):
+        """ """
+        
+        time=dt.now().strftime('%Y-%m-%d')
+        #item = 'concept'
+        #
+        query = (time, comp_type, title, component)
+        table = f"UPDATE Component \
+                 SET date = ?, \
+                     type = ?, \
+                     title = ? \
+                 WHERE name = ?;"
+        #
+        conn = create_connection(self.db_file)
+        with conn:          
+            cur = conn.cursor()
+            comp = cur.execute(table, query)
+        #
+        if not comp:
+            raise IOError(f' component {component} not valid')
+    # 
+#
 #
 #
 #
@@ -43,7 +137,9 @@ class UFOmodel(UFOmain):
       :name:  string node external name
     """
     __slots__ = ['_name', '_properties', 
-                 '_mesh', '_concept']
+                 '_mesh', '_concept',
+                 'db_file', '_component',
+                 'data_type', '_build']
 
     def __init__(self, name:str|int|None = None,
                  sql_file:str|None = None) -> None:
@@ -58,7 +154,8 @@ class UFOmodel(UFOmain):
         #
         # mesh basic
         self._mesh = Mesh(component=self._component, 
-                          sql_file=self.db_file)
+                          sql_file=self.db_file,
+                          build=self._build)
         #self._name = name
         self._properties = Properties()
         #
@@ -130,7 +227,5 @@ class UFOmodel(UFOmain):
     #def plot(self):
     #    """ """
     #    return self._plot
-#
-#
 #
 #

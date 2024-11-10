@@ -181,17 +181,18 @@ class NodeLoadItemSQL(ClassBasicSQL):
     __slots__ = ['_node', '_db_file', '_name', '_component']
     
     def __init__(self, load_name: str|int, db_file: str,
-                 component: int) -> None: # 
+                 component: int|str) -> None: # 
         """
         """
+        super().__init__(component, db_file)
         #self._db_file = db_file
         self._name = load_name
-        self._component = component       
+        #self._component = component       
         # create node table
         #conn = create_connection(self._db_file)
         #with conn:        
         #    nodeload_table(conn)
-        super().__init__(db_file)
+        
     #
     # -----------------------------------------------
     #

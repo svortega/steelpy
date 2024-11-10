@@ -28,9 +28,9 @@ class HydroProperty:
                  '_marine_growth',
                  # 'flooding', 
                  #'_non_hydro',
-                 'db_file'] # 'rho_w', 
+                 'db_file', '_component'] # 'rho_w', 
     
-    def __init__(self, db_file: str) -> None:
+    def __init__(self, component: str|int, db_file: str) -> None:
         """
         """
         #
@@ -45,12 +45,17 @@ class HydroProperty:
         #self._air_drag = {}
         #self.rho_w: float = rho_w  # 1032.0  * kg / m^3
         #
-        self._marine_growth = MarineGrowth(db_file=self.db_file)        
+        self._marine_growth = MarineGrowth(component=component,
+                                           db_file=self.db_file)        
         #
-        self._cdcm = CdCmCoefficients(db_file=self.db_file)
-        self._wkf = WaveKinFactor(db_file=self.db_file)
-        self._cbf = CurrentBlockFactor(db_file=self.db_file)
-        self._wip = ElementSegmentation(db_file=self.db_file)
+        self._cdcm = CdCmCoefficients(component=component,
+                                      db_file=self.db_file)
+        self._wkf = WaveKinFactor(component=component,
+                                  db_file=self.db_file)
+        self._cbf = CurrentBlockFactor(component=component,
+                                       db_file=self.db_file)
+        self._wip = ElementSegmentation(component=component,
+                                        db_file=self.db_file)
         #
         # create table
         conn = create_connection(self.db_file)

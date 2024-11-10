@@ -11,7 +11,7 @@ from typing import NamedTuple
 # package imports
 import steelpy.utils.io_module.text as common
 from steelpy.utils.dataframe.main import DBframework
-
+#from steelpy.ufo.utils.node import find_coord
 
 # -----------------------
 # TODO: merge with slite
@@ -41,7 +41,6 @@ class BoundaryNode(Mapping):
     def __init__(self, component: int):
         """
         """
-        #self._labels: list[int|str] = []
         self._component = component
     #
     #
@@ -59,62 +58,9 @@ class BoundaryNode(Mapping):
     # ----------------------------
     # Operations
     # ----------------------------
-    # TODO : why two ?
-    #def get_boundary(self, name:str):
-    #    """ """
-        #if re.match(r"\b(fix(ed)?|encastre)\b", name, re.IGNORECASE):
-        #    #self._title.append('fixed')
-        #    value = [1,1,1,1,1,1]
-        #elif re.match(r"\b(pinn(ed)?|roll(er)?)\b", name, re.IGNORECASE):
-        #    #self._title.append('pinned')
-        #    value = [1,1,1,1,0,0]
-        #
-        #elif re.match(r"\b(guide(d)?|roll(ed)?)\b", name, re.IGNORECASE):
-        #    return [0,1,1,1,0,0]
-        #
-        #elif re.match(r"\b(free)\b", name, re.IGNORECASE):
-        #    value = [0,0,0,0,0,0]
-        #    
-        #else:
-        #    raise IOError("boundary type {:} not implemented".format(name))
-        #
-        #value = get_boundary_by_name(bname=name)
-        #
-        #return value
     #
     def _get_fixity(self, fixity):
         """ """
-        #if isinstance(fixity, str):
-        #    return get_boundary_by_name(bname=fixity)
-            #if re.match(r"\b(fix(ed)?)\b", fixity, re.IGNORECASE):
-            #    return [1,1,1,1,1,1]
-            #
-            #elif re.match(r"\b(pinn(ed)?)\b", fixity, re.IGNORECASE):
-            #    return [1,1,1,1,0,0]
-            #
-            #elif re.match(r"\b(roll(er)?)\b", fixity, re.IGNORECASE):
-            #    return [0,1,1,1,0,0]
-            #
-            #elif re.match(r"\b(guide(d)?)\b", fixity, re.IGNORECASE):
-            #    return [1,0,0,1,0,0]
-            #
-            #elif re.match(r"\b(free)\b", fixity, re.IGNORECASE):
-            #    return [0,0,0,0,0,0]
-            #
-            #else:
-            #    raise IOError("boundary type {:} not implemented".format(fixity))
-        
-        #elif isinstance(fixity, (list, tuple)):
-        #    if isinstance(fixity[0], (list, tuple)):
-        #        fixity = fixity[0]
-        #    return fixity
-        #
-        #elif isinstance(fixity, dict):
-        #    return [fixity['x'], fixity['y'], fixity['z'], 
-        #            fixity['rx'], fixity['ry'], fixity['rz']]
-        #
-        #else:
-        #    raise Exception('   *** Boundary input format not recognized')
         return get_node_boundary(fixity)
     #
     #def _get_coordinates(self, coordinates):
@@ -126,6 +72,23 @@ class BoundaryNode(Mapping):
     #    else:
     #        raise Exception('Node input format not valid')
     #    return coordinates
+    #
+    # ----------------------------
+    # Operations
+    # ----------------------------
+    #
+    #
+    def get_number(self, start:int=1):
+        """
+        """
+        try:
+            n = max(self._number) + 1
+        except ValueError:
+            n = start
+        #
+        while True:
+            yield n
+            n += 1
 #
 #
 #
@@ -137,7 +100,7 @@ def find_boundary_type(word_in:str) -> str:
     match = common.find_keyword(word_in, key)
     return match
 #
-def find_support_item(word_in:str) -> str:
+def find_support_node(word_in:str) -> str:
     """
     """
     key = {'name': r'\b((boundar(y|ies)(_|-|\s*)?)?(id|name))\b',
@@ -147,6 +110,20 @@ def find_support_item(word_in:str) -> str:
            'title': r'\b(title)\b'}
     match = common.find_keyword(word_in, key)
     return match
+#
+def find_support_coord(word_in:str) -> str:
+    """
+    """
+    key = {'name': r'\b((boundar(y|ies)(_|-|\s*)?)?(id|name))\b',
+           'type': r'\b(type)\b',
+           'restrain': r'\b(restrain|constrain(s)?|fixit(y|ies))\b',
+           'title': r'\b(title)\b',
+           }
+    try:
+        match = common.find_keyword(word_in, key)
+        return match
+    except IOError:
+        return find_coord(word_in)
 #
 def find_support_boundary(word_in:str) -> str:
     """
@@ -160,31 +137,43 @@ def find_support_boundary(word_in:str) -> str:
     match = common.find_keyword(word_in, key)
     return match
 #
+#
+def find_coord(word_in: str) -> str:
+    """ """
+    key: dict = {
+                  "x": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?x)\b",
+                  "y": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?y)\b",
+                  "z": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?z)\b",
+                  #
+                  "r": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?r)\b",
+                  "theta": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?theta)\b",
+                  "phi": r"\b((coord(inate)?(s)?|elev(ation)?)?(_|-|\s*)?phi)\b",                
+                  }
+
+    match = common.find_keyword(word_in, key)
+    return match
+#
+#
 def get_support_df(df: DBframework.DataFrame):
-    """ [] """
+    """ """
     columns = list(df.columns)
-    header = {item:find_support_item(item) for item in columns}
-    df.rename(columns=header, inplace=True)
-    #
-    columns = list(df.columns)
-    if 'restrain' in columns:
-        df['restrain'] = df['restrain'].apply(get_node_boundary).tolist()
-        #fixity = {'x': [], 'y': [], 'z': [], 'rx': [], 'ry': [], 'rz': []}
-        #for item in boundary:
-        #    fixity['x'].append(item[0])
-        #    fixity['y'].append(item[1])
-        #    fixity['z'].append(item[2])
-        #    fixity['rx'].append(item[3])
-        #    fixity['ry'].append(item[4])
-        #    fixity['rz'].append(item[5])
+    try:
+        header = {item:find_support_node(item) for item in columns}
+        df.rename(columns=header, inplace=True)
         #
-        #db = DBframework()
-        #fixity = db.DataFrame(fixity)
-        #df = db.concat([df, fixity], axis=1)
-        #df.drop('restrain')
-    else: # here supose to be x,y,z,rx,ry,rz
-        1 / 0
+        #columns = list(df.columns)
+        #if 'restrain' in columns:
+        #    df['restrain'] = df['restrain'].apply(get_node_boundary).tolist()
+        #else:
+        #    raise IOError (f'rastrain missing')
+    except IOError:
+        header = {item:find_support_coord(item) for item in columns}
+        df.rename(columns=header, inplace=True)
+        #1 / 0
     #
+    columns = list(df.columns)
+    if not 'restrain' in columns:
+        raise IOError (f'rastrain missing')
     return df
 #
 def get_node_boundary(fixity:list|tuple|dict|str):

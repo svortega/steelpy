@@ -9,10 +9,8 @@ import re
 
 
 # package imports
-from steelpy.ufo.process.boundary import (BoundaryItem, BoundaryNode, get_support_df, 
-                                          get_node_boundary, find_boundary_type)
-#from steelpy.ufo.mesh.sqlite.beam import BeamSQL, BeamItemSQL
-
+from steelpy.ufo.utils.boundary import (BoundaryItem, BoundaryNode, get_support_df, 
+                                        get_node_boundary, find_boundary_type)
 from steelpy.ufo.mesh.sqlite.utils import check_nodes
 from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.dataframe.main import DBframework
@@ -28,11 +26,6 @@ class BoundaryNodeSQL(BoundaryNode):
         """
         super().__init__(component)
         self._db_file = db_file
-        #self._component = component
-        # create node table
-        #conn = create_connection(self._db_file)
-        #with conn:
-        #    self._new_table(conn)
     #
     def __setitem__(self, name: int,
                     values:list|tuple|dict) -> None:
@@ -48,15 +41,13 @@ class BoundaryNodeSQL(BoundaryNode):
             node_name = values[0]
             btype = values[1]
             fixity = get_node_boundary(values[2])
-        #
-        #
-        #
+        # get nodes
         conn = create_connection(self._db_file)
         with conn:  
             node = check_nodes(conn, node_name,
                                component=self._component)
             node_id = node[0]
-        
+        #
         try:
             # TODO : update data option if needed?
             self._labels.index(name)
@@ -115,18 +106,7 @@ class BoundaryNodeSQL(BoundaryNode):
         return [item[1] for item in items]
     #
     #
-    #def _new_table(self, conn) -> None:
-    #    """ """
-    #    table = "CREATE TABLE IF NOT EXISTS BoundaryNode(\
-    #                        number INTEGER PRIMARY KEY NOT NULL,\
-    #                        boundary_id INTEGER NOT NULL REFERENCES Boundary(number),\
-    #                        node_id INTEGER NOT NULL REFERENCES Node(number),\
-    #                        x DECIMAL, y DECIMAL, z DECIMAL,\
-    #                        rx DECIMAL, ry DECIMAL, rz DECIMAL, \
-    #                        title TEXT);"
-    #    #
-    #    create_table(conn, table)
-    #
+    # -----------------------------------------
     #
     def _push_boundary(self, conn,
                        boundary_id: int, node_id: int,
@@ -151,7 +131,7 @@ class BoundaryNodeSQL(BoundaryNode):
         #cur = conn.cursor()
         #cur.execute(sql, project)
     #
-    #
+    # -----------------------------------------
     #
     @property
     def df(self):
@@ -184,10 +164,6 @@ class BoundaryNodeSQL(BoundaryNode):
         for row in nodes.itertuples():
             #print(row)
             fixity = row.restrain
-            #fixity=[row.x, row.y, row.z,
-            #        row.rx, row.ry, row.rz]
-            #if any(fixity):
-            #print(fixity)
             values = [row.node, row.type, fixity]
             self.__setitem__(name=row.name,
                                  values=values)
@@ -292,7 +268,6 @@ class BoundarySQL:
             else:
                 raise IOError(f'boundary {btype} not valid')
     #
-    #
     def __getitem__(self, name: int|str):
         """
         """
@@ -310,8 +285,27 @@ class BoundarySQL:
         else:
             raise IOError(f' boundary type {boundary_type} not recognised')    
     #
-    # -----------------------------------------
     #
+    def __str__(self, units:str="si") -> str:
+        """ """
+        lenght = ' m'
+        space = " "
+        output = "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += f"{33*space}BOUNDARIES\n"
+        output += "\n"
+        output += (f"Boundary {11*space} Node {6*space} x {6*space} y {6*space} z {5*space} mx {5*space} my {5*space} mz {5*space}")
+        output += "\n"
+        output += "{:}\n".format(80*".")
+        output += "\n"
+        for key, node in self._boundary.items():
+            #if sum(node[:6]) == 0:
+            #    continue
+            output += node.__str__()
+        return output
+    #    
+    # -----------------------------------------
     #
     def _new_table(self, conn) -> None:
         """ """
@@ -342,30 +336,6 @@ class BoundarySQL:
     #
     # -----------------------------------------
     #
-    #@property
-    #def node(self):
-    #    """"""
-    #    return self._nodes
-    #
-    #@node.setter
-    #def node(self, values):
-    #    """"""
-    #    for value in values:
-    #        self._nodes[value[0]] = value[1:]
-    #
-    #def nodes(self, values:list|None=None):
-    #    """"""
-    #    if isinstance(values, list):
-    #        for value in values:
-    #            node_name = value[0]
-    #            boundary_type = "node"
-    #            b_number = self._set_item(b_name=node_name,
-    #                                      b_type=boundary_type)
-    #            #
-    #            1 / 0
-    #            self._nodes[node_name] = value[1:]
-    #    #
-    #    return self._nodes
     #
     def support(self, values:list|tuple|dict|None = None):
         """
@@ -402,39 +372,6 @@ class BoundarySQL:
         #return self.nodes(values)
     #
     #
-    def get_number(self, start:int=1):
-        """
-        """
-        1 / 0
-        try:
-            n = max(self._number) + 1
-        except ValueError:
-            n = start
-        #
-        while True:
-            yield n
-            n += 1
-    #
-    #
-    def __str__(self, units:str="si") -> str:
-        """ """
-        lenght = ' m'
-        space = " "
-        output = "\n"
-        output += "{:}\n".format(80*"_")
-        output += "\n"
-        output += f"{33*space}BOUNDARIES\n"
-        output += "\n"
-        output += (f"Boundary {11*space} Node {6*space} x {6*space} y {6*space} z {5*space} mx {5*space} my {5*space} mz {5*space}")
-        output += "\n"
-        output += "{:}\n".format(80*".")
-        output += "\n"
-        for key, node in self._boundary.items():
-            #if sum(node[:6]) == 0:
-            #    continue
-            output += node.__str__()
-        return output
-    #
     @property
     def _nodesX(self):
         """ """
@@ -451,6 +388,8 @@ class BoundarySQL:
                                             node=nodes[x][1])
                       for x, data in enumerate(items)}            
         return bnodes
+    #
+    # -----------------------------------------
     #
     @property
     def df(self):

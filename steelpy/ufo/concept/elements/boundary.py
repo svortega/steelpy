@@ -10,9 +10,11 @@ from typing import NamedTuple
 #
 #
 # package imports
-from steelpy.ufo.process.node import NodePoint
-from steelpy.ufo.process.boundary import BoundaryNode, BoundaryItem
-#from steelpy.ufo.concept.elements.points import NodesIM
+from steelpy.ufo.utils.node import NodePoint
+from steelpy.ufo.utils.boundary import (BoundaryNode,
+                                        BoundaryItem,
+                                        get_support_df)
+from steelpy.utils.dataframe.main import DBframework
 
 # ------------------------------------------------------
 #
@@ -66,13 +68,12 @@ class PointSupport(BoundaryNode):
         try:
             # TODO : update data
             self._labels.index(node_id)
-            raise Warning('    *** warning node {:} already exist'.format(node_id))
+            raise Warning(f'node {node_id} already exist')
         except ValueError:
-            title = self.setup_data(value)
+            title = self._setup_data(value)
             self._labels.append(node_id)
             self._number.append(self._labels.index(node_id))
             self._title.append(title)
-            # _type = _bound_type[_type]
     #
     def __getitem__(self, node_id: None | str | int) -> tuple | bool:
         """
@@ -86,7 +87,6 @@ class PointSupport(BoundaryNode):
         except ValueError:
             return False
             # raise IndexError
-
     #
     #
     def __delitem__(self, node_id: int) -> None:
@@ -104,12 +104,11 @@ class PointSupport(BoundaryNode):
             self._ry.pop(i)
             self._rz.pop(i)
         except IndexError:
-            # logging.warning('  ** boundary {:} does not exist'.format(node_id))
-            raise Warning('  ** boundary {:} does not exist'.format(node_id))
+            raise Warning(f'boundary {node_id} does not exist')
 
     #
     #
-    def setup_data(self, value):
+    def _setup_data(self, value):
         """ """
         title = None
         value = self._get_fixity(value)
@@ -123,21 +122,16 @@ class PointSupport(BoundaryNode):
         return title
     #
     #
-    def update_data(self, value:list|tuple):
+    def _update_data(self, value:list|tuple):
         """ """
         title = "NULL"
         if isinstance(value, list):
             node_name = value[0]
-            #if isinstance(value[1], str):
-            #    value = self.get_boundary(value[1])
-            #else:
-            #    1/0
             value = self._get_fixity(fixity=value[1])
         elif isinstance(value, BoundaryItem):
             node_name = value.node
             title = value.name
             value = value[:6]
-
         else:
             1/0
         #
@@ -157,35 +151,25 @@ class PointSupport(BoundaryNode):
         self._rz.insert(index, value[5])
     #
     #
-    def get_number(self, start: int = 1):
-        """
-        """
-        try:
-            n = len(self._labels) + 1
-        except ValueError:
-            n = start
-        #
-        while True:
-            yield n
-            n += 1
 #
 #
-class BoundaryPoint(Mapping):
+class BoundaryPoint(BoundaryNode):
     __slots__ = ['_point', '_component', '_nodes',
-                 '_labels', '_boundary']    
+                 '_labels', '_boundary', '_number']    
 
     def __init__(self, points, component:str|int) -> None:
         """
         """
+        super().__init__(component)
         # concept
         self._point = points
-        self._component = component
         #
         self._boundary = BoundaryConceptItem(self._point,
                                              self._component)
         #
         self._labels:list[str|int] = []
         self._nodes:list[str|int] = []
+        self._number : array = array('I', [])
     #
     #
     def __setitem__(self, name: int|str,
@@ -204,6 +188,7 @@ class BoundaryPoint(Mapping):
                 node_id = self._point.get_new_point(cood)            
         #
         self._nodes.append(node_id)
+        self._number.append(len(self._nodes))
         #print(f'boundary : {name}')
         
     #
@@ -212,9 +197,15 @@ class BoundaryPoint(Mapping):
         """
         try:
             index = self._labels.index(name)
-            node_id = self._nodes[index]
-            return self._boundary(node_id)
+            node_name = self._nodes[index]
+            #number = self._number[index]
+            #node = self._point[node_name]
+            #return BoundaryItem(*node[:3],
+            #                    number=number,
+            #                    name=name,
+            #                    node=node_name)
             #1 / 0
+            return self._boundary(node_name)
         except ValueError:
             raise IndexError(f' ** Support {name} no valid')
         
@@ -244,6 +235,37 @@ class BoundaryPoint(Mapping):
     #    """"""
     #    for value in values:
     #        self._nodes[value[0]] = value[1:]
+    #
+    # ----------------------------
+    # Operations
+    # ----------------------------
+    #
+    @property
+    def df(self):
+        """ """
+        #index = self._labels.index(326)
+        #node_id = self._nodes[index]
+        #point = self._boundary._points[node_id]
+        #restrain = self._boundary._support[node_id]
+        supports = [self._boundary._support[item][:6]
+                    for item in self._nodes]
+        supports = list(zip(*supports))
+        #
+        db = DBframework()
+        data = {'name': self._labels,
+                #'number': self._number,
+                #'node_id': self._nodes,
+                'ix': supports[0],
+                'iy': supports[1],
+                'iz': supports[2],
+                'rx': supports[3],
+                'ry': supports[4],
+                'rz': supports[5],
+                'title': None}
+        
+        boundf = db.DataFrame(data=data)
+        #header = ['name', 'ix', 'iy', 'iz', 'rx', 'ry', 'rz',  'title']        
+        return boundf
 #
 #
 class BoundaryConceptItem:
@@ -377,17 +399,13 @@ class BoundaryConcept:
     
     """
     __slots__ = ['_labels', '_number', '_component', 
-                 '_point', ]
+                 '_point']
     
     def __init__(self, points, component:str|int):
         """
         """
         self._component = component
-        #self._points = BoundaryNodes()
-        #self._supports = BoundarySupport(points,
-        #                                 self._component)
         self._point = BoundaryPoint(points, component)
-        #
         
     #
     #
@@ -401,6 +419,23 @@ class BoundaryConcept:
     #def __contains__(self, value) -> bool:
     #    return value in self._labels    
     #
+    #
+    def __str__(self, units:str="si") -> str:
+        """ """
+        lenght = ' m'
+        space = " "
+        output = "\n"
+        output += "{:}\n".format(80*"_")
+        output += "\n"
+        output += f"{33*space}BOUNDARIES\n"
+        output += "\n"
+        output += (f"Point {14*space} x {6*space} y {6*space} z {5*space} mx {5*space} my {5*space} mz {5*space} title")
+        output += "\n"
+        output += "{:}\n".format(80*".")
+        output += "\n"
+        for key, node in self._point.items():
+            output += node.restrain.__str__()
+        return output    
     #
     #def support(self):
     #    """ """
@@ -442,38 +477,42 @@ class BoundaryConcept:
     # Operations
     # ----------------------------
     #
-    #
-    #def get_number(self, start:int=1):
-    #    """
-    #    """
-    #    try:
-    #        n = max(self._number) + 1
-    #    except ValueError:
-    #        n = start
-    #    #
-    #    while True:
-    #        yield n
-    #        n += 1
-    #
-    #
-    #
-    def df(self, df, columns:dict|None=None):
+    @property
+    def df(self):
         """ """
+        #
+        #db = DBframework()
+        #data = {'name',
+        #        'number',
+        #        'boundary_id',
+        #        'ix', 'iy', 'iz', 'rx', 'ry', 'rz',
+        #        'title'}
+        #
+        #boundf = db.DataFrame(data=data)
+        #header = ['name', 'ix', 'iy', 'iz', 'rx', 'ry', 'rz',  'title']        
+        #return boundf[header]
+        return self._point.df
+    #
+    @df.setter
+    def df(self, df):
+        """ """
+        bdf = get_support_df(df)
         # types: support/line 
         grptype = df.groupby(['type'])
         #
         # support
         #
-        support = grptype.get_group('support')
-        grpboundary = support.groupby(['boundary'])
-        for key, items in grpboundary:
-            boundary = key[0]
+        support = grptype.get_group(('support', ))
+        #grpboundary = support.groupby(['boundary'])
+        for item in support.itertuples():
+            #boundary = key[0]
             # FIXME: in case input is a list
-            if boundary.lower() == 'free':
-                continue
-            self._supports[boundary] = boundary
-            for item in items.itertuples():
-                self._supports[boundary].points = item.x, item.y, item.z
+            #if boundary.lower() == 'free':
+            #    continue
+            #self._point[boundary] = boundary
+            #for item in items.itertuples():
+            self._point[item.name] = item.x, item.y, item.z
+            self._point[item.name].restrain = item.restrain
         #
         # Lines 
         #print('---')    
@@ -688,11 +727,9 @@ class PointItem(NamedTuple):
     name: str|None
     points:list
     
-    #def __str__(self) -> str:
-    #    if (name := self.name) == None:
-    #        name = ""
-    #    return "{:12d} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {:>12s}\n"\
-    #        .format(self.node, self.x, self.y, self.z, self.rx, self.ry, self.rz, name)
+    def __str__(self) -> str:
+        return "{:>12s} {:12d} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f} {: 8.0f}\n"\
+            .format(str(self.name), self.node, self.x, self.y, self.z, self.rx, self.ry, self.rz)
 #
 #
 

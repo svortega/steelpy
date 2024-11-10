@@ -454,7 +454,7 @@ class StaticSolver:
         Fn = self._mesh._load._basic.Fn(plane=self._mesh._plane)
         #
         if len(Fn) == 0:
-            raise IOError('Load Combination is required')
+            raise IOError('Load data is required')
         #
         colgrp = ['load_name', 'load_id', 
                   'load_level', 'load_title',

@@ -23,12 +23,13 @@ import numpy as np
 class Current(CurrentBasic):
     """
     """
-    __slots__ = ['db_file', '_criteria']
+    __slots__ = ['db_file', '_criteria', '_component']
     
-    def __init__(self, criteria: str|int, db_file: str):
+    def __init__(self, criteria: str|int,
+                 component: str|int, db_file: str):
         """
         """
-        super().__init__(db_file)
+        super().__init__(component, db_file)
         self._criteria = criteria
     #
     #

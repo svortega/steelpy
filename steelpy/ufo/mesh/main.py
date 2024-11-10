@@ -11,14 +11,14 @@ import time
 #
 
 # package imports
-from steelpy.ufo.process.main import ModelClassBasic # ufoBasicModel, 
 from steelpy.ufo.load.main import MeshLoad
 from steelpy.ufo.mesh.sqlite.main import MeshSQL
 from steelpy.ufo.mesh.process.main import Ke_matrix, Kg_matrix, Km_matrix, Kt_matrix
 from steelpy.ufo.plot.main import PlotMesh
 #
-from steelpy.ufo.process.sets import Groups
-from steelpy.ufo.process.node import node_renumbering
+from steelpy.ufo.utils.main import ModelClassBasic # ufoBasicModel, 
+from steelpy.ufo.utils.sets import Groups
+from steelpy.ufo.utils.node import node_renumbering
 #
 from steelpy.sections.main import Section
 from steelpy.material.main import Material
@@ -32,15 +32,16 @@ from steelpy.utils.sqlite.main import ClassBasicSQL
 #
 class ConceptMesh(ModelClassBasic):
     """ Mesh Model Class"""
-    __slots__ = ['_component', 'db_file', '_item']
+    __slots__ = ['_component', 'db_file', '_item', '_labels', '_mesh']
     
     def __init__(self, component:str,
                  sql_file:str|None = None):
         """
         """
-        super().__init__()
-        self._component = component
+        super().__init__(component)
+        #
         self._item:dict = {}
+        self._labels:list = []
         self._mesh = Mesh(component, sql_file=sql_file)
     #
     def __setitem__(self, name: int|str, title: int|str) -> None:
@@ -73,13 +74,14 @@ class ConceptMesh(ModelClassBasic):
 #
 class Mesh(ClassBasicSQL):
     __slots__ = ['_name', 'db_file', '_item', 
-                 '_plane', '_component']
+                 '_plane', '_component', '_build']
     
-    def __init__(self, component:int, sql_file:str):
+    def __init__(self, component:int|str, sql_file:str,
+                 build: bool):
         """
         """
-        super().__init__(db_file=sql_file)
-        self._component = component
+        super().__init__(component, db_file=sql_file)
+        self._build = build
         self._item:dict = {}
         #print('--')
     #
@@ -114,8 +116,10 @@ class Mesh(ClassBasicSQL):
             with conn:
                 number = self._push_data(conn, name=name, title=title)
         #
-        self._item[name] = MeshItem(name=name, component=number,
-                                    sql_file=self.db_file)
+        self._item[name] = MeshItem(name=name,
+                                    component=number,
+                                    sql_file=self.db_file,
+                                    build=self._build)
         #1 / 0
     #
     def __getitem__(self, name: str|int) -> tuple:
@@ -211,20 +215,21 @@ class MeshItem(MeshSQL):
     mesh[beam_name] = [number, element1, element2, elementn]
     """
     __slots__ = ['_name', 'db_file', '_plane', '_component', 
-                 '_df', 'data_type',
+                 '_df', 'data_type', 
                  '_nodes', '_elements', '_materials', '_sections',
                  '_load', '_boundaries', '_eccentricities', '_groups',
                  '_Kmatrix', '_build', '_solution']
 
-    def __init__(self, name:str|int|None = None,
-                 component:str|int|None = None, 
-                 sql_file:str|None = None):
+    def __init__(self, name:str|int,
+                 component:str|int, 
+                 sql_file:str, build: bool):
         """
         """
         super().__init__(name=name,
                          component=component,
                          sql_file=sql_file)
         #
+        self._build = build
         #
         # --------------------------------------------------
         # TODO: should plane be out of mesh?

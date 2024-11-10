@@ -21,12 +21,12 @@ import numpy as np
 class MarineGrowth(HydroBasic):
     """
     """
-    __slots__ = ['_mg', '_rho', 'db_file'] 
+    __slots__ = ['_mg', '_rho', 'db_file', '_component'] 
     
-    def __init__(self, db_file: str):
+    def __init__(self, component: str|int, db_file: str):
         """
         """
-        super().__init__(db_file)
+        super().__init__(component, db_file)
         #self._rho_w:float = rho_w # 1032.0 * f2u_units.kg / f2u_units.m**3
     #
     #

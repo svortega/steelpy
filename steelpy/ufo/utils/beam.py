@@ -3,7 +3,7 @@
 # 
 # Python stdlib imports
 from __future__ import annotations
-from array import array
+#from array import array
 from dataclasses import dataclass
 from collections.abc import Mapping
 #from typing import NamedTuple
@@ -24,18 +24,15 @@ from numpy.linalg import inv
 #
 #
 class BeamBasic(Mapping):
-    __slots__ = ['_lables', '_number', '_title']
+    __slots__ = ['_component',]
     
-    def __init__(self) -> None: #, m2D: bool
+    def __init__(self, component: int|str) -> None:
         """
         Beam element 
         """
-        #
-        #self._labels=labels
-        self._number: array = array('i', [])
-        self._title: list[int|str] = []
-        #self._m2D = m2D
+        self._component = component
     #
+    # ------------------------------------------------
     #
     def __contains__(self, value) -> bool:
         return value in self._labels
@@ -43,10 +40,12 @@ class BeamBasic(Mapping):
     def __iter__(self):
         """
         """
-        return iter(self._labels)
+        labels = list(dict.fromkeys(self._labels))
+        return iter(labels)
 
     def __len__(self) -> float:
-        return len(self._labels)
+        labels = list(dict.fromkeys(self._labels))
+        return len(labels)
     #
     def __str__(self) -> str:
         """ """
@@ -67,9 +66,11 @@ class BeamBasic(Mapping):
         for beam_name in self._labels:
             beam = self.__getitem__(beam_name)
             output += beam.__str__()
-        #print('beam basic')
-        #1/0
+        #
         return output
+    #
+    # ------------------------------------------------
+    #
 #
 #
 #

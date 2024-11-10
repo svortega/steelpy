@@ -23,12 +23,14 @@ from steelpy.utils.sqlite.utils import create_connection, create_table
 #
 class HydroCriteria(ClassBasicSQL):
     """ Hydro Criteria model Class """
-    __slots__ = ['_item', 'db_file', '_properties', '_rho_w']
+    __slots__ = ['_item', 'db_file', '_properties',
+                 '_rho_w', '_component']
     #
-    def __init__(self, rho_w, properties, db_file: str):
+    def __init__(self, rho_w, properties,
+                 component: str|int, db_file: str):
         """
         """
-        super().__init__(db_file=db_file)
+        super().__init__(component, db_file=db_file)
         #self._labels = list = []
         #
         self._properties = properties
@@ -71,6 +73,7 @@ class HydroCriteria(ClassBasicSQL):
                                 number=data.number,
                                 rho_w=data.rho, 
                                 properties= self._properties,
+                                component=self._component, 
                                 db_file=self.db_file)
         except ValueError:
             raise IndexError(' ** Concept {:} does not exist'.format(name))         
@@ -151,10 +154,12 @@ class CriteriaItem:
     """ f2u Concept model Class """
     __slots__ = ['_wave', '_current', '_wind',
                  '_condition', 
-                 '_name', '_number']
+                 '_name', '_number',
+                 '_component', 'db_file']
     #
     def __init__(self, name:str, number: int, 
-                 rho_w, properties, db_file: str):
+                 rho_w, properties,
+                 component: str|int, db_file: str):
         """
         """
         self._name = name
@@ -162,16 +167,20 @@ class CriteriaItem:
         #
         self._wave = Wave(criteria=self._number, 
                           rho_w=rho_w,
+                          component=component, 
                           db_file=db_file)
         
         self._wind = Wind(criteria=self._number,
+                          component=component,
                           db_file=db_file)
         
         self._current = Current(criteria=self._number,
+                                component=component,
                                 db_file=db_file)
         #
         self._condition = HydroCondition(criteria=self._number,
                                          properties=properties,
+                                         component=component,
                                          db_file=db_file)
     #
     # ------------------------------------------

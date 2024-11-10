@@ -29,12 +29,13 @@ from numpy.matlib import repmat
 #
 #
 class RegularWave(WaveBasic):
-    __slots__ = ['db_file', '_criteria', '_wave',
+    __slots__ = ['db_file', '_component', 
+                 '_criteria', '_wave',
                  '_hpoints', '_vpoints',
                  '_condition', 'nstep', 'niter', 'accuracy']
 
     def __init__(self, criteria: str | int,
-                 db_file: str,
+                 component: str|int, db_file: str,
                  nstep: int = 2, niter: int = 40,
                  accuracy: float = 1e-6,
                  depth_points: int = 100,
@@ -46,7 +47,7 @@ class RegularWave(WaveBasic):
         niter    : Maximum number of iterations for each step (20)
         accuracy : Criterion for convergence (1e-6)
         """
-        super().__init__(db_file)
+        super().__init__(component, db_file)
         self._criteria = criteria
         self._condition = 2
         self.nstep = nstep

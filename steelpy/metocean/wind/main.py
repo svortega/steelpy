@@ -13,12 +13,14 @@ from steelpy.utils.sqlite.utils import create_connection, create_table
 class Wind(WindBasic):
     """
     """
-    __slots__ = ['_wind', 'db_file', '_criteria']
+    __slots__ = ['_wind', 'db_file', '_criteria',
+                 '_component']
     
-    def __init__(self, criteria: str, db_file: str):
+    def __init__(self, criteria: str,
+                 component: str|int, db_file: str):
         """
         """
-        super().__init__(db_file)
+        super().__init__(component, db_file)
         self._criteria = criteria
         #
         self._wind:dict = {}

@@ -5,29 +5,34 @@
 from __future__ import annotations
 
 # package imports
-from steelpy.utils.sqlite.utils import create_connection, create_table
+from steelpy.utils.sqlite.main import ClassBasicSQL
+from steelpy.utils.sqlite.utils import create_table
 
 #
 #
-class HydroDesign:
+class HydroDesign(ClassBasicSQL):
     """ Hydrodynamic Design """
-    __slots__ = ['_name', '_db_file']
+    __slots__ = ['_name', '_db_file', '_component']
     
-    def __init__(self, db_file:str|None = None):
+    def __init__(self, component: str|int, db_file:str|None = None):
         """
         """
-        #self.name = name
-        self._db_file = db_file
-        #
-        # create table
-        conn = create_connection(self._db_file)
-        with conn:
-            self._create_table(conn)
+        super().__init__(component, db_file)
     #
+    #
+    def __setitem__(self, name: int|str,
+                    parameters: list) -> None:
+        """
+        """
+        pass
+    
+    def __getitem__(self, name: int|str):
+        """ """
+        pass    
     # ----------------------------------------
     # SQL ops
     #
-    def _create_table(self, conn) -> None:
+    def _new_table(self, conn) -> None:
         """ """
         #
         table = "CREATE TABLE IF NOT EXISTS Parameter (\

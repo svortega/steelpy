@@ -92,7 +92,8 @@ def check_element(conn, element_name: int|str, component: int):
     return row
 #
 #
-def get_elements(conn, component: int):
+def get_elements(conn, component: int,
+                 element_type: str|int|None = None):
     """ """
     query = (component, )
     table = "SELECT Element.name, Element.type,\
@@ -101,10 +102,16 @@ def get_elements(conn, component: int):
             FROM Element, Material, Section, Mesh\
             WHERE Element.material_id = Material.number \
             AND Element.section_id = Section.number \
-            AND Mesh.number = ? ;"
+            AND Mesh.number = ? "
+    #
+    if element_type:
+        table += 'AND Element.type = ?'
+        #query.extend([element_type])
+        query = (component, element_type, )
+    table += ';'
     #
     cur = conn.cursor()
-    cur.execute (table, query)
+    cur.execute(table, query)
     rows = cur.fetchall()
     #
     db = DBframework()

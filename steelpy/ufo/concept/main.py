@@ -6,8 +6,7 @@ from __future__ import annotations
 
 
 # package imports
-#from steelpy.ufo.mesh.main import ConceptMesh
-from steelpy.ufo.process.main import ufoBasicModel, ModelClassBasic
+from steelpy.ufo.utils.main import ufoBasicModel, ModelClassBasic
 #
 from steelpy.ufo.concept.elements.joint import Connection
 from steelpy.ufo.concept.elements.boundary import BoundaryConcept
@@ -23,8 +22,7 @@ from steelpy.ufo.load.main import ConceptLoad
 #
 from steelpy.ufo.plot.main import PlotConcept
 #
-#from steelpy.sections.main import Section
-#from steelpy.material.main import Material
+from steelpy.utils.dataframe.main import DBframework
 #
 #
 #
@@ -37,13 +35,12 @@ class Concept(ModelClassBasic):
                  mesh, properties):
         """
         """
-        super().__init__()
-        self._component = component
+        super().__init__(component)
+        #
         self._mesh = mesh
         self._properties = properties
         self._item : dict = {}
-        #
-        #self._mesh = ConceptMesh(name=self._name)
+        self._labels:list = []
     #
     def __setitem__(self, name: int|str, title: int|str) -> None:
         """
@@ -76,6 +73,8 @@ class Concept(ModelClassBasic):
         """ Meshing"""
         for name in self._labels:
             self._item[name].mesh()
+    #
+    #
 #
 #
 class ConceptItem(ufoBasicModel):
@@ -109,9 +108,8 @@ class ConceptItem(ufoBasicModel):
         """
         """
         #
-        #super().__init__(name, title)
+        super().__init__(component)
         #
-        self._component = component
         self._title = title
         self._mesh = mesh
         #
@@ -135,7 +133,8 @@ class ConceptItem(ufoBasicModel):
         #
         self._elements = ConceptElements(points=self._nodes,
                                          materials=self._materials,
-                                         sections=self._sections)
+                                         sections=self._sections,
+                                         component=self._component, )
         #
         # groups
         self._groups = Groups()
@@ -154,6 +153,34 @@ class ConceptItem(ufoBasicModel):
     #
     def point(self, values: None|list|dict=None,
               df=None):
+        """ """
+        if values:
+            if isinstance(values, dict):
+                mname = values['name']
+                if isinstance(mname, (list | tuple)):
+                    db = DBframework()
+                    dfnew = db.DataFrame(values)
+                    self._point.df = dfnew
+                else:
+                    mname = values.pop('name')
+                    self._point[mname] = values
+            
+            elif isinstance(values, (list,tuple)):
+                if isinstance(values[0], (list,tuple)):
+                    for value in values:
+                        self._point[value[0]] = value[1:]
+                elif isinstance(values[0], dict):
+                    for value in values:
+                        self._point[value['name']] = value
+                else:
+                    self._point[values[0]] = values[1:]
+        #
+        # dataframe input
+        try:
+            df.columns   
+            self._point.df = df
+        except AttributeError:
+            pass        
         return self._point
     #
     #
@@ -162,16 +189,33 @@ class ConceptItem(ufoBasicModel):
         """
         """
         if values:
-            if isinstance(values, list):
-                1/0
-                for item in values:
-                    self._boundaries[item[0]] = item[1:]
+            1 / 0
+            if isinstance(values, dict):
+                bname = values['name']
+                if isinstance(bname, (list | tuple)):
+                    db = DBframework()
+                    self._boundaries.df = db.DataFrame(values)
+                else:
+                    sname = values.pop('name')
+                    self._boundaries[sname] = values   
+
+            elif isinstance(values, (list, tuple)):
+                if isinstance(values[0], (list, tuple)):
+                    for item in values:
+                        self._boundaries[item[0]] = item[1:]
+
+                elif isinstance(values[0], dict):
+                    for item in values:
+                        self._boundaries[item['name']] = item
+                else:
+                    self._boundaries[values[0]] = values[1:]
+
             else:
-                raise IOError('boundary input not valid')
+                raise IOError('Boundary input data not valid')
         #
         try:
             df.columns
-            self._boundaries.df(df)
+            self._boundaries.df = df
         except AttributeError:
             pass
             

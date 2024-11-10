@@ -13,8 +13,9 @@ import re
 from steelpy.utils.math.operations import zeros, to_matrix
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #
-from steelpy.ufo.process.node import NodePoint, NodeBasic
-from steelpy.ufo.process.boundary import BoundaryItem, get_node_boundary
+from steelpy.ufo.utils.node import NodePoint, NodeBasic, get_node_df
+from steelpy.ufo.utils.boundary import BoundaryItem, get_node_boundary
+
 from steelpy.ufo.mesh.sqlite.boundary import push_boundary, push_boundary_node
 #
 from steelpy.utils.dataframe.main import DBframework
@@ -497,53 +498,8 @@ class NodeSQL(NodeBasic):
     @df.setter
     def df(self, df):
         """ """
-        columns = list(df.columns)
-        header = {}
-        for key in columns:
-            if re.match(r"\b(id|name|node(s)?)\b", key, re.IGNORECASE):
-                header[key] = 'name'
-            
-            elif re.match(r"\b(x(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
-                header[key] = 'x'
-            
-            elif re.match(r"\b(y(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
-                header[key] = 'y'              
-            
-            elif re.match(r"\b(z(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
-                header[key] = 'z'
-            
-            elif re.match(r"\b(r(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
-                header[key] = 'r'
-            
-            elif re.match(r"\b(theta(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
-                header[key] = 'theta'
-            
-            elif re.match(r"\b(phi(\_|\-)?(coord(inate)?(s)?)?)\b", key, re.IGNORECASE):
-                header[key] = 'phi'
-            
-            elif re.match(r"\b(boundary)\b", key, re.IGNORECASE):
-                header[key] = 'boundary'
-            
-            elif re.match(r"\b(title)\b", key, re.IGNORECASE):
-                header[key] = 'title'
-        #
-        #
-        nodes = df[header.keys()].copy()
+        nodes = get_node_df(df, system=self._system)
         nodes['mesh_id'] = self._component
-        nodes['system'] = self._system
-        if self._system == 'cartesian':
-            nodes[['r', 'theta', 'phi']] = None
-            # converting units
-            for key in ['x', 'y', 'z']:
-                try:
-                    nodes[key] = nodes[key].apply(lambda x: x.value)
-                except KeyError:
-                    # TODO : maybe 2D flag if z? 
-                    nodes[key] = 0.0
-                except AttributeError:
-                    raise IOError('units missing')
-        else:
-            raise NotImplementedError
         # TODO : fix boundary
         if 'boundary' in nodes:
             fixities = {nodes['name'][x]: get_node_boundary(item)
@@ -562,8 +518,6 @@ class NodeSQL(NodeBasic):
             nodes['boundary_id'] = blist
         else:
             nodes['boundary_id'] = None
-        #
-        nodes.rename(columns=header, inplace=True)
         #
         #
         idx = next(self.get_number()) - 1
