@@ -224,8 +224,8 @@ print(bl_blinedf)
 # ----------------------------------------------------
 #
 frame = Trave2D(mesh=mesh['2D'])
-frame.static()
-results = frame.results()
+run = frame.static()
+results = run.solve()
 #
 noderes = results.nodes()
 #print(noderes)

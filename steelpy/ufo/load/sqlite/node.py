@@ -185,13 +185,11 @@ class NodeLoadItemSQL(ClassBasicSQL):
         """
         """
         super().__init__(component, db_file)
-        #self._db_file = db_file
         self._name = load_name
-        #self._component = component       
         # create node table
-        #conn = create_connection(self._db_file)
-        #with conn:        
-        #    nodeload_table(conn)
+        conn = create_connection(self.db_file)
+        with conn:
+            self._new_table(conn)
         
     #
     # -----------------------------------------------
@@ -333,9 +331,11 @@ class NodeLoadItemSQL(ClassBasicSQL):
     #
     def _new_table(self, conn):
         """ """
+        # -------------------------------------
+        # Node Load
         table = "CREATE TABLE IF NOT EXISTS LoadNode(\
                 number INTEGER PRIMARY KEY NOT NULL,\
-                basic_id INTEGER NOT NULL REFERENCES Load(number),\
+                basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
                 node_id INTEGER NOT NULL REFERENCES Node(number),\
                 title TEXT,\
                 system TEXT NOT NULL,\
@@ -354,8 +354,8 @@ class NodeLoadItemSQL(ClassBasicSQL):
                 rz DECIMAL,\
                 psi DECIMAL,\
                 B DECIMAL,\
-                Tw DECIMAL);"
-        #
+                Tw DECIMAL,\
+                step DECIMAL);"
         create_table(conn, table)
     #
     # -----------------------------------------------

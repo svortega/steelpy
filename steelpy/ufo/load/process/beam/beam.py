@@ -40,7 +40,7 @@ class BeamLoadClass:
     name: str | int
     title: str | None
     load_name: str | int
-    component_name: str | int
+    mesh_name: str | int
     system: int
     #
     # -------------------------
@@ -151,7 +151,7 @@ class BeamLoadClass:
         Pend1 = [*Fend1, *Rend1, *end1.t[2:]]
         Pend2 = [*Fend2, *Rend2, *end2.t[2:]]
         #
-        FER_out = [self.load_name, self.component_name,
+        FER_out = [self.load_name, self.mesh_name,
                    self.title, self.load_type, 
                    'basic', self.system,
                    self.name, Pend1, Pend2]
@@ -247,7 +247,7 @@ class LineBeam(BeamLoadClass):
         if isinstance(x, (list, tuple)):
             Fx_out = []
             for xstep in x:
-                Fx_out.append([self.load_name, self.component_name,
+                Fx_out.append([self.load_name, self.mesh_name,
                                self.title, self.load_type, 'basic',
                                self.coordinate_system,
                                self.name, xstep,
@@ -276,7 +276,7 @@ class LineBeam(BeamLoadClass):
                                                        q2=self.qz1 * factor,
                                                        L1=self.L0, L2=self.L1))])
         else:
-            Fx_out = [self.load_name, self.component_name,
+            Fx_out = [self.load_name, self.mesh_name,
                       self.title, self.load_type, 'basic',
                       self.coordinate_system,
                       self.name, x,
@@ -453,7 +453,7 @@ class PointBeam(BeamLoadClass):
                                          M=self.my * factor,
                                          L1=self.L0)
                 #
-                Fx_out.append([self.load_name, self.component_name,
+                Fx_out.append([self.load_name, self.mesh_name,
                                self.title, self.load_type, 'basic',
                                self.coordinate_system,
                                self.name, xstep,
@@ -480,7 +480,7 @@ class PointBeam(BeamLoadClass):
                                      M=self.my * factor,
                                      L1=self.L0)
             
-            Fx_out = [self.load_name, self.component_name,
+            Fx_out = [self.load_name, self.mesh_name,
                       self.title, self.load_type, 'basic',
                       self.coordinate_system, 
                       self.name, x,

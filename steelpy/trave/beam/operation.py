@@ -321,7 +321,7 @@ class BeamBasic:
                            Asy=self.Asy, Asz=self.Asz,
                            P=0.0, factor=1.0) # FIXME: comb maybe?
 
-            reac[item.load_name].append([item.load_name, item.component_name, 
+            reac[item.load_name].append([item.load_name, item.mesh_name, 
                                          item.title, item.load_type, 'basic', 
                                          item.coordinate_system,
                                          item.name, 
@@ -354,7 +354,7 @@ class BeamBasic:
         Tw : Warping torque
         """
         #1 / 0
-        header =  ['load_name', 'component', 
+        header =  ['load_name', 'mesh_name', 
                    'load_title', 'load_type',
                    'load_level', 'load_system',
                    'element_name'] 
@@ -432,10 +432,10 @@ class BeamBasic:
         #
         # Member
         #
-        header = ['load_name', 'component_name',
+        header = ['load_name', 'mesh_name',
                   'load_title', 'load_type',
                   'load_level', 'load_system',
-                  'element_name', 'node_end',
+                  'element_name', 'length',
                   'Fx', 'blank1', 'blank2', 'delta_x',
                   'Mx', 'theta_x', 'psi', 'B', 'Tw', 
                   'Fy', 'Mz', 'theta_z', 'delta_y',
@@ -443,10 +443,10 @@ class BeamBasic:
         #
         db = DBframework()
         df_mload = db.DataFrame(data=lbforce, columns=header, index=None)
-        df_mload = df_mload[['load_name', 'component_name',
+        df_mload = df_mload[['load_name', 'mesh_name',
                              'load_title', 'load_type',
                              'load_level', 'load_system',
-                             'element_name', 'node_end',
+                             'element_name', 'length',
                              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                              'delta_x', 'delta_y', 'delta_z',
                              'theta_x', 'theta_y', 'theta_z',
@@ -487,7 +487,7 @@ class BeamBasic:
             #beamfun[item.load_name].extend(lout)
             beamfun.extend(Fx)
         #
-        header = ['load_name', 'component',
+        header = ['load_name', 'mesh_name',
                   'load_title', 'load_type',
                   'load_level', 'load_system', 
                   'element_name',

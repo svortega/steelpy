@@ -34,6 +34,7 @@ def Ke_matrix(elements,
                          mitem=mitem, item=None)
     if sparse:
         Ka = coo_matrix(Ka)
+        Ka = Ka.tolil()
     #
     uptime = time.time() - start_time
     print(f"** [{mitem}] assembly: {uptime:1.4e} sec")
@@ -48,16 +49,17 @@ def Km_matrix(elements,
               mitem:str = "Km"):
     """ Mass matrix"""
     start_time = time.time()
-    Ka = assemble_matrix(elements=elements,
+    Km = assemble_matrix(elements=elements,
                          nodes=nodes,
                          plane2D=plane2D,
                          mitem=mitem, item=None)
     if sparse:
-        Ka = coo_matrix(Ka)
+        Km = coo_matrix(Km)
+        Km = Km.tolil()
     #
     uptime = time.time() - start_time
     print(f"** [{mitem}] assembly: {uptime:1.4e} sec")
-    return Ka
+    return Km
 
 
 #
@@ -74,6 +76,7 @@ def Kg_matrix(elements,
                           mitem=mitem, item=D)
     if sparse:
         Kg = coo_matrix(Kg)
+        Kg = Kg.tolil()
     #
     uptime = time.time() - start_time
     print(f"** [{mitem}] assembly: {uptime:1.4e} sec")
@@ -92,6 +95,7 @@ def Kt_matrix(elements,
                           mitem=mitem, item=D)
     if sparse:
         Kt = coo_matrix(Kt)
+        Kt = Kt.tolil()
     #
     uptime = time.time() - start_time
     print(f"** [{mitem}] assembly: {uptime:1.4e} sec")

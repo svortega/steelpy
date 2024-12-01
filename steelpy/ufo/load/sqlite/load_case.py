@@ -12,7 +12,7 @@ import time
 # package imports
 # steelpy.f2uModel
 from steelpy.ufo.load.process.actions import SelfWeight
-from steelpy.ufo.load.process.basic_load import BasicLoadCase, BasicLoadType 
+from steelpy.ufo.load.process.load_case import BasicLoadCase, BasicLoadType 
 from steelpy.ufo.load.sqlite.beam import BeamLoadItemSQL, BeamLoadGloabalSQL
 from steelpy.ufo.load.sqlite.node import  NodeLoadItemSQL, NodeLoadGlobalSQL
 #
@@ -92,6 +92,7 @@ class BasicLoadSQL(BasicLoadCase):
 
     #
     # -----------------------------------------------
+    # SQL operations
     #
     def _push_load(self, conn, load_name:int|str, load_title:str):
         """ """
@@ -121,143 +122,13 @@ class BasicLoadSQL(BasicLoadCase):
                     design_load TEXT);"
         # UNIQUE(load_id, load_type, step)
         create_table(conn, table)
-        # -------------------------------------
-        # Node Load
-        table = "CREATE TABLE IF NOT EXISTS LoadNode(\
-                number INTEGER PRIMARY KEY NOT NULL,\
-                basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
-                node_id INTEGER NOT NULL REFERENCES Node(number),\
-                title TEXT,\
-                system TEXT NOT NULL,\
-                type TEXT NOT NULL,\
-                fx DECIMAL,\
-                fy DECIMAL,\
-                fz DECIMAL,\
-                mx DECIMAL,\
-                my DECIMAL,\
-                mz DECIMAL,\
-                x DECIMAL,\
-                y DECIMAL,\
-                z DECIMAL,\
-                rx DECIMAL,\
-                ry DECIMAL,\
-                rz DECIMAL,\
-                psi DECIMAL,\
-                B DECIMAL,\
-                Tw DECIMAL,\
-                step DECIMAL);"
-        create_table(conn, table)
-        # -------------------------------------
-        # line 
-        table = "CREATE TABLE IF NOT EXISTS LoadBeamLine(\
-                number INTEGER PRIMARY KEY NOT NULL,\
-                basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
-                element_id INTEGER NOT NULL REFERENCES Element(number),\
-                title TEXT,\
-                system INTEGER NOT NULL,\
-                type TEXT NOT NULL,\
-                L0 DECIMAL,\
-                qx0 DECIMAL,\
-                qy0 DECIMAL,\
-                qz0 DECIMAL,\
-                qt0 DECIMAL,\
-                L1 DECIMAL,\
-                qx1 DECIMAL,\
-                qy1 DECIMAL,\
-                qz1 DECIMAL,\
-                qt1 DECIMAL,\
-                step DECIMAL);"
-        create_table(conn, table)
-        # -------------------------------------
-        # point
-        table = "CREATE TABLE IF NOT EXISTS LoadBeamPoint(\
-                number INTEGER PRIMARY KEY NOT NULL,\
-                basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
-                element_id INTEGER NOT NULL REFERENCES Element(number),\
-                title TEXT,\
-                system INTEGER NOT NULL,\
-                type TEXT NOT NULL,\
-                L0 DECIMAL,\
-                fx DECIMAL,\
-                fy DECIMAL,\
-                fz DECIMAL,\
-                mx DECIMAL,\
-                my DECIMAL,\
-                mz DECIMAL,\
-                x DECIMAL,\
-                y DECIMAL,\
-                z DECIMAL,\
-                rx DECIMAL,\
-                ry DECIMAL,\
-                rz DECIMAL, \
-                step DECIMAL);"
-        create_table(conn, table)
-        # -------------------------------------
-        # FER
-        table = "CREATE TABLE IF NOT EXISTS LoadBeamFER(\
-                number INTEGER PRIMARY KEY NOT NULL,\
-                basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
-                element_id INTEGER REFERENCES Element(number),\
-                node_id INTEGER NOT NULL REFERENCES Node(number),\
-                title TEXT,\
-                system TEXT NOT NULL,\
-                type TEXT NOT NULL,\
-                fx DECIMAL,\
-                fy DECIMAL,\
-                fz DECIMAL,\
-                mx DECIMAL,\
-                my DECIMAL,\
-                mz DECIMAL,\
-                x DECIMAL,\
-                y DECIMAL,\
-                z DECIMAL,\
-                rx DECIMAL,\
-                ry DECIMAL,\
-                rz DECIMAL,\
-                Psi DECIMAL,\
-                B DECIMAL,\
-                Tw DECIMAL, \
-                step DECIMAL);"
-        create_table(conn, table)        
-    #
-    # -----------------------------------------------
     #
     # -----------------------------------------------
     # Loading Operations
-    # -----------------------------------------------
-    #
-    def function(self, steps:int,
-                 Pa:float=0.0, factor:float=1):
-        """utils element load"""
-        #
-        dftemp = self._beams.load_function(steps=steps,
-                                           Pa=Pa, factor=factor)
-        #
-        # Axial   [FP, blank, blank, Fu]
-        # torsion [T, B, Psi, Phi, Tw]
-        # Bending [V, M, theta, w]        
-        #
-        # [Fx, Fy, Fz, Mx, My, Mz]
-        # [V, M, w, theta]
-        header = ['load_name', 'mesh_name',
-                  'load_comment', 'load_type', 
-                  'load_level', 'load_system',
-                  'element_name', 'node_end',
-                  'axial', 'torsion', 'VM_inplane', 'VM_outplane']
-        #
-        #          'FP', 'blank1', 'blank2', 'Fu',
-        #          'T', 'B', 'Psi', 'Phi', 'Tw',
-        #          'Vy', 'Mz', 'theta_y', 'w_y',
-        #          'Vz', 'My', 'theta_z', 'w_z']
-        df = DBframework()
-        dfload = df.DataFrame(data=dftemp, columns=header, index=None)
-        #return load_func
-        return dfload
-    #
     #
     def FER(self, elements):
         """
-        Fixed End Reactions (FER) 
+        Beams' Fixed End Reactions (FER)
         Convert element load to global node loads
         """
         # TODO : loop slow
@@ -287,20 +158,39 @@ class BasicLoadSQL(BasicLoadCase):
         uptime = time.time() - start_time
         print(f"** FER Operation: {uptime:1.4e} sec")
     #
-    #
-    def ENL(self):
-        """Equivalent Nodal Loads """
-        #
-        # beam FER
+    def FER_ENL(self):
+        """
+        Equivalent Beam Nodal Loads
+
+        Return:
+            Dataframe with global node loads
+        """
         conn = create_connection(self.db_file)
         with conn:
             dfbeam = pull_ENL_df(conn, self._component)
         return dfbeam
     #
-    #
-    def Fn(self, plane):
+    def FER_END(self):
         """
-        Global matrix consisting of summation of force & displacement 
+        Equivalent Beam Nodal Displacements
+
+        Return:
+            Dataframe with global node displacements
+        """
+        conn = create_connection(self.db_file)
+        with conn:
+            dfbeam = pull_END_df(conn, self._component)
+        return dfbeam
+    #
+    # -----------------------------------------------
+    #
+    def NFD_global(self, plane):
+        """
+        Nodal Force and Displacement (total)
+
+        Return:
+            Dataframe consisting of summation of
+            node and elements (FER) nodal force & displacement
         """
         # FIXME: step needs to be sorted
         columns = [*plane.hforce, *plane.hdisp]
@@ -326,8 +216,6 @@ class BasicLoadSQL(BasicLoadCase):
         return Fn_df.reindex(columns=['load_name', 'mesh_name', 
                                       'load_id', 'load_level',
                                       'load_title','load_system',
-                                      #'load_title', 'load_comment', 'load_system',
-                                      #'element_name', 'node_name', 'node_index',
                                       'node_name', 'node_index', 
                                       'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                                       'x', 'y', 'z', 'rx', 'ry', 'rz'])
@@ -346,23 +234,33 @@ def pull_ENL_df(conn, component: int):
              'Psi', 'B', 'Tw', 'step']]
     return df
 #
+def pull_END_df(conn, component: int):
+    """ Return Fix End Forces in dataframe form"""
+    df = pull_FER_data(conn, component)
+    return df[['load_name', 'mesh_name',
+               'load_title', 'load_level',
+               'load_id', 'load_system', 'load_comment',
+               'element_name',
+               'node_name', 'node_index',
+               'load_type',
+               'x', 'y', 'z', 'rx', 'ry', 'rz']]
 #
 def pull_FER_df(conn, component: int):
-    """ """
+    """ Return Fix End Forces in dataframe form"""
     df = pull_FER_data(conn, component)
     #
     return df[['load_name', 'mesh_name', 
-             'load_title', 'load_level',
-             'load_id', 'load_system', 'load_comment',
-             'element_name',
-             'node_name', 'node_index', 
-             'load_type',
-             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-             'x', 'y', 'z', 'rx', 'ry', 'rz']]
+               'load_title', 'load_level',
+               'load_id', 'load_system', 'load_comment',
+               'element_name',
+               'node_name', 'node_index',
+               'load_type',
+               'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+               'x', 'y', 'z', 'rx', 'ry', 'rz']]
 #
 #
 def pull_FER_data(conn, component: int):
-    """ """
+    """ Return Fix End Forces from database in dataframe form"""
     query = (component, )
     table = "SELECT Load.name AS load_name, \
                     Mesh.name AS mesh_name, \

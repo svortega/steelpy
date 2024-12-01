@@ -21,8 +21,8 @@ from steelpy.ufo.load.concept.wave_load import MetoceanLoadIM
 from steelpy.ufo.load.process.combination import (get_comb_dict,
                                                   get_comb_list)
 
-from steelpy.ufo.load.process.basic_load import (get_bload_list,
-                                                 get_bload_dict)
+from steelpy.ufo.load.process.load_case import (get_bload_list,
+                                                get_bload_dict)
 
 from steelpy.ufo.plot.main import PlotLoad
 # 
@@ -319,8 +319,10 @@ class ConceptLoad(MasterLoad):
         #
         self._hydro = MetoceanLoadIM(elements=self._elements)
         #self.th = TimeHistory()
-        self._combination = LoadCombConcept(basic_load=self._basic)
-        self._mass = LoadCombConcept(basic_load=self._basic)
+        self._combination = LoadCombConcept(basic_load=self._basic,
+                                            component=component)
+        self._mass = LoadCombConcept(basic_load=self._basic,
+                                     component=component)
     #
     #
     def basic(self):

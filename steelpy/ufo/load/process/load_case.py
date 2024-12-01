@@ -339,6 +339,38 @@ class BasicLoadCase(BasicLoadRoot):
     #
     # -----------------------------------------------
     #
+    #
+    def function(self, steps:int,
+                 Pa:float=0.0, factor:float=1):
+        """utils element load"""
+        #
+        dftemp = self._beams.load_function(steps=steps,
+                                           Pa=Pa, factor=factor)
+        #
+        # Axial   [FP, blank, blank, Fu]
+        # torsion [T, B, Psi, Phi, Tw]
+        # Bending [V, M, theta, w]
+        #
+        # [Fx, Fy, Fz, Mx, My, Mz]
+        # [V, M, w, theta]
+        header = ['load_name', 'mesh_name',
+                  'load_comment', 'load_type',
+                  'load_level', 'load_system',
+                  'element_name', 'length',
+                  'axial', 'torsion', 'VM_inplane', 'VM_outplane']
+        #
+        #          'FP', 'blank1', 'blank2', 'Fu',
+        #          'T', 'B', 'Psi', 'Phi', 'Tw',
+        #          'Vy', 'Mz', 'theta_y', 'w_y',
+        #          'Vz', 'My', 'theta_z', 'w_z']
+        df = DBframework()
+        dfload = df.DataFrame(data=dftemp, columns=header, index=None)
+        #return load_func
+        return dfload
+    #
+    #
+    # -----------------------------------------------
+    #
     @property
     def df(self):
         """ """

@@ -37,6 +37,36 @@ def check_nodes(conn, node_name: int|str, component: int):
         raise IOError(f'Node {node_name} not found')    
     return node    
 #
+def pull_node_id(conn, name: int|str, mesh_name: str|int):
+    """ """
+    query = (name, mesh_name, )
+    table = f"SELECT Node.number \
+                FROM Node, Mesh \
+                WHERE Node.name = ? \
+                AND Mesh.name = ? \
+                AND Node.mesh_id = Mesh.number ;"
+
+    cur = conn.cursor()
+    cur.execute(table, query)
+    node = cur.fetchone()
+    if not node:
+        raise IOError(f'Node {name} not found')
+    return node[0]
+#
+def pull_node_mesh(conn, mesh_name: str|int):
+    """ """
+    query = (mesh_name, )
+    table = f"SELECT Node.number, Node.name \
+                FROM Node, Mesh \
+                WHERE Mesh.name = ? \
+                AND Node.mesh_id = Mesh.number ;"
+
+    cur = conn.cursor()
+    cur.execute(table, query)
+    node = cur.fetchall()
+    if not node:
+        raise IOError(f'Mesh {mesh_name} not found')
+    return node
 #
 def get_nodes_connec(conn, component: int):
     """ """
@@ -91,12 +121,44 @@ def check_element(conn, element_name: int|str, component: int):
         raise IOError(f'Element {element_name} not found')    
     return row
 #
+def pull_element_id(conn, name: int|str,
+                    mesh_name: int|str):
+    """ """
+    query = (name, mesh_name, )
+    table = f"SELECT Element.number \
+              FROM Element, Mesh \
+              WHERE Element.name = ? \
+              AND Mesh.name = ? \
+              AND Element.mesh_id = Mesh.number ;"
+    cur = conn.cursor()
+    cur.execute(table, query)
+    row = cur.fetchone()
+    if not row:
+        raise IOError(f'Element {name} not found')
+    return row[0]
+#
+def pull_element_mesh(conn, mesh_name: int|str):
+    """ """
+    query = (mesh_name, )
+    table = f"SELECT Element.number, Element.name\
+              FROM Element, Mesh\
+              WHERE Element.mesh_id = Mesh.number\
+              AND Mesh.name = ?;"
+    #
+    #
+    cur = conn.cursor()
+    cur.execute(table, query)
+    row = cur.fetchall()
+    #
+    if not row:
+        raise IOError(f'Mesh {mesh_name} not found')
+    return row    
 #
 def get_elements(conn, component: int,
                  element_type: str|int|None = None):
     """ """
     query = (component, )
-    table = "SELECT Element.name, Element.type,\
+    table = "SELECT Element.name, Element.number, Element.type,\
                     Material.name, Section.name, \
                     Element.roll_angle, Element.title\
             FROM Element, Material, Section, Mesh\
@@ -115,7 +177,8 @@ def get_elements(conn, component: int,
     rows = cur.fetchall()
     #
     db = DBframework()
-    header = ['name', 'type', 'material', 'section', 'roll_angle', 'title']
+    header = ['name', 'number', 'type',
+              'material', 'section', 'roll_angle', 'title']
     membdf = db.DataFrame(data=rows, columns=header)
     membdf.set_index('name', inplace=True)
     #
@@ -260,12 +323,62 @@ def get_unitvector(conn, beam_name: int,
     return items
 #
 # --------------------------------------------
+# Mesh
+#
+def pull_mesh_id(conn, name:str|int, component: int):
+    """ """
+    query = (name, component, )
+    table = 'SELECT number FROM Mesh \
+             WHERE name = ? AND component_id = ?'
+    cur = conn.cursor()
+    cur.execute (table, query)
+    items = cur.fetchone()
+    return items[0]
 #
 #
-#
+def pull_results_mesh(conn, mesh_name: int|str):
+    """ """
+    query = (mesh_name, )
+    table = f"SELECT Result.number, Result.name \
+              FROM Result, Mesh \
+              WHERE Mesh.name = ? \
+              AND Result.mesh_id = Mesh.number ;"
+    #
+    cur = conn.cursor()
+    cur.execute(table, query)
+    row = cur.fetchall()
+    return row
 #
 #
 # --------------------------------------------
+# Load
 #
+def pull_load_id(conn, name: int|str,
+                 mesh_name: int|str):
+    """ """
+    query = (name, mesh_name, )
+    table = f"SELECT Load.number \
+              FROM Load, Mesh \
+              WHERE Load.name = ? \
+              AND Mesh.name = ? \
+              AND Load.mesh_id = Mesh.number ;"
+    cur = conn.cursor()
+    cur.execute(table, query)
+    row = cur.fetchone()
+    if not row:
+        raise IOError(f'Load {name} not found')
+    return row[0]
 #
-#
+def pull_load_mesh(conn, mesh_name: int|str):
+    """ """
+    query = (mesh_name, )
+    table = f"SELECT Load.number, Load.name \
+              FROM Load, Mesh \
+              WHERE Mesh.name = ? \
+              AND Load.mesh_id = Mesh.number ;"
+    cur = conn.cursor()
+    cur.execute(table, query)
+    row = cur.fetchall()
+    if not row:
+        raise IOError(f'Mesh {mesh_name} not found')
+    return row

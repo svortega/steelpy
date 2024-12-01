@@ -9,7 +9,7 @@ from __future__ import annotations
 #from collections.abc import Mapping
 #from typing import NamedTuple
 #from collections import defaultdict
-
+#import re
 
 # package imports
 #
@@ -22,6 +22,8 @@ from steelpy.trave.beam.operation import BeamBasic
 from steelpy.utils.dataframe.main import DBframework
 #
 from steelpy.material.utils.operations import get_mat_properties
+from steelpy.ufo.load.process.combination import (get_comb_dict,
+                                                  get_comb_list)
 # 
 #
 class Beam:
@@ -48,7 +50,8 @@ class Beam:
                                      component=self.name)
         self._basic._load.local_system()
         #
-        self._combination = LoadCombConcept(basic_load=self._basic )
+        self._combination = LoadCombConcept(basic_load=self._basic,
+                                            component=self.name)
         #
         self._db = DBframework()
         self._Pdelta = True
@@ -128,10 +131,12 @@ class Beam:
             support.append(value[4]) # k1
         except:
             support.append(None)
+
         try:
             support.append(value[5]) # k1
         except:
             support.append(None)
+
         self._support = support
     #
     # -----------------------------------------------------
@@ -176,19 +181,56 @@ class Beam:
         return self._combination
 
     @load_combination.setter
-    def load_combination(self, value:list|dict):
+    def load_combination(self, values:list|dict):
         """load combination"""
-        
-        if isinstance(value, dict):
-            for key, item in value.items():
-                self._combination[key] = item
+        if isinstance(values, dict):
+            comb = get_comb_dict(values)
+            sname = comb[2]  # lname
+            if isinstance(sname, (list | tuple)):
+                for x, lname in enumerate(sname):
+                    cname = self._check_type(comb[0], step=x)
+                    ltype = self._check_type(comb[1], step=x)
+                    factor = self._check_type(comb[3], step=x)
+                    title = self._check_type(comb[4], step=x)
+                    self._comb_setup(values=[cname, ltype, lname, factor, title])
+            else:
+                self._comb_setup(values=comb)
         else:
-            if isinstance(value[0], (list,tuple)):
-                for item in value:
-                    self._combination[item[0]] = item[1]
-            else:    
-                self._combination[value[0]] = value[1]
+            comb = get_comb_list(values)
+            self._comb_setup(values=comb)
     #
+    # ----------------------------
+    #
+    def _check_type(self, item:list|str|float|int, step:int):
+        """ """
+        if isinstance(item, list):
+            return item[step]
+        else:
+            return item
+    #
+    def _comb_setup(self, values: list):
+        """" values : [name, type, load_id, factor, title] """
+        cname = values[0]
+        ltype = values[1]
+        lname = values[2]
+        factor = float(values[3])
+        try:
+            title = values[4]
+        except IndexError:
+            title = cname
+        #
+        try:
+            self._combination[cname]
+        except KeyError:
+            self._combination[cname] = title
+        #
+        match ltype:
+            case 'basic':
+                self._combination[cname]._basic[lname] = factor
+            case 'combination':
+                self._combination[cname]._combination[lname] = factor
+            case _:
+                raise IOError(f"Combination load type {ltype} not available")
     #
     # -----------------------------------------------------
     # TODO: beam with multiple supports
@@ -200,7 +242,6 @@ class Beam:
         b = b1.join(b2, 'fixed')
         """
         pass
-    #
     #
     #
     # -----------------------------------------------------
@@ -221,9 +262,9 @@ class Beam:
                          Asz=section.Asz,
                          Pdelta=Pdelta)
     #
-    def _getloads(self):
+    def _get_loads(self)-> list:
         """get beam loading"""
-        bloads = []
+        bloads:list = []
         # basic load
         for item in self._basic._load._line.values():
             bloads.extend(item)
@@ -231,10 +272,17 @@ class Beam:
         for item in self._basic._load._point.values():
             bloads.extend(item)
         # combination
-        for items in self._combination.values():
-            for item in items.combination.values():
-                bloads.extend(item)
-        #
+        if self._combination:
+            comb = self._combination.to_basic()
+            #comb
+            #for items in self._combination.values():
+            #    # basic
+            #    for item in items.basic.values():
+            #        bloads.extend(item)
+            #    # combination
+            #    for item in items.combination.values():
+            #        bloads.extend(item)
+
         return bloads
     #
     #    
@@ -272,7 +320,7 @@ class Beam:
                      delta_x, delta_y, delta_z,
                      phi_x, theta_y, theta_z]
         """
-        bloads = self._getloads()
+        bloads = self._get_loads()
         #
         beam = self._beam(Pdelta=self._Pdelta)
         beam.supports(*self.support)
@@ -303,7 +351,7 @@ class Beam:
         #
         # Dataframe setup 
         #
-        header = ['load_name', 'component',
+        header = ['load_name', 'mesh_name',
                   'load_title', 'load_type',
                   'load_level', 'load_system',
                   'element_name', 
@@ -313,7 +361,7 @@ class Beam:
                   'Fz', 'My', 'theta_y', 'delta_z']
         #
         df_mload = self._db.DataFrame(data=msupport, columns=header, index=None)
-        df_mload = df_mload[['load_name', 'component',
+        df_mload = df_mload[['load_name', 'mesh_name',
                              'load_title', 'load_type',
                              'load_level', 'load_system',
                              'element_name', 'support_type', 'support_end',
@@ -336,35 +384,12 @@ class Beam:
                    phi_x, theta_y, theta_z,
                    psi_t (phi_x'), B(bimoment), Tw(Warping torque)]
         """
-        bloads = self._getloads()
+        bloads = self._get_loads()
         #        
         # -----------------------------------------------------
         #        
         beam = self._beam(Pdelta=self._Pdelta)
         beam.supports(*self.support)
-        #lbforce = beam.solve(bloads, steps)
-        #
-        #
-        #lbforce =[[*lbf[:6], *lbf[6], *lbf[7], *lbf[8]]
-        #          for lbf in lbforce]
-        #
-        # Member
-        # [Fx, Fy, Fz, Mx, My, Mz]
-        # [V, M, theta, w]
-        #header = ['load_name', 'load_title', 'load_type', 'system',
-        #          'element_name', 'node_end',
-        #          'Fx', 'Mx', 'theta_x', 'delta_x',
-        #          'Fy', 'Mz', 'theta_z', 'delta_y',
-        #          'Fz', 'My', 'theta_y', 'delta_z']
-        #
-        #df_mload = self._db.DataFrame(data=lbforce, columns=header, index=None)
-        #df_mload = df_mload[['load_name', 'load_title', 'load_type', 'system',
-        #                     'element_name', 'node_end',
-        #                     'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-        #                     'delta_x', 'delta_y', 'delta_z', 'theta_x', 'theta_y', 'theta_z']]
-        #
-        #
-        #
         df_mload = beam.forces(bloads, steps=self.steps)
         return df_mload
     #

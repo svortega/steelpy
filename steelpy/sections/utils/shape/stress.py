@@ -33,63 +33,56 @@ class ShapeStressBasic:
     # -------------------------------------
     #
     #
-    def stress(self, E: float, G: float, poisson: float, 
-               actions=None, stress=None, df=None):
-        """return cross section stress"""
-        #print('-->')
-        #try:
-        df.columns
-        dfres = DBframework()
+    def stress(self, beam_result:DBframework.DataFrame,
+               E: float, G: float, poisson: float)-> DBframework.DataFrame:
+        """
+         Return:
+             Beams' cross-section stress
+        """
+        cols = list(beam_result.columns)
         # -------------------------------------
         try:
-            stress_df = df[['node_end', 'tau_x', 'tau_y', 'tau_z',
-                            'sigma_x', 'sigma_y', 'sigma_z']]
+            stress_df = beam_result[['length', 'tau_x', 'tau_y', 'tau_z',
+                                     'sigma_x', 'sigma_y', 'sigma_z']]
             stress = self._stress(stress=stress_df, G=G, E=E)
         except KeyError:
-            actions_df = df[['node_end', # 'load_title', 
-                             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                             'Psi', 'B', 'Tw']]
-                             #'theta1', 'theta2', 'theta3']]
+            actions_df = beam_result[['length', # 'load_title',
+                                      'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                                      'Psi', 'B', 'Tw']]
+                                      #'theta1', 'theta2', 'theta3']]
             stress = self._stress(actions=actions_df,
                                   G=G, E=E, poisson=poisson)
             # -------------------------------------
-            header = ['load_name', 'mesh_name', 
-                      'load_level', 'load_system',
-                      'element_name', 
-                      'node_end','stress_points', 'y', 'z']
+            header = ['mesh_name', 'result_name',
+                      'load_name', 'load_level',
+                      'element_name', 'length', 'system',
+                      'stress_point', 'y', 'z']
             # -------------------------------------
             coord = stress.stress_point
-            items = [[row.load_name, row.mesh_name, 
-                      row.load_level, row.load_system, 
-                      row.element_name, row.node_end,
+            items = [[row.mesh_name, row.result_name,
+                      row.load_name, row.load_level,
+                      row.element_name, row.length, row.system,
                       x+1, coord.y[x], coord.z[x]]
                      for x in range(len(coord.y))
-                     for row in df.itertuples()]
-            df_stress = dfres.DataFrame(data=items, columns=header, index=None)
+                     for row in beam_result.itertuples()]
+            #
+            dfres = DBframework()
+            beam_stress = dfres.DataFrame(data=items, columns=header, index=None)
             # -------------------------------------
             # axial stress
-            df_stress['tau_x'] = np.array(stress.tau_x).flatten()
+            beam_stress['tau_x'] = np.array(stress.tau_x).flatten()
             # In Plane shear stress
-            df_stress['tau_y'] = np.array(stress.tau_y).flatten()
+            beam_stress['tau_y'] = np.array(stress.tau_y).flatten()
             # Out Plane shear stress
-            df_stress['tau_z'] = np.array(stress.tau_z).flatten()
+            beam_stress['tau_z'] = np.array(stress.tau_z).flatten()
             # torsion stress
-            df_stress['sigma_x'] = np.array(stress.sigma_x).flatten()
+            beam_stress['sigma_x'] = np.array(stress.sigma_x).flatten()
             # In plane bending stress
-            df_stress['sigma_y'] = np.array(stress.sigma_y).flatten()
+            beam_stress['sigma_y'] = np.array(stress.sigma_y).flatten()
             # Out plane bending stress
-            df_stress['sigma_z'] = np.array(stress.sigma_z).flatten()
+            beam_stress['sigma_z'] = np.array(stress.sigma_z).flatten()
             # return dataframe
-            return df_stress
-
-        #except AttributeError:
-        #    if stress:
-        #        print("stress")
-        #    elif actions:
-        #        print("actions")
-        #    else:
-        #        print('--> ??')
-        #        1 / 0
+            return beam_stress
     #
     #
     #

@@ -33,14 +33,16 @@ class LoadCombConcept(LoadCombinationBasic):
       :name:  string node external name
     """
     #
-    __slots__ = ('number', 'name', '_combination', '_basic')
+    __slots__ = ('number', 'name', '_component',
+                 '_combination', '_basic')
     #
-    def __init__(self, basic_load):
+    def __init__(self, basic_load, component:str|int):
         """
         """
         super().__init__()
         self._combination = {}
         self._basic = basic_load
+        self._component = component
     
     def __setitem__(self, load_name:int, load_title:str) -> None:
         """
@@ -53,7 +55,9 @@ class LoadCombConcept(LoadCombinationBasic):
             self._labels.append(load_name)
             self._title.append(load_title)
             #
-            self._combination[load_name] = CombTypes(name=load_name, title=load_title)
+            self._combination[load_name] = CombTypes(name=load_name,
+                                                     title=load_title,
+                                                     component=self._component)
             #
             load_id = next(self.get_number())
             self._combination[load_name].number = load_id
@@ -106,13 +110,15 @@ class CombTypes:
     """
     """
     __slots__ = ['_basic', '_metocean', 'name', 'number',
-                 'title', '_combination']
+                 'title', '_combination','_component']
     
-    def __init__(self, name:int, title:str):
+    def __init__(self, name:int, title:str,
+                 component:str|int):
         """
         """
         self.name = name
         self.title = title
+        self._component = component
         #
         self._basic = BasicLoad("basic")
         self._metocean = BasicLoad("metocean")
@@ -135,6 +141,11 @@ class CombTypes:
         """
         """
         return self._combination
+    #
+    @property
+    def mesh_name(self):
+        """ component name """
+        return self._component
 #
 #
 class BasicLoad(Mapping):

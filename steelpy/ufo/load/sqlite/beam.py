@@ -231,7 +231,7 @@ class BeamLoadItemSQL(BeamLoadBasic):
                 b2n.append(executor.submit(fer_b2n, beam, item, global_system).result())
         #
         #
-        res =[]
+        fer_res =[]
         for gnload in b2n:
             try:
                 1 / gnload[2]
@@ -240,15 +240,15 @@ class BeamLoadItemSQL(BeamLoadBasic):
                 load_system = 'global'
             #
             # [fx, fy, fz, mx, my, mz, rx, ry,rz, Psi, B, Tw, step]
-            res.extend([[basic_id, gnload[3], gnload[4],
-                         gnload[1], load_system, 'load', *gnload[5], gnload[8]],
-                        [basic_id, gnload[3], gnload[6],
-                         gnload[1], load_system, 'load', *gnload[7], gnload[8]]])            
+            fer_res.extend([[basic_id, gnload[3], gnload[4],
+                             gnload[1], load_system, 'reaction', *gnload[5], gnload[8]],
+                           [basic_id, gnload[3], gnload[6],
+                            gnload[1], load_system, 'reaction', *gnload[7], gnload[8]]])
         #
-        #
-        if res:          
+        # FER results to database
+        if fer_res:
             with conn:
-                push_FER(conn, node_load=res)
+                push_FER(conn, node_load=fer_res)
     #
     # -----------------------------------------------
     #
@@ -273,11 +273,7 @@ class BeamLoadItemSQL(BeamLoadBasic):
                 qy1 DECIMAL,\
                 qz1 DECIMAL,\
                 qt1 DECIMAL,\
-                BS DECIMAL,\
-                OTM DECIMAL);"
-                #x DECIMAL,\
-                #y DECIMAL,\
-                #z DECIMAL);"
+                step DECIMAL);"
         create_table(conn, table)
         # -------------------------------------
         # point
@@ -300,7 +296,8 @@ class BeamLoadItemSQL(BeamLoadBasic):
                 z DECIMAL,\
                 rx DECIMAL,\
                 ry DECIMAL,\
-                rz DECIMAL);"
+                rz DECIMAL, \
+                step DECIMAL);"
         create_table(conn, table)
         # -------------------------------------
         # FER
@@ -326,7 +323,8 @@ class BeamLoadItemSQL(BeamLoadBasic):
                 rz DECIMAL,\
                 Psi DECIMAL,\
                 B DECIMAL,\
-                Tw DECIMAL);"
+                Tw DECIMAL, \
+                step DECIMAL);"
         create_table(conn, table)
     #
     #
@@ -1046,8 +1044,12 @@ def get_line_load(conn, beam_name:int|str,
                   load_name:int|str, component: int):
     """ """
     query = [component]
-    table = "SELECT Load.name, Element.name, \
-             LoadBeamLine.*, Mesh.name \
+    table = "SELECT Element.name, LoadBeamLine.title,\
+             Load.name, Mesh.name, LoadBeamLine.system,\
+             LoadBeamLine.qx0, LoadBeamLine.qy0, LoadBeamLine.qz0, LoadBeamLine.qt0,\
+             LoadBeamLine.qx1, LoadBeamLine.qy1, LoadBeamLine.qz1, LoadBeamLine.qt1,\
+             LoadBeamLine.L0, LoadBeamLine.L1,\
+             LoadBeamLine.step, LoadBeamLine.type \
              FROM Load, Element, LoadBasic, LoadBeamLine, Mesh \
              WHERE LoadBeamLine.basic_id = LoadBasic.number \
              AND LoadBeamLine.element_id = Element.number \
@@ -1077,16 +1079,16 @@ def get_line_load(conn, beam_name:int|str,
         rows = cur.fetchall()
     #
     #
-    beam_line = [] # defaultdict(list)
+    beam_line = []
     for row in rows:
-        beam_line.append(LineBeam(row[1], row[5],    # name, title,
-                                  row[0], row[19],   # load_name, component_name
-                                  row[6],            # system, 
+        beam_line.append(LineBeam(row[0], row[1],    # name, title,
+                                  row[2], row[3],   # load_name, component_name
+                                  row[4],            # system, 
                                   #
-                                  *row[9:13],        # q_inplane [qx, qy, qz, qt]
-                                  *row[14:18],       # q_outplane [qx, qy, qz, qt]
-                                  row[8], row[13],   # L0, L1
-                                  row[18]))          # load_step
+                                  *row[5:9],        # q_inplane [qx, qy, qz, qt]
+                                  *row[9:13],       # q_outplane [qx, qy, qz, qt]
+                                  row[13], row[14],   # L0, L1
+                                  row[15]))          # load_step
     return beam_line
 #
 #
@@ -1305,8 +1307,11 @@ def get_point_load(conn, beam_name:int|str,
                    component: int):
     """ """
     query = [component]
-    table = "SELECT Load.name, Element.name, \
-            LoadBeamPoint.*, Mesh.name \
+    table = "SELECT Element.name, LoadBeamPoint.title,\
+            Load.name, Mesh.name, LoadBeamPoint.system,\
+            LoadBeamPoint.fx, LoadBeamPoint.fy, LoadBeamPoint.fz, \
+            LoadBeamPoint.mx, LoadBeamPoint.my, LoadBeamPoint.mz, \
+            LoadBeamPoint.L0, LoadBeamPoint.step, LoadBeamPoint.type \
             FROM Load, Element, LoadBeamPoint, LoadBasic, Mesh \
             WHERE LoadBeamPoint.basic_id = LoadBasic.number \
             AND LoadBeamPoint.element_id = Element.number \
@@ -1340,15 +1345,15 @@ def get_point_load(conn, beam_name:int|str,
     #
     beam_point = []
     for row in rows:
-        if row[7] in ['mass']:
+        if row[13] in ['mass']:
             raise NotImplemented
         else:
-            beam_point.append(PointBeam(row[1], row[5],   # name, title, 
-                                        row[0], row[22],  # load_name, component_name
-                                        row[6],           # system,
+            beam_point.append(PointBeam(row[0], row[1],   # name, title, 
+                                        row[2], row[3],   # load_name, component_name
+                                        row[4],           # system,
                                         #
-                                        *row[9:15],       # fx, fy, fz, mx, my, mz
-                                        row[8], row[21])) # L0, load_step
+                                        *row[5:11],        # fx, fy, fz, mx, my, mz
+                                        row[11], row[12])) # L0, load_step
     return beam_point
 #
 #

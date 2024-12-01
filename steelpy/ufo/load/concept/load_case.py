@@ -9,7 +9,7 @@ from __future__ import annotations
 from array import array
 # steelpy.f2uModel.load
 from steelpy.ufo.load.process.actions import SelfWeight
-from steelpy.ufo.load.process.basic_load import BasicLoadCase
+from steelpy.ufo.load.process.load_case import BasicLoadCase
 from steelpy.ufo.load.concept.beam import BeamLoadItemIM
 from steelpy.ufo.load.concept.node import NodeLoadItemIM
 from steelpy.ufo.load.concept.wave_load import WaveLoadItemIM

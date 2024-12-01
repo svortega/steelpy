@@ -1,3 +1,5 @@
+from itertools import combinations
+
 from steelpy import Beam
 from steelpy import Units
 #
@@ -122,9 +124,10 @@ beam.q = {'qy':0.20 * units.kip / units.ft,
 #
 # TODO: fix combination
 beam.load_combination = {'name': 'comb_1',
-                         'basic': 'AISC_C-C2.2',
+                         'basic': ['AISC_C-C2.2', 'selfweight_y'],
                          'factor': 1.0}
 #
+beam.load_combination = ['comb_2', 'combination', 'comb_1', 1.0]
 #beam.load_combination = ['AISC_C-C2.2', 1.0]
 #beam.load_combination = ['AISC_C-C2.3', 1.0]
 #
@@ -329,12 +332,12 @@ basic.beam({'load': 'snow load',
 #             'nodey_2']])
 #            ['wind load', 3, 'load', -200 * Punit, 'nodex_4']])
 #
-#basic.node({'load': 'dispExample',
-#            'node': 6,
-##            'type': 'force',
-##            'Fy': -75 * units.kN ,})
-#            'type': 'displacement', 
-#            'y': -0.0511813 * units.m,})
+basic.node({'load': 'dispExample',
+            'node': 6,
+#            'type': 'force',
+#            'Fy': -75 * units.kN ,})
+            'type': 'displacement',
+            'y': -0.0511813 * units.m,})
 #            #'rz': 0.0136483 * units.rad,})
 #
 basic.node({'load': 'AISC_C-C2.3',
@@ -389,8 +392,8 @@ mesh.build()
 # ----------------------------------------------------
 #
 frame = Trave2D(mesh=mesh[10])
-frame.static(second_order=True)
-results = frame.results(beam_steps=4)
+run = frame.static(second_order=False)
+results = run.solve(beam_steps=4)
 #
 # ----------------------------------------------------
 # Results

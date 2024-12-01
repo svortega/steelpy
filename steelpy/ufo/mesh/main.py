@@ -371,35 +371,33 @@ class MeshItem(MeshSQL):
         # get data
         Ka = Ke_matrix(elements=self._elements,
                        nodes=self._nodes,
-                       plane2D=self._plane.plane2D, 
-                       #dof=self._plane.dof,
-                       #condensed=condensed,
+                       plane2D=self._plane.plane2D,
                        sparse=sparse)
         #
         return Ka
     #
-    def Kg(self, D, sparse: bool = True):
+    def Kg(self, Dn, sparse: bool = True):
         """
         Element global geometric stiffness matrix
         
         D : 
         """
-        #D = D.set_index('node_name', inplace=True)
+        head_disp = ['node_name', *self._plane.hdisp]
+        #Dn.set_index('node_name', inplace=True)
         Kg = Kg_matrix(elements=self._elements,
                        nodes=self._nodes,
-                       D=D,
-                       plane2D=self._plane.plane2D, 
-                       #ndof=self._plane.ndof,
+                       D=Dn[head_disp].set_index('node_name'),
+                       plane2D=self._plane.plane2D,
                        sparse=sparse)
         return Kg
     #
-    def Kt(self, D, sparse: bool = True):
+    def Kt(self, Dn, sparse: bool = True):
         """ Element Tangent Stiffness matrix"""
+        head_disp = ['node_name', *self._plane.hdisp]
         Kt = Kt_matrix(elements=self._elements,
                        nodes=self._nodes,
-                       D=D,
-                       plane2D=self._plane.plane2D, 
-                       #ndof=self._plane.ndof,
+                       D=Dn[head_disp].set_index('node_name'),
+                       plane2D=self._plane.plane2D,
                        sparse=sparse)
         return Kt
     #
@@ -408,8 +406,7 @@ class MeshItem(MeshSQL):
         #
         Ma = Km_matrix(elements=self._elements,
                        nodes=self._nodes,
-                       plane2D=self._plane.plane2D, 
-                       #ndof=self._plane.ndof,
+                       plane2D=self._plane.plane2D,
                        sparse=sparse)
         return Ma
     #
@@ -500,7 +497,7 @@ class MeshItem(MeshSQL):
         #1 / 0
     #
 #
-#
+# TODO : MeshPlane should be eventually removed
 #@dataclass
 class MeshPlane(NamedTuple):
     #__slots__ = ['plane2D', '_index']

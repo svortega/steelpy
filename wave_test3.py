@@ -308,8 +308,8 @@ print(basicLoad)
 # ----------------------------------------------------
 #
 frame = Trave2D(mesh=mesh['wt3'])
-frame.static()
-results = frame.results()
+run = frame.static()
+results = run.solve()
 print(results)
 #
 print('-->')

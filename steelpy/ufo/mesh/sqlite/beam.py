@@ -205,7 +205,7 @@ class BeamSQL(BeamBasic):
                                 component=self._component,
                                 element_type='beam')
         
-        header = ['name', 'type', 'material', 'section',
+        header = ['name', 'number', 'type', 'material', 'section',
                   'node_1', 'node_2', 'node_3', 'node_4',
                   'roll_angle', 'title']
         return data[header]
