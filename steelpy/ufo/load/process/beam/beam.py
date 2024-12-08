@@ -22,7 +22,6 @@ from steelpy.utils.math.operations import trnsload
 from steelpy.ufo.load.process.beam.utils import(get_BeamLoad_list_units,
                                                 get_BeamLine_dic,
                                                 get_BeamLoad_dic,
-                                                #get_BeamPoint_load,
                                                 get_BeamLine_load)
 #
 #
@@ -225,18 +224,14 @@ class LineBeam(BeamLoadClass):
         beam_name, x, Fx, Fy, Fz]
         Fx, Fy, Fz --> [V, M, theta, w] Note positive load is upwards
         """
-        #TODO: return list
-        #if isinstance(x, (int|float)):
-        #    x = [x]
         # convert load to beam local
         self.local_system()
         #
         # Axial [P, blank, blank, u]
         Fx = BeamAxial(L=L, E=E, A=Area)
         # Torsion [T, B, psi, phi, Tw]
-        #Mx_blank = [0, 0, 0, 0, 0]
-        Mx = BeamTorsion(E=E, L=L, G=G, J=J, Cw=Cw)
-        #Mx.torque(T=self.mx, L1=self.L0)        
+        #
+        Mx = BeamTorsion(E=E, L=L, G=G, J=J, Cw=Cw)     
         #
         # In plane [V, M, theta, w]
         in_plane =  BeamBending(L=L, E=E, G=G, As=Asy, I=Iy)
@@ -412,9 +407,6 @@ class PointBeam(BeamLoadClass):
         Axial, Bending_inplane, Bending_outplane = [V, M, w, theta]
         Torsion = [T, B, psi, phi, Tw]
         """
-        #TODO: return list
-        #if isinstance(x, (int|float)):
-        #    x = [x]
         # convert load to beam local
         self.local_system()       
         #

@@ -35,7 +35,7 @@ class BeamResBasic(Mapping):
 
     def __len__(self) -> float:
         return len(self._labels)
-    #
+    
     def __str__(self) -> str:
         """ """
         output = "\n"
@@ -126,19 +126,15 @@ def print_beam_items(items,
     blgrp = items.groupby('load_level')
     #
     output = ''
-    # basic
     try:
         bltype = blgrp.get_group('basic')
         blitems = bltype.groupby(['load_name', 'component_name', 'system'])
         for key, wk in blitems:
-            #header =  wk[['load_name', 'load_system']].values
-            #output += "-- Basic Load  Name: {:}  System: {:}".format(*header[0])
             output += "-- Basic Load  Name: {:}  Component: {:} System: {:}\n".format(*key)
             output += "\n"
             #
             vals = wk.drop(cols, axis=1)
             header2 = list(vals)
-            #header2 = '       '.join(header2)
             header2 = get_gap(header2)
             #
             output += header2
@@ -155,14 +151,11 @@ def print_beam_items(items,
         #
         output += '{:}\n'.format(52 * '-')
         for key, wk in blitems:
-            #header =  wk[['load_name', 'load_system']].values
-            #output += "-- Load Combination  Name: {:}  System: {:}".format(*header[0])
             output += "-- Load Combination  Name: {:} Component: {:} System: {:}\n".format(*key)
             output += "\n"
             #
             vals = wk.drop(cols, axis=1)
             header2 = list(vals)
-            #header2 = '       '.join(header2)
             header2 = get_gap(header2)
             #
             output += header2
@@ -177,17 +170,12 @@ def print_beam_items(items,
 def printout(bforces):
     """
     """
-    #
     output = ""
-    #
     mgroup = bforces.groupby("beam")
-    #bforces.set_index('beam', inplace=True)
     #
     for key, mgroup in mgroup:
-    #for item in bforces.itertuples():
         output += "{:9d} ".format(key)
         items = mgroup.set_index('beam')
-        #for x, member in enumerate(items):
         for x, item in enumerate(items.itertuples()):
             try:
                 1 / x

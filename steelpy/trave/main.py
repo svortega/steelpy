@@ -7,18 +7,15 @@ from __future__ import annotations
 #import multiprocessing
 #import pickle
 #from dataclasses import dataclass
-from datetime import datetime as dt
+#from datetime import datetime as dt
 
 # package imports
-from steelpy.trave.process.dynamic import eigen, trnsient
+#from steelpy.trave.process.dynamic import eigen, trnsient
 #from steelpy.trave.utils.solution import UnSolver
 #from steelpy.trave.process.static import StaticSolver
 #from steelpy.trave.postprocess.main import PostProcess
 #
 from steelpy.trave.preprocess.main import TraveItemBasic
-#from steelpy.trave.beam.main import Beam
-#from steelpy.utils.dataframe.main import DBframework
-from steelpy.utils.sqlite.utils import create_connection, create_table
 #
 #
 #

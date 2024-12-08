@@ -173,25 +173,23 @@ class LoadCombinationBasic(Mapping):
         return dfload
 
     #
-    def NFD_global(self, plane):
+    #
+    def _get_FD(self, plane, values: list[str], dfbasic):
         """
-        Nodal Force and Displacement (total)
-
+        
         Return:
-            Dataframe consisting of summation of basic and combinations
-            of node and elements (FER) nodal force & displacement
+            Dataframe consisting of summation of
+            node and elements (FER) nodal displacement
         """
-        dfbasic = self._basic.NFD_global(plane=plane)
         dfcomb = self.to_basic()
-        #
-        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                  'x', 'y', 'z', 'rx', 'ry', 'rz']
         try:
             dfnew = self.update_combination(dfbasic, dfcomb,
                                             values=values)
         except ValueError:
-            raise IOError('2nd order requires Load Combination as input')
+            db = DBframework()
+            return db.DataFrame()
         #
+        # Select output
         colgrp = ['load_name', 'load_id',
                   'load_level', 'load_title',
                   'load_system', 'mesh_name',
@@ -199,7 +197,33 @@ class LoadCombinationBasic(Mapping):
         #
         dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
         return dfnew
+    #
+    def NF_global(self, plane):
+        """
+        Nodal Displacement (total)
 
+        Return:
+            Dataframe consisting of summation of
+            node and elements (FER) nodal displacement
+        """
+        dfbasic = self._basic.NF_global(plane=plane)
+        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+        dfnew = self._get_FD(plane, values, dfbasic)
+        return dfnew
+    #
+    def ND_global(self, plane):
+        """
+        Nodal Displacement (total)
+
+        Return:
+            Dataframe consisting of summation of
+            node and elements (FER) nodal displacement
+        """
+        dfbasic = self._basic.ND_global(plane=plane)
+        values = ['x', 'y', 'z', 'rx', 'ry', 'rz']
+        dfnew = self._get_FD(plane, values, dfbasic)
+        return dfnew
+    #
     #
     def FER_ENL(self):
         """Equivalent Nodal Loads """
@@ -216,8 +240,8 @@ class LoadCombinationBasic(Mapping):
             return ENLbasic
         #
         # basic loading
-        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                  'Psi', 'B', 'Tw']
+        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz', 'step']
+                 # 'Psi', 'B', 'Tw']
         dfnew = []
         for item in cols:
             dfnew.append(self.update_combination(ENLbasic,

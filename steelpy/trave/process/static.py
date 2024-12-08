@@ -15,7 +15,7 @@ import time
 # package imports
 from steelpy.utils.math.operations import to_matrix
 from steelpy.utils.dataframe.main import DBframework
-from steelpy.utils.math.operations import remove_column_row
+#from steelpy.utils.math.operations import remove_column_row
 #
 from steelpy.trave.postprocess.main import PostProcess
 #
@@ -46,380 +46,6 @@ def solver_sparse(a, b):
     ndisp = spsolve(a.tocsr(), b)
     return ndisp
 #
-#
-# ---------------------------------------------
-#
-# ---------------------------------------------
-#
-@dataclass
-class StaticSolverX:
-    """ Linear static solver class"""
-    __slots__ = ['_plane',  '_method']
-    
-    def __init__(self, plane) -> None:
-        """
-        plane : Plane system (3D/2D)
-        """
-        self._plane = plane
-    #
-    #
-    def solve(self, Ks, Fn, jbc, #Ddof, 
-              sparse: bool=False, 
-              method:str|None = None):
-        """
-        Linear Static Analysis (1st Order)
-        
-        Input: 
-        Ks  : Global stiffness matrix
-        Fn  : FER Node load dataframe
-        jbc : Node boundary condition dataframe
-        
-        Return: 
-        Udf : Node displacement global system dataframe
-        """
-        #
-        order = "1st"
-        print(f"** Solving U = K^-1 F [{order} order] ")
-        start_time = time.time()
-        #
-        maxstiff = Ks.max()
-        # Select solver
-        if sparse:
-            solver = solver_sparse
-            Ks = Ks.tolil() #copy=True
-        else:
-            solver = solver_np
-        #if self._method == 'banded':
-        #    solver = solver_Mbanded
-        # Solution f = Ku
-        #Us = self.DSM(Kg, Fn, jbc, solver)
-        Us = self.PMT(Ks, Fn, jbc,
-                      solver, maxstiff)
-        #
-        #
-        uptime = time.time() - start_time
-        print(f"** Finish Time: {uptime:1.4e} sec")
-        return Us
-    #
-    def DSM(self, Ks, Fn, jbc, solver):
-        """
-        Direct Stiffness Method
-        
-        Ks : Global stiffness matrix
-        Fn : Global force & displacement matrix
-        jbc = Nodes with boundary
-        
-        Return:
-        U : Global node displacement
-        """
-        # TODO : must be better ways to manipulate dfs
-        db = DBframework()
-        # group FER node load
-        colgrp = ['load_name', 'load_id', 
-                  'load_level','load_system',
-                  'component_name']        
-        #
-        # Select nodes' free DOF
-        DOFbool, DOFzeros = self._mask_DOF(jbc)
-        # jbc Matrix to vector 
-        jbcflat = jbc.stack()
-        # group FER node load
-        fergrp = Fn.groupby(colgrp)
-        # Matrix condensed
-        #Ks = self._Mcond(Ks, jbcflat)
-        #
-        Utemp = []
-        for key, item in fergrp:
-            # set FER df by nodes
-            fernodes = item.set_index(['node_name'])
-            # Select load nodes with free DOF
-            DOFindex = DOFzeros.index.isin(item['node_name'])
-            #
-            # Select load vector comprising nodes with free DOF 
-            Fs = DOFzeros.copy() #.astype('float64')
-            Fs.loc[DOFindex] = fernodes[self._plane.hforce] 
-            Fs = Fs.stack() # get load matrix as vector
-            # Select invidual free nodes DOF
-            Fs = Fs[DOFbool]
-            #
-            #Fs2 = fernodes[self._plane.hforce].stack()
-            # Select invidual free nodes DOF 
-            #Fs2 = Fs2[DOFbool]
-            #
-            # Solve displacements U
-            Us = iter(solver(Ks, Fs))
-            #
-            # reshape vector in matrix form [row, col]
-            Us = [next(Us) if ieqnum != 0 else ieqnum
-                  for ieqnum in jbcflat]
-            # bak to matrix form
-            Us = to_matrix(Us, self._plane.ndof)
-            # pack basic load data for df's dumping 
-            Utemp.extend([[*key,  item['load_title'].iloc[0],
-                           nname, *Us[x]]
-                           for x, nname in enumerate(jbc.index)])
-        #
-        #
-        Us = self.df(Utemp)
-        #
-        # add displacements from beam solution
-        #fergrp = Fn.groupby(colgrp)
-        # group Us
-        Usgrp = Us.groupby(colgrp)
-        cols = self._plane.hdisp
-        Utemp = []
-        for key, item in fergrp:
-            #Usitem = Usgrp.get_group(key)
-            Usitem = Usgrp.get_group(key).set_index(['node_name'])
-            fernodes = item.set_index(['node_name'])
-            # Select load nodes with free DOF
-            DOFindex = DOFzeros.index.isin(item['node_name'])            
-            #
-            #Usitem.loc[DOFindex][cols] = Usitem.loc[DOFindex][cols].sub(fernodes[cols])
-            Usitem.loc[item['node_name']][cols] = Usitem.loc[item['node_name']][cols].sub(fernodes[cols])
-            #
-            Utemp.append(Usitem.reset_index())
-        # Update U results
-        Us = db.concat(Utemp, ignore_index=True)        
-        #
-        return Us
-    #
-    #
-    def PMT(self, Ks, Fn,
-            jbc, solver,
-            maxstiff: float):
-        """
-        Penalty Method
-        
-        Ks : Global stiffness matrix
-        Fn : Global force & displacement matrix
-        jbc = Nodes with boundary
-        
-        Return:
-        U : Global node displacement
-        """
-        # TODO : must be better ways to manipulate dfs
-        #db = DBframework()
-        # group FER node load
-        colgrp = ['load_name', 'load_id', 
-                  'load_level','load_system',
-                  'component_name']        
-        #
-        ndof = self._plane.ndof
-        hforce =  self._plane.hforce
-        hdisp = self._plane.hdisp
-        colrename = self._plane.colrename
-        #
-        Ktrans = maxstiff * 10_000
-        Krot = maxstiff * 100_000
-        #
-        kb = np.zeros((ndof, ndof), dtype=np.float64)
-        #
-        ditem = {'x':Ktrans, 'y':Ktrans, 'z':Ktrans,
-                 'rx': Krot, 'ry': Krot, 'rz': Krot,}
-        #
-        hstiff = {key : ditem[key] for key in hdisp}
-        kp = np.array([ditem[key] for key in hdisp])
-        #
-        #
-        # Select nodes' free DOF
-        Fbool, Fzeros = self._mask_DOF(jbc)
-        Dbool, Dzeros = self._mask_DOF(jbc, rename=False)
-        # jbc Matrix to vector 
-        jbcflat = jbc.stack()
-        # group FER node load
-        fergrp = Fn.groupby(colgrp)
-        #
-        Utemp = []
-        for key, item in fergrp:
-            #Kitem = Ks.tolil(copy=True)
-            Kitem = Ks.copy()
-            # set FER df by nodes
-            fernodes = item.set_index(['node_name'])
-            # Select load nodes with free DOF
-            Findex = Fzeros.index.isin(item['node_name'])
-            #
-            # Force Section
-            #
-            # Select load vector comprising nodes with free DOF 
-            Fs = Fzeros.copy() #.astype('float64')
-            #Fs = Fs[Findex]
-            #Fs = Fs.add(fernodes[hforce].astype('float64'))
-            #
-            #Fs = fernodes[hforce].astype('float64').copy()
-            #
-            #Fs.loc[Findex] = fernodes[hforce].astype('float64')
-            Fs.loc[Findex] = fernodes[hforce].astype('float64')
-            #Fs = Fs.stack() # get load matrix as vector
-            # Select invidual free nodes DOF
-            #Fs = Fs[Fbool]
-            #
-            #
-            Ds = Dzeros.copy()
-            Dindex = Dzeros.index.isin(item['node_name'])
-            Ds.loc[Dindex] = fernodes[hdisp].astype('float64')
-            #
-            #
-            # update Ks + Kg if axial load
-            #1 / 0
-            #
-            # Displacement Section
-            if Ds.any(axis=None):
-            #try:
-                #1 / len(Dzeros)
-                #Ds = Dzeros.copy()
-                #Dindex = Dzeros.index.isin(item['node_name'])
-                #Ds.loc[Dindex] = fernodes[hdisp].astype('float64')
-                #print(f'displacement all: {Ds.all(axis=None)} empty :{Ds.empty}')
-                Ds = Ds.mul(hstiff)
-                Ds.rename(columns=colrename, inplace=True)
-                # Update gloabl load vextor with displacement load
-                #Fs = Fs.add(Ds, axis='columns')
-                #print(f'---> {Ds} {Fs}')
-                #
-                for nodeid, idof in zip(item['node_name'], item['node_index']):
-                    # check if node with displacement
-                    try:
-                        nload = Ds.loc[nodeid] #.to_numpy()
-                        if not nload.any():
-                            continue
-                        Fs.loc[nodeid] = Fs.loc[nodeid].add(nload, axis='rows')
-                        #Ditem = [nodeid + x
-                        #         for x, step in enumerate(nload.tolist())
-                        #         if step != 0]
-                    except KeyError:
-                        continue
-                    # DOF
-                    niqi = idof * ndof
-                    niqj = niqi + ndof                    
-                    #
-                    kc = kp.copy()
-                    kc[nload == 0] = 0
-                    ksup = kb.copy()
-                    ksup.flat[0::ndof+1] = kc
-                    # update global K matrix with dummy stiffness
-                    Kitem[niqi:niqj, niqi:niqj] += ksup
-                    #1 / 0
-                    #Ddof =  list(set(Ddof + Ditem))
-                    #print('--->', niqi, niqj)
-            #except ZeroDivisionError:
-            #    pass
-            #
-            # FIXME: Matrix condensed
-            K11, K12 = self._Msplit(Kitem, jbcflat)
-            #Kitem1 = self._Mcond(Kitem, jbcflat)
-            #
-            # get load matrix as vector
-            #Fs = Fs[Findex].stack()
-            Fs = Fs.stack()
-            Fs = Fs.loc[Fbool]
-            #
-            # Solve displacements U
-            Us = self._Us(K11, Fs, solver,
-                          jbcflat, ndof)
-            #Us = iter(solver(K11, Fs))
-            ##
-            ## reshape vector in matrix form [row, col]
-            #Us = [next(Us) if ieqnum != 0 else ieqnum
-            #      for ieqnum in jbcflat]
-            # bak to matrix form
-            #Us = to_matrix(Us, ndof)
-            # pack basic load data for df's dumping 
-            Utemp.extend([[*key,  item['load_title'].iloc[0],
-                           nname, *Us[x]]
-                           for x, nname in enumerate(jbc.index)])
-        #
-        #
-        Us = self.df(Utemp)
-        return Us
-    #
-    def _Mcond(self, Kitem: list, jbcflat: list):
-        """ """
-        jbcc = jbcflat.values
-        index = list(reversed([i for i, item in enumerate(jbcc)
-                               if item == 0]))
-        for i in index:
-            Kitem = remove_column_row(Kitem, i, i)
-        #
-        return Kitem
-    #
-    def _Msplit(self, Km, jbcflat: list):
-        """
-        Km: The unpartitioned matrix (or vector) to be partitioned.
-        D1: A list of the indices for degrees of freedom that have unknown displacements.
-        D2: A list of the indices for degrees of freedom that have known displacements.
-        """
-        jbcc = jbcflat.values
-        D2 = [i for i, item in enumerate(jbcc)
-              if item == 0]
-        
-        D1 = [i for i, item in enumerate(jbcc)
-              if item != 0]        
-        # 1D vectors
-        if Km.shape[1] == 1:
-            # Partition the vector into 2 subvectors
-            m1 = Km[D1, :]
-            m2 = Km[D2, :]
-            return m1, m2
-        # 2D matrices
-        else:
-            # Partition the matrix into 4 submatrices
-            m11 = Km[D1, :][:, D1]
-            m12 = Km[D1, :][:, D2]
-            #m21 = Km[D2, :][:, D1]
-            #m22 = Km[D2, :][:, D2]
-            return m11, m12 #, m21, m22
-    #
-    #
-    def _Us(self, Ks, Fs, solver, 
-            jbcflat: list, ndof: float):
-        """ """
-        # Solve displacements U
-        Us = iter(solver(Ks, Fs))
-        # reshape vector in matrix form [row, col]
-        Us = [next(Us) if ieqnum != 0 else ieqnum
-              for ieqnum in jbcflat]
-        # bak to matrix form
-        Us = to_matrix(Us, ndof)
-        return Us
-    #
-    #
-    #@property
-    def df(self, dftemp):
-        """displacement dataframe"""
-        db = DBframework()
-        header = ['load_name', 'load_id', 'load_level',
-                  'load_system', 'component_name', 'load_title', 
-                  'node_name', *self._plane.hdisp]
-        return db.DataFrame(data=dftemp, columns=header, index=None)
-    #
-    #
-    def _mask_DOF(self, jbc, rename: bool = True):
-        """ """
-        # remove rows with zeros
-        dfjbc = jbc.copy()
-        if rename :
-            dfjbc.rename(columns=self._plane.colrename, inplace=True)
-        dfjbc = dfjbc[jbc.any(axis=1)]
-        dfjbc = dfjbc.replace(float(0.0), np.nan)
-        #
-        dfbool = dfjbc.copy()
-        dfbool = dfbool.notnull()
-        dfbool = dfbool.stack(future_stack=True)
-        # Copy dataframe 
-        #dfzeros = dfjbc.copy()
-        #dfzeros.iloc[:] = float(0.0)
-        #
-        dfjbc.iloc[:] = float(0.0)
-        #for col in dfjbc.columns:
-        #    dfjbc[col].values[:] = float(0.0)
-        #
-        return dfbool.astype('bool'), dfjbc.astype('float64')
-    #
-    # -----------------------------------------------------------
-    # Post-utils
-    # -----------------------------------------------------------
-    #    
 #
 # ---------------------------------------------
 #
@@ -455,71 +81,104 @@ class StaticSolver:
     #
     # ------------------------------------------
     #
-    def FD_basic(self):
+    def Dn(self, load: str):
         """
-        Fn & Dn Nodal Basic Load
-
-        Return
-        Fi : Nodal force
-        Di : Nodal displacement
+        Return:
+            Nodal global displacement
         """
-        FDn = self._mesh._load._basic.NFD_global(plane=self._mesh._plane)
+        if load in ['combination']:
+            Dn = self._mesh._load._combination.ND_global(plane=self._mesh._plane)
+        else: # basic 
+            Dn = self._mesh._load._basic.ND_global(plane=self._mesh._plane)
         #
-        if len(FDn) == 0:
-            raise IOError('Load data is required')
+        if Dn.empty:
+            return Dn
+        #
+        jbc = self._mesh.jbc()
+        #head_disp = ['node_name', *self._mesh._plane.hdisp]
+        #Dn_bool, Dn_zeros = self._mask_DOF(jbc, rename=False)
+        #
+        dfjbc = jbc[jbc.any(axis=1)]
+        Di = Dn.loc[Dn['node_name'].isin(dfjbc.index)]
+        Di = Di.loc[Di[self._mesh._plane.hdisp].any(axis=1)]
+        #
+        #Dn_set = Dn[head_disp].set_index(['node_name'])
+        #Dn_index = Dn_set.index.isin(dfjbc.index)
+        #
+        #1 / 0
+        #col_grp = ['load_name', 'load_id',
+        #           'load_level', 'load_title',
+        #           'load_system', 'mesh_name']
+        #Dn_grp = Dn.groupby(col_grp)
+        #for key, grp in Dn_grp:
+        #    Dn_set = Dn_grp.get_group(key).set_index(['node_name'])
+        #    Dn_set
+        #    
+        #
+        #Dn_set = Dn_set[head_disp].set_index(['node_name'])
+        #
+        #Dn_index = Dn_zeros.index.isin(Dn['node_name'])
         #
         col_grp = ['load_name', 'load_id',
                    'load_level', 'load_title',
                    'load_system', 'mesh_name',
-                   'node_name', 'node_index']
-        #
-        head_force =  self._mesh._plane.hforce
-        head_disp = self._mesh._plane.hdisp
-        #
-        Fi = FDn[col_grp + head_force]
-        Di = FDn[col_grp + head_disp]
-        return Fi, Di
+                   'node_name', 'node_index',
+                   *self._mesh._plane.hdisp]
+        Di = Di[col_grp]
+        return Di
     #
-    def FD_combination(self):
+    def Fn(self, load: str):
         """
-        Fn & Dn Nodal Combination Load
-
-        Return
-        Fi : Nodal force
-        Di : Nodal displacement
+        Return:
+            Nodal global force
         """
-        FDn = self._mesh._load._combination.NFD_global(plane=self._mesh._plane)
-        col_grp = ['load_name', 'load_id',
-                   'load_level', 'load_title', 'load_system',
-                   'mesh_name', 'node_name', 'node_index']
+        if load in ['combination']:
+            Fn = self._mesh._load._combination.NF_global(plane=self._mesh._plane)
+            
+        else: # basic 
+            Fn = self._mesh._load._basic.NF_global(plane=self._mesh._plane)
         #
         head_force =  self._mesh._plane.hforce
-        head_disp = self._mesh._plane.hdisp
+        jbc = self._mesh.jbc()
+        dfjbc = jbc[jbc.any(axis=1)]
         #
-        Fi = FDn[col_grp + head_force]
-        Di = FDn[col_grp + head_disp]
-        return Fi, Di
+        Fi = Fn.loc[Fn['node_name'].isin(dfjbc.index)]
+        #Fi = Fi.loc[Fi[head_force].any(axis=1)]        
+        #
+        col_grp = ['load_name', 'load_id',
+                   'load_level', 'load_title',
+                   'load_system', 'mesh_name',
+                   'node_name', 'node_index',
+                   *head_force]
+        Fi = Fi[col_grp]
+        return Fi
     #
     # ------------------------------------------
     #
     def _Msplit(self, Km, jbcflat: list):
         """
         Km: The un-partitioned matrix (or vector) to be partitioned.
-        D1: A list of the indices for degrees of freedom that have unknown displacements.
-        D2: A list of the indices for degrees of freedom that have known displacements.
+        
+        Return:
+            m1 : 
+            m2 : 
         """
         jbcc = jbcflat.values
+        #
+        # List of the indices for degrees of freedom with unknown displacements.
+        D1 = [i for i, item in enumerate(jbcc)
+              if item != 0]        
+        # List of the indices for degrees of freedom with known displacements.
         D2 = [i for i, item in enumerate(jbcc)
               if item == 0]
-
-        D1 = [i for i, item in enumerate(jbcc)
-              if item != 0]
+        #
         # 1D vectors
         if Km.shape[1] == 1:
             # Partition the vector into 2 subvectors
             m1 = Km[D1, :]
             m2 = Km[D2, :]
             return m1, m2
+        #
         # 2D matrices
         else:
             # Partition the matrix into 4 submatrices
@@ -574,11 +233,39 @@ class StaticSolver:
         #
         return Un
     #
+    #
+    def _linear(self, load_type: str,
+                col_grp: list[str], 
+                sparse: bool = False):
+        """
+        """
+        # Get basic data
+        # ------------------------------          
+        Ke = self._mesh.Ke(sparse=sparse)
+        #
+        # ------------------------------       
+        # and displacement (combination)
+        Dn = self.Dn(load=load_type)
+        Fn = self.Fn(load=load_type)
+        # group global node load and displacement
+        (load_keys,
+         Fn_grp, Dn_grp) = self._Fn_items(Fn, Dn,
+                                          colgrp=col_grp)        
+        # ------------------------------
+        # linear solution
+        Un = self.PMT(load_keys=load_keys,
+                      Ke=Ke,
+                      Fn_grp=Fn_grp,
+                      Dn_grp=Dn_grp,
+                      sparse=sparse)
+        return Un, Fn_grp, Dn_grp
+    #
     # ------------------------------------------
     #
     def solve_Linear(self,
                      sparse: bool = False,
                      max_iter: int | None = None):
+                     #load_type: str = 'basic'):
         """
         Linear Static Analysis
 
@@ -592,16 +279,20 @@ class StaticSolver:
         """
         start_time = time.time()
         #
-        Ke = self._mesh.Ke(sparse=sparse)
-        jbc = self._mesh.jbc()
-        # Ke, Kfactor, solver = self._get_solver(sparse)
+        # ------------------------------
+        # Get global nodal load
+        col_grp = ['load_name', 'load_id',
+                   'load_level','load_system',
+                   'load_title','mesh_name']        
+        #     
+        # ------------------------------
+        # Step 1 : linear solution
         #
-        # Get global nodal load and displacement
-        Fn, Dn = self.FD_basic()
+        Un, Fn_grp, Dn_grp = self._linear(load_type='basic',
+                                          col_grp=col_grp,
+                                          sparse=sparse)
         #
-        Un = self.PMT(Ke, Fn, Dn,
-                      jbc=jbc, sparse=sparse)
-        #
+        # ------------------------------
         # Post-processing load combinations
         #
         load_comb = self._mesh._load.combination()
@@ -617,8 +308,8 @@ class StaticSolver:
         return Un
     #
     def solve_Pdelta(self,
-                    sparse: bool=False, 
-                    max_iter: int = 30):
+                     sparse: bool=False, 
+                     max_iter: int = 30):
         """
         Linear Static Analysis (2nd Order)
         Approximate method: Two cycles iterative method.
@@ -631,250 +322,59 @@ class StaticSolver:
         Return: 
         Udf : Node displacement global system dataframe
         """
+        # ------------------------------
         # start process
+        # ------------------------------
         start_time = time.time()
-        # ------------------------------
-        # Get basic data
-        Ke = self._mesh.Ke(sparse=sparse)
-        jbc = self._mesh.jbc()
-        # ------------------------------
+        #
         # Get global nodal load
-        # and displacement (combination)
-        Fn, Dn = self.FD_combination()
+        col_grp = ['load_name', 'load_id',
+                   'load_level','load_system',
+                   'load_title','mesh_name']        
+        #       
         # ------------------------------
         # Step 1 : linear solution
-        Un = self.PMT(Ke, Fn, Dn,
-                      jbc=jbc, sparse=sparse)
+        # ------------------------------
+        #
+        Un, Fn_grp, Dn_grp = self._linear(load_type='combination',
+                                          col_grp=col_grp,
+                                          sparse=sparse)
+        # grouping Un results
+        Un_grp = Un.groupby(col_grp)
         #
         # ------------------------------
         # Step 2 : Pdelta solution
-        # ------------------------------            
-        #
-        col_grp = ['load_name', 'load_id', 'load_level',
-                   'load_system', 'mesh_name']
-        # grouping df
-        Un_grp = Un.groupby(col_grp)
-        Fn_grp = Fn.groupby(col_grp)
-        Dn_grp = Dn.groupby(col_grp)
+        # ------------------------------      
         #
         Un_temp = []
         for key, Un_step in Un_grp:
-            Fn_step = Fn_grp.get_group(key)
-            Dn_step = Dn_grp.get_group(key)
             # ------------------------------
             # Assembly matrix including
             # node displacement to force
             kl = self._mesh.Kt(Dn=Un_step)
             # ------------------------------
-            Un_temp.append(self.PMT(Ke=kl,
-                                    Fn=Fn_step,
-                                    Dn=Dn_step,
-                                    jbc=jbc,
+            Un_temp.append(self.PMT(load_keys=[key],
+                                    Ke=kl,
+                                    Fn_grp=Fn_grp,
+                                    Dn_grp=Dn_grp,
                                     sparse=sparse))
         #
         # Results to dataframe
         db = DBframework()
         Us = db.concat(Un_temp, ignore_index=True)
+        # ------------------------------
         # end process
+        # ------------------------------
         uptime = time.time() - start_time
         print(f"** {{F}} = [Kt] {{U}} Solution: {uptime:1.4e} sec")
         return Us
-    #
-    # ------------------------------------------
-    # TODO : remove redundant code
-    #
-    def solveLinearX(self, Ke, Kg, Kt,
-                     Fn, Dn, jbc,
-                     sparse: bool = False,
-                     max_iter: int | None = None):
-        """
-        Linear Static Analysis
-
-        Input:
-        Ke  : Global stiffness matrix
-        Fn  : FER Node load dataframe
-        jbc : Node boundary condition dataframe
-
-        Return:
-        Udf : Node displacement global system dataframe
-        """
-        #
-        order = "1st"
-        print(f"** Solving U = K^-1 F [{order} order] ")
-        # start_time = time.time()
-        #
-        #
-        (Ke, Kfactor,
-         jbc, solver) = self._get_solver(sparse)
-        #
-        Us = self.PMT(Ke, Fn, Dn, jbc,
-                      solver, Kfactor)
-        #
-        return Us
-
-    #
-    def solvePdeltaX(self,
-                    Ke, Kg, Kt,
-                    Fn, Dn, jbc,
-                    sparse: bool=False, 
-                    max_iter: int = 30):
-        """
-        Linear Static Analysis (2nd Order)
-        Aproximate method: Two cycles iterative method.
-        
-        Input: 
-        Ks  : Global stiffness matrix
-        Fn  : FER Node load dataframe
-        jbc : Node boundary condition dataframe
-        
-        Return: 
-        Udf : Node displacement global system dataframe
-        """
-        #
-        order = "2nd"
-        print(f"** Solving U = K^-1 F [{order} order] ")
-        #start_time = time.time()
-        #
-        # ------------------------------
-        #
-        (Ke, Kfactor,
-         jbc, solver) = self._get_solver(Ke, jbc, sparse)
-        #
-        # ------------------------------
-        # Step 1 
-        Un = self.PMT(Ke, Fn, Dn, jbc,
-                      solver, Kfactor)
-        #
-        # ------------------------------
-        # Pdelta solution
-        # ------------------------------            
-        #
-        colgrp = ['load_name', 'load_id', 'load_level',
-                  'load_system', 'mesh_name',]
-        #
-        Ugrp = Un.groupby(colgrp)
-        Dgrp = Dn.groupby(colgrp)
-        #
-        hdisp = ['node_name', *self._plane.hdisp]
-        #
-        Utemp = []
-        for key, noded in Ugrp:
-            #
-            # ------------------------------
-            # TODO: select basic only
-            #if key[2] != 'basic':
-            #    continue
-            #
-            # ------------------------------
-            #
-            Dstep = Dgrp.get_group(key)          
-            #            
-            # ------------------------------
-            #
-            Uii = noded[hdisp].set_index('node_name')
-            #
-            # ------------------------------
-            #
-            # Assembly matrix start
-            #kg = Kg(D=Uii)
-            #kt = Ke + kg
-            #
-            kl = Kt(D=Uii)
-            kl = kl.tolil()
-            #
-            # ------------------------------
-            #
-            #Ui = self.PMT(Ke=kt, F=Fn,
-            #              D=Dstep,
-            #              jbc=jbc,
-            #              solver=solver,
-            #              maxstiff=Kfactor)
-            #
-            Uni = self.PMT(Ke=kl, F=Fn,
-                           D=Dstep,
-                           jbc=jbc,
-                           solver=solver,
-                           maxstiff=Kfactor)
-            # ------------------------------
-            Utemp.extend(Uni)
-        #
-        Us = self.df(Utemp)
-        return Us
-    #
-    def solvePdeltaXX(self, elements,
-                    Ke, Fn, Un, jbc, 
-                    sparse: bool=False, 
-                    max_iter: int = 30):
-        """
-        Linear Static Analysis (2nd Order)
-        
-        Input: 
-        Ks  : Global stiffness matrix
-        Fn  : FER Node load dataframe
-        jbc : Node boundary condition dataframe
-        
-        Return: 
-        Udf : Node displacement global system dataframe
-        """
-        #
-        order = "2nd"
-        print(f"** Solving U = K^-1 F [{order} order] ")
-        #start_time = time.time()
-        #
-        Ke, Kfactor, solver = self._get_solver(Ke, sparse)
-        #
-        colgrp = ['load_name', 'load_id', 
-                  'load_level', 'load_title',
-                  'load_system', 'mesh_name',
-                  'node_name', 'node_index']
-        #
-        hforce =  self._plane.hforce
-        hdisp = self._plane.hdisp
-        #
-        F = Fn[colgrp+hforce]
-        D = Fn[colgrp+hdisp]
-        #
-        #
-        colgrp = ['load_name', 'mesh_name',
-                  'load_level',  'load_system']      
-        #
-        #
-        # group FER node load
-        Fgrp = F.groupby(colgrp)
-        Dgrp = D.groupby(colgrp)
-        Ugrp = Un.groupby(colgrp)
-        #
-        Utemp = []
-        for key, item in Fgrp:
-            # set FER df by nodes
-            Fitem = item.set_index(['node_name'])
-            #Fitem
-            ndisp = Ugrp.get_group(key).set_index(['node_name'])
-            ndisp
-            for mname, element in elements.items():
-                nodes = element.connectivity
-                Tb = element.T
-                # ---------------------------------------------
-                # displacement
-                nd_global = np.concatenate((ndisp.loc[nodes[0]],
-                                            ndisp.loc[nodes[1]]), axis=None)
-                #
-                # ---------------------------------------------
-                # convert global end-node disp in beam's local system
-                # [x,y,z,rx,ry,rz]
-                nd_local = Tb @ nd_global
-                #
-                # --------------------------------------------
-                # get kg matrix            
+    #          
     #    
     # ------------------------------------------
     #
     def _get_solver(self, Ke, sparse: bool):
-        """ """
-
-        # jbc = self._mesh.jbc()
-        # Ke = self._mesh.Ke(sparse=sparse)
-
+        """
+        """
         if sparse:
             solver = solver_sparse
             # Ke = Ke.tolil()
@@ -931,18 +431,221 @@ class StaticSolver:
         """displacement dataframe"""
         db = DBframework()
         header = ['load_name', 'load_id', 'load_level',
-                  'load_system', 'mesh_name', 'result_name',
-                  'load_title', 'node_name', *self._mesh._plane.hdisp]
+                  'load_system', 'load_title', 'mesh_name',
+                  'result_name','node_name',
+                  *self._mesh._plane.hdisp]
         dftemp = db.DataFrame(data=Us, columns=header, index=None)
-        #dftemp.rename(columns={'load_system':'system'}, inplace=True)
-        #header = ['load_name', 'load_id', 'load_level',
-        #          'load_title', 'result_name',
-        #          'node_name', 'system',  *self._mesh._plane.hdisp]
         return dftemp #[header]
     #
     # ------------------------------------------
     #
-    def PMT(self, Ke, Fn, Dn,
+    def _Fn_items(self, Fn, Dn, #Un=None, 
+                  colgrp: list[str]):
+        """
+        """
+        #if not colgrp:
+        #    colgrp = ['load_name', 'load_id', 
+        #              'load_level','load_system',
+        #              'mesh_name']
+        #
+        # Force
+        Fn_grp = None
+        if not Fn.empty:
+            Fn_grp = Fn.groupby(colgrp)
+            Fn_keys = list(Fn_grp.groups.keys())
+        #
+        # Displacement
+        if Dn.empty:
+            if Fn.empty:
+                raise IOError('{Fn} and {Dn} missing')
+            Dn_grp = None
+        else:
+            Dn_grp = Dn.groupby(colgrp)
+            Dn_keys = list(Dn_grp.groups.keys())
+            if Fn.empty:
+                Fn_keys = Dn_keys
+            else:
+                Fn_idx = [item[0] for item in Fn_keys]
+                Fn_keys.extend([item for item in Dn_keys
+                                if item[0] not in Fn_idx])
+        #
+        # Un
+        #
+        return Fn_keys, Fn_grp, Dn_grp
+    #
+    def _K_penalty(self, K_factor: float):
+        """
+        """
+        K_trans = K_factor * 10_000
+        K_rot = K_factor * 100_000
+        col_disp = self._mesh._plane.hdisp
+        #
+        ditem = {'x':K_trans, 'y':K_trans, 'z':K_trans,
+                 'rx': K_rot, 'ry': K_rot, 'rz': K_rot,}
+        
+        head_stiff = {key : ditem[key] for key in col_disp}
+        Kp = np.array([ditem[key] for key in col_disp])
+        #
+        return Kp, head_stiff
+        
+    #
+    def PMT(self, load_keys, Ke, Fn_grp, Dn_grp,
+            sparse: bool=False):
+        """
+        Penalty Method
+        
+        Ke : Global stiffness matrix
+        Fn : Global force  df
+        Dn : Global displacement df
+        jbc = Nodes with boundary
+        
+        Return:
+        U : Global node displacement
+        """
+        jbc = self._mesh.jbc()
+        K_factor, solver = self._get_solver(Ke, sparse)
+        #
+        # TODO : must be better ways to manipulate dfs
+        #
+        ndof = self._mesh._plane.ndof
+        col_force = self._mesh._plane.hforce
+        head_force = ['node_name', *col_force]
+        col_disp = self._mesh._plane.hdisp
+        head_disp = ['node_name', 'node_index', *col_disp]
+        col_rename = self._mesh._plane.colrename
+        #
+        # Select nodes' free DOF
+        Fn_bool, Fn_zeros = self._mask_DOF(jbc)
+        #
+        # group global node load and displacement
+        #load_keys, Fn_grp, Dn_grp = self._Fn_items(Fn, Dn)
+        #
+        # --------------------------------------
+        #
+        Ke_sup = np.zeros((ndof, ndof), dtype=np.float64)
+        #
+        Kp, head_stiff = self._K_penalty(K_factor)
+        #
+        # --------------------------------------
+        #
+        Utemp = []
+        for key in load_keys:
+            Fs = Fn_zeros.copy()
+            Kitem = Ke.copy()
+            #
+            # Load Section
+            try:
+                Fn_item = Fn_grp.get_group(key)
+                Fn_set = Fn_item[head_force].set_index(['node_name'])
+                Fs.loc[Fn_set.index] = Fn_set.astype('float64')
+            except (KeyError, AttributeError):
+                #print(f'--> Force {key}')
+                pass
+            #
+            # Displacement Section
+            try:
+                Dn_item = Dn_grp.get_group(key)
+                FDs = Dn_item[head_disp].set_index(['node_name'])
+                #
+                # calculate force {F} = {D} x Kmod
+                FDs[col_disp] = FDs[col_disp].mul(head_stiff)
+                FDs.rename(columns=col_rename, inplace=True)
+                #
+                Fs.loc[FDs.index] = Fs.loc[FDs.index].add(FDs[col_force])
+                #
+                #idx = {name: i for i, name in enumerate(list(FDs), start=1)}
+                #node_name = Ds.index.to_list()
+                for nodeid, idof in zip(FDs.index.to_list(),
+                                        FDs['node_index'].to_list()):
+                #for item in FDs.itertuples():
+                    #idof = item.node_index
+                    #nodeid = item.Index
+                    #
+                    # DOF
+                    niqi = idof * ndof
+                    niqj = niqi + ndof
+                    #
+                    nload = FDs[col_force].loc[nodeid]
+                    kc = Kp.copy()
+                    kc[nload == 0] = 0
+                    #
+                    Ke_sup.flat[0::ndof + 1] = kc
+                    # update global K matrix with dummy stiffness
+                    Kitem[niqi:niqj, niqi:niqj] += Ke_sup
+                    #print('---> ', niqi, niqj)
+            except (KeyError, AttributeError):
+                #print(f'--> node disp {key}')
+                pass
+            #
+            # get load matrix as vector
+            Fs = Fs.stack()
+            Fs = Fs.loc[Fn_bool]
+            # Solve displacements U
+            Us = self._Us(Kitem, Fs, solver, jbc, ndof)
+            # pack basic load data for df's dumping 
+            Utemp.extend([[*key,  self._result_name,
+                           #Fn_item['load_title'].iloc[0],
+                           nname, *Us[x]]
+                           for x, nname in enumerate(jbc.index)])
+        #
+        Us = self._to_df(Utemp)
+        return Us
+    #
+    def _PTM_Dn(self, Kitem, Fs,
+                Fn_item, Dn_set, Dn_zeros,
+                ndof:int, K_factor:float):
+        """
+        """
+        # set up
+        #Dn_index = Dn_zeros.index.isin(Fn_item['node_name'])
+        #Ds = Dn_zeros.copy()
+        #Ds.loc[Dn_index] = Dn_set.astype('float64')
+        #
+        Ke_sup = np.zeros((ndof, ndof), dtype=np.float64)
+        #
+        K_trans = K_factor * 10_000
+        K_rot = K_factor * 100_000
+        ditem = {'x':K_trans, 'y':K_trans, 'z':K_trans,
+                 'rx': K_rot, 'ry': K_rot, 'rz': K_rot,}
+        #
+        col_rename = self._mesh._plane.colrename
+        head_disp = self._mesh._plane.hdisp
+        head_stiff = {key : ditem[key] for key in head_disp}
+        kp = np.array([ditem[key] for key in head_disp])
+        #
+        # Displacement check and postprocess
+        #
+        # calculate force {F} = {D} x Kmod
+        FDs = Ds.mul(head_stiff)
+        FDs.rename(columns=col_rename, inplace=True)
+        # Update global load vector with displacement load
+        # print(f'---> {Ds} {Fs}')
+        for nodeid, idof in zip(Fn_item['node_name'], Fn_item['node_index']):
+            # check if node with displacement
+            try:
+                nload = FDs.loc[nodeid]  # .to_numpy()
+                if not nload.any():
+                    continue
+                Fs.loc[nodeid] = Fs.loc[nodeid].add(nload, axis='rows')
+            except KeyError:
+                continue
+            #
+            # DOF
+            niqi = idof * ndof
+            niqj = niqi + ndof
+            #
+            kc = kp.copy()
+            kc[nload == 0] = 0
+            #
+            Ke_sup.flat[0::ndof + 1] = kc
+            # update global K matrix with dummy stiffness
+            Kitem[niqi:niqj, niqi:niqj] += Ke_sup
+            # print('--->', niqi, niqj)
+        #
+        return Kitem, Fs
+    #
+    #
+    def PMTX(self, Ke, Fn, Dn,
             jbc, sparse: bool=False):
         """
         Penalty Method
@@ -978,7 +681,7 @@ class StaticSolver:
         for key, Fn_item in Fn_grp:
             # set df by nodes
             Fn_set = Fn_item[head_force].set_index(['node_name'])
-            Dn_set = Dn_grp.get_group(key) # .set_index(['node_name'])
+            Dn_set = Dn_grp.get_group(key)
             Dn_set = Dn_set[head_disp].set_index(['node_name'])
             # Select load nodes with free DOF
             Fn_index = Fn_zeros.index.isin(Fn_item['node_name'])
@@ -1010,7 +713,7 @@ class StaticSolver:
         Us = self._to_df(Utemp)
         return Us
     #
-    def _PTM_Dn(self, Kitem, Fs,
+    def _PTM_DnX(self, Kitem, Fs,
                 Fn_item, Dn_set, Dn_zeros,
                 ndof:int, K_factor:float):
         """
@@ -1062,7 +765,7 @@ class StaticSolver:
             # print('--->', niqi, niqj)
         #
         return Kitem, Fs
-    #
+    #    
     #
     # ------------------------------------------
     #
@@ -1080,12 +783,10 @@ class StaticSolver:
                 order = "2nd"
                 self._postprocess._Pdelta = True
                 run = self.solve_Pdelta
-                # Fn = mesh._load._combination.Fn()
             else:
                 order = "1st"
                 self._postprocess._Pdelta = False
                 run = self.solve_Linear
-                # Fn = mesh._load._basic.Fn()
             #
             print(f"** Solving Linear Static [{order} order] ")
             #

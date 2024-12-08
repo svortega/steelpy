@@ -408,7 +408,6 @@ class Beam:
         for key, item in members:
             frames.append(self.section.stress(df=item,
                                               E=mat.E, G=mat.G))
-            #stress = self.section.stress(df=item)
         #
         try:
             stress = DBframework.concat(frames, ignore_index=True)

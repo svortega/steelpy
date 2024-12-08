@@ -90,9 +90,6 @@ class BeamResSQL(BeamResBasic):
         with conn:        
             df = get_stress(conn)
         #
-        #if self.plane.plane2D:
-        #    df.drop(['tau_z', 'sigma_x', 'sigma_y'], axis=1, inplace=True)        
-        #
         return BeamStress(df, units=units)         
     #
     #def code_check(self):
@@ -154,12 +151,7 @@ class BeamResItem:
         with conn:        
             df = get_stress(conn, beam_name)
         #
-        #if self._plane.plane2D:
-        #    df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
-        #
         return BeamStress(df, units=units)
-    #
-#
 #
 # --------------------
 # sql operations
@@ -237,7 +229,6 @@ def get_stress(conn, element_name: int|str|None=None,
         query += f' AND Element.name = {element_name}'
     query += ';'
     #
-    
     cols = ['load_name', 'load_level', 'component_name', 'element_name',
             'number', 'result_id', 'load_id',
             'element_id', 'length', 'system',

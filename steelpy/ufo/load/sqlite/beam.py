@@ -126,7 +126,7 @@ class BeamLoadItemSQL(BeamLoadBasic):
             rows = cur.fetchall()
         labels.extend([item[0] for item in rows])
         #
-        return labels
+        return list(set(labels))
     #    
     # -----------------------------------------------
     #
@@ -221,7 +221,6 @@ class BeamLoadItemSQL(BeamLoadBasic):
         global_system = 0
         b2n = []
         with executor:
-        #with ThreadPoolExecutor() as executor:
             for item in line:
                 beam = beams[item.name]
                 b2n.append(executor.submit(fer_b2n, beam, item, global_system).result())
@@ -229,7 +228,6 @@ class BeamLoadItemSQL(BeamLoadBasic):
             for item in point:
                 beam = beams[item.name]
                 b2n.append(executor.submit(fer_b2n, beam, item, global_system).result())
-        #
         #
         fer_res =[]
         for gnload in b2n:
@@ -400,21 +398,13 @@ class BeamLoadItemSQL(BeamLoadBasic):
         #print('-->')
         beams = BeamSQL(db_file=self.db_file,
                         component=self._component)
-                        #plane=self._plane)
         #
-        #print(' beam load')
         conn = create_connection(self.db_file)
         with conn:
             line, point = get_beam_load(conn,
                                         beam_name='*',
                                         load_name=self._name,
                                         component=self._component)
-        #
-        #Fbgrp = Fb.groupby('element_name')
-        #for bname, bitem in Fbgrp:
-        #    bload = self.__getitem__(beam_name=bname)
-        #    for key, items in bload._line.items():
-        #        print(key)
         #
         loadfun = []
         # line load
@@ -440,9 +430,6 @@ class BeamLoadItemSQL(BeamLoadBasic):
                             Asy=sec.Asy, Asz=sec.Asz,
                             P=Pdelta.Fx, factor=factor)
             #
-            #lout2 = [[Pdelta.load_name, *item]
-            #         for item in lout]
-            #
             loadfun.extend([[Pdelta.load_name, *item]
                             for item in lout])
         #
@@ -460,7 +447,6 @@ class BeamLoadItemSQL(BeamLoadBasic):
             Fbeam.set_index('node_name', inplace=True)
             Pdelta = Fbeam.loc[nodes[1]]
             #
-            #for bitem in items:
             lout = item.Fx(x=Lsteps, L=beam.L,
                             E=mat.E, G=mat.G,
                             Iy=sec.Iy, Iz=sec.Iz,
@@ -469,7 +455,6 @@ class BeamLoadItemSQL(BeamLoadBasic):
                             Asy=sec.Asy, Asz=sec.Asz,
                             P=Pdelta.Fx, factor=factor)
             #
-            #loadfun.extend(lout)
             loadfun.extend([[Pdelta.load_name, *item]
                             for item in lout])
         #
@@ -505,8 +490,7 @@ class BeamLoadTypeSQL(BeamTypeBasic):
 
     def __init__(self, load_name: str|int,
                  component: int,
-                 #plane, 
-                 db_file: str): #, beams
+                 db_file: str):
         """
         """
         super().__init__()
@@ -521,7 +505,7 @@ class BeamLoadTypeSQL(BeamTypeBasic):
         self._point = BeamPointSQL(load_name=self._name,
                                    component=component,
                                    db_file=self._db_file)
-        #
+    #
     #
     #
     #def __call__(self, beam):
@@ -701,21 +685,17 @@ class BeamLoadGloabalSQL(BeamLoadBasic):
                         component=self._component)
                         #plane=self._plane)        
         #1 / 0
-        #beamfun = defaultdict(list)
         loadfun = []
         # line load
         for key, items in self._line.items():
             beam = beams[key]
-            #nodes = beam.connectivity
             mat = beam.material
             sec = beam.section.properties(poisson=mat.poisson)
             #
             Lsteps = linstep(d=beam.section.geometry.d,
                              L=beam.L, steps=steps)
-            #Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
             #
             for bitem in items:
-                #header = [bitem.load_name, bitem.component_name, *nodes]
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
                                 E=mat.E, G=mat.G, 
                                 Iy=sec.Iy, Iz=sec.Iz,
@@ -723,16 +703,7 @@ class BeamLoadGloabalSQL(BeamLoadBasic):
                                 Area=sec.area,
                                 Asy=sec.Asy, Asz=sec.Asz,
                                 P=Pa, factor=factor)
-                #beamfun[key].extend(lout)
-                #beamfun[key].append(lout)
-                #
                 loadfun.extend(lout)
-                #loadfun.append([key, bitem.name, lout])
-                #loadfun.extend([[bitem.name, 'local', key, *step]
-                #                for step in lout])
-                #for step in lout:
-                #    # load_name, load_title, [Fx, Fy, Fz, Mx, My, Mz]
-                #    loadfun.append([bitem.name, 'local', key, *step])
         # point load
         for key, items in self._point.items():
             beam = beams[key]
@@ -741,7 +712,6 @@ class BeamLoadGloabalSQL(BeamLoadBasic):
             #
             Lsteps = linstep(d=beam.section.geometry.d,
                              L=beam.L, steps=steps)
-            #Lsteps = linspace(start=0, stop=beam.L, num=steps+1, endpoint=True)
             #
             for bitem in items:
                 lout = bitem.Fx(x=Lsteps, L=beam.L,
@@ -751,18 +721,9 @@ class BeamLoadGloabalSQL(BeamLoadBasic):
                                 Area=sec.area,
                                 Asy=sec.Asy, Asz=sec.Asz,
                                 P=Pa, factor=factor)
-                #beamfun[key].append([bitem.name, lout])
-                #beamfun[key].extend(lout)
-                #beamfun[key].append(lout)
-                #
                 loadfun.extend(lout)
-                #loadfun.append([key, bitem.name, lout])
-                #loadfun.extend([[bitem.name, 'local', key, *step]
-                #                for step in lout])                
-                #for step in lout:
-                #    loadfun.append([bitem.name, 'local', key, *step])
         #print('---')
-        return loadfun # beamfun #         
+        return loadfun
     #    
     #
     # -----------------------------------------------
@@ -785,8 +746,6 @@ class BeamLoadGloabalSQL(BeamLoadBasic):
         #
         db = DBframework()
         df_beam = db.concat([line, point], ignore_index=True, sort=False)
-        #df_beam.rename(columns={'L0': 'a', 'L1': 'b'},
-        #               inplace=True)
         #
         return df_beam
 #

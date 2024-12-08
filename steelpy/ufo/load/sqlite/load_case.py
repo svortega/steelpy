@@ -167,7 +167,7 @@ class BasicLoadSQL(BasicLoadCase):
         """
         conn = create_connection(self.db_file)
         with conn:
-            dfbeam = pull_ENL_df(conn, self._component)
+            dfbeam = pull_ENL_FER(conn, self._component)
         return dfbeam
     #
     def FER_END(self):
@@ -179,49 +179,119 @@ class BasicLoadSQL(BasicLoadCase):
         """
         conn = create_connection(self.db_file)
         with conn:
-            dfbeam = pull_END_df(conn, self._component)
+            dfbeam = pull_END_FER(conn, self._component)
         return dfbeam
     #
     # -----------------------------------------------
     #
-    def NFD_global(self, plane):
+    def NF_global(self, plane):
         """
-        Nodal Force and Displacement (total)
+        Nodal Force (total)
 
         Return:
             Dataframe consisting of summation of
-            node and elements (FER) nodal force & displacement
+            node and elements (FER) nodal force
         """
         # FIXME: step needs to be sorted
-        columns = [*plane.hforce, *plane.hdisp]
-        headgrp = ['load_name', 'mesh_name',
-                   'load_id', 'load_level',
-                   'load_title','load_system',
-                   'node_name', 'node_index']
+        columns = [*plane.hforce]
+        head = ['load_name', 'mesh_name',
+                'load_id', 'load_level',
+                'load_title','load_system',
+                'node_name', 'node_index']
         # beam FER
         conn = create_connection(self.db_file)
         with conn:
-            dfbeam = pull_FER_df(conn, self._component)
+            beam_fer = pull_ENL_FER(conn, self._component)
         #
-        dfbeam = dfbeam.groupby(headgrp)[columns].sum()
+        if not beam_fer.empty:
+            Fn_df = beam_fer.groupby(head)[columns].sum()
+            #beam_fer.reset_index(inplace=True)
         #
         # Node load
-        dfnodal = self._nodes.df
-        dfnodal = dfnodal.groupby(headgrp)[columns].sum()
+        node_force =self._nodes.force
+        if node_force.empty:
+            if beam_fer.empty:
+                db = DBframework()
+                return db.DataFrame()                
+            #Fn_df = beam_grp
+        else:
+            node_grp = node_force.groupby(head)[columns].sum()
+            if beam_fer.empty:
+                Fn_df = node_grp
+            else:
+                Fn_df = node_grp.add(Fn_df, fill_value=0, axis='columns')
+        #node_df = self._nodes.df
+        #node_df = node_df.groupby(head)[columns].sum()
+        #node_grp = node_df.groupby(head)
+        #node_grp = node_grp.getgroup('node_name')
+        #node_df.reset_index(inplace=True)
         #
         #dfnodal[columns] = dfnodal[columns].add(dfbeam[columns], fill_value=0)
-        Fn_df = dfnodal.add(dfbeam, fill_value=0)
+        #head = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+        #Fn_df = node_grp.add(beam_grp, fill_value=0, axis='columns')
         Fn_df.reset_index(inplace=True)
         #
         return Fn_df.reindex(columns=['load_name', 'mesh_name', 
                                       'load_id', 'load_level',
                                       'load_title','load_system',
                                       'node_name', 'node_index', 
-                                      'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                                      'x', 'y', 'z', 'rx', 'ry', 'rz'])
+                                      'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
+    #
+    def ND_global(self, plane):
+        """
+        Nodal Displacement (total)
+
+        Return:
+            Dataframe consisting of summation of
+            node and elements (FER) nodal displacement
+        """
+        db = DBframework()
+        # FIXME: step needs to be sorted
+        #
+        columns = [*plane.hdisp]
+        head = ['load_name', 'mesh_name',
+                'load_id', 'load_level',
+                'load_title','load_system',
+                'node_name', 'node_index']
+        # beam FER
+        conn = create_connection(self.db_file)
+        with conn:
+            beam_fer = pull_END_FER(conn, self._component)
+        #
+        #Fn_df = None
+        if not beam_fer.empty:
+            Fn_df = beam_fer.groupby(head)[columns].sum()
+            Fn_df = Fn_df[(Fn_df != 0).any(axis=1)]
+            if Fn_df.empty:
+                beam_fer = db.DataFrame()
+        #
+        # Node displacement
+        node_disp = self._nodes.displacement
+        if node_disp.empty:
+            if beam_fer.empty:
+                return db.DataFrame()
+            pass
+        else:
+            node_grp = node_disp.groupby(head)[columns].sum()
+            #dfnodal = self._nodes.df
+            #dfnodal = dfnodal.groupby(head)[columns].sum()
+            #
+            if beam_fer.empty:
+                Fn_df = node_grp
+            else:
+                #dfnodal[columns] = dfnodal[columns].add(dfbeam[columns], fill_value=0)
+                Fn_df = node_grp.add(Fn_df, fill_value=0, axis='columns')
+        #
+        Fn_df.reset_index(inplace=True)
+        #
+        return Fn_df.reindex(columns=['load_name', 'mesh_name', 
+                                      'load_id', 'load_level',
+                                      'load_title','load_system',
+                                      'node_name', 'node_index', 
+                                      'x', 'y', 'z', 'rx', 'ry', 'rz'])    
 #
 #
-def pull_ENL_df(conn, component: int):
+def pull_ENL_FER(conn, component: int):
     """ Equivalent Nodal Loads """
     df = pull_FER_data(conn, component)
     df = df[['load_name', 'mesh_name', 
@@ -230,11 +300,11 @@ def pull_ENL_df(conn, component: int):
              'element_name',
              'node_name', 'node_index', 
              'load_type',
-             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-             'Psi', 'B', 'Tw', 'step']]
+             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz', 'step']]
+             #'Psi', 'B', 'Tw', 'step']]
     return df
 #
-def pull_END_df(conn, component: int):
+def pull_END_FER(conn, component: int):
     """ Return Fix End Forces in dataframe form"""
     df = pull_FER_data(conn, component)
     return df[['load_name', 'mesh_name',
@@ -243,7 +313,7 @@ def pull_END_df(conn, component: int):
                'element_name',
                'node_name', 'node_index',
                'load_type',
-               'x', 'y', 'z', 'rx', 'ry', 'rz']]
+               'x', 'y', 'z', 'rx', 'ry', 'rz', 'step']]
 #
 def pull_FER_df(conn, component: int):
     """ Return Fix End Forces in dataframe form"""
