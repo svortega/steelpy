@@ -575,8 +575,16 @@ class BasicLoadType(BasicLoadRoot):
     def function(self, beam_name: str | int,
                  load_name: str | int, 
                  steps: int, Pa: float,
-                 factor: float = 1.0):
-        """ """
+                 factor: float = 1.0)->DBframework.DataFrame:
+        """
+        beam_name:
+        load_name:
+        steps: beam steps where load function will be calculated
+        factor: load factor
+
+        Return:
+            Beam's load functions
+        """
         beam = self._beam[beam_name]
         bfunction = beam.function(steps=steps,
                                   Pa=Pa, factor=factor)
@@ -602,7 +610,7 @@ class BasicLoadType(BasicLoadRoot):
         grp_bfunc = bfunction.groupby(['load_name', 'element_name', 'length'])
         #grp_bfunc.get_group(())
         bfunction = grp_bfunc[['axial', 'torsion', 'VM_inplane', 'VM_outplane']].sum()
-        bfunction.reset_index()
+        bfunction.reset_index(inplace=True)
         grp_bfunc = bfunction.groupby(['load_name', 'element_name'])
         grp_bfunc = grp_bfunc.get_group((load_name, beam_name, )).reset_index()
         return grp_bfunc

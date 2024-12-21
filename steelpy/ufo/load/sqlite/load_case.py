@@ -208,8 +208,6 @@ class BasicLoadSQL(BasicLoadCase):
             beam_fer = pull_ENL_FER(conn, self._component)
         #
         if not beam_fer.empty:
-            # 3D sign correction hack
-            #beam_fer['Mz'] *= -1
             Fn_df = beam_fer.groupby(head)[columns].sum()
             #beam_fer.reset_index(inplace=True)
         #
@@ -226,22 +224,10 @@ class BasicLoadSQL(BasicLoadCase):
                 Fn_df = node_grp
             else:
                 Fn_df = node_grp.add(Fn_df, fill_value=0, axis='columns')
-        #node_df = self._nodes.df
-        #node_df = node_df.groupby(head)[columns].sum()
-        #node_grp = node_df.groupby(head)
-        #node_grp = node_grp.getgroup('node_name')
-        #node_df.reset_index(inplace=True)
         #
-        #dfnodal[columns] = dfnodal[columns].add(dfbeam[columns], fill_value=0)
-        #head = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
-        #Fn_df = node_grp.add(beam_grp, fill_value=0, axis='columns')
+        head += ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
         Fn_df.reset_index(inplace=True)
-        #
-        return Fn_df.reindex(columns=['load_name', 'mesh_name', 
-                                      'load_id', 'load_level',
-                                      'load_title','load_system',
-                                      'node_name', 'node_index', 
-                                      'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'])
+        return Fn_df.reindex(columns=head)
     #
     def ND_global(self, plane):
         """

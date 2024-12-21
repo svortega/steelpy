@@ -531,11 +531,10 @@ class BeamLoadTypeSQL(BeamTypeBasic):
         #
         Lsteps = linstep(d=geometry.d,
                          L=Lb, steps=steps)
-        #1 / 0
+        #
         load_function = []
         # line load
         line_load = self._line[self._beam_id]
-        #for key, items in line_load:
         for bitem in line_load:
             lout = bitem.Fx(x=Lsteps, L=Lb,
                             E=mat.E, G=mat.G, 
@@ -547,7 +546,6 @@ class BeamLoadTypeSQL(BeamTypeBasic):
             load_function.extend(lout)
         # point load
         point_load = self._point[self._beam_id]
-        #for key, items in point_load:
         for bitem in point_load:
             lout = bitem.Fx(x=Lsteps, L=Lb,
                             E=mat.E, G=mat.G, 

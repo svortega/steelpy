@@ -74,12 +74,12 @@ class LoadCombinationBasic(Mapping):
     #
     # ----------------------------
     #
-    def to_basic(self):
+    def to_basic(self)->DBframework.DataFrame:
         """
         Return:
             Load Combinations in terms of Basic Load"""
         # get combination of combination and convert them to basic loads
-        comb = {}
+        comb2basic = {}
         for key, item in self._combination.items():
             # basic load
             cbasic = {comb_name: factor
@@ -92,22 +92,22 @@ class LoadCombinationBasic(Mapping):
                         cbasic[precomb] += prefactor * factor
                     except KeyError:
                         cbasic[precomb] = prefactor * factor
-            comb[key] = cbasic
+            comb2basic[key] = cbasic
         #
         # Combinations into basic loads only
-        dftemp = []
+        df_temp = []
         for key, item in self._combination.items():
-            for bl_name, factor in comb[key].items():
-                dftemp.append([key, item.number, 'combination',
-                               item.title, item.mesh_name,
-                               bl_name, factor])
+            for bl_name, factor in comb2basic[key].items():
+                df_temp.append([key, item.number, 'combination',
+                                item.title, item.mesh_name,
+                                bl_name, factor])
         #
-        header = ['load_name', 'load_id','load_level',
-                  'load_title', 'mesh_name', 
-                  'basic_load', 'factor']
+        columns = ['load_name', 'load_id','load_level',
+                   'load_title', 'mesh_name',
+                   'basic_load', 'factor']
         db = DBframework()
-        df_comb = db.DataFrame(data=dftemp, columns=header, index=None)
-        return df_comb 
+        df_temp = db.DataFrame(data=df_temp, columns=columns, index=None)
+        return df_temp
     #
     # ----------------------------
     #

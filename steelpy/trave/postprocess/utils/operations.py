@@ -35,9 +35,9 @@ import numpy as np
 #
 @dataclass
 class MainPostProcess:
-    __slots__ = ['_plane', '_mesh', '_result_name'] #'_name',
+    __slots__ = ['_plane', '_mesh', '_result_name']
     
-    def __init__(self, mesh, result_name:int|str,) -> None: #, name: str
+    def __init__(self, mesh, result_name:int|str,) -> None:
         """
         """
         self._mesh = mesh
@@ -62,22 +62,10 @@ class MainPostProcess:
         if Pdelta:
             load = self._mesh._load._combination
             Un_set = Un_grp.get_group(('combination', ))
-            #Fb_local = self.solve_beam_end_disp(elements, Un_set, Pdelta)
-            #
-            #comb_load = self._mesh._load._combination
-            #beam_fer_enl = comb_load.FER_ENL()
-            #load_func = comb_load.function(steps=steps,
-            #                               Fb_local=Fb_local)
         else:
             load = self._mesh._load._basic
-            Un_set = Un_grp.get_group(('basic', ))
-            # Solve node and element force and displacements
-            #basic_load = self._mesh._load._basic
-            #beam_fer_enl = basic_load.FER_ENL()
-            #load_func = basic_load.function(steps=steps,
-            #                                Pa=0.0, factor=1.0)    
+            Un_set = Un_grp.get_group(('basic', ))  
         #
-        #1 / 0
         Fbeam = self.solve_beam_end_disp(elements, Un_set, Pdelta)        
         #
         df_beamf, df_nforce = self.solve_beam_forces(elements,
@@ -248,11 +236,6 @@ class MainPostProcess:
                     #  'load_level', 'load_system',
                     #  'element_name', 'length',
                     #  'axial', 'torsion', 'VM_inplane', 'VM_outplane']
-                    #bload_fuction = bload.function(steps=steps,
-                    #                               Pa=0.0, factor=1)
-                    #
-                    #for bstep in bload_fuction.itertuples(index=False):
-                    #    print(bstep.length)
                     #
                     #print('---->')
                     lbforce = [['local', bname, bstep.length,
@@ -290,8 +273,6 @@ class MainPostProcess:
                 # ---------------------------------------------
                 # convert beam end-node disp to force [F = Kd] in global system
                 #
-                #k_global = getattr(element, Kglobal)(plane2d, bend_dispg)
-                #gnforce = k_global @ bend_dispg
                 gn_force = beam_item.FU_global
                 #
                 # ---------------------------------------------
@@ -324,216 +305,7 @@ class MainPostProcess:
         uptime = time.time() - start_time
         print(f"** Beam Force Calculation: {uptime:1.4e} sec")
         return df_mif, df_nforce
-    #
-    def solve_beam_forcesXX(self, elements,
-                          Un:DBframework.DataFrame,
-                          load_function:DBframework.DataFrame,
-                          beam_fer:DBframework.DataFrame,
-                          steps: int, Pdelta: bool)-> (DBframework.DataFrame, DBframework.DataFrame):
-        """
-        Beam's internal forces along its lenght
-        """
-        #1/0
-        start_time = time.time()
-        #
-        #Klocal = 'Ke_local'
-        Kglobal = 'Ke'
-        if Pdelta:
-            #Klocal = 'Kt_local'
-            Kglobal = 'Kt'
-        #
-        Un_grp = Un.groupby(['load_name', 'mesh_name',
-                             'load_level',  'system'])
-        #
-        bfer_grp = beam_fer.groupby(['load_name', 'mesh_name',
-                                     'load_level', 'load_system'])
-        #
-        bloadfunc_grp = load_function.groupby(['load_name', 'mesh_name',
-                                       'load_level'])
-        #
-        hload = ['axial', 'torsion', 'VM_inplane', 'VM_outplane']
-        #
-        ndof = self._plane.ndof
-        hdisp = ['node_name', *self._plane.hdisp]
-        #
-        plane2d = self._plane.plane2D
-        dftemp: list = []
-        mif_data: list = []
-        for key, node_item in Un_grp:
-            # get node displacement variables
-            Un_disp = node_item[hdisp].set_index('node_name')
-            #
-            for bname, element in elements.items():
-                nodes = element.connectivity
-                Tb = element.T(plane2d)
-                #
-                material = element.material
-                section = element.section.properties(poisson=material.poisson)
-                beam = BeamBasic(L=element.L, area=section.area, 
-                                 Iy=section.Iy, Iz=section.Iz,
-                                 J=section.J, Cw=section.Cw, 
-                                 E=material.E, G=material.G,
-                                 Asy=section.Asy,
-                                 Asz=section.Asz,
-                                 Pdelta=Pdelta)
-                #
-                # ---------------------------------------------
-                # Select beam end-nodes displacement
-                #
-                bend_dispg = np.concatenate((Un_disp.loc[nodes[0]],
-                                             Un_disp.loc[nodes[1]]), axis=None)
-                #
-                # ---------------------------------------------
-                # Convert global end-node disp in beam's local system
-                # 
-                bend_displ = Tb @ bend_dispg
-                #
-                # --------------------------------------------
-                # Convert beam end-node disp to force [F = Kd] in global system
-                #
-                #k_local = getattr(element, Klocal)(plane2d, bend_dispg)
-                #FUtn = k_local @ bend_displ
-                #
-                k_global = getattr(element, Kglobal)(plane2d, bend_dispg)
-                FUn_global = k_global @ bend_dispg
-                #
-                #TODO: confirm change reactions sign
-                eq = NodeGenRespEq(bend_displ, self._plane)
-                #
-                # ---------------------------------------------
-                # Beam load (udl/point)
-                try:                    
-                    # get FER beam end load
-                    beam_fer_enl = bfer_grp.get_group(key)
-                    beam_fer_enl = beam_fer_enl.groupby(['element_name'])                    
-                    beam_fer_enl = beam_fer_enl.get_group((bname, ))
-                    # get load function
-                    bload_fuction = bloadfunc_grp.get_group(key[:3])
-                    bload_fuction = bload_fuction.groupby(['element_name'])                    
-                    bload_fuction = bload_fuction.get_group((bname, ))
-                    bload_fuction = bload_fuction.groupby(['length'],
-                                                          as_index=False)[hload].sum()
-                    # calculate beam end 1 reactions
-                    R0 = self._beam_load(#beam_name=bname,
-                                         nodes=nodes,
-                                         #beam=beam,
-                                         Tb=Tb,
-                                         FUn=FUn_global,
-                                         #load_function=bload_fuction,
-                                         fer_enl=beam_fer_enl,
-                                         eq=eq)
-                    #
-                    lbforce = [['local', bname, bstep.length,
-                                *beam.response(x=bstep.length,
-                                               R0=[R0.x, R0.t, R0.y, R0.z],
-                                               Fx=[*bstep[2:]])]
-                               for bstep in bload_fuction.itertuples()]                    
-                    #
-                    ##
-                    ## [load_name, member_load_title, load_type, load_system, 
-                    ## beam_number, x, Fx, Fy, Fz]
-                    ##
-                    #mbload = lf_grp.get_group(key[:3])
-                    #mbload = mbload.groupby(['element_name'])                    
-                    #mnload = mbload.get_group((mname, ))
-                    #mnload = mnload.groupby(['length'],
-                    #                        as_index=False)[hload].sum()
-                    ##
-                    #benl = benlgrp.get_group(key)
-                    #benl = benl.groupby(['element_name'])                    
-                    #bnload = benl.get_group((mname, ))
-                    ##
-                    ## Torsion
-                    #mtload = bnload.groupby(['node_name'],
-                    #                        as_index=False)[tforce].sum()
-                    #mtload.set_index('node_name', inplace=True)                    
-                    ##
-                    ## Get beam end loads
-                    ##
-                    #nf_local = bnload.groupby(['node_name'],
-                    #                           as_index=False)[hforce].sum()
-                    #nf_local.set_index('node_name', inplace=True)                 
-                    ##
-                    #FUen = np.concatenate((nf_local.loc[nodes[0]],
-                    #                       nf_local.loc[nodes[1]]), axis=None)
-                    ##
-                    #Pu = Tb @ FUen - FUtn
-                    ##
-                    ## get reactions with correct sign for postprocessing
-                    ##
-                    #R0 = eq.R0(bload=Pu,
-                    #           tload=mtload.loc[nodes[0]])
-                    ##
-                    #lbforce = [['local', mname, bstep.length,
-                    #            *beam.response(x=bstep.length,
-                    #                           R0=[R0.x, R0.t, R0.y, R0.z],
-                    #                           Fx=[*bstep[2:]])]
-                    #           for bstep in mnload.itertuples()]
-                
-                except KeyError :
-                    # --------------------------------------------
-                    #
-                    lbforce = self._beam_no_load(beam_name=bname,
-                                                 beam=beam,
-                                                 FUn=FUn_global,
-                                                 eq=eq,
-                                                 Tb=Tb, 
-                                                 geometry=element.section.geometry,
-                                                 steps=steps)
-                    ##
-                    ## [Fx,Fy,Fz,Mx,My,Mz]
-                    #Pu = -1 * FUtn
-                    #R0 = eq.R0(bload=Pu,
-                    #           tload=Tload(0, 0, 0))
-                    ##
-                    ## [beam_number, load_title, x, Fx, Fy, Fz, Mx, My, Mz]
-                    ##
-                    #Lsteps = linstep(d=element.section.geometry.d,
-                    #                 L=element.L, steps=steps)
-                    ##
-                    #lbforce = [['local', mname,  xstep,
-                    #            *beam.response(x=xstep, R0=[R0.x, R0.t, R0.y, R0.z],
-                    #                           Fx=[Fblank, Fblank_t, Fblank, Fblank])]
-                    #           for xstep in Lsteps]
-                #
-                # ---------------------------------------------
-                # convert beam end-node disp to force [F = Kd] in global system
-                #
-                k_global = getattr(element, Kglobal)(plane2d, bend_dispg)
-                gnforce = k_global @ bend_dispg
-                #
-                # ---------------------------------------------
-                #
-                dftemp.append([*key,  bname, nodes[0], *gnforce[:ndof]])
-                dftemp.append([*key, bname, nodes[1], *gnforce[ndof:]])                
-                #
-                # ---------------------------------------------
-                # Member total force in local system
-                #
-                # Axial   [FP, blank, blank, Fu]
-                # Torsion [T, Phi, Psi, B, Tw] - [T, theta, theta1, theta2, theta3]
-                # Bending [V, M, theta, w]
-                #
-                mif_data.extend([[*key[:3], # load_name, component_name, load_level,
-                                  *lbf[:3], # load_system, element_name, node_end
-                                  *lbf[3],  # Axial
-                                  *lbf[4],  # Torsion
-                                  *lbf[5],  # Bending in plane
-                                  *lbf[6]]  # Bending out plane
-                                 for lbf in lbforce])
-        #
-        # ---------------------------------------------
-        #
-        df_nforce = self._mf2df(Fb=dftemp,
-                                head_force=self._plane.hforce)
-        # Member internal forces
-        df_mif = self._mif2df(mif_data)
-        #
-        # ---------------------------------------------
-        uptime = time.time() - start_time
-        print(f"** Beam Force Calculation: {uptime:1.4e} sec")
-        return df_mif, df_nforce
-    #    
+    #   
     #
     # -----------------------------------------------------------
     # Operations
@@ -574,68 +346,6 @@ class MainPostProcess:
                    tload=mtload.loc[nodes[0]])
         return R0
     #    
-    #
-    def _beam_loadXX(self,
-                   #beam_name: int|str,
-                   nodes: list,
-                   #beam,
-                   Tb, FUn,
-                   #load_function,
-                   fer_enl, eq):
-        """ """
-        #
-        # [load_name, member_load_title, load_type, load_system, 
-        # beam_number, x, Fx, Fy, Fz]
-        #
-        hforce = [*self._plane.hforce]
-        tforce = ['Psi', 'B', 'Tw'] # torsion part
-        #hload = ['axial', 'torsion', 'VM_inplane', 'VM_outplane']        
-        #
-        #lfunction = load_function.groupby(['element_name'])                    
-        #lfunction = lfunction.get_group((beam_name, ))
-        #lfunction = lfunction.groupby(['length'],
-        #                              as_index=False)[hload].sum()
-        #
-        #beam_fer_enl = fer_enl.groupby(['element_name'])                    
-        #beam_fer_enl = beam_fer_enl.get_group((beam_name, ))
-        #
-        # Torsion
-        mtload = fer_enl.groupby(['node_name'],
-                                 as_index=False)[tforce].sum()
-        mtload.set_index('node_name', inplace=True)                    
-        #
-        # Get beam end loads
-        #
-        fer_enl = fer_enl.groupby(['node_name'],
-                                  as_index=False)[hforce].sum()
-        fer_enl.set_index('node_name', inplace=True)                 
-        #
-        FU_fer = np.concatenate((fer_enl.loc[nodes[0]],
-                                 fer_enl.loc[nodes[1]]), axis=None)
-        #
-        #FU_fer[1] *= -1 # Fy_end1
-        #FU_fer[5] *= -1  # My_end1
-        #FU_fer[7] *= -1  # Fy_end2
-        #FU_fer[10] *= -1  # My_end2
-        # Calculate total end node force in local system
-        Pu = Tb @ (FUn - FU_fer)
-        #Pu = Tb @ Pu
-        #1 / 0
-        #Pu[5] *= -1
-        #
-        # get reactions with correct sign for postprocessing
-        #
-        R0 = eq.R0(bm_load=Pu,
-                   tload=mtload.loc[nodes[0]])
-        return R0
-        #
-        #lbforce = [['local', beam_name, bstep.length,
-        #            *beam.response(x=bstep.length,
-        #                           R0=[R0.x, R0.t, R0.y, R0.z],
-        #                           Fx=[*bstep[2:]])]
-        #           for bstep in lfunction.itertuples()]
-        #return lbforce
-    #
     def _beam_no_load(self, beam_name: int|str,
                       beam, FUn, eq, Tb, 
                       geometry, steps: int):
