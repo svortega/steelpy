@@ -38,6 +38,7 @@ class BeamTypeBasic:
     #
     def __call__(self, beam):
         """ """
+        #1/0
         self._beam = beam
         self._beam_id = beam.name
         return self

@@ -81,10 +81,10 @@ class LoadCombinationBasic(Mapping):
         # get combination of combination and convert them to basic loads
         comb = {}
         for key, item in self._combination.items():
-            cbasic = {}
             # basic load
-            for comb_name, factor in item._basic.items():
-                cbasic[comb_name] = factor
+            cbasic = {comb_name: factor
+                      for comb_name, factor in item._basic.items()}
+            #
             # comb of comb
             for comb_name, factor in item._combination.items():
                 for precomb, prefactor in self._combination[comb_name]._basic.items():
@@ -94,7 +94,7 @@ class LoadCombinationBasic(Mapping):
                         cbasic[precomb] = prefactor * factor
             comb[key] = cbasic
         #
-        # Combination formed by basic loads only
+        # Combinations into basic loads only
         dftemp = []
         for key, item in self._combination.items():
             for bl_name, factor in comb[key].items():
@@ -102,7 +102,7 @@ class LoadCombinationBasic(Mapping):
                                item.title, item.mesh_name,
                                bl_name, factor])
         #
-        header = ['load_name', 'load_id','load_type',
+        header = ['load_name', 'load_id','load_level',
                   'load_title', 'mesh_name', 
                   'basic_load', 'factor']
         db = DBframework()
@@ -126,22 +126,23 @@ class LoadCombinationBasic(Mapping):
     #
     # ----------------------------
     #
-    def function(self, steps: int,
+    def functionXX(self, steps: int,
                  Fb_local):
         """
         steps : Beam locations along length
         Fb_local: Beam end-nodes force in local system
         """
         basic = self._basic
-        dfcomb = self.to_basic()
+        comb2basic = self.to_basic()
         header = ['load_name', 'mesh_name']
-        combgrp = dfcomb.groupby(header)
-        Fbgrp = Fb_local.groupby(header)
-        #
+        comb_grp = comb2basic.groupby(header)
+        Fb_grp = Fb_local.groupby(header)
+        #1 / 0
         loadfun = []
-        for key, items in combgrp:
-            Fb = Fbgrp.get_group(key)
+        for key, items in comb_grp:
+            Fb = Fb_grp.get_group(key)
             Fb.set_index('element_name', inplace=True)
+            #
             for item in items.itertuples():
                 # print(item)
                 lbasic = basic[item.basic_load]
@@ -207,6 +208,8 @@ class LoadCombinationBasic(Mapping):
             node and elements (FER) nodal displacement
         """
         dfbasic = self._basic.NF_global(plane=plane)
+        if dfbasic.empty:
+            return dfbasic
         values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
         dfnew = self._get_FD(plane, values, dfbasic)
         return dfnew
@@ -220,6 +223,8 @@ class LoadCombinationBasic(Mapping):
             node and elements (FER) nodal displacement
         """
         dfbasic = self._basic.ND_global(plane=plane)
+        if dfbasic.empty:
+            return dfbasic
         values = ['x', 'y', 'z', 'rx', 'ry', 'rz']
         dfnew = self._get_FD(plane, values, dfbasic)
         return dfnew
@@ -240,8 +245,8 @@ class LoadCombinationBasic(Mapping):
             return ENLbasic
         #
         # basic loading
-        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz', 'step']
-                 # 'Psi', 'B', 'Tw']
+        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                  'Psi', 'B', 'Tw', 'step']
         dfnew = []
         for item in cols:
             dfnew.append(self.update_combination(ENLbasic,

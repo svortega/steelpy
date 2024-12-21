@@ -32,6 +32,8 @@ class PostProcessSQL:
                  db_file: str) -> None:
         """
         """
+        # fix result name
+        #1 / 0
         self._mesh = mesh
         self._result_name = result_name
         self.db_file = db_file

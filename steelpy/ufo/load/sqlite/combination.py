@@ -13,8 +13,9 @@ from collections import defaultdict
 
 # package imports
 from steelpy.ufo.load.sqlite.load_case import BasicLoadSQL
-from steelpy.ufo.load.process.utils import duplicates, indices
+#from steelpy.ufo.load.process.utils import duplicates, indices
 from steelpy.ufo.load.process.combination import LoadCombinationBasic
+from steelpy.ufo.load.sqlite.beam import BeamLoadItemSQL, BeamLoadGloabalSQL
 # steelpy
 from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.dataframe.main import DBframework
@@ -22,7 +23,7 @@ from steelpy.utils.dataframe.main import DBframework
 #
 class LoadCombSQL(LoadCombinationBasic):
     
-    __slots__ = ['_labels', '_title', '_number', 'db_file',
+    __slots__ = ['_title', '_number', 'db_file',
                  '_index', '_basic', '_combination', '_metocean',
                  '_component']
     #
@@ -44,6 +45,7 @@ class LoadCombSQL(LoadCombinationBasic):
         conn = create_connection(self.db_file)
         with conn: 
             self._new_table(conn)
+    #   
     #
     def __setitem__(self, load_name:int|str, load_title:str) -> None:
         """
@@ -105,67 +107,7 @@ class LoadCombSQL(LoadCombinationBasic):
         #conn.commit()
         return cur.lastrowid
         
-    #
-    def to_basic2(self):
-        """ """
-        #
-        1/0
-        # get basic load
-        conn = create_connection(self.db_file)
-        cur = conn.cursor()
-        cur.execute("SELECT load_id, bl_number, factor\
-                      FROM LoadCombination\
-                      WHERE bl_number IS NOT NULL")
-        basic_loads = cur.fetchall()
-        # get basic load factors
-        blc = defaultdict(list)
-        for basic in basic_loads:
-            blc[basic[0]].append([basic[1], basic[2]])
-        #
-        # get load combination and convert to basic loads
-        cur.execute("SELECT load_id, lc_number, factor\
-                      FROM LoadCombination\
-                      WHERE lc_number IS NOT NULL")
-        comb_loads = cur.fetchall()
-        for comb in comb_loads:
-            for bl in blc[comb[1]]:
-                blc[comb[0]].append([bl[0], bl[1]*comb[2]])
-        #
-        # organize basic load in user load name
-        load_list = get_load_list(conn)
-        lnumber = {item[0]:item[2] for item in load_list}
-        basic_loads = defaultdict(list)
-        for key, item in blc.items():
-            lname = lnumber[key]
-            tlist = list(zip(*item))
-            dup = duplicates(tlist[0])
-            dup = indices(tlist[0], dup)
-            if dup:
-                # duplicates
-                for name, load in dup.items():
-                    blname = lnumber[name]
-                    factor = [tlist[1][index] for index in load]
-                    #basic_loads[key].append([name, sum(factor)])
-                    basic_loads[ lname ].append( [ blname, sum ( factor ) ] )
-                    #dftemp.append([key, item.number, 'combination', item.title, blname, sum(factor)])
-                # singles
-                sload = set(tlist[0]) - set(dup)
-                for name in sload:
-                    blname = lnumber[name]
-                    index = tlist[0].index(name)
-                    #basic_loads[key].append([name, tlist[1][index]])
-                    basic_loads[lname].append([blname, tlist[1][index]])
-            else:
-                #basic_loads[key] = item
-                basic_loads[lname] = [[lnumber[_bl[0]], _bl[1]] for _bl in item]
-                #dftemp.extend([[key, item.number, 'combination', item.title, lnumber[_bl[0]], _bl[1]]
-                #               for _bl in item])
-        #
-        #header = ['load_name', 'load_id','load_type', 'load_title', 'basic_load', 'factor']
-        #dfcomb = db.DataFrame(data=dftemp, columns=header, index=None)
-        #return dfcomb #, basic_loads
-        return basic_loads
-    #
+
     #def solve_combinations(self, basic_res, memb_force):
     #    """
     #    """
@@ -196,7 +138,7 @@ class CombTypeSQL:
     """
     __slots__ = ['name', 'number', 'title', 
                  '_basic', '_metocean', '_combination',
-                 'db_file', '_component']
+                 'db_file', '_component', '_beams']
 
     def __init__(self, name:str, title:str,
                  component: int, db_file:str):
@@ -220,11 +162,29 @@ class CombTypeSQL:
         self._combination = BasicCombSQL(bl_type="combination",
                                          comb_name=self.name,
                                          component=self._component, 
-                                         db_file=self.db_file)        
+                                         db_file=self.db_file)
         #
-        #conn = create_connection(self.db_file)
-        #with conn: 
-        #    self._create_table(conn)
+        self._beams = BeamLoadGloabalSQL(component=self._component,
+                                         db_file=self.db_file)
+    #
+    #@property
+    #def _labels(self):
+    #    """ """
+    #    query = ('combination', self._component, )
+    #    table = "SELECT Load.name \
+    #              FROM Load, LoadCombination \
+    #              WHERE Load.level = ? \
+    #              AND LoadCombination.load_id = Load.number\
+    #              AND Load.mesh_id = ? ;"
+    #    conn = create_connection(self.db_file)
+    #    with conn:        
+    #        cur = conn.cursor()
+    #        cur.execute(table, query)
+    #        items = cur.fetchall()
+    #    items = set([item[0] for item in items])
+    #    return list(items)
+    #
+    # ----------------------------    
     #
     @property
     def combination(self):
@@ -258,13 +218,295 @@ class CombTypeSQL:
             cur.execute(table, query)
             items = cur.fetchone()
         return items[0]
+    #
+    #
+    #
+    # -----------------------------------------------
+    #
+    def function(self, beam_name: str | int,
+                 load_name: str | int,
+                 steps: int, Pa: float):
+        """ """
+        #
+        comb2basic = self.to_basic()
+        header = ['load_name', 'mesh_name']
+        comb_grp = comb2basic.groupby(header)
+        #1 / 0
+        # get basic load somehow
+        #basic = self._basic
+        beam = self._beams[beam_name]
+        #
+        comb_item = comb_grp.get_group((load_name, self.mesh_name,))
+        #
+        #loadfun = []
+        #for key, items in comb_grp:
+        #    for item in items.itertuples():
+        #        lfout = beam.function(steps=steps,
+        #                              Pa=Pa,
+        #                              factor=item.factor)
+        #        loadfun.extend(lfout)
+        #
+        bfunction = beam.function(steps=steps,
+                                  Pa=Pa, factor=1)
+        # Axial   [FP, blank, blank, Fu]
+        # torsion [T, B, Psi, Phi, Tw]
+        # Bending [V, M, theta, w]
+        #
+        # [Fx, Fy, Fz, Mx, My, Mz]
+        # [V, M, w, theta]
+        header = ['load_name', 'mesh_name',
+                  'load_comment', 'load_type',
+                  'load_level', 'load_system',
+                  'element_name', 'length',
+                  'axial', 'torsion', 'VM_inplane', 'VM_outplane']
+        #
+        #          'FP', 'blank1', 'blank2', 'Fu',
+        #          'T', 'B', 'Psi', 'Phi', 'Tw',
+        #          'Vy', 'Mz', 'theta_y', 'w_y',
+        #          'Vz', 'My', 'theta_z', 'w_z']
+        df = DBframework()
+        bfunction = df.DataFrame(data=bfunction, columns=header, index=None)
+        grp_funct = bfunction.groupby(['load_name', 'element_name'])
+        #
+        loadfun = []
+        for item in comb_item.itertuples():
+            funct_item = grp_funct.get_group((item.basic_load, beam_name, )).reset_index()
+            funct_item = funct_item.groupby(['load_name', 'element_name', 'length'])
+            funct_item = funct_item[['axial', 'torsion', 'VM_inplane', 'VM_outplane']].sum()
+            funct_item *= item.factor
+            loadfun.append(funct_item.reset_index())
+        #
+        loadfun = df.concat(loadfun, ignore_index=True)
+        loadfun = loadfun.groupby(['element_name', 'length'])
+        loadfun = loadfun[['axial', 'torsion', 'VM_inplane', 'VM_outplane']].sum()
+        loadfun.reset_index(inplace=True)        
+        #print('-->')
+        return loadfun      
+    #
+    # ----------------------------
+    #
+    def to_basic(self):
+        """ """
+        # get basic load
+        conn = create_connection(self.db_file)
+        with conn:
+            # Load data
+            query = (self._component, )
+            table = "SELECT Load.*, Mesh.name \
+                     FROM Load, Mesh \
+                     WHERE Load.mesh_id = ? \
+                     AND Mesh.number = Load.mesh_id; \
+                    "
+            cur = conn.cursor()
+            cur.execute(table, query)
+            load_data = cur.fetchall()
+            #
+            # combination data
+            query = (self._component, )
+            table = "SELECT LoadCombination.* \
+                     FROM Load, LoadCombination \
+                     WHERE Load.number = LoadCombination.load_id \
+                     AND Load.mesh_id = ?; \
+                     "
+            cur.execute(table, query)
+            combination = cur.fetchall()            
+        #
+        load_comb = {item[0]: item[1]
+                     for item in load_data if item[3] == 'combination'}
+        load_basic = {item[0]: item[1]
+                      for item in load_data if item[3] == 'basic'}        
+        # [number, ]
+        load_df = {item[1]: [item[0], item[4], item[7]]
+                   for item in load_data }
+        #
+        cbasic = defaultdict(list)
+        ccomb = defaultdict(list)
+        for item in combination:
+            if item[2]: # basic load
+                cbasic[item[1]].append([item[2], item[4]])
+            elif item[3]: # combination
+                ccomb[item[1]].append([item[3], item[4]])
+        #
+        comb1 = get_factor(load=cbasic)
+        comb2 = get_factor(load=ccomb)   
+        #
+        dftemp = []
+        test = defaultdict(list)
+        for key, items in comb1.items():
+            namec = load_comb[key]
+            for precomb, prefactor in items.items():
+                nameb =  load_basic[precomb]
+                test[namec].append([nameb, prefactor])
+        #
+        for key, items in comb2.items():
+            name = load_comb[key]
+            for comb_item, factor in items.items():
+                for precomb, prefactor in comb1[comb_item].items():
+                    nameb =  load_basic[precomb]
+                    test[name].append([nameb, prefactor * factor])
+        #
+        test = get_factor(load=test)
+        #
+        #number = 0
+        for key, items in test.items():
+            number = load_df[key][0]
+            title = load_df[key][1]
+            mesh_name = load_df[key][2]
+            for item in items.items():
+                dftemp.append([key, number, 'combination',
+                               title, mesh_name, *item])
+
+        #
+        #
+        header = ['load_name', 'load_id','load_level',
+                  'load_title', 'mesh_name', 
+                  'basic_load', 'factor']
+        db = DBframework()
+        df_comb = db.DataFrame(data=dftemp, columns=header, index=None)
+        #1 / 0
+        return df_comb
+    #
+    #
+    def to_basicXX(self):
+        """ """
+        1 / 0
+        # get basic load
+        conn = create_connection(self.db_file)
+        with conn:
+            # Basic
+            query = ('combination', self.name, self._component, )
+            table = "SELECT LoadCombination.load_id, \
+                            LoadCombination.bl_number, \
+                            LoadCombination.factor \
+                    FROM LoadCombination, LoadBasic, Load\
+                        WHERE Load.level = ? \
+                        AND Load.name = ?  \
+                        AND Load.mesh_id = ? \
+                        AND LoadBasic.number = LoadCombination.bl_number \
+                        AND Load.number = LoadCombination.load_id;"
+            cur = conn.cursor()
+            cur.execute(table, query)
+            basic_loads = cur.fetchall()
+            #
+            # Load name
+            query = ('basic', self._component,)
+            table = "SELECT Load.number, Load.name \
+                     FROM Load \
+                     WHERE Load.level = ? \
+                     AND Load.mesh_id = ?;"
+            cur = conn.cursor()
+            cur.execute(table, query)
+            basic_name = cur.fetchall()            
+            #
+            # Combination
+            query = ('combination', self.name, self._component, )
+            table = "SELECT LoadCombination.load_id, \
+                            LoadCombination.lc_number, \
+                            LoadCombination.factor \
+                    FROM LoadCombination, Load\
+                        WHERE Load.level = ? \
+                        AND Load.name = ?  \
+                        AND Load.mesh_id = ? \
+                        AND Load.number = LoadCombination.load_id;"
+            cur = conn.cursor()
+            cur.execute(table, query)
+            comb_loads = cur.fetchall()
+            #
+            # Load name
+            query = ('combination', self.name, self._component, )
+            table = "SELECT Load.number, Load.name \
+                     FROM Load\
+                     WHERE Load.level = ? \
+                     AND Load.name = ? \
+                     AND Load.mesh_id = ? "
+            cur = conn.cursor()
+            cur.execute(table, query)
+            comb_name = cur.fetchall()
+        #
+        basic_name = {item[0]: item[1] for item in basic_name}
+        comb_name = {item[0]: item[1] for item in comb_name}
+        #
+        # get basic load factors
+        blc = defaultdict(list)
+        for basic in basic_loads:
+            blc[basic[0]].append([basic[1], basic[2]])
+        #
+        #combination = defaultdict(list)
+        for comb in comb_loads:
+            for bl in blc[comb[1]]:
+                blc[comb[0]].append([bl[0], bl[1]*comb[2]])   
+        #
+        #
+        basic_loads = []
+        for key, items in blc.items():
+            for item in items:
+                try:
+                    basic_loads.append([comb_name[key], key, 'combination',
+                                        self.title , self._component, 
+                                        basic_name[item[0]], item[1]])
+                except KeyError:
+                    pass
+        #
+        #basic_loads
+        #
+        # organize basic load in user load name
+        #load_list = get_load_list(conn, component=self._component)
+        #lnumber = {item[0]:item[2] for item in load_list}
+        #basic_loads = defaultdict(list)
+        #for key, item in blc.items():
+        #    lname = lnumber[key]
+        #    tlist = list(zip(*item))
+        #    dup = duplicates(tlist[0])
+        #    dup = indices(tlist[0], dup)
+        #    if dup:
+        #        # duplicates
+        #        for name, load in dup.items():
+        #            blname = lnumber[name]
+        #            factor = [tlist[1][index] for index in load]
+        #            #basic_loads[key].append([name, sum(factor)])
+        #            basic_loads[ lname ].append( [ blname, sum ( factor ) ] )
+        #            #dftemp.append([key, item.number, 'combination', item.title, blname, sum(factor)])
+        #        # singles
+        #        sload = set(tlist[0]) - set(dup)
+        #        for name in sload:
+        #            blname = lnumber[name]
+        #            index = tlist[0].index(name)
+        #            #basic_loads[key].append([name, tlist[1][index]])
+        #            basic_loads[lname].append([blname, tlist[1][index]])
+        #    else:
+        #        #basic_loads[key] = item
+        #        basic_loads[lname] = [[lnumber[_bl[0]], _bl[1]] for _bl in item]
+        #        #dftemp.extend([[key, item.number, 'combination', item.title, lnumber[_bl[0]], _bl[1]]
+        #        #               for _bl in item])
+        #
+        header = ['load_name', 'load_id','load_level',
+                  'load_title', 'mesh_name', 
+                  'basic_load', 'factor']
+        db = DBframework()
+        dfcomb = db.DataFrame(data=basic_loads, columns=header, index=None)
+        return dfcomb
+    #     
 #
+def get_factor(load):
+    """ """
+    comb = {}
+    for key, items in load.items():
+        factors = {}
+        for item in items:
+            try:
+                factors[item[0]] += item[1]
+            except KeyError:
+                factors[item[0]] = item[1]
+        #
+        #comb[load_name[key]] = factors
+        comb[key] = factors
+    return comb
 #
 class BasicCombSQL(Mapping):
     """
     FE Metocean Combination Class
     """
-    __slots__ = ['_labels', '_type', '_number',
+    __slots__ = ['_type', '_number', '_labels', 
                  'db_file', '_comb_name', '_component']
 
     def __init__(self, bl_type:str, comb_name:str|int,
@@ -277,6 +519,7 @@ class BasicCombSQL(Mapping):
         self._type = bl_type
         self.db_file = db_file
         self._component = component
+    #
     #
     def __setitem__(self, load_name:int|str,
                     factor: float) -> None:
@@ -357,22 +600,28 @@ class BasicCombSQL(Mapping):
         cur = conn.cursor()
         cur.execute(sql, project)
     #
+    # ----------------------------
+    #
     @property
     def load_type(self):
         """
         """
         return self._type
     #
+    #
     def __len__(self) -> int:
-        return len(self._labels)
+        labels = list(set(self._labels))
+        return len(labels)
 
     def __contains__(self, value) -> bool:
-        return value in self._labels
+        labels = list(set(self._labels))
+        return value in labels
     #
     def __iter__(self):
         """
         """
-        return iter(self._labels)
+        labels = list(set(self._labels))
+        return iter(labels)
 #   
 #
 def get_load_list(conn, component: int):
@@ -410,8 +659,9 @@ def get_load_factor(conn, lc_id, load_type:str,
     #
     cur = conn.cursor ()
     cur.execute(table, query)
-    loads = cur.fetchone ()
-    return loads[4]
+    loads = cur.fetchall()
+    factor = sum([item[4] for item in loads])
+    return factor
 #
 def get_comb_factor(conn, load_id, lc_number):
     """ """

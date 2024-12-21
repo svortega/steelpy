@@ -14,15 +14,16 @@ from steelpy.utils.dataframe.main import DBframework
 #
 #
 class BeamResBasic(Mapping):
-    __slots__ = ['_labels', '_mesh', 'plane']
+    __slots__ = ['_mesh', '_beams']
     
     def __init__(self, mesh) -> None:
         """
         Beam element 
         """
         self._mesh = mesh
-        self._labels = list(self._mesh._elements._beams.keys())
-        self.plane = mesh._plane # self._plane()
+        #self._labels = list(self._mesh._elements._beams.keys())
+        #self.plane = mesh._plane # self._plane()
+        self._beams = mesh._elements._beams
     #
     #
     def __contains__(self, value) -> bool:

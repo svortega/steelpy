@@ -106,10 +106,11 @@ class BendingGE:
         results:
         [V, M, theta, w]
         """
+        1/0
         # shear & deflection signed change 
-        return [-1 * self.V(x), # Shear force
-                self.M(x),      # Bending moment
-                self.theta(x),  # Slope
-                -1 * self.w(x)] # Deflection
+        return [1 * self.V(x),      # Shear force
+                1 * self.M(x),      # Bending moment
+                1 * self.theta(x),  # Slope
+                1 * self.w(x)]      # Deflection
 #
 #

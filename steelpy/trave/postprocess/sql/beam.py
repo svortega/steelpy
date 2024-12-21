@@ -16,8 +16,8 @@ from steelpy.utils.dataframe.main import DBframework
 
 #
 class BeamResSQL(BeamResBasic):
-    __slots__ = ['_labels', '_mesh', 
-                 'plane', 'db_file', '_result_name']
+    __slots__ = ['_mesh', 'db_file', '_result_name',
+                 '_beams']
     
     def __init__(self, mesh, result_name:int|str,
                  db_file: str)-> None:
@@ -26,13 +26,34 @@ class BeamResSQL(BeamResBasic):
         self.db_file = db_file
         self._result_name = result_name
     #
+    @property
+    def _labels(self):
+        """ """
+        query = (self._mesh._name, )
+        table = "SELECT Element.name \
+                 FROM Element, Result, Mesh \
+                 WHERE Mesh.name = ? \
+                 AND Element.mesh_id = Mesh.number \
+                 AND Result.mesh_id = Mesh.number ;"
+        #
+        # Extract data from sqlite
+        conn = create_connection(self.db_file)
+        with conn:
+            cur = conn.cursor()
+            cur.execute(table, query)
+            rows = cur.fetchall()
+        #
+        labels = set([item[0] for item in rows])
+        return list(labels) 
     #
     def __getitem__(self, beam_name: int|str)-> BeamResItem|IndexError:
         """ """
         try:
             self._labels.index(beam_name)
-            return BeamResItem(beam=self._mesh._elements._beams[beam_name],
-                               plane=self.plane,
+            return BeamResItem(beam=self._beams[beam_name],
+                               mesh_name=self._mesh._name,
+                               result_name=self._result_name, 
+                               plane=self._mesh._plane.plane2D,
                                db_file=self.db_file)
         except ValueError:
             raise IndexError(' ** element {:} does not exist'.format(beam_name))
@@ -59,15 +80,18 @@ class BeamResSQL(BeamResBasic):
         #
         conn = create_connection(self.db_file)
         with conn:        
-            df = get_force(conn)
+            df = get_force(conn,
+                           result_name=self._result_name,
+                           mesh_name=self._mesh._name)
         #
-        if self.plane.plane2D:
+        if self._mesh._plane.plane2D:
             df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
         #
         return BeamForce(df, units=units)
     #
     def displacement(self, units:str='si'):
         """beam integration forces"""
+        
         return self.deflection(units)
         
     #
@@ -76,9 +100,11 @@ class BeamResSQL(BeamResBasic):
         #
         conn = create_connection(self.db_file)
         with conn:        
-            df = get_displacement(conn)
+            df = get_displacement(conn,
+                                  result_name=self._result_name,
+                                  mesh_name=self._mesh._name)
         #
-        if self.plane.plane2D:
+        if self._mesh._plane.plane2D:
             df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)        
         #
         return BeamDeflection(df, units=units)    
@@ -88,7 +114,9 @@ class BeamResSQL(BeamResBasic):
         #
         conn = create_connection(self.db_file)
         with conn:        
-            df = get_stress(conn)
+            df = get_stress(conn,
+                            result_name=self._result_name,
+                            mesh_name=self._mesh._name)
         #
         return BeamStress(df, units=units)         
     #
@@ -112,22 +140,31 @@ class BeamResSQL(BeamResBasic):
 #
 @dataclass
 class BeamResItem:
-    __slots__ = ['_beam', '_db_file', '_plane']
+    __slots__ = ['_beam', '_db_file', '_plane',
+                 '_mesh_name', '_result_name']
     
-    def __init__(self, beam, plane, db_file: str)-> None:
+    def __init__(self, beam,
+                 mesh_name: int|str,
+                 result_name: int|str, 
+                 plane: bool, db_file: str)-> None:
         """ """
         self._beam = beam
         self._plane = plane
         self._db_file = db_file
+        self._mesh_name = mesh_name
+        self._result_name = result_name
     #
     def force(self, units:str='si')-> BeamForce:
         """node force"""
         beam_name = self._beam.name
         conn = create_connection(self._db_file)
         with conn:        
-            df = get_force(conn, beam_name)
+            df = get_force(conn,
+                           element_name=beam_name,
+                           result_name=self._result_name,
+                           mesh_name=self._mesh_name)
         #
-        if self._plane.plane2D:
+        if self._plane:
             df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
         #
         return BeamForce(df, units=units)
@@ -137,10 +174,13 @@ class BeamResItem:
         beam_name = self._beam.name
         conn = create_connection(self._db_file)
         with conn:        
-            df = get_displacement(conn, beam_name)
+            df = get_displacement(conn,
+                                  element_name=beam_name,
+                                  result_name=self._result_name,
+                                  mesh_name=self._mesh_name)
         #
-        if self._plane.plane2D:
-            df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)        
+        if self._plane:
+            df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)
         #        
         return BeamDeflection(df, units=units)
     #
@@ -149,35 +189,49 @@ class BeamResItem:
         beam_name = self._beam.name
         conn = create_connection(self._db_file)
         with conn:        
-            df = get_stress(conn, beam_name)
+            df = get_stress(conn,
+                            element_name=beam_name,
+                            result_name=self._result_name,
+                            mesh_name=self._mesh_name)
         #
         return BeamStress(df, units=units)
 #
 # --------------------
 # sql operations
 #
-def get_force(conn, element_name: int|str|None=None,
+def get_force(conn, result_name: int|str,
+              mesh_name: int|str,
+              element_name: int|str|None=None,
               item:str='*'):
     """ """
-    query = (f'SELECT Load.name, Load.level, Component.name, Element.name,\
+    query = (result_name, mesh_name, )
+    table = (f'SELECT Load.name, Load.level, Component.name, Element.name,\
               ResultBeamForce.{item} \
-              FROM Load, Node, Mesh, Component, Element, Result, ResultBeamForce \
-              WHERE Load.number = ResultBeamForce.load_id\
-                 AND Result.number = ResultBeamForce.result_id\
-                 AND Element.number = ResultBeamForce.element_id\
-                 AND Result.mesh_id = Mesh.number\
-                 AND Mesh.component_id = Component.number')
+              FROM Load,  Mesh, Component, Element, Result, ResultBeamForce \
+              WHERE Result.name = ? \
+              AND Mesh.name = ? \
+              AND Result.mesh_id = Mesh.number \
+              AND Result.number = ResultBeamForce.result_id \
+              AND Mesh.component_id = Component.number \
+              AND Element.number = ResultBeamForce.element_id \
+              AND Load.number = ResultBeamForce.load_id \
+              ')
+              #WHERE Load.number = ResultBeamForce.load_id\
+              #   AND Result.number = ResultBeamForce.result_id\
+              #   AND Element.number = ResultBeamForce.element_id\
+              #   AND Result.mesh_id = Mesh.number\
+              #   AND Mesh.component_id = Component.number')
 
     if element_name:
-        query += f' AND Element.name = {element_name}'
-    query += ';'
+        table += f' AND Element.name = {element_name}'
+    table += ';'
     #
     cols = ['load_name', 'load_level', 'component_name', 'element_name',
             'number', 'result_id', 'load_id',
             'element_id', 'length', 'system',
             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
             'theta1', 'theta2', 'theta3']
-    df = pull_data(conn, query, cols)
+    df = pull_data(conn, table, query, cols)
     #
     cols = ['number', 'component_name', 'load_name',
             'load_level', 'element_name', 'length', 'system',
@@ -185,27 +239,38 @@ def get_force(conn, element_name: int|str|None=None,
     return df[cols]
 #
 #
-def get_displacement(conn, element_name: int|str|None=None,
+def get_displacement(conn, result_name: int|str,
+                     mesh_name: int|str,
+                     element_name: int|str|None=None,
                      item:str='*'):
     """ """
-    query = (f'SELECT Load.name, Load.level, Component.name, Element.name,\
+    query = (result_name, mesh_name, )
+    table = (f'SELECT Load.name, Load.level, Component.name, Element.name,\
               ResultBeamDeflection.{item} \
-              FROM Load, Node, Mesh, Component, Element, Result, ResultBeamDeflection \
-              WHERE Load.number = ResultBeamDeflection.load_id\
-                 AND Result.number = ResultBeamDeflection.result_id\
-                 AND Element.number = ResultBeamDeflection.element_id\
-                 AND Result.mesh_id = Mesh.number\
-                 AND Mesh.component_id = Component.number')
+              FROM Load, Mesh, Component, Element, Result, ResultBeamDeflection \
+              WHERE Result.name = ? \
+              AND Mesh.name = ? \
+              AND Result.mesh_id = Mesh.number \
+              AND Result.number = ResultBeamDeflection.result_id \
+              AND Mesh.component_id = Component.number \
+              AND Element.number = ResultBeamDeflection.element_id \
+              AND Load.number = ResultBeamDeflection.load_id \
+              ')              
+              #WHERE Load.number = ResultBeamDeflection.load_id\
+              #   AND Result.number = ResultBeamDeflection.result_id\
+              #   AND Element.number = ResultBeamDeflection.element_id\
+              #   AND Result.mesh_id = Mesh.number\
+              #   AND Mesh.component_id = Component.number')
 
     if element_name:
-        query += f' AND Element.name = {element_name}'
-    query += ';'
+        table += f' AND Element.name = {element_name}'
+    table += ';'
     #
     cols = ['load_name', 'load_level', 'component_name', 'element_name',
             'number', 'result_id', 'load_id',
             'element_id', 'length', 'system',
             'x', 'y', 'z', 'rx', 'ry', 'rz']
-    df = pull_data(conn, query, cols)
+    df = pull_data(conn, table, query, cols)
     #
     cols = ['number', 'component_name', 'load_name',
             'load_level', 'element_name', 'length', 'system',
@@ -213,21 +278,32 @@ def get_displacement(conn, element_name: int|str|None=None,
     return df[cols]
 #
 #
-def get_stress(conn, element_name: int|str|None=None,
-                     item:str='*'):
+def get_stress(conn, result_name: int|str,
+               mesh_name: int|str,
+               element_name: int|str|None=None,
+               item:str='*'):
     """ """
-    query = (f'SELECT Load.name, Load.level, Component.name, Element.name,\
+    query = (result_name, mesh_name, )
+    table = (f'SELECT Load.name, Load.level, Component.name, Element.name,\
                ResultBeamStress.{item} \
                FROM Load, Node, Mesh, Component, Element, Result, ResultBeamStress \
-               WHERE Load.number = ResultBeamStress.load_id\
-                  AND Result.number = ResultBeamStress.result_id\
-                  AND Element.number = ResultBeamStress.element_id\
-                  AND Result.mesh_id = Mesh.number\
-                  AND Mesh.component_id = Component.number')
+               WHERE Result.name = ? \
+               AND Mesh.name = ? \
+               AND Result.mesh_id = Mesh.number \
+               AND Result.number = ResultBeamStress.result_id \
+               AND Mesh.component_id = Component.number \
+               AND Element.number = ResultBeamStress.element_id \
+               AND Load.number = ResultBeamStress.load_id \
+               ')                     
+               #WHERE Load.number = ResultBeamStress.load_id\
+               #   AND Result.number = ResultBeamStress.result_id\
+               #   AND Element.number = ResultBeamStress.element_id\
+               #   AND Result.mesh_id = Mesh.number\
+               #   AND Mesh.component_id = Component.number')
 
     if element_name:
-        query += f' AND Element.name = {element_name}'
-    query += ';'
+        table += f' AND Element.name = {element_name}'
+    table += ';'
     #
     cols = ['load_name', 'load_level', 'component_name', 'element_name',
             'number', 'result_id', 'load_id',
@@ -235,7 +311,7 @@ def get_stress(conn, element_name: int|str|None=None,
             'stress_point', 'y', 'z',
             'tau_x', 'tau_y', 'tau_z',
             'sigma_x', 'sigma_y', 'sigma_z']
-    df = pull_data(conn, query, cols)
+    df = pull_data(conn, table, query, cols)
     #
     cols = ['number', 'component_name', 'load_name',
             'load_level', 'element_name', 'length', 'system',
@@ -245,10 +321,10 @@ def get_stress(conn, element_name: int|str|None=None,
     return df[cols]
 #
 #
-def pull_data(conn, query: str, cols: list):
+def pull_data(conn, table: str, query: tuple, cols: list):
     """ """
     cur = conn.cursor()
-    cur.execute(query)
+    cur.execute(table, query)
     data = cur.fetchall()
     #
     db = DBframework()

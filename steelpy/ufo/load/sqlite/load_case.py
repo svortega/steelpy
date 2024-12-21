@@ -20,6 +20,7 @@ from steelpy.ufo.load.sqlite.node import  NodeLoadItemSQL, NodeLoadGlobalSQL
 from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.dataframe.main import DBframework
 #
+import numpy as np
 #
 #
 class BasicLoadSQL(BasicLoadCase):
@@ -82,6 +83,9 @@ class BasicLoadSQL(BasicLoadCase):
     def __getitem__(self, load_name: str|int):
         """
         """
+        if isinstance(load_name, (int, np.integer)):
+            load_name = int(load_name)
+        
         try:
             index = self._labels.index(load_name)
             return LoadTypeSQL(load_name=load_name,
@@ -204,6 +208,8 @@ class BasicLoadSQL(BasicLoadCase):
             beam_fer = pull_ENL_FER(conn, self._component)
         #
         if not beam_fer.empty:
+            # 3D sign correction hack
+            #beam_fer['Mz'] *= -1
             Fn_df = beam_fer.groupby(head)[columns].sum()
             #beam_fer.reset_index(inplace=True)
         #
@@ -260,6 +266,8 @@ class BasicLoadSQL(BasicLoadCase):
         #
         #Fn_df = None
         if not beam_fer.empty:
+            # 3D sign correction hack
+            #beam_fer['rz'] *= -1            
             Fn_df = beam_fer.groupby(head)[columns].sum()
             Fn_df = Fn_df[(Fn_df != 0).any(axis=1)]
             if Fn_df.empty:
@@ -292,7 +300,9 @@ class BasicLoadSQL(BasicLoadCase):
 #
 #
 def pull_ENL_FER(conn, component: int):
-    """ Equivalent Nodal Loads """
+    """
+    Return:
+        Equivalent Nodal Loads in dataframe form"""
     df = pull_FER_data(conn, component)
     df = df[['load_name', 'mesh_name', 
              'load_title', 'load_level',
@@ -300,20 +310,27 @@ def pull_ENL_FER(conn, component: int):
              'element_name',
              'node_name', 'node_index', 
              'load_type',
-             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz', 'step']]
-             #'Psi', 'B', 'Tw', 'step']]
+             'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz', 
+             'Psi', 'B', 'Tw', 'step']]
+    # 3D sign correction
+    #df['Mz'] *= -1
     return df
 #
 def pull_END_FER(conn, component: int):
-    """ Return Fix End Forces in dataframe form"""
+    """
+    Return :
+        Equivalent Nodal Displacement in dataframe form"""
     df = pull_FER_data(conn, component)
-    return df[['load_name', 'mesh_name',
+    df = df[['load_name', 'mesh_name',
                'load_title', 'load_level',
                'load_id', 'load_system', 'load_comment',
                'element_name',
                'node_name', 'node_index',
                'load_type',
                'x', 'y', 'z', 'rx', 'ry', 'rz', 'step']]
+    # 3D sign correction
+    #df['rz'] *= -1
+    return df
 #
 def pull_FER_df(conn, component: int):
     """ Return Fix End Forces in dataframe form"""

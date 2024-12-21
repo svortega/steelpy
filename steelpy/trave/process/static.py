@@ -138,12 +138,20 @@ class StaticSolver:
         else: # basic 
             Fn = self._mesh._load._basic.NF_global(plane=self._mesh._plane)
         #
+        if Fn.empty:
+            return Fn
+        #
         head_force =  self._mesh._plane.hforce
         jbc = self._mesh.jbc()
         dfjbc = jbc[jbc.any(axis=1)]
         #
         Fi = Fn.loc[Fn['node_name'].isin(dfjbc.index)]
-        #Fi = Fi.loc[Fi[head_force].any(axis=1)]        
+        #Fi = Fi.loc[Fi[head_force].any(axis=1)]
+        #
+        if Fi.empty:
+            #jbc2 = self._mesh._nodes.DOF_unreleased()
+            #1 / 0
+            Fi = Fn
         #
         col_grp = ['load_name', 'load_id',
                    'load_level', 'load_title',
@@ -151,6 +159,7 @@ class StaticSolver:
                    'node_name', 'node_index',
                    *head_force]
         Fi = Fi[col_grp]
+        #Fi = Fn[col_grp]
         return Fi
     #
     # ------------------------------------------
@@ -189,19 +198,24 @@ class StaticSolver:
             return m11, m12  # , m21, m22
     #
     #
-    def _Un_update(self, Un, lcomb,
-                   values:list[str]): #  = ['x', 'y', 'z', 'rx', 'ry', 'rz']
+    def _Un_comb_update(self, Un):
+                        #lcomb,
+                        #values:list[str]): #  = ['x', 'y', 'z', 'rx', 'ry', 'rz']
         """
         Update node displacements to include lcomb
 
         Un : node displacement
-        lcomb : load combination
-        values:
+        Return:
+            Un + load combinations
         """
         db = DBframework()
         # group basic load by name
         ndgrp = Un.groupby('load_name')
+        #
+        values = self._mesh._plane.hdisp
         # get combinations with basic loads
+        load_comb = self._mesh._load.combination()
+        lcomb = load_comb.to_basic()        
         #
         combgrp = lcomb.groupby('load_name')
         for key, combfactors in combgrp:
@@ -234,10 +248,11 @@ class StaticSolver:
         return Un
     #
     #
-    def _linear(self, load_type: str,
+    def _linear(self, load_level: str,
                 col_grp: list[str], 
                 sparse: bool = False):
         """
+        load_level: basic/combination
         """
         # Get basic data
         # ------------------------------          
@@ -245,8 +260,8 @@ class StaticSolver:
         #
         # ------------------------------       
         # and displacement (combination)
-        Dn = self.Dn(load=load_type)
-        Fn = self.Fn(load=load_type)
+        Dn = self.Dn(load=load_level)
+        Fn = self.Fn(load=load_level)
         # group global node load and displacement
         (load_keys,
          Fn_grp, Dn_grp) = self._Fn_items(Fn, Dn,
@@ -265,7 +280,7 @@ class StaticSolver:
     def solve_Linear(self,
                      sparse: bool = False,
                      max_iter: int | None = None):
-                     #load_type: str = 'basic'):
+                     #load_level: str = 'basic'):
         """
         Linear Static Analysis
 
@@ -288,20 +303,13 @@ class StaticSolver:
         # ------------------------------
         # Step 1 : linear solution
         #
-        Un, Fn_grp, Dn_grp = self._linear(load_type='basic',
+        Un, Fn_grp, Dn_grp = self._linear(load_level='basic',
                                           col_grp=col_grp,
                                           sparse=sparse)
         #
         # ------------------------------
         # Post-processing load combinations
-        #
-        load_comb = self._mesh._load.combination()
-        df_comb = load_comb.to_basic()
-        #
-        # Update load comb displacements
-        Un = self._Un_update(Un=Un,
-                             lcomb=df_comb,
-                             values=self._mesh._plane.hdisp)
+        Un = self._Un_comb_update(Un=Un)
         #
         uptime = time.time() - start_time
         print(f"** {{F}} = [Ke] {{U}} Solution: {uptime:1.4e} sec")
@@ -336,7 +344,7 @@ class StaticSolver:
         # Step 1 : linear solution
         # ------------------------------
         #
-        Un, Fn_grp, Dn_grp = self._linear(load_type='combination',
+        Un, Fn_grp, Dn_grp = self._linear(load_level='combination',
                                           col_grp=col_grp,
                                           sparse=sparse)
         # grouping Un results
@@ -457,6 +465,7 @@ class StaticSolver:
         # Displacement
         if Dn.empty:
             if Fn.empty:
+                #return Fn, None, None
                 raise IOError('{Fn} and {Dn} missing')
             Dn_grp = None
         else:

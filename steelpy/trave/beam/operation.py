@@ -140,12 +140,15 @@ class BeamBasic:
         R0 [Fa, T, Ry, Rz]
         R1 [Fa, T, Ry, Rz]
         """
+        # Axial force flag
         Pflag = 0
         if self._Pdelta:
             Pflag = 1        
         # get initial condition beam local system
         # [Axial, Torsion, BM_inplane, BM_outplane]
-        R0 = self.R0(Fbar=Fbar)        
+        #R0xx = self.R0XX(Fbar=Fbar)
+        suppx, suppt, suppy, suppz = self._shear_force(Fbar)
+        R0 = R0eq(suppx, suppt, suppy, suppz)
         #
         #Fx = [load_name, load_title, load_type, load_system,
         #      beam_name, L_step,
@@ -164,34 +167,44 @@ class BeamBasic:
         #
         #
         # Axial [P, blank, blank, u]
-        Fa = self._axial.response(x=self.L, R0=R0[0], Fx=Fbar[8])
+        Fa = self._axial.response(x=self.L, R0=R0[0], Fx=Fbar.axial)
         Fa = [-1*item for item in Fa]
         #
         # Torsion [T, Phi, Psi, B,Tw]
-        T1x = self._torsion.response(x=self.L, R0=R0[1], Fx=Fbar[9])
+        T1x = self._torsion.response(x=self.L, R0=R0[1], Fx=Fbar.torsion)
                                      #Fx=[-1 * item for item in Fbar[9]])
         T1x = [-1*item for item in T1x]
         #
         # Bending in plane [V, M, theta, w, P]
         #Fx = [-1 * item for item in Fbar[10]]
         #Fx.append(Fa[0])
-        #Rf = [*R0[2], R0.x[0]]
+        #R0f = [1 * item for item in R0[2]]
+        #R0f.append(R0.x[0] * Pflag)
+        Rf = [*R0[2], R0.x[0] * Pflag]
         R1y = self._bminplane.response(x=self.L,
-                                       R0=[*R0[2], R0.x[0] * Pflag],
-                                       Fx=[-1 * item for item in Fbar[10]])
+                                       R0=Rf, #[*R0[2], R0.x[0] * Pflag],
+                                       Fx=Fbar.VM_inplane) #[1 * item for item in Fbar[10]])
         #R1y = [-1*item for item in R1y]
         #R1y[0] *= -1
         #
         # Bending out plane [V, M, theta, w, P]
         #Fx = [-1 * item for item in Fbar[11]]
         #Fx.append(Fa[0])
+        #R0f = [1 * item for item in R0[3]]
+        #R0f.append(R0.x[0] * Pflag)
+        Rf = [*R0[3], R0.x[0] * Pflag]
         R1z = self._bmoutplane.response(x=self.L,
-                                        R0=[*R0[3], R0.x[0] * Pflag],
-                                        Fx=[-1 * item for item in Fbar[11]])
+                                        R0=Rf, #[*R0[3], R0.x[0] * Pflag],
+                                        Fx=Fbar.VM_outplane)#[1 * item for item in Fbar[11]])
         #R1z = [-1*item for item in R1z]
-        #R1z[0] *= -1
+        R1z[1] *= -1 # 3D moment correction
         #
         R1 = R0eq(Fa, T1x, R1y, R1z)
+        #
+        suppy = [-1*item for item in suppy]
+        suppz = [-1*item for item in suppz]
+        suppz[1] *= -1 # 3D moment correction        
+        R0 = R0eq(suppx, suppt, suppy, suppz)
         #
         #
         #K = (1 / 3.0 * (2 * 6.20**3 * 120 + 9.80**3 * 0.240)) / 1000**4
@@ -202,39 +215,97 @@ class BeamBasic:
         #thetas = rtorsion.cantilever(coord=[0, 0.25 * self.L, 0.50 * self.L, 0.75 * self.L, self.L])
         #
         return R0, R1
-
     #
-    def R0(self, Fbar):
+    def _shear_force(self, Fbar):
+        """ """
+        # Axial force flag
+        Pflag = 0
+        if self._Pdelta:
+            Pflag = 1         
+        #
+        # TODO : check axial/torsion sign
+        #
+        # Axial [P, blank, blank, u]
+        suppx = self._axial.R0(Fbar=Fbar.axial)
+        #
+        # Torsion [T, Phi, Psi, B, Tw]
+        suppt = self._torsion.R0(Fbar=Fbar.torsion)
+        #suppt = [-1*item for item in suppt]
+        #
+        # Bending in plane [V, M, theta, w, P]
+        #bload = [-1 * item for item in Fbar[10]]
+        #bload.append(suppx[0] * Pflag)
+        bload = [*Fbar.VM_inplane, suppx[0] * Pflag]
+        suppy = self._bminplane.R0(Fbar=bload)
+        #suppy[1] *= -1
+        # Bending out plane [V, M, theta, w, P]
+        #bload = [-1 * item for item in Fbar[11]]
+        #bload.append(suppx[0] * Pflag)
+        bload = [*Fbar.VM_outplane, suppx[0] * Pflag]
+        suppz =  self._bmoutplane.R0(Fbar=bload)
+        return suppx, suppt, suppy, suppz
+    #
+    def _FER_shear_force(self, Fbar: list):
+        """
+        Fbar =[load_name, component, 
+                load_title, load_type,
+                load_level, load_system,
+                beam_name, x, Fx, Mx, Fy, Fz]
+        """
+        # Axial force flag
+        Pflag = 0
+        if self._Pdelta:
+            Pflag = 1
+        #
+        # get initial condition beam local system
+        # [Axial, Torsion, BM_inplane, BM_outplane]
+        suppx, suppt, suppy, suppz = self._shear_force(Fbar)
+        Pax = suppx[0] * Pflag
+        #
+        # Axial [P, blank, blank, u]
+        Fa = self._axial.response(x=self.L, R0=suppx, Fx=Fbar.axial)
+        Fa = [-1*item for item in Fa]
+        #
+        # Torsion [T, Phi, Psi, B,Tw]
+        T1x = self._torsion.response(x=self.L, R0=suppt, Fx=Fbar.torsion)
+        T1x = [-1*item for item in T1x]
+        #
+        # Bending in plane [V, M, theta, w, P]
+        #
+        Rf = [*suppy, Pax]
+        R1y = self._bminplane.response(x=self.L,
+                                       R0=Rf, Fx=Fbar.VM_inplane)
+        R1y = [-1*item for item in R1y]
+        #
+        # Bending out plane [V, M, theta, w, P]
+        #
+        Rf = [*suppz, Pax]
+        R1z = self._bmoutplane.response(x=self.L,
+                                        R0=Rf, Fx=Fbar.VM_outplane)
+        R1z = [-1*item for item in R1z]
+        #
+        R1y[1] *= -1 # 3D moment correction
+        R1 = R0eq(Fa, T1x, R1y, R1z)
+        #
+        suppy[1] *= -1 # 3D moment correction
+        R0 = R0eq(suppx, suppt, suppy, suppz)
+        #print('-->')
+        return R0, R1
+    #
+    def R0XX(self, Fbar):
         """Reaction end 0 local system
         
         Return: 
         R0 [Fa, T, Ry, Rz]
         """
+        suppx, suppt, suppy, suppz = self._shear_force(Fbar)
         #
-        Pflag = 0
-        if self._Pdelta:
-            Pflag = 1         
-        #
-        # Axial [P, blank, blank, u]
-        suppx = self._axial.R0(Fbar=Fbar[8])
-        #
-        # Torsion [T, Phi, Psi, B, Tw]
-        suppt = self._torsion.R0(Fbar=Fbar[9])
-        #suppt = [-1*item for item in suppt]
-        #
-        # Bending in plane [V, M, theta, w, P]
-        bload = [-1 * item for item in Fbar[10]]
-        bload.append(suppx[0] * Pflag)
-        suppy = self._bminplane.R0(Fbar=bload)
-        #suppy[1] *= -1
-        # Bending out plane [V, M, theta, w, P]
-        bload = [-1 * item for item in Fbar[11]]
-        bload.append(suppx[0] * Pflag)
-        suppz =  self._bmoutplane.R0(Fbar=bload)
-        #suppz[1] *= -1
+        suppy = [-1*item for item in suppy]
+        suppz = [-1*item for item in suppz]
+        suppz[1] *= -1 # 3D moment correction
         #
         return R0eq(suppx, suppt, suppy, suppz)
-        #return self._sign_inverse(suppx, suppt, suppy, suppz)
+    
     #
     #
     def response(self, x: float, R0:list, Fx:list):

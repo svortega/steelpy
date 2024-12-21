@@ -340,7 +340,7 @@ class BasicLoadCase(BasicLoadRoot):
     # -----------------------------------------------
     #
     #
-    def function(self, steps:int,
+    def functionX(self, steps:int,
                  Pa:float=0.0, factor:float=1):
         """utils element load"""
         #
@@ -572,6 +572,40 @@ class BasicLoadType(BasicLoadRoot):
     #
     # -----------------------------------------------
     #
+    def function(self, beam_name: str | int,
+                 load_name: str | int, 
+                 steps: int, Pa: float,
+                 factor: float = 1.0):
+        """ """
+        beam = self._beam[beam_name]
+        bfunction = beam.function(steps=steps,
+                                  Pa=Pa, factor=factor)
+        #
+        # Axial   [FP, blank, blank, Fu]
+        # torsion [T, B, Psi, Phi, Tw]
+        # Bending [V, M, theta, w]
+        #
+        # [Fx, Fy, Fz, Mx, My, Mz]
+        # [V, M, w, theta]
+        header = ['load_name', 'mesh_name',
+                  'load_comment', 'load_type',
+                  'load_level', 'load_system',
+                  'element_name', 'length',
+                  'axial', 'torsion', 'VM_inplane', 'VM_outplane']
+        #
+        #          'FP', 'blank1', 'blank2', 'Fu',
+        #          'T', 'B', 'Psi', 'Phi', 'Tw',
+        #          'Vy', 'Mz', 'theta_y', 'w_y',
+        #          'Vz', 'My', 'theta_z', 'w_z']
+        df = DBframework()
+        bfunction = df.DataFrame(data=bfunction, columns=header, index=None)
+        grp_bfunc = bfunction.groupby(['load_name', 'element_name', 'length'])
+        #grp_bfunc.get_group(())
+        bfunction = grp_bfunc[['axial', 'torsion', 'VM_inplane', 'VM_outplane']].sum()
+        bfunction.reset_index()
+        grp_bfunc = bfunction.groupby(['load_name', 'element_name'])
+        grp_bfunc = grp_bfunc.get_group((load_name, beam_name, )).reset_index()
+        return grp_bfunc
     #
 #
 #

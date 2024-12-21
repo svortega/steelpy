@@ -63,6 +63,7 @@ class TableBasic:
                     # Beam with Tensile Axial Force P
                     #print(f'tension : {self.P}')
                     return self._beam_tension(x, load=load)
+                    #return self._simple_beam(x, load=load)
                 
                 else: # compression
                     # Beam with Compressive Axial Force P
@@ -96,17 +97,17 @@ class TableBasic:
         Zeta = abs(self.P / (self.E * self.I))
         alpha = sqrt(Zeta)
         
-        e1 = cos(alpha*x)
+        e1 = round(cos(alpha*x), 6)
         if load and x == 0:
             e1 = 0
         
-        return e_values(e0= -1*alpha*sin(alpha*x),
-                        e1= e1, # cos(alpha*x),
+        return e_values(e0= -1*round(alpha*sin(alpha*x), 6),
+                        e1= e1, #cos(alpha*x),
                         e2= sin(alpha*x)/alpha,
-                        e3= (1.0 - cos(alpha*x)) / alpha**2,
-                        e4= (alpha*x - sin(alpha*x)) / alpha**3,
-                        e5= (alpha**2 * x**2 / 2.0 + cos(alpha*x) - 1.0) / alpha**4,
-                        e6= (alpha**3 * x**3 / 6.0 + sin(alpha*x) - alpha*x) / alpha**5,
+                        e3= round((1.0 - cos(alpha*x)) / alpha**2, 6),
+                        e4= round((alpha*x - sin(alpha*x)) / alpha**3, 6),
+                        e5= round((alpha**2 * x**2) / 2.0 + (cos(alpha*x) - 1.0), 6) / alpha**4,
+                        e6= round((alpha**3 * x**3) / 6.0 + (sin(alpha*x) - alpha*x), 6) / alpha**5,
                         Zeta= Zeta,
                         alpha=alpha, 
                         Lambda=0.0,
@@ -117,17 +118,17 @@ class TableBasic:
         Zeta = abs(self.P / (self.E * self.I))
         alpha = sqrt(Zeta)
         
-        e1 = cosh(alpha*x)
+        e1 = round(cosh(alpha*x), 6)
         if load and x == 0:
             e1 = 0
         
-        return e_values(e0= alpha*sinh(alpha*x),
-                        e1= e1 , # cosh(alpha*x),
-                        e2= sinh(alpha*x)/alpha,
-                        e3= (cosh(alpha*x) - 1.0) / alpha**2,
-                        e4= (sinh(alpha*x) - alpha*x) / alpha**3,
-                        e5= (-1*alpha**2 * x**2 / 2.0 + cosh(alpha*x) - 1.0) / alpha**4,
-                        e6= (-1*alpha**3 * x**3 / 6.0 + sinh(alpha*x) - alpha*x) / alpha**5,
+        return e_values(e0= round(alpha*sinh(alpha*x), 6),
+                        e1= e1, #cosh(alpha*x),
+                        e2= round(sinh(alpha*x)/alpha, 6),
+                        e3= round((cosh(alpha*x) - 1.0) / alpha**2, 6),
+                        e4= round((sinh(alpha*x) - alpha*x) / alpha**3, 6),
+                        e5= round((-1*(alpha**2 * x**2) / 2.0 + (cosh(alpha*x) - 1.0)) / alpha**4, 6),
+                        e6= round((-1*(alpha**3 * x**3) / 6.0 + (sinh(alpha*x) - alpha*x)) / alpha**5, 6),
                         Zeta= Zeta,
                         alpha=alpha,
                         Lambda=0.0,
@@ -263,9 +264,9 @@ class BendingGE(TableBasic):
         """
         # shear & deflection signed change
         ef = self.ei(x=x, k=0)
-        return [-1 * self.V(x, ef),     # Shear force
-                self.M(x, ef),          # Bending moment
-                self.theta(x, ef),      # Slope
-                -1 * self.w(x, ef)]     # Deflection
+        return [1 * self.V(x, ef),     # Shear force
+                1 * self.M(x, ef),     # Bending moment
+                1 * self.theta(x, ef), # Slope
+                1 * self.w(x, ef)]     # Deflection
 #
 #
