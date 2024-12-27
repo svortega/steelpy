@@ -31,39 +31,35 @@ from steelpy.utils.dataframe.main import DBframework
 class SectionSQL(SectionMainSQL):
     __slots__ = ['_tubular', '_solid', '_ibeam', '_box',
                  '_channel', '_tee', '_angle', '_default',
-                 'db_file', '_component']
+                 'db_file', '_mesh_id']
                  # '_labels', '_number', '_title', '_type',
 
     def __init__(self, db_file: str,
-                 component:int, 
+                 mesh_id:int, 
                  db_system: str = "sqlite"):
         """
         """
-        super().__init__(component=component,
-                         db_file=db_file)
+        super().__init__(mesh_id=mesh_id, db_file=db_file)
         #
-        #self.db_file = db_file
-        #self._component = component
-        #
-        self._tubular = TubularSQL(component=component,
+        self._tubular = TubularSQL(mesh_id=mesh_id,
                                    db_file=db_file)
         
-        self._solid = SolidSectionSQL(component=component,
+        self._solid = SolidSectionSQL(mesh_id=mesh_id,
                                       db_file=db_file)
         
-        self._ibeam = IbeamSQL(component=component,
+        self._ibeam = IbeamSQL(mesh_id=mesh_id,
                                db_file=db_file)
         
-        self._box = BoxSQL(component=component,
+        self._box = BoxSQL(mesh_id=mesh_id,
                            db_file=db_file)
         
-        self._channel = ChannelSQL(component=component,
+        self._channel = ChannelSQL(mesh_id=mesh_id,
                                    db_file=db_file)
         #
-        self._tee = TeeSQLite(component=component,
+        self._tee = TeeSQLite(mesh_id=mesh_id,
                               db_file=db_file)
         
-        self._angle = AngleSQL(component=component,
+        self._angle = AngleSQL(mesh_id=mesh_id,
                                db_file=db_file)
         #
         conn = create_connection(self.db_file)
@@ -136,7 +132,7 @@ class SectionSQL(SectionMainSQL):
         """ raw data for dataframe"""
         conn = create_connection(self.db_file)
         with conn:        
-            data = get_section_df(conn, component=self._component)
+            data = get_section_df(conn, mesh_id=self._mesh_id)
         db =  DBframework()
         header = ['name', 'type',
                   'diameter', 'wall_thickness',
@@ -158,7 +154,7 @@ class SectionSQL(SectionMainSQL):
     def df(self, df):
         """ """
         sectdf, propdf = get_sect_df(df)
-        sectdf['mesh_id'] = self._component
+        sectdf['mesh_id'] = self._mesh_id
         # Section
         header = ['name', 'mesh_id',
                   'SA_inplane', 'SA_outplane',
@@ -171,7 +167,7 @@ class SectionSQL(SectionMainSQL):
                                   if_exists='append', index=False)
         # Section
         with conn:
-            rows = get_sections(conn, component=self._component)
+            rows = get_sections(conn, mesh_id=self._mesh_id)
             sectid = {item[0]: item[1] for item in rows}
         #
         # SectionGeometry

@@ -20,7 +20,8 @@ class WaveBasic(ClassBasicSQL):
     def __init__(self, component: str|int, db_file: str):
         """
         """
-        super().__init__(component, db_file)
+        super().__init__(db_file)
+        self._component = component
     #
     #
     def _push_wave(self, conn, wave_data: list) -> int:

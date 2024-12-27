@@ -45,12 +45,13 @@ class NodeBasic(Mapping):
     sets : List[tuple]
         set with node/element
     """
-    __slots__ = ['_labels', '_system'] # , '_plane'
+    __slots__ = ['_name', '_system']
 
-    def __init__(self, system: str) -> None:
+    def __init__(self, name:str|int, system: str) -> None:
         """
         system : cartesian/cylindrical/spherical
         """
+        self._name = name
         self._system = system
 
     #

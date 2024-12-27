@@ -9,9 +9,9 @@ import re
 #
 # package imports
 # 
-from steelpy.ufo.load.process.node import (NodeLoadBasic,
-                                            get_nodal_load,
-                                            PointNode)
+from steelpy.ufo.load.process.node.main import (NodeLoadBasic,
+                                                PointNode)
+from steelpy.ufo.load.process.node.utils import get_nodal_load
 from steelpy.utils.dataframe.main import DBframework
 
 

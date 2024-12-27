@@ -44,7 +44,7 @@ class NodesIM(NodeBasic):
                  system:str = 'cartesian') -> None:
         """
         """
-        super().__init__(system)
+        super().__init__(name=component, system=system)
         self._labels : list = []
         #
         self._x: array = array('f', [])

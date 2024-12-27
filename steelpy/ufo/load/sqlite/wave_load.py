@@ -26,7 +26,7 @@ from steelpy.ufo.mesh.sqlite.beam import BeamSQL # BeamItemSQL,
 from steelpy.ufo.mesh.sqlite.utils import (get_connectivity,
                                            get_element_data) # check_element)
 from steelpy.sections.sqlite.utils import get_section
-from steelpy.ufo.mesh.sqlite.nodes import pull_node
+from steelpy.ufo.mesh.sqlite.node import pull_node
 #
 from steelpy.utils.sqlite.utils import create_connection
 #
@@ -34,16 +34,17 @@ from steelpy.utils.sqlite.utils import create_connection
 #
 #
 class MetoceanLoadSQL(MetoceanLoad):
-    __slots__ = ['db_file', '_component']
+    __slots__ = ['db_file', '_mesh_id', '_name']
     #
-    def __init__(self, db_file:str, component: int) -> None:
+    def __init__(self, db_file:str, mesh_id: int,
+                 name: int|str) -> None:
         """
         """
         super().__init__()
         #
         self.db_file = db_file
-        #self._plane = plane
-        self._component = component
+        self._name = name
+        self._mesh_id = mesh_id
     #
     #
     #
@@ -88,7 +89,7 @@ class MetoceanLoadSQL(MetoceanLoad):
     def _push_load(self, conn, name: str|int,
                    title: str|None, file: str|None):
         """ """
-        query = (name, self._component, "basic", title, 'metocean', file, )
+        query = (name, self._mesh_id, "basic", title, 'metocean', file, )
         #project = (load_name, load_title, "basic", 'metocean')
         table = 'INSERT INTO Load(name, mesh_id, level, title, \
                                   input_type, input_file) \
@@ -122,7 +123,8 @@ class MetoceanLoadSQL(MetoceanLoad):
             # ------------------------------------------
             #
             beams = BeamSQL(db_file=self.db_file,
-                            component=self._component)
+                            name=self._name, 
+                            mesh_id=self._mesh_id)
             #
             # ------------------------------------------
             conn = create_connection(self.db_file)
@@ -134,7 +136,7 @@ class MetoceanLoadSQL(MetoceanLoad):
                     design =  df_bload['design_load'].tolist()[0]
                     basic_id = push_basic(conn,
                                          load_name=item.name,
-                                         component=self._component, 
+                                         mesh_id=self._mesh_id, 
                                          design_load=design, 
                                          step_type='time')
                     df_bload['basic_id'] = basic_id
@@ -155,7 +157,7 @@ class MetoceanLoadSQL(MetoceanLoad):
     #
     def _push_wload(self, conn, df):
         """ """
-        dfgrp = df.groupby(['basic_id', 'title', 'time'])
+        dfgrp = df.groupby(['basic_id', 'comment', 'time'])
         for key, item in dfgrp:
             df_bload = item.drop(columns=['BS', 'OTM', 'design_load'])
             df_bload.rename(columns={'time': 'step'}, inplace=True)
@@ -203,17 +205,17 @@ class Engine:
 @dataclass
 class BeamItemWave:
     """ """
-    __slots__ = ['name', 'number', 'type', 'db_file', '_component', 
+    __slots__ = ['name', 'number', 'type', 'db_file', '_mesh_id', 
                  'nodes', 'unit_vector', 'section', 'connectivity']
     
     def __init__(self, name:int|str,
-                 component: int, 
+                 mesh_id: int, 
                  db_file:str) -> None:
         """
         """
         self.name = name
         self.type: str = "beam"
-        self._component = component
+        self._mesh_id = mesh_id
         self.db_file = db_file
         #
         self.connectivity = self._connectivity()
@@ -238,7 +240,7 @@ class BeamItemWave:
             data = get_element_data(conn,
                                     element_name=self.name,
                                     element_type=self.type,
-                                    component=self._component)
+                                    mesh_id=self._mesh_id)
         return data[1]    
     #
     def _nodes(self) -> list:
@@ -273,7 +275,7 @@ class BeamItemWave:
             data = get_element_data(conn,
                                     element_name=self.name,
                                     element_type=self.type,
-                                    component=self._component)
+                                    mesh_id=self._mesh_id)
             
             sect =  get_section(conn, data[5])
         #

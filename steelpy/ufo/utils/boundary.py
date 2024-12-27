@@ -36,12 +36,12 @@ class BoundaryItem(NamedTuple):
 #
 #
 class BoundaryNode(Mapping):
-    __slots__ = ['_component', '_labels']
+    __slots__ = ['_name']
     
-    def __init__(self, component: int):
+    def __init__(self, name: int|str):
         """
         """
-        self._component = component
+        self._name = name
     #
     #
     def __len__(self) -> float:

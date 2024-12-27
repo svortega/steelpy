@@ -15,26 +15,40 @@ import steelpy.utils.io_module.text as common
 from steelpy.utils.dataframe.main import DBframework
 
 #
-class LoadCombinationBasic(Mapping):
-    __slots__ = ['_labels', '_title', '_number',
-                 '_index', '_basic', '_combination', '_metocean']
+class LoadCombinationRoot(Mapping):
+    __slots__ = ['_name']
+    def __init__(self, name:int|str):
+        """
+        """
+        self._name = name
     
-    def __init__(self):
-        """
-        """
-        self._labels: list[str|int] = []
-        self._title: list[str] = []
-        self._number: array = array("I", [])
-    #
     def __len__(self) -> int:
-        return len(self._labels)
+        labels = list(set(self._labels))
+        return len(labels)
+
+    def __contains__(self, value) -> bool:
+        labels = list(set(self._labels))
+        return value in labels
     #
     def __iter__(self):
         """
         """
-        #comb =  list(dict.fromkeys(self._labels))
-        #return iter(comb)
-        return iter(self._labels)
+        labels = list(set(self._labels))
+        return iter(labels)
+
+#
+class LoadCombinationBasic(LoadCombinationRoot):
+    __slots__ = ['_labels', '_title', '_number',
+                 '_index', '_basic', '_combination', '_metocean']
+    
+    def __init__(self, name:str|int):
+        """
+        """
+        super().__init__(name)
+        self._labels: list[str|int] = []
+        self._title: list[str] = []
+        self._number: array = array("I", [])
+    #
     #
     def __str__(self) -> str:
         """ """
@@ -74,7 +88,7 @@ class LoadCombinationBasic(Mapping):
     #
     # ----------------------------
     #
-    def to_basic(self)->DBframework.DataFrame:
+    def to_basic(self)-> DBframework.DataFrame:
         """
         Return:
             Load Combinations in terms of Basic Load"""
@@ -175,7 +189,7 @@ class LoadCombinationBasic(Mapping):
 
     #
     #
-    def _get_FD(self, plane, values: list[str], dfbasic):
+    def _get_combination(self, values: list[str], dfbasic):
         """
         
         Return:
@@ -184,8 +198,8 @@ class LoadCombinationBasic(Mapping):
         """
         dfcomb = self.to_basic()
         try:
-            dfnew = self.update_combination(dfbasic, dfcomb,
-                                            values=values)
+            dfnew = update_combination(dfbasic, dfcomb,
+                                       values=values)
         except ValueError:
             db = DBframework()
             return db.DataFrame()
@@ -193,28 +207,29 @@ class LoadCombinationBasic(Mapping):
         # Select output
         colgrp = ['load_name', 'load_id',
                   'load_level', 'load_title',
-                  'load_system', 'mesh_name',
+                  'system', 'mesh_name',
                   'node_name', 'node_index']
         #
         dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
         return dfnew
     #
-    def NF_global(self, plane):
+    def _Fnt(self):
         """
-        Nodal Displacement (total)
+        Nodal Force (total)
 
         Return:
             Dataframe consisting of summation of
             node and elements (FER) nodal displacement
         """
-        dfbasic = self._basic.NF_global(plane=plane)
+        dfbasic = self._basic._Fnt()
         if dfbasic.empty:
             return dfbasic
         values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
-        dfnew = self._get_FD(plane, values, dfbasic)
+        dfnew = self._get_combination(values, dfbasic)
+        #
         return dfnew
     #
-    def ND_global(self, plane):
+    def _Dnt(self):
         """
         Nodal Displacement (total)
 
@@ -222,11 +237,11 @@ class LoadCombinationBasic(Mapping):
             Dataframe consisting of summation of
             node and elements (FER) nodal displacement
         """
-        dfbasic = self._basic.ND_global(plane=plane)
+        dfbasic = self._basic._Dnt()
         if dfbasic.empty:
             return dfbasic
         values = ['x', 'y', 'z', 'rx', 'ry', 'rz']
-        dfnew = self._get_FD(plane, values, dfbasic)
+        dfnew = self._get_combination(values, dfbasic)
         return dfnew
     #
     #
@@ -249,52 +264,21 @@ class LoadCombinationBasic(Mapping):
                   'Psi', 'B', 'Tw', 'step']
         dfnew = []
         for item in cols:
-            dfnew.append(self.update_combination(ENLbasic,
-                                                 comb_grp.get_group((item,)),
-                                                 values=values))
+            dfnew.append(update_combination(ENLbasic,
+                                            comb_grp.get_group((item,)),
+                                            values=values))
         #
         db = DBframework()
         dfnew = db.concat(dfnew, ignore_index=True)
         #
         colgrp = ['load_name', 'load_id',
                   'load_level', 'load_title',
-                  'load_system', 'mesh_name',
+                  'system', 'mesh_name',
                   'element_name',
                   'node_name', 'node_index']
         dfnew = dfnew.groupby(colgrp, as_index=False)[values].sum()
         return dfnew
 
-    #
-    def update_combination(self, dfbasic, dfcomb,
-                           values: list[str]):
-        """
-        Update node displacements to include lcomb
-
-        dfbasic: basic load
-        dfcomb: load combination in terms of basic load
-        values : df data to be extracted
-        """
-        db = DBframework()
-        # group basic load by name
-        header = ['mesh_name', 'load_name']
-        blgrp = dfbasic.groupby(header)
-        combgrp = dfcomb.groupby(header)
-        dftemp = []
-        for key, combfactors in combgrp:
-            for row in combfactors.itertuples():
-                try:  # check for beam load only
-                    comb = blgrp.get_group((key[0], row.basic_load,)).copy()
-                except KeyError:
-                    continue
-                comb.loc[:, values] *= row.factor
-                comb['load_level'] = 'combination'
-                comb['load_name'] = row.load_name
-                comb['load_id'] = row.load_id
-                comb['load_title'] = row.load_title
-                dftemp.append(comb)
-        #
-        dftemp = db.concat(dftemp, ignore_index=True)
-        return dftemp
     #
     #
     # ----------------------------
@@ -323,6 +307,38 @@ class LoadCombinationBasic(Mapping):
                 if item.combination:
                     self._combination[cname]._combination[item.combination] = item.factor             
 #
+# -----------------------------------------------------
+#
+def update_combination(dfbasic, dfcomb,
+                       values: list[str]):
+    """
+    Update node displacements to include lcomb
+
+    dfbasic: basic load
+    dfcomb: load combination in terms of basic load
+    values : df data to be extracted
+    """
+    db = DBframework()
+    # group basic load by name
+    header = ['mesh_name', 'load_name']
+    blgrp = dfbasic.groupby(header)
+    combgrp = dfcomb.groupby(header)
+    dftemp = []
+    for key, combfactors in combgrp:
+        for row in combfactors.itertuples():
+            try:  # check for beam load only
+                comb = blgrp.get_group((key[0], row.basic_load,)).copy()
+            except KeyError:
+                continue
+            comb.loc[:, values] *= row.factor
+            comb['load_level'] = 'combination'
+            comb['load_name'] = row.load_name
+            comb['load_id'] = row.load_id
+            comb['load_title'] = row.load_title
+            dftemp.append(comb)
+    #
+    dftemp = db.concat(dftemp, ignore_index=True)
+    return dftemp
 #
 # -----------------------------------------------------
 #

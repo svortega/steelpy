@@ -10,26 +10,20 @@ from operator import itemgetter
 # package imports
 from steelpy.utils.dataframe.main import DBframework
 #
-#
+import numpy as np
 #
 # --------------------------------------------
 # Nodes
 #
 #
-def check_nodes(conn, node_name: int|str, component: int):
+def check_nodes(conn, node_name: int|str, mesh_id: int):
     """check if node exist"""
-    query = (node_name, component, )
+    query = (node_name, mesh_id, )
     table = f"SELECT * FROM Node \
                 WHERE name = ? \
                 AND mesh_id= ? ;"
     
     cur = conn.cursor()
-    #if isinstance(node_name, str):
-    #    cur.execute(table, query)
-    #else:
-    #    cur.execute(f"SELECT * FROM Node \
-    #                  WHERE name = {node_name} ;")
-    #
     cur.execute(table, query)
     node = cur.fetchone()
     
@@ -68,9 +62,9 @@ def pull_node_mesh(conn, mesh_name: str|int):
         raise IOError(f'Mesh {mesh_name} not found')
     return node
 #
-def get_nodes_connec(conn, component: int):
+def get_nodes_connec(conn, mesh_id: int):
     """ """
-    query = ('beam', component)
+    query = ('beam', mesh_id)
     table = 'SELECT Element.number, ElementConnectivity.node_end, Node.name \
                 FROM ElementConnectivity, Element, Node, Mesh \
                 WHERE Element.number = ElementConnectivity.element_id \
@@ -108,9 +102,12 @@ def get_node_coord(conn, node_id: int):
 # Element
 #
 #
-def check_element(conn, element_name: int|str, component: int):
+def check_element(conn, element_name: int|str, mesh_id: int):
     """ """
-    query = (element_name, component, )
+    if isinstance(element_name, (int, np.integer)):
+        element_name = int(element_name)
+
+    query = (element_name, mesh_id, )
     table = f"SELECT * FROM Element \
                        WHERE name = ? \
                        AND mesh_id = ? ;"
@@ -154,10 +151,10 @@ def pull_element_mesh(conn, mesh_name: int|str):
         raise IOError(f'Mesh {mesh_name} not found')
     return row    
 #
-def get_elements(conn, component: int,
+def get_elements(conn, mesh_id: int,
                  element_type: str|int|None = None):
     """ """
-    query = (component, )
+    query = (mesh_id, )
     table = "SELECT Element.name, Element.number, Element.type,\
                     Material.name, Section.name, \
                     Element.roll_angle, Element.title\
@@ -169,7 +166,7 @@ def get_elements(conn, component: int,
     if element_type:
         table += 'AND Element.type = ?'
         #query.extend([element_type])
-        query = (component, element_type, )
+        query = (mesh_id, element_type, )
     table += ';'
     #
     cur = conn.cursor()
@@ -182,7 +179,7 @@ def get_elements(conn, component: int,
     membdf = db.DataFrame(data=rows, columns=header)
     membdf.set_index('name', inplace=True)
     #
-    connodes = get_connectivities(conn, component=component)
+    connodes = get_connectivities(conn, mesh_id=mesh_id)
     conndf = db.DataFrame(data=connodes, columns=['name', 'nodes', 'end'])
     conndf = conndf.pivot(index='name', columns='end', values='nodes')
     #conndf.reset_index(inplace=True)
@@ -199,9 +196,9 @@ def get_elements(conn, component: int,
 #
 def get_element_data(conn, element_name: str|int,
                      element_type: str, 
-                     component: int):
+                     mesh_id: int):
     """ """
-    query = (element_name, element_type, component, )
+    query = (element_name, element_type, mesh_id, )
     table = "SELECT Element.name, Element.number, Element.type,\
                     Element.roll_angle, Material.name, \
                     Section.name, Element.title \
@@ -219,15 +216,15 @@ def get_element_data(conn, element_name: str|int,
     #
     #element_id = row[1]
     connodes = get_connectivity(conn, element_name,
-                                component=component)
+                                mesh_id=mesh_id)
     data = [*row[:6], connodes, row[-1]]
     #conn.close ()
     return data
 #
 def update_element_item(conn, name: str|int, item: str,
-                        value, component: int):
+                        value, mesh_id: int):
     """ """
-    query = (value, name, component, )
+    query = (value, name, mesh_id, )
     table = f'UPDATE Element SET {item} = ? \
              WHERE name = ? \
              AND mesh_id = ? ;'
@@ -236,14 +233,14 @@ def update_element_item(conn, name: str|int, item: str,
 #
 #
 def push_connectivity(conn, element_id: int,
-                      connectivity: list, component: int):
+                      connectivity: list, mesh_id: int):
     """
     """
     items = []
     cur = conn.cursor()
     for x, item in enumerate(connectivity):
         node_id = check_nodes(conn, item,
-                              component=component)
+                              mesh_id=mesh_id)
         items.append(node_id[0])
         query = (element_id, node_id[0], x+1)
         table = 'INSERT INTO  ElementConnectivity(element_id,\
@@ -254,9 +251,9 @@ def push_connectivity(conn, element_id: int,
     return items
 #
 def get_connectivity(conn, element_name: int|str,
-                     component: int):
+                     mesh_id: int):
     """ """
-    query = (element_name, component)
+    query = (element_name, mesh_id)
     table = "SELECT ElementConnectivity.node_end, Node.name \
                 FROM ElementConnectivity, Node, Element, Mesh \
             WHERE Node.number = ElementConnectivity.node_id\
@@ -284,11 +281,11 @@ def update_connectivity(conn, element_id: int,
         cur.execute(table, query)
     #return cur.lastrowid
 #
-def get_connectivities(conn, component: int):
+def get_connectivities(conn, mesh_id: int):
     """
     Return [element_id, node_id, node_end]
     """
-    query = (component, )
+    query = (mesh_id, )
     table = "SELECT Element.name, Node.name, ElementConnectivity.node_end \
                 FROM Element, Node, ElementConnectivity \
              WHERE Element.number = ElementConnectivity.element_id \
@@ -306,9 +303,9 @@ def get_connectivities(conn, component: int):
     return connodes
 #
 def get_unitvector(conn, beam_name: int,
-                   component: int):
+                   mesh_id: int):
     """get direction cosines"""
-    query = (beam_name, component, )
+    query = (beam_name, mesh_id, )
     table = 'SELECT ElementDirectionCosine.x, \
                     ElementDirectionCosine.y, \
                     ElementDirectionCosine.z \

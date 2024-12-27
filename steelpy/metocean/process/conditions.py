@@ -974,14 +974,14 @@ class CombTypes:
         # update database
         #
         header = ['element_id', 'design_load', 
-                  'title', 'system', 'type',
+                  'comment', 'system', 'type',
                   'L0', 'qx0', 'qy0', 'qz0', 'qt0',
                   'L1', 'qx1', 'qy1', 'qz1', 'qt1',
                   'BS', 'OTM', 'time'] # , 'x', 'y', 'z'
         #
         # FIXME : load_id
         df_bload['design_load'] = design
-        df_bload['title'] = f'MET_{self.name}'
+        df_bload['comment'] = f'MET_{self.name}'
         # FIXME : global or local? 
         df_bload['system'] = 'local'
         #df_bload.rename(columns={'load_type': 'type'}, inplace=True)

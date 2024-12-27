@@ -22,7 +22,7 @@ from math import dist
 from steelpy.sections.sqlite.utils import ShapeGeometrySQL
 from steelpy.sections.utils.operations import ShapeGeometry
 from steelpy.material.sqlite.isotropic import  get_materialSQL
-from steelpy.ufo.mesh.sqlite.nodes import pull_node
+from steelpy.ufo.mesh.sqlite.node import pull_node
 from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            get_element_data ,
                                            get_connectivity,
@@ -41,20 +41,22 @@ from steelpy.ufo.utils.element import get_beam_df
 #
 #
 class BeamSQL(BeamBasic):
-    __slots__ = ['_title', 'db_file', '_component']
+    __slots__ = ['_title', 'db_file', '_mesh_id']
     
     def __init__(self, db_file:str,
-                 component: int) -> None:
+                 mesh_id: int,
+                 name:str|int) -> None:
         """
         beam elements
         """
-        super().__init__(component)
+        super().__init__(name=name)
         self.db_file = db_file
+        self._mesh_id = mesh_id
     #
     @property
     def _labels(self):
         """ """
-        query = ('beam', self._component)
+        query = ('beam', self._mesh_id)
         table = "SELECT name FROM Element \
                  WHERE type = ? AND mesh_id = ? "
         conn = create_connection(self.db_file)
@@ -86,7 +88,7 @@ class BeamSQL(BeamBasic):
         self._labels.index(beam_name)
         return BeamItemSQL(beam_name=beam_name,
                            #plane=self._plane,
-                           component=self._component,
+                           mesh_id=self._mesh_id,
                            db_file=self.db_file)
         #except ValueError:
         #    raise IndexError(f' ** element {beam_name} not valid')    
@@ -111,7 +113,7 @@ class BeamSQL(BeamBasic):
         #except IndexError:
         #    title = None
         #
-        query = (beam_name, self._component, 'beam', 
+        query = (beam_name, self._mesh_id, 'beam', 
                  materials[parameters[2]],
                  sections[parameters[3]],
                  roll_angle)
@@ -126,7 +128,7 @@ class BeamSQL(BeamBasic):
         #
         # connectivity
         node_id = push_connectivity(conn, beam_number, parameters[:2],
-                                    component=self._component)
+                                    mesh_id=self._mesh_id)
         #
         # Unit Vector
         coord = get_node_coord(conn, node_id)
@@ -156,7 +158,7 @@ class BeamSQL(BeamBasic):
     #
     def _pull_material(self, conn):
         """ """
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = "SELECT name, number \
                  FROM Material \
                  WHERE mesh_id = ?;"
@@ -170,7 +172,7 @@ class BeamSQL(BeamBasic):
     #
     def _pull_section(self, conn):
         """ """
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = "SELECT name, number \
                  FROM Section \
                  WHERE mesh_id = ?;"
@@ -189,7 +191,7 @@ class BeamSQL(BeamBasic):
         """
         conn = create_connection(self.db_file)
         with conn:
-            nodes = get_connectivities(conn, self._component)
+            nodes = get_connectivities(conn, self._mesh_id)
         return nodes
     #
     #
@@ -202,7 +204,7 @@ class BeamSQL(BeamBasic):
         conn = create_connection(self.db_file)
         with conn:
             data = get_elements(conn,
-                                component=self._component,
+                                mesh_id=self._mesh_id,
                                 element_type='beam')
         
         header = ['name', 'number', 'type', 'material', 'section',
@@ -216,7 +218,7 @@ class BeamSQL(BeamBasic):
         # clean df
         df = get_beam_df(df)
         #
-        query = (self._component, )
+        query = (self._mesh_id, )
         conn = create_connection(self.db_file)
         with conn:
             cur = conn.cursor()
@@ -235,7 +237,7 @@ class BeamSQL(BeamBasic):
             sections = cur.fetchall()
             sections = {item[0]:item[1] for item in sections}
         #
-        df['mesh_id'] = self._component
+        df['mesh_id'] = self._mesh_id
         df['material_id'] = df['material'].apply(lambda x: materials[x])
         df['section_id'] = df['section'].apply(lambda x: sections[x])
         #
@@ -258,7 +260,7 @@ class BeamSQL(BeamBasic):
         # ElementConnectivity
         #
         with conn:
-            query = ('beam', self._component)
+            query = ('beam', self._mesh_id)
             table = "SELECT name, number FROM Element \
                      WHERE type = ? AND mesh_id = ? ;"
             #
@@ -268,7 +270,7 @@ class BeamSQL(BeamBasic):
             elements = {item[0]:item[1] for item in elements}
             #
             #
-            query = (self._component, )
+            query = (self._mesh_id, )
             table = "SELECT name, number FROM Node \
                      WHERE mesh_id = ? ;"
             #
@@ -307,10 +309,10 @@ class BeamSQL(BeamBasic):
 class BeamItemSQL(BeamItemBasic):
     """ """
     __slots__ = ['name', '_releases', 'type',
-                 'db_file', '_component']
+                 'db_file', '_mesh_id']
     
     def __init__(self, beam_name:int,
-                 component: int, 
+                 mesh_id: int, 
                  db_file:str) -> None:
         """
         """
@@ -318,11 +320,11 @@ class BeamItemSQL(BeamItemBasic):
         with conn:        
             beam = check_element(conn,
                                  element_name=beam_name,
-                                 component=component)
+                                 mesh_id=mesh_id)
         #
         super().__init__(beam_name)
         self.db_file = db_file
-        self._component = component
+        self._mesh_id = mesh_id
         #print('--')
     #
     def __str__(self) -> str:
@@ -332,7 +334,7 @@ class BeamItemSQL(BeamItemBasic):
         with conn:
             data = get_element_data(conn, beam_name,
                                     element_type='beam', 
-                                    component=self._component)
+                                    mesh_id=self._mesh_id)
         #title =  data[-1]
         if (title := data[-1]) == None:
             title = ""
@@ -352,7 +354,7 @@ class BeamItemSQL(BeamItemBasic):
         conn = create_connection(self.db_file)
         with conn:
             connodes = get_connectivity(conn, self.name,
-                                        component=self._component)
+                                        mesh_id=self._mesh_id)
         return connodes
 
     @connectivity.setter
@@ -363,11 +365,11 @@ class BeamItemSQL(BeamItemBasic):
         with conn:
             data = get_element_data(conn, self.name,
                                     element_type='beam',
-                                    component=self._component)
+                                    mesh_id=self._mesh_id)
             nnodes = []
             for node in nodes:
                 item = pull_node(conn, node_name=node,
-                                 component=self._component)
+                                 mesh_id=self._mesh_id)
                 nnodes.append(item.number)
             update_connectivity(conn, data[1], nnodes)
         #self._connectivity[self.index] = nodes
@@ -381,10 +383,10 @@ class BeamItemSQL(BeamItemBasic):
         with conn:
             data = get_element_data(conn, self.name,
                                     element_type='beam', 
-                                    component=self._component)
+                                    mesh_id=self._mesh_id)
             
             mat = get_materialSQL(conn, data[4],
-                                  component=self._component)
+                                  mesh_id=self._mesh_id)
         return mat
 
     @material.setter
@@ -405,12 +407,12 @@ class BeamItemSQL(BeamItemBasic):
         with conn:
             data = get_element_data(conn, self.name,
                                     element_type='beam', 
-                                    component=self._component)
-            query = (data[5], self._component, )
+                                    mesh_id=self._mesh_id)
+            query = (data[5], self._mesh_id, )
             table = f"SELECT Section.*, SectionGeometry.* \
-                      FROM Section, SectionGeometry, Component \
+                      FROM Section, SectionGeometry, Mesh \
                       WHERE Section.name = ? \
-                      AND Component.number = ? \
+                      AND Mesh.number = ? \
                       AND Section.number = SectionGeometry.section_id ;"              
             #
             cur = conn.cursor()
@@ -444,7 +446,7 @@ class BeamItemSQL(BeamItemBasic):
         with conn:
             data = get_element_data(conn, self.name,
                                     element_type='beam', 
-                                    component=self._component)
+                                    mesh_id=self._mesh_id)
         return data[3]
     
     @beta.setter
@@ -465,7 +467,7 @@ class BeamItemSQL(BeamItemBasic):
         with conn:
             data = get_element_data(conn, self.name,
                                     element_type='beam', 
-                                    component=self._component)
+                                    mesh_id=self._mesh_id)
         return data[1]
     #
     @property
@@ -477,7 +479,7 @@ class BeamItemSQL(BeamItemBasic):
         with conn:
             for node in self.connectivity:
                 nodes.append(pull_node(conn, node_name=node,
-                                       component=self._component))
+                                       mesh_id=self._mesh_id))
         return nodes
     #    
     @property
@@ -488,7 +490,7 @@ class BeamItemSQL(BeamItemBasic):
         dof = [ ]
         for node_name in self.connectivity:
             node = pull_node(conn, node_name=node_name,
-                             component=self._component)
+                             mesh_id=self._mesh_id)
             #number = node[0] - 1
             #number = node.index
             dof.append(node.index) #  * 6
@@ -502,9 +504,9 @@ class BeamItemSQL(BeamItemBasic):
         conn = create_connection(self.db_file)
         with conn:
             node1 = pull_node(conn, node_name=nodes[0],
-                             component=self._component)
+                             mesh_id=self._mesh_id)
             node2 = pull_node(conn, node_name=nodes[1],
-                             component=self._component)
+                             mesh_id=self._mesh_id)
         return dist(node1[:3], node2[:3])
         #return dist(node1[3:6], node2[3:6])
     #
@@ -516,7 +518,7 @@ class BeamItemSQL(BeamItemBasic):
         with conn:        
             unitvec = get_unitvector(conn,
                                      beam_name=self.name,
-                                     component=self._component)
+                                     mesh_id=self._mesh_id)
         return unitvec
     #
     @property
@@ -527,9 +529,9 @@ class BeamItemSQL(BeamItemBasic):
         nodes = self.connectivity
         with conn:
             node1 = pull_node(conn, node_name=nodes[0],
-                             component=self._component)
+                             mesh_id=self._mesh_id)
             node2 = pull_node(conn, node_name=nodes[1],
-                             component=self._component)
+                             mesh_id=self._mesh_id)
         # direction cosines
         L = dist(node1[:3], node2[:3])
         uv = list(map(sub, node2[:3], node1[:3]))

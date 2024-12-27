@@ -123,18 +123,18 @@ class ConceptItem(ufoBasicModel):
         self._hinges = Releases()
         #
         # Points
-        self._point = NodesIM(component=self._component)
+        self._point = NodesIM(component=component)
         #                      boundary=self._boundaries)
         #
         #
         self._boundaries = BoundaryConcept(points=self._point,
-                                           component=self._component)
+                                           component=component)
         #        
         #
         self._elements = ConceptElements(points=self._nodes,
                                          materials=self._materials,
                                          sections=self._sections,
-                                         component=self._component, )
+                                         component=component)
         #
         # groups
         self._groups = Groups()
@@ -142,7 +142,7 @@ class ConceptItem(ufoBasicModel):
         #self._load = load
         self._load = ConceptLoad(points=self._point,
                                  elements=self._elements,
-                                 component=self._component, 
+                                 component=component, 
                                  boundaries=self._boundaries)
     #
     #

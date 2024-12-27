@@ -26,12 +26,12 @@ from steelpy.utils.io_module.inout import check_input_file
 #
 class ClassBasicSQL(Mapping):
     """ """
-    __slots__ = ['_component', 'db_file']
+    __slots__ = ['db_file']
     #
-    def __init__(self, component: str|int, db_file: str):
+    def __init__(self, db_file: str):
         """
         """
-        self._component = component
+        #self._component = component
         self.db_file = db_file
         # create table
         conn = create_connection(self.db_file)

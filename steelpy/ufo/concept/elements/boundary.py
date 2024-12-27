@@ -163,9 +163,10 @@ class BoundaryPoint(BoundaryNode):
         super().__init__(component)
         # concept
         self._point = points
+        self._component = component
         #
         self._boundary = BoundaryConceptItem(self._point,
-                                             self._component)
+                                             component=component)
         #
         self._labels:list[str|int] = []
         self._nodes:list[str|int] = []

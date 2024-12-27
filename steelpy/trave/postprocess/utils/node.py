@@ -15,7 +15,7 @@ from steelpy.utils.dataframe.main import DBframework
 
 #
 #
-class NodeResBasic(Mapping):
+class NodeResultBasic(Mapping):
     __slots__ = ['_mesh', '_labels', 'plane']
     
     def __init__(self, mesh) -> None:
@@ -45,9 +45,11 @@ class NodeResBasic(Mapping):
         #space = " "
         output = "\n"
         output += self.displacement().__str__()
-        output += self.force().__str__()
+        # TODO: is node force needed? 
+        #output += self.force().__str__()
         output += self.reaction().__str__()
-        return output   
+        return output
+    #
 #
 #
 #
@@ -129,7 +131,7 @@ def print_node_items(items: DBframework.DataFrame,
     # default heading
     if not cols:
         cols = ['number', 'load_name', 'component_name',
-                'load_level', 'system']
+                'load_level', 'system', 'mesh_name', 'result_name']
     #
     output = ""
     items.rename(columns={'node_name': 'node'}, inplace=True)

@@ -80,7 +80,8 @@ class Mesh(ClassBasicSQL):
                  build: bool):
         """
         """
-        super().__init__(component, db_file=sql_file)
+        super().__init__(db_file=sql_file)
+        self._component = component
         self._build = build
         self._item:dict = {}
         #print('--')
@@ -114,10 +115,10 @@ class Mesh(ClassBasicSQL):
             #
             conn = create_connection(self.db_file)
             with conn:
-                number = self._push_data(conn, name=name, title=title)
+                mesh_id = self._push_data(conn, name=name, title=title)
         #
         self._item[name] = MeshItem(name=name,
-                                    component=number,
+                                    mesh_id=mesh_id,
                                     sql_file=self.db_file,
                                     build=self._build)
         #1 / 0
@@ -214,21 +215,21 @@ class MeshItem(MeshSQL):
     """
     mesh[beam_name] = [number, element1, element2, elementn]
     """
-    __slots__ = ['_name', 'db_file', '_plane', '_component', 
+    __slots__ = ['_name', 'db_file', '_plane', '_mesh_id',
                  '_df', 'data_type', 
                  '_nodes', '_elements', '_materials', '_sections',
                  '_load', '_boundaries', '_eccentricities', '_groups',
                  '_Kmatrix', '_build', '_solution']
 
-    def __init__(self, name:str|int,
-                 component:str|int, 
+    def __init__(self, name:str|int, mesh_id:int,
                  sql_file:str, build: bool):
         """
         """
         super().__init__(name=name,
-                         component=component,
+                         mesh_id=mesh_id,
                          sql_file=sql_file)
         #
+        #self._mesh_id = mesh_id
         self._build = build
         #
         # --------------------------------------------------
@@ -237,20 +238,21 @@ class MeshItem(MeshSQL):
         #
         # --------------------------------------------------
         #
-        self._materials = Material(component=self._component,
+        self._materials = Material(mesh_id=self._id,
                                     mesh_type=self.data_type, 
                                     db_file=self.db_file)
     
-        self._sections = Section(component=self._component,
-                                  mesh_type=self.data_type, 
-                                  db_file=self.db_file)       
+        self._sections = Section(mesh_id=self._id,
+                                 mesh_type=self.data_type,
+                                 db_file=self.db_file)
         #
         # --------------------------------------------------
         # groups
         self._groups = Groups()
         #     
         self._load = MeshLoad(mesh_type=self.data_type,
-                              component=self._component,
+                              mesh_id=self._id,
+                              name=name,
                               db_file=self.db_file)
         #
         # --------------------------------------------------
@@ -342,16 +344,16 @@ class MeshItem(MeshSQL):
         print(f"** Mesh Building: {uptime:1.4e} sec")
         print('{:}'.format(52 * '-'))
     #
-    # --------------------
-    # Matrix Operations
-    # --------------------
     #
     def plane(self, plane2D: bool) -> None:
         """ """
         self._plane = MeshPlane(plane2D)
-        #self._nodes.plane = self._plane
-        #self._elements.plane = self._plane
-        #self._load.plane = self._plane
+    #
+    #
+    # --------------------
+    # Matrix Operations
+    # --------------------
+    #
     #
     def jbc(self):
         """ """
@@ -410,6 +412,82 @@ class MeshItem(MeshSQL):
                        sparse=sparse)
         return Ma
     #
+    #
+    # ------------------------------------------
+    #
+    def Dn(self) -> DBframework.DataFrame|None:
+        """
+        load_level: basic/combination
+
+        Return:
+            Nodal global displacement dataframe
+        """
+        df = DBframework()
+        #if load_level in ['combination']:
+        #    Dn = self._load._combination.Dn()
+        #else:  # basic
+        #    Dn = self._load._basic.Dn()
+        #
+        Dn = df.concat([self._load._basic._Dnt(),
+                        self._load._combination._Dnt()],
+                       ignore_index=True)
+        if Dn.empty:
+            return Dn
+        #
+        col_disp = ['x', 'y', 'z', 'rx', 'ry', 'rz'] # self._plane.hdisp
+        jbc = self.jbc()
+        dfjbc = jbc[jbc.any(axis=1)]
+        #
+        Di = Dn.loc[Dn['node_name'].isin(dfjbc.index)]
+        Di = Di.loc[Di[col_disp].any(axis=1)]
+        #
+        col_grp = ['load_name', 'load_id',
+                   'load_level', 'load_title',
+                   'system', 'mesh_name',
+                   'node_name', 'node_index',
+                   *col_disp]
+        Di = Di[col_grp]
+        return Di
+
+    #
+    def Fn(self) -> DBframework.DataFrame|None:
+        """
+        load_level: basic/combination
+
+        Return:
+            Nodal global force dataframe
+        """
+        df = DBframework()
+        #if load_level in ['combination']:
+        #Fn = self._load._combination.Fn()
+        #else:  # basic
+        #Fn = self._load._basic.Fn()
+        Fn = df.concat([self._load._basic._Fnt(),
+                        self._load._combination._Fnt()],
+                       ignore_index=True)
+        if Fn.empty:
+            return Fn
+        #
+        col_force = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'] #self._plane.hforce
+        jbc = self.jbc()
+        dfjbc = jbc[jbc.any(axis=1)]
+        #
+        Fi = Fn.loc[Fn['node_name'].isin(dfjbc.index)]
+        #Fi = Fi.loc[Fi[col_force].any(axis=1)]
+        #
+        if Fi.empty:
+            Fi = Fn
+        #
+        columns = ['load_name', 'load_id',
+                   'load_level', 'load_title',
+                   'system', 'mesh_name',
+                   'node_name', 'node_index',
+                   *col_force]
+        Fi = Fi[columns]
+        return Fi
+
+    #
+    #
     # --------------------
     # Plotting
     # --------------------
@@ -448,25 +526,25 @@ class MeshItem(MeshSQL):
         bload = self._load._case._basic._beams.df
         bload.rename(columns={'L0': 'a', 'L1': 'b', 'load_name': 'Load',
                               'element_name': 'Beam', 'load_type': 'Type',
-                              'load_comment': 'Title',},
+                              'comment': 'Comment',},
                      inplace=True)
         bload = bload[['Load', 'Beam', 'Type', 'a', 'b',
                        'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
                        'qx0', 'qy0', 'qz0', 'qx1', 'qy1', 'qz1',
-                       'Title']]
+                       'Comment']]
         #
         nload = self._load._case._basic._nodes.df
         nload.rename(columns={'load_name': 'Load',
                               'node_name': 'Node',
                               'element_name': 'Beam',
                               'load_type': 'Type',
-                              'load_comment': 'Title',},
+                              'comment': 'Comment',},
                      inplace=True)
         # remove element's node load
         nload = nload[nload['Beam'].isnull()]
         nload = nload[['Load', 'Node', 'Type',
                        'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                       'x', 'y', 'z', 'rx', 'ry', 'rz', 'Title']]
+                       'x', 'y', 'z', 'rx', 'ry', 'rz', 'Comment']]
         #
         #
         with self._df.ExcelWriter(name) as writer:
@@ -494,7 +572,7 @@ class MeshItem(MeshSQL):
         #
         #
         print(f'--- end writing excel {name}')
-        #1 / 0
+    #
     #
 #
 # TODO : MeshPlane should be eventually removed

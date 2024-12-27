@@ -60,13 +60,13 @@ class StaticSolver:
     """ Linear static solver class"""
     __slots__ = ['_mesh', '_method', '_postprocess',
                  '_log', '_result_name', 'db_file',
-                 'second_order', 'ineleastic']
+                 'second_order', 'inelastic']
 
     def __init__(self, mesh,
                  result_name: int | str,
                  db_file: str, log: bool,
                  second_order: bool = False,
-                 ineleastic: bool = False,
+                 inelastic: bool = False,
                  ) -> None:
         """
         plane : Plane system (3D/2D)
@@ -79,81 +79,13 @@ class StaticSolver:
                                         db_file=db_file)
         self._log = log
         self.second_order = second_order
-        self.ineleastic = ineleastic
+        self.inelastic = inelastic
 
     #
-    def Ke(self, sparse: bool):
-        """Stiffness matrix"""
-        return self._mesh.Ke(sparse=sparse)
-
+    #def Ke(self, sparse: bool):
+    #    """Stiffness matrix"""
+    #    return self._mesh.Ke(sparse=sparse)
     #
-    # ------------------------------------------
-    #
-    def Dn(self, load_level: str) -> DBframework.DataFrame|None:
-        """
-        load_level: basic/combination
-
-        Return:
-            Nodal global displacement dataframe
-        """
-        if load_level in ['combination']:
-            Dn = self._mesh._load._combination.ND_global(plane=self._mesh._plane)
-        else:  # basic
-            Dn = self._mesh._load._basic.ND_global(plane=self._mesh._plane)
-        #
-        if Dn.empty:
-            return Dn
-        #
-        col_disp = self._mesh._plane.hdisp
-        jbc = self._mesh.jbc()
-        dfjbc = jbc[jbc.any(axis=1)]
-        #
-        Di = Dn.loc[Dn['node_name'].isin(dfjbc.index)]
-        Di = Di.loc[Di[col_disp].any(axis=1)]
-        #
-        col_grp = ['load_name', 'load_id',
-                   'load_level', 'load_title',
-                   'load_system', 'mesh_name',
-                   'node_name', 'node_index',
-                   *col_disp]
-        Di = Di[col_grp]
-        return Di
-
-    #
-    def Fn(self, load_level: str) -> DBframework.DataFrame|None:
-        """
-        load_level: basic/combination
-
-        Return:
-            Nodal global force dataframe
-        """
-        if load_level in ['combination']:
-            Fn = self._mesh._load._combination.NF_global(plane=self._mesh._plane)
-
-        else:  # basic
-            Fn = self._mesh._load._basic.NF_global(plane=self._mesh._plane)
-        #
-        if Fn.empty:
-            return Fn
-        #
-        col_force = self._mesh._plane.hforce
-        jbc = self._mesh.jbc()
-        dfjbc = jbc[jbc.any(axis=1)]
-        #
-        Fi = Fn.loc[Fn['node_name'].isin(dfjbc.index)]
-        #Fi = Fi.loc[Fi[col_force].any(axis=1)]
-        #
-        if Fi.empty:
-            Fi = Fn
-        #
-        columns = ['load_name', 'load_id',
-                   'load_level', 'load_title',
-                   'load_system', 'mesh_name',
-                   'node_name', 'node_index',
-                   *col_force]
-        Fi = Fi[columns]
-        return Fi
-
     #
     # ------------------------------------------
     #
@@ -206,8 +138,8 @@ class StaticSolver:
         #
         # get combinations with basic loads
         load_combination = self._mesh._load.combination()
-        lcomb2basic = load_combination.to_basic()
-        comb_grp = lcomb2basic.groupby('load_name')
+        comb2basic = load_combination.to_basic()
+        comb_grp = comb2basic.groupby('load_name')
         #
         df_temp = []
         for key, comb_factors in comb_grp:
@@ -223,7 +155,7 @@ class StaticSolver:
         #
         db = DBframework()
         columns = ['load_name', 'load_id', 'load_level',
-                   'load_title', 'load_system',
+                   'load_title', 'system',
                    'mesh_name', 'result_name',
                    'node_name']
         try:
@@ -238,7 +170,6 @@ class StaticSolver:
     #
     #
     def _linear(self, load_level: str,
-                #col_grp: list[str],
                 sparse: bool = False):
         """
         load_level: basic/combination
@@ -253,11 +184,20 @@ class StaticSolver:
         # Get basic data
         # ------------------------------          
         Ke = self._mesh.Ke(sparse=sparse)
+        # ------------------------------
         #
-        # ------------------------------       
-        # and displacement (combination)
-        Dn = self.Dn(load_level)
-        Fn = self.Fn(load_level)
+        Fn = self._mesh.Fn()
+        Fn = Fn[Fn['load_level'] == load_level]
+        Dn = self._mesh.Dn()
+        Dn = Dn[Dn['load_level'] == load_level]
+        #if load_level in ['comb', 'combination']:
+        #   load = self._mesh._load._combination
+        #   Fn = Fn[Fn['load_level']==load_level]
+        #else:
+        #    load = self._mesh._load._basic
+        # get load data
+        #Dn = load.Dnt()
+        #Fn = load.Fnt()
         # ------------------------------
         # linear solution
         Un = self.PMT(Ke=Ke,
@@ -271,7 +211,6 @@ class StaticSolver:
     def solve_Linear(self,
                      sparse: bool = False,
                      max_iter: int | None = None):
-        #load_level: str = 'basic'):
         """
         Linear Static Analysis
 
@@ -293,14 +232,14 @@ class StaticSolver:
         #     
         # ------------------------------
         # Step 1 : linear solution
-        # Un, Fn_grp, Dn_grp =
         Un, Ke, Fn, Dn = self._linear(load_level='basic',
-                                      #col_grp=col_grp,
                                       sparse=sparse)
         #
         # ------------------------------
         # Post-processing load combinations
         Un = self._update_Un_comb(Un=Un)
+        #
+        self._postprocess.Un = Un
         #
         uptime = time.time() - start_time
         print(f"** {{F}} = [Ke] {{U}} Solution: {uptime:1.4e} sec")
@@ -329,7 +268,7 @@ class StaticSolver:
         #
         # Get global nodal load
         col_grp = ['load_name', 'load_id',
-                   'load_level', 'load_system', 'load_title',
+                   'load_level', 'system', 'load_title',
                    'mesh_name']
         #       
         # ------------------------------
@@ -374,6 +313,9 @@ class StaticSolver:
         # ------------------------------
         # end process
         # ------------------------------
+        #
+        self._postprocess.Un = Un
+        #
         uptime = time.time() - start_time
         print(f"** {{F}} = [Kt] {{U}} Solution: {uptime:1.4e} sec")
         return Us
@@ -440,16 +382,6 @@ class StaticSolver:
         return dfbool.astype('bool'), dfjbc.astype('float64')
 
     #
-    def _to_df(self, Us):
-        """displacement dataframe"""
-        db = DBframework()
-        header = ['load_name', 'load_id', 'load_level',
-                  'load_system', 'load_title', 'mesh_name',
-                  'result_name', 'node_name',
-                  *self._mesh._plane.hdisp]
-        dftemp = db.DataFrame(data=Us, columns=header, index=None)
-        return dftemp  #[header]
-
     #
     # ------------------------------------------
     #
@@ -463,7 +395,7 @@ class StaticSolver:
         """
         if not colgrp:
             colgrp = ['load_name', 'load_id',
-                      'load_level', 'load_system',
+                      'load_level', 'system',
                       'load_title', 'mesh_name']
         #
         # Force
@@ -579,20 +511,6 @@ class StaticSolver:
                                              FDs=FDs,
                                              Kp=Kp,
                                              col_force=col_force)
-                #
-                #for nodeid, idof in zip(FDs.index.to_list(),
-                #                        FDs['node_index'].to_list()):
-                #    # DOF
-                #    niqi = idof * ndof
-                #    niqj = niqi + ndof
-                #    #
-                #    nload = FDs[col_force].loc[nodeid]
-                #    kc = Kp.copy()
-                #    kc[nload == 0] = 0
-                #    #
-                #    Ke_sup.flat[0::ndof + 1] = kc
-                #    # update global K matrix with dummy stiffness
-                #    Ke_item[niqi:niqj, niqi:niqj] += Ke_sup
             except (KeyError, AttributeError):
                 pass
             #
@@ -605,7 +523,11 @@ class StaticSolver:
             Utemp.extend([[*key, self._result_name, nname, *Us[x]]
                           for x, nname in enumerate(jbc.index)])
         #
-        Us = self._to_df(Utemp)
+        header = ['load_name', 'load_id', 'load_level',
+                  'system', 'load_title', 'mesh_name',
+                  'result_name', 'node_name',
+                  *col_disp]
+        Us = list2df(data=Utemp, header=header)
         return Us
 
     #
@@ -633,164 +555,7 @@ class StaticSolver:
 
     #
     # ------------------------------------------
-    # tb removed
     #
-    def PMTX(self, load_keys, Ke, Fn_grp, Dn_grp,
-            sparse: bool = False):
-        """
-        Penalty Method
-
-        Ke : Global stiffness matrix
-        Fn : Global force  df
-        Dn : Global displacement df
-        jbc = Nodes with boundary
-
-        Return:
-        U : Global node displacement
-        """
-        jbc = self._mesh.jbc()
-        K_factor, solver = self._get_solver(Ke, sparse)
-        #
-        # TODO : must be better ways to manipulate dfs
-        #
-        ndof = self._mesh._plane.ndof
-        col_force = self._mesh._plane.hforce
-        head_force = ['node_name', *col_force]
-        col_disp = self._mesh._plane.hdisp
-        head_disp = ['node_name', 'node_index', *col_disp]
-        col_rename = self._mesh._plane.colrename
-        #
-        # Select nodes' free DOF
-        Fn_bool, Fn_zeros = self._mask_DOF(jbc)
-        #
-        # group global node load and displacement
-        # load_keys, Fn_grp, Dn_grp = self._Fn_items(Fn, Dn)
-        #
-        # --------------------------------------
-        #
-        Ke_sup = np.zeros((ndof, ndof), dtype=np.float64)
-        #
-        Kp, head_stiff = self._K_penalty(K_factor)
-        #
-        # --------------------------------------
-        #
-        Utemp = []
-        for key in load_keys:
-            Fs = Fn_zeros.copy()
-            Kitem = Ke.copy()
-            #
-            # Load Section
-            try:
-                Fn_item = Fn_grp.get_group(key)
-                Fn_set = Fn_item[head_force].set_index(['node_name'])
-                Fs.loc[Fn_set.index] = Fn_set.astype('float64')
-            except (KeyError, AttributeError):
-                # print(f'--> Force {key}')
-                pass
-            #
-            # Displacement Section
-            try:
-                Dn_item = Dn_grp.get_group(key)
-                FDs = Dn_item[head_disp].set_index(['node_name'])
-                #
-                # calculate force {F} = {D} x Kmod
-                FDs[col_disp] = FDs[col_disp].mul(head_stiff)
-                FDs.rename(columns=col_rename, inplace=True)
-                #
-                Fs.loc[FDs.index] = Fs.loc[FDs.index].add(FDs[col_force])
-                #
-                # idx = {name: i for i, name in enumerate(list(FDs), start=1)}
-                # node_name = Ds.index.to_list()
-                for nodeid, idof in zip(FDs.index.to_list(),
-                                        FDs['node_index'].to_list()):
-                    # for item in FDs.itertuples():
-                    # idof = item.node_index
-                    # nodeid = item.Index
-                    #
-                    # DOF
-                    niqi = idof * ndof
-                    niqj = niqi + ndof
-                    #
-                    nload = FDs[col_force].loc[nodeid]
-                    kc = Kp.copy()
-                    kc[nload == 0] = 0
-                    #
-                    Ke_sup.flat[0::ndof + 1] = kc
-                    # update global K matrix with dummy stiffness
-                    Kitem[niqi:niqj, niqi:niqj] += Ke_sup
-                    # print('---> ', niqi, niqj)
-            except (KeyError, AttributeError):
-                # print(f'--> node disp {key}')
-                pass
-            #
-            # get load matrix as vector
-            Fs = Fs.stack()
-            Fs = Fs.loc[Fn_bool]
-            # Solve displacements U
-            Us = self._Us(Kitem, Fs, solver, jbc, ndof)
-            # pack basic load data for df's dumping
-            Utemp.extend([[*key, self._result_name,
-                           # Fn_item['load_title'].iloc[0],
-                           nname, *Us[x]]
-                          for x, nname in enumerate(jbc.index)])
-        #
-        Us = self._to_df(Utemp)
-        return Us
-
-    #
-    def _PTM_DnX(self, Kitem, Fs,
-                Fn_item, Dn_set, Dn_zeros,
-                ndof: int, K_factor: float):
-        """
-        """
-        # set up
-        # Dn_index = Dn_zeros.index.isin(Fn_item['node_name'])
-        # Ds = Dn_zeros.copy()
-        # Ds.loc[Dn_index] = Dn_set.astype('float64')
-        #
-        Ke_sup = np.zeros((ndof, ndof), dtype=np.float64)
-        #
-        K_trans = K_factor * 10_000
-        K_rot = K_factor * 100_000
-        ditem = {'x': K_trans, 'y': K_trans, 'z': K_trans,
-                 'rx': K_rot, 'ry': K_rot, 'rz': K_rot, }
-        #
-        col_rename = self._mesh._plane.colrename
-        head_disp = self._mesh._plane.hdisp
-        head_stiff = {key: ditem[key] for key in head_disp}
-        kp = np.array([ditem[key] for key in head_disp])
-        #
-        # Displacement check and postprocess
-        #
-        # calculate force {F} = {D} x Kmod
-        FDs = Ds.mul(head_stiff)
-        FDs.rename(columns=col_rename, inplace=True)
-        # Update global load vector with displacement load
-        # print(f'---> {Ds} {Fs}')
-        for nodeid, idof in zip(Fn_item['node_name'], Fn_item['node_index']):
-            # check if node with displacement
-            try:
-                nload = FDs.loc[nodeid]  # .to_numpy()
-                if not nload.any():
-                    continue
-                Fs.loc[nodeid] = Fs.loc[nodeid].add(nload, axis='rows')
-            except KeyError:
-                continue
-            #
-            # DOF
-            niqi = idof * ndof
-            niqj = niqi + ndof
-            #
-            kc = kp.copy()
-            kc[nload == 0] = 0
-            #
-            Ke_sup.flat[0::ndof + 1] = kc
-            # update global K matrix with dummy stiffness
-            Kitem[niqi:niqj, niqi:niqj] += Ke_sup
-            # print('--->', niqi, niqj)
-        #
-        return Kitem, Fs
-
     #
     #
     # ------------------------------------------
@@ -819,7 +584,8 @@ class StaticSolver:
             Un = run(sparse=sparse,
                      max_iter=max_iter)
             #
-            self._postprocess.Un.df = Un
+            #1/0
+            #self._postprocess.Un.df = Un
         else:
             raise IOError('** error: mesh missing')
         # run postprocessing
@@ -827,3 +593,8 @@ class StaticSolver:
         #
         return self._postprocess._results
 #
+def list2df(data:list[list], header:list):
+    """ dataframe"""
+    db = DBframework()
+    dftemp = db.DataFrame(data=data, columns=header, index=None)
+    return dftemp

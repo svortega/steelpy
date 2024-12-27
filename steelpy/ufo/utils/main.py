@@ -15,11 +15,12 @@ from steelpy.utils.dataframe.main import DBframework
 
 
 class ufoBasicModel:
-    __slots__ = ['_component']
+    __slots__ = ['_name']
     
-    def __init__(self, component:str|int) -> None:
+    def __init__(self, name:str|int) -> None:
         """ """
-        self._component = component
+        self._name = name
+        #pass
     #   
     # --------------------
     # Common

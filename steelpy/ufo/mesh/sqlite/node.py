@@ -45,20 +45,20 @@ class NodeSQL(NodeBasic):
     sets : list[tuple]
         set with node/element
     """
-    __slots__ = ['_system', 'db_file', '_component']
+    __slots__ = ['_system', 'db_file', '_mesh_id', '_name']
 
     def __init__(self,
                  db_file: str,
-                 #plane: NamedTuple,
-                 component: str|int, 
+                 name: str|int,
+                 mesh_id: str|int, 
                  db_system:str="sqlite",
                  system:str = 'cartesian') -> None:
         """
         """
-        super().__init__(system)
+        super().__init__(name=name, system=system)
         self.db_file = db_file
         #self._plane = plane
-        self._component =  component
+        self._mesh_id =  mesh_id
         # create node table
         conn = create_connection(self.db_file)
         with conn:
@@ -69,7 +69,7 @@ class NodeSQL(NodeBasic):
     @property
     def _labels(self):
         """ """
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = 'SELECT Node.name FROM Node \
                  WHERE mesh_id = ? \
                  ORDER BY number ASC ;'
@@ -106,7 +106,7 @@ class NodeSQL(NodeBasic):
             with conn:
                 bid = None
                 if fixity:
-                    mesh_id = self._component
+                    mesh_id = self._mesh_id
                     bid = push_node_boundary(conn, name,
                                              mesh_id, fixity)
                 
@@ -181,7 +181,7 @@ class NodeSQL(NodeBasic):
         #
         # -------------------------------------------
         #
-        query = (node_name, self._component, node_title,
+        query = (node_name, self._mesh_id, node_title,
                  idx, boundary)
         table = 'INSERT INTO Node(name, mesh_id, \
                                   title, idx, boundary_id) \
@@ -217,13 +217,13 @@ class NodeSQL(NodeBasic):
                    item: str = '*'):
         """ """
         return pull_node(conn, node_name=node_number,
-                         component=self._component,
+                         mesh_id=self._mesh_id,
                          item=item)
     #
     def _isclose(self, item:str, value:float, key:str = '*', 
                  rel_tol:float=1e-6, abs_tol:float=0.0)-> tuple:
         """ """
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = f'SELECT NodeCoordinate.{key}, Node.title \
                   FROM Node, NodeCoordinate \
                   WHERE Node.mesh_id = ? \
@@ -240,7 +240,7 @@ class NodeSQL(NodeBasic):
     def _update_item(self, conn, name, item, value):
         """ """
         1 / 0
-        project = (value, name, self._component, )
+        project = (value, name, self._mesh_id, )
         sql = f'UPDATE Node SET {item} = ? \
                 WHERE name = ? AND mesh_id = ? '
 
@@ -251,7 +251,7 @@ class NodeSQL(NodeBasic):
         """
         """
         1 / 0
-        query = (self._component, )
+        query = (self._mesh_id, )
         conn = create_connection(self.db_file)
         table = 'SELECT * FROM Node \
                 WHERE mesh_id = ? \
@@ -269,10 +269,10 @@ class NodeSQL(NodeBasic):
         conn = create_connection(self.db_file)
         with conn:
             # [row number, node name]
-            rows = pull_node_rows(conn, self._component)
+            rows = pull_node_rows(conn, self._mesh_id)
             rows = {item[1]: item[0] for item in rows}
 
-            indexes = [(x, rows[node_name], self._component,)
+            indexes = [(x, rows[node_name], self._mesh_id,)
                        for x, node_name in enumerate(new_numbers)]
 
             update_colum(conn, colname='idx',
@@ -284,7 +284,7 @@ class NodeSQL(NodeBasic):
         """
         def maxmin(head: str, col: str):
             #
-            query = (self._component, )
+            query = (self._mesh_id, )
             table = f'SELECT {head.upper()}(NodeCoordinate.{col}) \
                       FROM Node, NodeCoordinate \
             WHERE Node.mesh_id = ? \
@@ -313,7 +313,7 @@ class NodeSQL(NodeBasic):
         conn = create_connection(self.db_file)
         with conn:
             name = pull_node_by_title(conn, title,
-                                      self._component)
+                                      self._mesh_id)
         return name
     #
     def get_number(self, start: int = 1):
@@ -321,9 +321,9 @@ class NodeSQL(NodeBasic):
         """
         conn = create_connection(self.db_file)
         with conn:
-            #number = pull_node_rows(conn, self._component)
+            #number = pull_node_rows(conn, self._mesh_id)
             #
-            query = (self._component, )
+            query = (self._mesh_id, )
             table = 'SELECT max(number) from Node WHERE mesh_id = ?;'
             cur = conn.cursor()
             cur.execute(table, query)
@@ -362,9 +362,9 @@ class NodeSQL(NodeBasic):
         conn = create_connection(self.db_file)
         with conn:        
             fixity = pull_boundary(conn,
-                                   component=self._component)
+                                   mesh_id=self._mesh_id)
             #
-            nidx = pull_node_index(conn, self._component)
+            nidx = pull_node_index(conn, self._mesh_id)
             nidx = {item[0]: item[1] for item in nidx}
         #
         # update jbc
@@ -405,7 +405,7 @@ class NodeSQL(NodeBasic):
     #
     def jwbc(self):
         """ joints with boundary condition"""
-        project = (self._component, )
+        project = (self._mesh_id, )
         table = 'SELECT Node.idx, \
                  IIF(Node.number = NodeBoundary.node_id,\
                      (NodeBoundary.x, NodeBoundary.y, NodeBoundary.z, \
@@ -450,7 +450,7 @@ class NodeSQL(NodeBasic):
     #
     def DOF_unreleased(self):
         """ list of the indices for the unreleased DOFs """
-        project = (self._component, )
+        project = (self._mesh_id, )
         table = 'SELECT Node.idx, Node.name, \
                         NodeBoundary.* \
                  FROM Node, NodeBoundary \
@@ -489,7 +489,7 @@ class NodeSQL(NodeBasic):
         conn = create_connection(self.db_file)
         table = f'SELECT Node.name, Node.mesh_id, NodeCoordinate.* \
                   FROM Node, NodeCoordinate \
-                  WHERE Node.mesh_id = {self._component} \
+                  WHERE Node.mesh_id = {self._mesh_id} \
                   AND Node.number = NodeCoordinate.node_id ;'
         nodes = db.read_sql_query(table,conn)
         nodes.drop(columns=['node_id'], inplace=True)
@@ -499,7 +499,7 @@ class NodeSQL(NodeBasic):
     def df(self, df):
         """ """
         nodes = get_node_df(df, system=self._system)
-        nodes['mesh_id'] = self._component
+        nodes['mesh_id'] = self._mesh_id
         # TODO : fix boundary
         if 'boundary' in nodes:
             fixities = {nodes['name'][x]: get_node_boundary(item)
@@ -513,7 +513,7 @@ class NodeSQL(NodeBasic):
                         blist.append(None)
                         continue
                     blist.append(push_node_boundary(conn, node_id=int(key),
-                                                     mesh_id=self._component,
+                                                     mesh_id=self._mesh_id,
                                                      fixity=item))
             nodes['boundary_id'] = blist
         else:
@@ -531,7 +531,7 @@ class NodeSQL(NodeBasic):
                                index_label=cols, 
                                if_exists='append', index=False)
             #
-            node_id = pull_node_rows(conn, component=self._component)
+            node_id = pull_node_rows(conn, mesh_id=self._mesh_id)
             node_id = {item[1]: item[0] for item in node_id}
             #
             cols = ['node_id', 'system',
@@ -547,19 +547,19 @@ class NodeSQL(NodeBasic):
 #
 #
 #
-def pull_node(conn, node_name:int|str, component: int, item:str='*'):
+def pull_node(conn, node_name:int|str, mesh_id: int, item:str='*'):
     """ """
-    data = pull_node_item(conn, node_name, component, item)
+    data = pull_node_item(conn, node_name, mesh_id, item)
     boundary = pull_node_boundary(conn,
                                   node_name=node_name,
-                                  component=component)
+                                  mesh_id=mesh_id)
     #
     node = NodePoint(*data, boundary=boundary)
     return node.system()
 #
-def pull_node_item(conn, node_name:int|str, component: int, item:str='*'):
+def pull_node_item(conn, node_name:int|str, mesh_id: int, item:str='*'):
     """ """
-    project = (node_name, component)
+    project = (node_name, mesh_id)
     table = f'SELECT NodeCoordinate.{item}, \
                      Node.title, Node.idx \
             FROM Node, NodeCoordinate \
@@ -572,10 +572,10 @@ def pull_node_item(conn, node_name:int|str, component: int, item:str='*'):
     return [*project, *record[1:]]
 #
 def pull_node_boundary(conn, node_name: int|str,
-                       component: int, item:str="*"):
+                       mesh_id: int, item:str="*"):
     """
     """
-    data = pull_boundary(conn, component,
+    data = pull_boundary(conn, mesh_id,
                          node_name, item)
     
     try:
@@ -589,12 +589,12 @@ def pull_node_boundary(conn, node_name: int|str,
     #
     return boundary
 #
-def pull_boundary(conn, component: int,
+def pull_boundary(conn, mesh_id: int,
                   node_name: int|str|None = None,
                   item:str="*"):
     """pull all boundary data"""
     #
-    project = [component]
+    project = [mesh_id]
     #
     table = f'SELECT Node.idx, Node.name, \
              Boundary.name, \
@@ -615,9 +615,9 @@ def pull_boundary(conn, component: int,
     return data
 #
 def pull_node_number(conn, node_name:int|str,
-                     component: int):
+                     mesh_id: int):
     """ """
-    project = (node_name, component)
+    project = (node_name, mesh_id)
     table = f'SELECT number FROM Node \
               WHERE name = ? \
               AND mesh_id = ?'
@@ -628,9 +628,9 @@ def pull_node_number(conn, node_name:int|str,
         raise IOError(f'node {node_name} not found')
     return record[0]
 #
-def pull_node_rows(conn, component: int):
+def pull_node_rows(conn, mesh_id: int):
     """ """
-    project = (component,)
+    project = (mesh_id,)
     table = f'SELECT number, name FROM Node \
               WHERE mesh_id = ?'
     cur = conn.cursor()
@@ -638,9 +638,9 @@ def pull_node_rows(conn, component: int):
     records = cur.fetchall()
     return records
 #
-def pull_node_index(conn, component: int):
+def pull_node_index(conn, mesh_id: int):
     """ """
-    project = (component,)
+    project = (mesh_id,)
     table = f'SELECT idx, name FROM Node \
               WHERE mesh_id = ?'
     cur = conn.cursor()
@@ -649,9 +649,9 @@ def pull_node_index(conn, component: int):
     return records
 #
 def pull_node_by_title(conn, node_title: int|str,
-                       component: int,):
+                       mesh_id: int,):
     """ """
-    project = (node_title, component)
+    project = (node_title, mesh_id)
     table = f'SELECT name FROM Node \
               WHERE title = ? \
               AND mesh_id = ?'
@@ -681,7 +681,7 @@ def push_node_boundary(conn, node_id: int, mesh_id: int,
 #
 def update_colum(conn, colname: str, newcol: list):
     """update entire column values"""
-    #query = (component, )
+    #query = (mesh_id, )
     table = f'UPDATE Node SET {colname} = ? \
               WHERE rowId = ? \
               AND mesh_id = ?;'

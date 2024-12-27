@@ -15,7 +15,7 @@ import re
 # package imports
 from ..concept.node import NodeLoadIM
 
-from steelpy.ufo.load.process.beam.beam import LineBeam, PointBeam
+from steelpy.ufo.load.process.beam.operations import LineBeam, PointBeam
 from steelpy.ufo.load.process.beam.main import (BeamTypeBasic,
                                                 BeamLineBasic,
                                                 BeamPointBasic)

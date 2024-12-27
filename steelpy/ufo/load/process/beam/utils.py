@@ -6,10 +6,11 @@
 from __future__ import annotations
 #from array import array
 #from collections.abc import Mapping
-from collections import defaultdict, Counter
+from collections import defaultdict #, Counter
 #from dataclasses import dataclass
 from typing import NamedTuple
 import re
+#from unittest import case
 
 # package imports
 import steelpy.utils.io_module.text as common
@@ -21,14 +22,15 @@ from steelpy.utils.dataframe.main import DBframework
 #
 def get_beam_line_load(load:list|tuple|dict) -> list:
     """
-    [line, qx1,qy1,qz1,qt1,qx2,qy2,qz2,qt2,L0,L1, tile]
+    Returns:
+        [line, qx1,qy1,qz1,qt1,qx2,qy2,qz2,qt2,L0,L1, comment]
     """
     #print('--->')
     if isinstance(load, UDL):
         load = get_BeamLine_load(load)
     elif isinstance(load, dict):
         try:
-            load = get_BeamLine_dic(load)
+            load = get_BeamLine_dict(load)
         except AttributeError:
             raise IOError('units missing')
     elif isinstance(load, (list, tuple)):
@@ -44,15 +46,16 @@ def get_beam_line_load(load:list|tuple|dict) -> list:
 #
 def get_beam_point_load(load:list|tuple|dict) -> list:
     """
-    [point,Fx, Fy, Fz, Mx, My, Mz, L0, title]
-    [mass, x, y, z, mx, my, mz, L0, title]
+    Returns:
+        [point,Fx, Fy, Fz, Mx, My, Mz, L0, comment]
+        [mass, x, y, z, mx, my, mz, L0, comment]
     """
     #print('--->')
     if isinstance(load, PLoad):
         load = get_BeamPoint_load(load)
     elif isinstance(load, dict):
         try:
-            load = get_BeamLoad_dic(load)
+            load = get_BeamPoint_dict(load)
         except AttributeError:
             raise IOError('units missing')    
     elif isinstance(load, (list, tuple)):
@@ -66,9 +69,10 @@ def get_beam_point_load(load:list|tuple|dict) -> list:
     return load     
 #
 #
-def get_BeamLine_load(data:list|tuple|UDL)->list[float]:
+def get_BeamLine_load(data:list|tuple|UDL)->list:
     """
-    line = [q1x,q1y,q1z,q1t,q2x,q2y,q2z,q2t,L0,L1, title]
+    Returns:
+         [line, q1x,q1y,q1z,q1t,q2x,q2y,q2z,q2t,L0,L1, comment]
     """
     try:
         load_type = data.pop(0)
@@ -77,11 +81,11 @@ def get_BeamLine_load(data:list|tuple|UDL)->list[float]:
     #
     if isinstance(data[-1], str):
         try:
-            load_title = data.pop()
+            load_comment = data.pop()
         except AttributeError:
-            load_title = data.title        
+            load_comment = data.comment        
     else:
-        load_title = None
+        load_comment = None
     #
     new_data = []
     # q0 [x,y,z,t]
@@ -110,13 +114,14 @@ def get_BeamLine_load(data:list|tuple|UDL)->list[float]:
             new_data.append(0.0)
     #
     new_data.insert(0, load_type)
-    new_data.append(load_title)    
+    new_data.append(load_comment)    
     return new_data
 #
 #
-def get_BeamPoint_load(data:list|tuple|PLoad)->list[float]:
+def get_BeamPoint_load(data:list|tuple|PLoad)->list:
     """
-    point = [Fx, Fy, Fz, Mx, My, Mz, L0, title]
+    Returns:
+        [point, Fx, Fy, Fz, Mx, My, Mz, L0, comment]
     """
     try:
         load_type = data.pop(0)
@@ -125,11 +130,11 @@ def get_BeamPoint_load(data:list|tuple|PLoad)->list[float]:
     #
     if isinstance(data[-1], str):
         try:
-            load_title = data.pop()
+            load_comment = data.pop()
         except AttributeError:
-            load_title = data.title
+            load_comment = data.comment
     else:
-        load_title = None
+        load_comment = None
     #
     new_data = []
     # Fx,y,z
@@ -155,15 +160,16 @@ def get_BeamPoint_load(data:list|tuple|PLoad)->list[float]:
         new_data.append(data[0])
     #
     new_data.insert(0, load_type)
-    new_data.append(load_title)
+    new_data.append(load_comment)
     return new_data
 #
 # ---------------------------------
 #
 #
-def get_value_line(data, label:str, steps:int = 8):
+def get_value_line(data, label:str, steps:int = 8)->list[float]:
     """
-    new_data = [q0x,q0y,q0z,q0t, q1x,q1y,q1z,q1t]
+    Returns:
+        [q0x,q0y,q0z,q0t, q1x,q1y,q1z,q1t]
     """
     new_data = [0,0,0,0, None,None,None, None]
     for x in range(steps):
@@ -186,21 +192,11 @@ def get_value_line(data, label:str, steps:int = 8):
 def get_BeamLoad_df(df: DBframework.DataFrame,
                     system: int):
     """
-    point = ['load_name', 'system',
-              'type', 'element_id',
-              'fx', 'fy', 'fz', 'mx', 'my', 'mz',
-              'L0', 'title', 'step']
-    
-    mass = ['load_name', 'system',
-            'type', 'element_id',
-            'x', 'y', 'z', 'rx', 'ry', 'rz',
-            'L0', 'title', 'step']
-              
-    line = ['load_name', 'system',
-            'type', 'beam_id',
-            'qx0', 'qy0', 'qz0', 'qt0',
-            'qx1', 'qy1', 'qz1', 'qt1',
-            'L0', 'L1', 'title', 'step']
+    Returns:
+        Dataframe:
+        [line, qx1,qy1,qz1,qt1, qx2,qy2,qz2,qt2,L0,L1, tile]
+        [point, fx, fy, fz, mx, my, mz, L0, comment]
+        [mass, x, y, z, rx, ry, rz, L0, comment]
     """
     #
     flag_system = 'global'
@@ -229,25 +225,25 @@ def get_BeamLoad_df(df: DBframework.DataFrame,
                 #for bname, bload in grpbeam:
                 for load in bload['data']:
                     data = dict(zip(bload['columns'], load))
-                    line = get_BeamLine_dic(data)
+                    line = get_BeamLine_dict(data)
                     temp.append([data['name'], data['system'], key[1], *line, None])
                 newgrp['line'].extend(temp)
     
             elif re.match(r"\b(point)\b", key[0], re.IGNORECASE):
-                # ['type', Fx, Fy, Fz, Mx, My, Mz, L0, title]
+                # ['type', Fx, Fy, Fz, Mx, My, Mz, L0, comment]
                 temp = []
                 for load in bload['data']:
                     data = dict(zip(bload['columns'], load))
-                    point = get_BeamPoint_dic(data)
+                    point = get_BeamPoint_dict(data)
                     temp.append([data['name'], data['system'], key[1], *point, None])
                 newgrp['point'].extend(temp)
                 
             elif re.match(r"\b(mass)\b", key[0], re.IGNORECASE):
-                # ['type', x, y, z, mx, my, mz, L0, title]
+                # ['type', x, y, z, mx, my, mz, L0, comment]
                 temp = []
                 for load in bload['data']:
                     data = dict(zip(bload['columns'], load))
-                    mass = get_BeamPoint_dic(data)
+                    mass = get_BeamPoint_dict(data)
                     temp.append([data['name'], data['system'], key[1], *mass, None])
                 newgrp['mass'].extend(temp)
                 
@@ -268,14 +264,14 @@ def get_BeamLoad_df(df: DBframework.DataFrame,
                 except AttributeError:
                     pass
                 
-                try: # ['type', Fx, Fy, Fz, Mx, My, Mz, L0, title]
+                try: # ['type', Fx, Fy, Fz, Mx, My, Mz, L0, comment]
                     data = item.point
                     force = get_BeamLoad_list_units(['point', *data])
                     newgrp['point'].append([item.name, flag_system, item.beam, *force, None])
                 except AttributeError:
                     pass
                 
-                try: # ['type', x, y, z, mx, my, mz, L0, title]
+                try: # ['type', x, y, z, mx, my, mz, L0, comment]
                     data = item.mass
                     force = get_BeamLoad_list_units(['mass', *data])
                     newgrp['mass'].append([item.name, flag_system, item.beam, *force, None])
@@ -288,15 +284,15 @@ def get_BeamLoad_df(df: DBframework.DataFrame,
                        'beam', 'type', 
                        'qx0', 'qy0', 'qz0', 'qt0',
                        'qx1', 'qy1', 'qz1', 'qt1',
-                       'L0', 'L1', 'title', 'step'],
+                       'L0', 'L1', 'comment', 'step'],
               'point': ['name', 'system',
                         'beam', 'type', 
                         'fx', 'fy', 'fz', 'mx', 'my', 'mz',
-                        'L0', 'title', 'step'],
+                        'L0', 'comment', 'step'],
               'mass': ['name', 'system',
                        'beam', 'type', 
                        'x', 'y', 'z', 'rx', 'ry', 'rz',
-                       'L0', 'title', 'step']}
+                       'L0', 'comment', 'step']}
     newdf = {}
     for key, item in newgrp.items():
         newdf[key] = db.DataFrame(data=item, columns=header[key])
@@ -306,21 +302,22 @@ def get_BeamLoad_df(df: DBframework.DataFrame,
 #
 def get_BeamLoad_list_units(data: list|tuple) -> list[float] :
     """
-    line = [qx1,qy1,qz1,qt1,qx2,qy2,qz2,qt2,L0,L1, tile]
-    point = [Fx, Fy, Fz, Mx, My, Mz, L0, title]
-    mass = [x, y, z, mx, my, mz, L0, title]
+    Returns:
+        [line, qx1,qy1,qz1,qt1, qx2,qy2,qz2,qt2,L0,L1, tile]
+        [point, fx, fy, fz, mx, my, mz, L0, comment]
+        [mass, x, y, z, rx, ry, rz, L0, comment]
     """
     loat_type = data.pop(0)
     if isinstance(data[-1], str):
-        load_title = data.pop()
+        load_comment = data.pop()
     else:
-        load_title = None
+        load_comment = None
     #
     #
     load = defaultdict(list)
     L = []
     new_data = []
-    if re.match(r"\b(line|(u|v)?(\_)?d(istributed)?(\_)?(l(oad)?)?)\b",
+    if re.match(r"\b(line(_|-|\s*)?d(istributed)?(_|-|\s*)?(l(oad)?)?)\b",
                 loat_type, re.IGNORECASE):
         for item in data:
             # Force
@@ -395,188 +392,77 @@ def get_BeamLoad_list_units(data: list|tuple) -> list[float] :
         
     else:
         raise IOError(f'beam load type {loat_type} not available')    
-    #   
     #
-    new_data.append(load_title)
-    return new_data    
-    #
-
+    new_data.append(load_comment)
+    return new_data
 #
 # ---------------------------------
 #
-def get_BeamLoad_dic(data: dict)->list[float]:
+def get_BeamLoad_dict(data: dict)->list:
     """
-    line = [qx1,qy1,qz1,qt1, qx2,qy2,qz2,qt2,L0,L1, tile]
-    point: [fx, fy, fz, mx, my, mz, L0, title]
-    mass: [x, y, z, rx, ry, rz, L0, title]
+    Returns:
+        [line, qx1,qy1,qz1,qt1, qx2,qy2,qz2,qt2,L0,L1, tile]
+        [point, fx, fy, fz, mx, my, mz, L0, comment]
+        [mass, x, y, z, rx, ry, rz, L0, comment]
     """
-    loat_type = data['type']
-    #new_data = [0,0,0, 0,0,0,  0, 'NULL'] # 0,0,0,0,0,0,
+    load_type = data['type']
     if re.match(r"\b(line|(u|v)?(_|-|\s*)?d(istributed)?(_|-|\s*)?(l(oad)?)?)\b",
-                loat_type, re.IGNORECASE):
-        #new_data[0] = 'line'
-        new_data = [0,0,0,0, 0,0,0,0, 0,0, None]
-        for key, item in data.items():
-            # End 1
-            if re.match(r"\b(qx(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[0] = item.convert("newton/metre").value
-            
-            elif re.match(r"\b(qy(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[1] = item.convert("newton/metre").value
-            
-            elif re.match(r"\b(qz(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[2] = item.convert("newton/metre").value
-            
-            elif re.match(r"\b(qt(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[3] = item.convert("newton*metre").value
-            
-            #
-            # End 2
-            #
-            elif re.match(r"\b(qx(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
-                new_data[4] = item.convert("newton/metre").value
-            
-            elif re.match(r"\b(qy(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
-                new_data[5] = item.convert("newton/metre").value
-            
-            elif re.match(r"\b(qz(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
-                new_data[6] = item.convert("newton/metre").value
-            
-            elif re.match(r"\b(qt(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
-                new_data[7] = item.convert("newton*metre").value
-            #
-            # L
-            elif re.match(r"\b((l|d(istance)?)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[8] = item.value
-            
-            elif re.match(r"\b((l|d(istance)?)(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
-                new_data[9] = item.value
-            #
-            elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
-                new_data[10] = item            
-        #
-        #
-        new_data.insert(0, 'line')        
+                load_type, re.IGNORECASE):
+        new_data = get_BeamLine_dict(data)
     
-    elif re.match(r"\b(p(oint)?)\b", loat_type, re.IGNORECASE):
-        #new_data[0] = 'point'
-        new_data = [0,0,0, 0,0,0, 0, None]
-        
-        for key, item in data.items():
-            if re.match(r"\b(fx|fa(xial)?)\b", key, re.IGNORECASE):
-                new_data[0] = item.convert("newton").value
-            
-            elif re.match(r"\b(py|fy|in(_|-|\s*)?plane)\b", key, re.IGNORECASE):
-                new_data[1] = item.convert("newton").value
-            
-            elif re.match(r"\b(pz|fz|out(_|-|\s*)?plane)\b", key, re.IGNORECASE):
-                new_data[2] = item.convert("newton").value
-            #
-            elif re.match(r"\b(mx|t(orsion)?)\b", key, re.IGNORECASE):
-                new_data[3] = item.convert("newton*metre").value
-            
-            elif re.match(r"\b(my|out(_|-|\s*)?plane)\b", key, re.IGNORECASE):
-                new_data[4] = item.convert("newton*metre").value
-            
-            elif re.match(r"\b(mz|in(_|-|\s*)?plane)\b", key, re.IGNORECASE):
-                new_data[5] = item.convert("newton*metre").value
-            #
-            elif re.match(r"\b((l|d(istance)?)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[6] = item.value
-            
-            elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
-                new_data[7] = item
-        #
-        new_data.insert(0, 'point')
-    
-    elif re.match(r"\b(mass)\b", loat_type, re.IGNORECASE):
-        #new_data[0] = 'mass'
-        new_data = [0,0,0, 0,0,0, 0, None]
-        for key, item in data.items():
-            
-            if re.match(r"\b(x)\b", key, re.IGNORECASE):
-                new_data[0] = item.convert("kilogram").value
-            
-            elif re.match(r"\b(y)\b", key, re.IGNORECASE):
-                new_data[1] = item.convert("kilogram").value
-            
-            elif re.match(r"\b(z)\b", key, re.IGNORECASE):
-                new_data[2] = item.convert("kilogram").value
-            #
-            #elif re.match(r"\b(mx|t(orsion)?)\b", key, re.IGNORECASE):
-            #    new_data[3] = item.convert("newton*metre").value
-            #
-            #elif re.match(r"\b(my|out(_)?plane)\b", key, re.IGNORECASE):
-            #    new_data[4] = item.convert("newton*metre").value
-            #
-            #elif re.match(r"\b(mz|in(_)?plane)\b", key, re.IGNORECASE):
-            #    new_data[5] = item.convert("newton*metre").value
-            #
-            elif re.match(r"\b((l|d(istance)?)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[6] = item.value
-            
-            elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
-                new_data[7] = item
-        #
-        new_data.insert(0, 'mass')
-    
+    elif re.match(r"\b(p(oint)?)\b", load_type, re.IGNORECASE):
+        new_data = get_BeamPoint_dict(data)
+
     else:
-        raise IOError(f'beam load type {loat_type} not available')    
+        raise IOError(f'beam load type {load_type} not available')
     #
-    #        
-    #new_data.append(load_title)
     return new_data
 #
 #
-def get_BeamLine_dic(data: dict)->list:
+def get_BeamLine_dict(data: dict)->list:
     """
-    new_data: [type,
-               qx1, qy1, qz1, qt1,
-               qx2, qy2, qz2, qt2,
-               d1, d2,
-               title]
+    Returns:
+        [type,
+        qx1, qy1, qz1, qt1,
+        qx2, qy2, qz2, qt2,
+        L1, L2,
+        comment]
     """
-    #rows = 0
+    #
     new_data = [0, 0, 0, 0, None,None,None,None, 0, 0, None]
     for key, item in data.items():
-        #
-        # End 1
-        if re.match(r"\b((qx|qa(xial)?)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-            new_data[0] = item.convert("newton/metre").value
-            
-        elif re.match(r"\b((qy|in(_|-|\s*)?plane)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-            new_data[1] = item.convert("newton/metre").value
-            
-        elif re.match(r"\b((qz|out(_|-|\s*)?plane)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-            new_data[2] = item.convert("newton/metre").value
-            
-        elif re.match(r"\b((qt(orsion)?|mx)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-            new_data[3] = item.convert("newton/metre").value
-        #
-        # End 2
-        elif re.match(r"\b((qx|qa(xial)?)(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
-            new_data[4] = item.convert("newton/metre").value           
-        
-        elif re.match(r"\b((qy|in(_|-|\s*)?plane)(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
-            new_data[5] = item.convert("newton/metre").value
-        
-        elif re.match(r"\b((qz|out(_|-|\s*)?plane)(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
-            new_data[6] = item.convert("newton/metre").value           
-        
-        elif re.match(r"\b((qt(orsion)?|mx)(_|-|\s*)?(2|end)?)\b", key, re.IGNORECASE):
-            new_data[7] = item.convert("newton/metre").value            
-        #
-        # L0, L2
-        elif re.match(r"\b((l|d(istance)?)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-            new_data[8] = item.convert("metre").value
-        
-        elif re.match(r"\b((l|d(istance)?)(_|-|\s*)?(2|end))\b", key, re.IGNORECASE):
-            new_data[9] = item.convert("metre").value
-        #
-        # Comment
-        elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
-            new_data[10] = item
-    #
+        load_item = find_BeamLoad_line(key)
+        #print(load_item)
+        match load_item:
+            # End 1
+            case 'qx1':
+                new_data[0] = item.convert("newton/metre").value
+            case 'qy1':
+                new_data[1] = item.convert("newton/metre").value
+            case 'qz1':
+                new_data[2] = item.convert("newton/metre").value
+            case 'qt1':
+                new_data[3] = item.convert("newton/metre").value
+           #
+           # End 2
+            case 'qx2':
+                new_data[4] = item.convert("newton/metre").value
+            case 'qy2':
+                new_data[5] = item.convert("newton/metre").value
+            case 'qz2':
+                new_data[6] = item.convert("newton/metre").value
+            case 'qt2':
+                new_data[7] = item.convert("newton/metre").value
+           #
+           # L0, L2
+            case 'L1':
+                new_data[8] = item.convert("metre").value
+            case 'L2':
+                new_data[9] = item.convert("metre").value
+           #
+           # Comment
+            case 'comment':
+                new_data[10] = item
     #
     # for uniform load
     # qx2
@@ -592,22 +478,21 @@ def get_BeamLine_dic(data: dict)->list:
     if new_data[7] == None:
         new_data[7] = new_data[3]    
     #
-    #
     new_data.insert(0, 'line')
-    #
     return new_data
 #
 #
 def get_BeamLine_list(data: list|tuple) -> list :
     """
-    line = [qx1,qy1,qz1,qt1,qx2,qy2,qz2,qt2,L0,L1, tile]
+    Returns:
+        line = [qx1,qy1,qz1,qt1,qx2,qy2,qz2,qt2,L0,L1, tile]
     """
     load_type = data.pop(0)
     #
     if isinstance(data[-1], str):
-        load_title = data.pop()
+        load_comment = data.pop()
     else:
-        load_title = None
+        load_comment = None
     #
     load = defaultdict(list)
     L = []
@@ -639,45 +524,44 @@ def get_BeamLine_list(data: list|tuple) -> list :
     else:
         raise IOError(f'load type {load_type} not valid')
     #
-    new_data.append(load_title)
+    new_data.append(load_comment)
     return new_data     
 #
 #
 #
-def get_BeamPoint_dic(data: dict)->list:
+def get_BeamPoint_dict(data: dict)->list:
     """
-    point: [type, fx, fy, fz, mx, my, mz, L0, title]
-    mass: [type, x, y, z, rx, ry, rz, L0, title]
+    Returns:
+        [point, fx, fy, fz, mx, my, mz, L0, comment]
+        [mass, x, y, z, mx, my, mz, L0, comment]
     """
     load_type = data['type']
     if re.match(r"\b(p(oint)?)\b", load_type, re.IGNORECASE):
         #new_data[0] = 'point'
         new_data = [0,0,0, 0,0,0, 0, None]
-        
         for key, item in data.items():
-            if re.match(r"\b(fx|fa(xial)?)\b", key, re.IGNORECASE):
-                new_data[0] = item.convert("newton").value
-            
-            elif re.match(r"\b(py|fy|in(_)?plane)\b", key, re.IGNORECASE):
-                new_data[1] = item.convert("newton").value
-            
-            elif re.match(r"\b(pz|fz|out(_)?plane)\b", key, re.IGNORECASE):
-                new_data[2] = item.convert("newton").value
-            #
-            elif re.match(r"\b(mx|t(orsion)?)\b", key, re.IGNORECASE):
-                new_data[3] = item.convert("newton*metre").value
-            
-            elif re.match(r"\b(my|out(_)?plane)\b", key, re.IGNORECASE):
-                new_data[4] = item.convert("newton*metre").value
-            
-            elif re.match(r"\b(mz|in(_)?plane)\b", key, re.IGNORECASE):
-                new_data[5] = item.convert("newton*metre").value
-            #
-            elif re.match(r"\b((l|d(istance)?)(_)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[6] = item.convert("metre").value
-            
-            elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
-                new_data[7] = item
+            load_item = find_BeamLoad_PointForce(key)
+            #print(load_item)
+            match load_item:
+                case 'fx':
+                    new_data[0] = item.convert("newton").value
+                case 'fy':
+                    new_data[1] = item.convert("newton").value
+                case 'fz':
+                    new_data[2] = item.convert("newton").value
+                # moment
+                case 'mx':
+                    new_data[3] = item.convert("newton*metre").value
+                case 'my':
+                    new_data[4] = item.convert("newton*metre").value
+                case 'mz':
+                    new_data[5] = item.convert("newton*metre").value
+                # Load distance
+                case 'L':
+                    new_data[6] = item.convert("metre").value
+                # load comment
+                case 'comment':
+                    new_data[7] = item
         #
         new_data.insert(0, 'point')
     
@@ -685,48 +569,40 @@ def get_BeamPoint_dic(data: dict)->list:
         #new_data[0] = 'mass'
         new_data = [0,0,0, 0,0,0, 0, None]
         for key, item in data.items():
-            
-            if re.match(r"\b(x)\b", key, re.IGNORECASE):
-                new_data[0] = item.convert("kilogram").value
-            
-            elif re.match(r"\b(y)\b", key, re.IGNORECASE):
-                new_data[1] = item.convert("kilogram").value
-            
-            elif re.match(r"\b(z)\b", key, re.IGNORECASE):
-                new_data[2] = item.convert("kilogram").value
+            load_item = find_BeamLoad_PointMass(key)
+            #print(load_item)
+            match load_item:
+                case 'x':
+                    new_data[0] = item.convert("kilogram").value
+                case 'y':
+                    new_data[1] = item.convert("kilogram").value
+                case 'z':
+                    new_data[2] = item.convert("kilogram").value
             #
-            #elif re.match(r"\b(mx|t(orsion)?)\b", key, re.IGNORECASE):
-            #    new_data[3] = item.convert("newton*metre").value
-            #
-            #elif re.match(r"\b(my|out(_)?plane)\b", key, re.IGNORECASE):
-            #    new_data[4] = item.convert("newton*metre").value
-            #
-            #elif re.match(r"\b(mz|in(_)?plane)\b", key, re.IGNORECASE):
-            #    new_data[5] = item.convert("newton*metre").value
-            #
-            elif re.match(r"\b((l|d(istance)?)(_|-|\s*)?(0|1|start)?)\b", key, re.IGNORECASE):
-                new_data[6] = item.convert("metre").value
-            
-            elif re.match(r"\b(title|comment|name|id)\b", key, re.IGNORECASE):
-                new_data[7] = item
+            # Load distance
+                case 'L':
+                    new_data[6] = item.convert("metre").value
+        # load comment
+                case 'comment':
+                    new_data[7] = item
         #
         new_data.insert(0, 'mass')
-    
     else:
-        raise IOError(f'beam load type {loat_type} not available')    
+        raise IOError(f'beam load type {load_type} not available')
     #
     return new_data    
 #
 def get_BeamPoint_list(data: list|tuple) -> list :
     """
-    point = [Fx, Fy, Fz, Mx, My, Mz, L0, title]
-    mass = [x, y, z, mx, my, mz, L0, title]
+    Returns:
+        [point, fx, fy, fz, mx, my, mz, L0, comment]
+        [mass, x, y, z, mx, my, mz, L0, comment]
     """
     load_type = data.pop(0)
     if isinstance(data[-1], str):
-        load_title = data.pop()
+        load_comment = data.pop()
     else:
-        load_title = None
+        load_comment = None
     #
     #
     load = defaultdict(list)
@@ -780,7 +656,7 @@ def get_BeamPoint_list(data: list|tuple) -> list :
         new_data.append(L[0])
         new_data.insert(0, 'mass')
     #
-    new_data.append(load_title)
+    new_data.append(load_comment)
     return new_data     
 #
 # ---------------------------------
@@ -793,34 +669,51 @@ def find_load_type(word_in:str) -> str:
     match = common.find_keyword(word_in, key)
     return match
 #
+def find_BeamLoad_basic(word_in:str) -> str:
+    """ """
+    key = {"load": r"\b(load(s)?(_|-|\s*)?(id|name)?)\b",
+           "type": r"\b((load(_|-|\s*)?)?type)\b",
+           "title": r"\b((load(_|-|\s*)?)?title)\b",
+           "comment": r"\b((load(_|-|\s*)?)?comment)\b",
+           "system": r"\b((load(_|-|\s*)?)?system)\b",
+           "beam": r"\b(beam(s)?(_|-|\s*)?(name|id)?)\b",}
+    match = common.find_keyword(word_in, key)
+    return match
 #
 def find_BeamLoad_item(word_in:str) -> str:
     """ """
-    key = {"name": r"\b(id|name|load(s)?)\b",
-           "type": r"\b((load(_|-|\s*)?)?type)\b",
-           "title": r"\b(title|comment)\b",
-           "beam": r"\b(beam(s)?(_|-|\s*)?(name|id)?)\b",
-           "system": r"\b(system)\b",}
     try:
-        match = common.find_keyword(word_in, key)
-        return match
+        return find_BeamLoad_basic(word_in)
     except IOError:
         return find_load_item(word_in)
 #
-#
 def find_BeamLoad_type(word_in:str) -> str:
     """ """
-    key = {"name": r"\b(id|name|load(s)?)\b",
-           "type": r"\b((load(_|-|\s*)?)?type)\b",
-           "title": r"\b(title|comment)\b",
-           "beam": r"\b(beam(s)?(_|-|\s*)?(name|id)?)\b",
-           "system": r"\b(system)\b",}
     try:
-        match = common.find_keyword(word_in, key)
-        return match
+        return find_BeamLoad_basic(word_in)
     except IOError:
         return find_load_type(word_in)
 #
+def find_BeamLoad_line(word_in:str) -> str:
+    """ """
+    try:
+        return find_BeamLoad_basic(word_in)
+    except IOError:
+        return find_LineLoad_item(word_in)
+#
+def find_BeamLoad_PointForce(word_in:str) -> str:
+    """ """
+    try:
+        return find_BeamLoad_basic(word_in)
+    except IOError:
+        return find_PointLoad_item(word_in)
+#
+def find_BeamLoad_PointMass(word_in:str) -> str:
+    """ """
+    try:
+        return find_BeamLoad_basic(word_in)
+    except IOError:
+        return find_PointMass_item(word_in)
 #
 def find_load_item(word_in:str) -> str:
     """ """
@@ -839,20 +732,21 @@ def find_load_item(word_in:str) -> str:
     except IOError:
         pass
     #
-    return IOError('load definition')
+    return IOError('beam load definition')
+#
 #
 #
 def find_LineLoad_item(word_in:str) -> str:
     """ """
-    key = {"qx1": r"\b(qx(_|-|\s*)?(0|1|start)?)\b",
-           "qy1": r"\b(qy(_|-|\s*)?(0|1|start)?)\b",
-           "qz1": r"\b(qz(_|-|\s*)?(0|1|start)?)\b",
-           "qt1": r"\b(qt(_|-|\s*)?(0|1|start)?)\b",
+    key = {"qx1": r"\b((qx|qa(xial)?)(_|-|\s*)?(0|1|start)?)\b",
+           "qy1": r"\b((qy|in(_|-|\s*)?plane)(_|-|\s*)?(0|1|start)?)\b",
+           "qz1": r"\b((qz|out(_|-|\s*)?plane)(_|-|\s*)?(0|1|start)?)\b",
+           "qt1": r"\b((qt(orsion)?|mx)(_|-|\s*)?(0|1|start)?)\b",
            #
-           "qx2": r"\b(qx(_|-|\s*)?(2|end))\b", 
-           "qy2": r"\b(qy(_|-|\s*)?(2|end))\b",
-           "qz2": r"\b(qz(_|-|\s*)?(2|end))\b",
-           "qt2": r"\b(qt(_|-|\s*)?(2|end))\b",
+           "qx2": r"\b((qx|qa(xial)?)(_|-|\s*)?(2|end))\b",
+           "qy2": r"\b((qy|in(_|-|\s*)?plane)(_|-|\s*)?(2|end))\b",
+           "qz2": r"\b((qz|out(_|-|\s*)?plane)(_|-|\s*)?(2|end))\b",
+           "qt2": r"\b((qt(orsion)?|mx)(_|-|\s*)?(2|end))\b",
            #
            "L1": r"\b((l|d(istance)?)(_|-|\s*)?(0|1|start)?)\b",
            "L2": r"\b((l|d(istance)?)(_|-|\s*)?(2|end))\b"}
@@ -870,7 +764,6 @@ def find_PointMass_item(word_in:str) -> str:
            "rz": r"\b(mz|in(_|-|\s*)?plane)\b",
            #
            "L": r"\b((l|d(istance)?)(_|-|\s*)?(0|1|start)?)\b",}
-    
     match = common.find_keyword(word_in, key)
     return match
 #
@@ -890,79 +783,10 @@ def find_PointLoad_item(word_in:str) -> str:
     return match
 #
 #
-#
-def read_point(key, header):
-    """ """
-    if re.match(r"\b(fx)\b", key, re.IGNORECASE):
-        header[key] = 'fx'
-    
-    elif re.match(r"\b(fy)\b", key, re.IGNORECASE):
-        header[key] = 'fy'
-    
-    elif re.match(r"\b(fz)\b", key, re.IGNORECASE):
-        header[key] = 'fz'
-    
-    elif re.match(r"\b(mx)\b", key, re.IGNORECASE):
-        header[key] = 'mx'
-    
-    elif re.match(r"\b(my)\b", key, re.IGNORECASE):
-        header[key] = 'my'
-    
-    elif re.match(r"\b(mz)\b", key, re.IGNORECASE):
-        header[key] = 'mz'
-    #
-    return header
-#
-def read_dispmass(key, header):
-    """ """
-    if re.match(r"\b(x)\b", key, re.IGNORECASE):
-        header[key] = 'x'
-        #df['type'] = df[key].apply(lambda x: find_element_type(x))
-    
-    elif re.match(r"\b(y)\b", key, re.IGNORECASE):
-        header[key] = 'y'
-    
-    elif re.match(r"\b(z)\b", key, re.IGNORECASE):
-        header[key] = 'z'
-    
-    elif re.match(r"\b(rx)\b", key, re.IGNORECASE):
-        header[key] = 'rx'
-    
-    elif re.match(r"\b(ry)\b", key, re.IGNORECASE):
-        header[key] = 'ry'
-    
-    elif re.match(r"\b(rz)\b", key, re.IGNORECASE):
-        header[key] = 'rz'
-    #
-    return header
-#
-def read_line(key, header):
-    """ """
-    if re.match(r"\b(qx0)\b", key, re.IGNORECASE):
-        header[key] = 'qx0'
-    
-    elif re.match(r"\b(qy0)\b", key, re.IGNORECASE):
-        header[key] = 'qy0'
-    
-    elif re.match(r"\b(qz0)\b", key, re.IGNORECASE):
-        header[key] = 'qz0'
-    
-    elif re.match(r"\b(qx1)\b", key, re.IGNORECASE):
-        header[key] = 'qx1'
-    
-    elif re.match(r"\b(qy1)\b", key, re.IGNORECASE):
-        header[key] = 'qy1'
-    
-    elif re.match(r"\b(qz1)\b", key, re.IGNORECASE):
-        header[key] = 'qz1'
-    #
-    return header
-#
-#
 # ---------------------------------
 #
 class UDL(NamedTuple):
-    """ """
+    """ Beam UDL load"""
     qx1: float
     qy1: float
     qz1: float
@@ -976,10 +800,10 @@ class UDL(NamedTuple):
     L1: float | None 
     L2: float | None 
     #
-    title: str | int| None    
+    comment: str | int| None
 #
 class PLoad(NamedTuple):
-    """ """
+    """ Beam point load"""
     Fx: float
     Fy: float
     Fz: float
@@ -990,7 +814,7 @@ class PLoad(NamedTuple):
     #
     L: float | None 
     #
-    title: str | int| None
+    comment: str | int| None
     #
     @property
     def L1(self):

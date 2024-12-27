@@ -26,7 +26,7 @@ class BasicLoadConcept(BasicLoadCase):
     def __init__(self, points, elements, component: int):
         """
         """
-        super().__init__()
+        super().__init__(name=component)
         self._labels: list = []
         self._title: list[str] = []
         self._number: array = array("I", [])        

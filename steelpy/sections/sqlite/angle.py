@@ -21,16 +21,10 @@ from steelpy.sections.sqlite.utils import SectionMainSQL
 
 class AngleSQL(SectionMainSQL):
     """ """
-    __slots__ = ['_properties', # 'diameter', 'thickness', 
+    __slots__ = ['_properties', '_mesh_id', 
                  'name', 'number', 'db_file']
     
-    def __init__(self, component: int, db_file:str):
-                 #name:Union[str, int],
-                 #d:Union[float,None], t:Union[float,None], 
-                 #db_file:str,
-                 #build:str = 'welded', 
-                 #shear_stress:str = 'maximum',
-                 #FAvy:float = 1.0, FAvz:float = 1.0):
+    def __init__(self, mesh_id: int, db_file:str):
         """
         Parameters
         ----------
@@ -38,10 +32,7 @@ class AngleSQL(SectionMainSQL):
         t : wall Thickness
         Shear Stress: MAXIMUM / AVERAGE
         """
-        self.db_file = db_file      
-        # push data to sqlite table
-        super().__init__(component=component,
-                         db_file=self.db_file)
+        super().__init__(mesh_id=mesh_id, db_file=db_file)
     #
     def __setitem__(self, shape_name: int|str, parameters: list) -> None:
         """

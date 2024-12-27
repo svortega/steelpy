@@ -18,19 +18,19 @@ from steelpy.sections.utils.operations import get_section
 # ---------------------------------
 #
 class Section(Mapping):
-    __slots__ = ['_sections', '_default', '_component']
+    __slots__ = ['_sections', '_default', '_mesh_id']
 
     def __init__(self,
-                 component:int,
+                 mesh_id:int,
                  db_file: str | None = None, 
                  mesh_type: str = 'inmemory'):
         """
         """
-        self._component = component
+        self._mesh_id = mesh_id
         #
         if mesh_type != "inmemory":
             self._sections = SectionSQL(db_file=db_file,
-                                        component=component, 
+                                        mesh_id=mesh_id, 
                                         db_system=mesh_type)
         else:
             self._sections = SectionIM()

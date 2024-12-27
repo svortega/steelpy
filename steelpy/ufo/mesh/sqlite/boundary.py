@@ -19,13 +19,14 @@ from steelpy.utils.dataframe.main import DBframework
 #
 class BoundaryNodeSQL(BoundaryNode):
     
-    __slots__ = ['_db_file', '_component']
+    __slots__ = ['_db_file', '_mesh_id','_name']
     
-    def __init__(self, component: int, db_file:str):
+    def __init__(self, name:str|int, mesh_id: int, db_file:str):
         """
         """
-        super().__init__(component)
+        super().__init__(name=name)
         self._db_file = db_file
+        self._mesh_id = mesh_id
     #
     def __setitem__(self, name: int,
                     values:list|tuple|dict) -> None:
@@ -45,7 +46,7 @@ class BoundaryNodeSQL(BoundaryNode):
         conn = create_connection(self._db_file)
         with conn:  
             node = check_nodes(conn, node_name,
-                               component=self._component)
+                               mesh_id=self._mesh_id)
             node_id = node[0]
         #
         try:
@@ -57,11 +58,11 @@ class BoundaryNodeSQL(BoundaryNode):
             conn = create_connection(self._db_file)
             with conn:
                 boundary_id = push_boundary(conn, name,
-                                            self._component, btype)
+                                            self._mesh_id, btype)
 
                 push_boundary_node(conn, boundary_id, fixity, title=None)
                 update_node(conn, colname='boundary_id', item=boundary_id,
-                            node_id=node_id, mesh_id=self._component)
+                            node_id=node_id, mesh_id=self._mesh_id)
 
             #
             #print('-->')
@@ -73,7 +74,7 @@ class BoundaryNodeSQL(BoundaryNode):
         conn = create_connection(self._db_file)
         with conn:  
             node = check_nodes(conn, node_name,
-                               component=self._component)
+                               mesh_id=self._mesh_id)
             node_id = node[0]
         #try:
         #    node_id = node[0]
@@ -86,7 +87,7 @@ class BoundaryNodeSQL(BoundaryNode):
             with conn:
                 data = pull_nboundary(conn, boundary_id=node[-1])
                 data = data[0]
-                #data = pull_node_boundary(conn, node_id, self._component)
+                #data = pull_node_boundary(conn, node_id, self._mesh_id)
 
             return BoundaryItem(*data[3:9],
                                 number=data[2],
@@ -102,7 +103,7 @@ class BoundaryNodeSQL(BoundaryNode):
         conn = create_connection(self._db_file)
         with conn:
             items = pull_node_boundaries(conn,
-                                         mesh_id=self._component)
+                                         mesh_id=self._mesh_id)
         return [item[1] for item in items]
     #
     #
@@ -136,7 +137,7 @@ class BoundaryNodeSQL(BoundaryNode):
     @property
     def df(self):
         """Boundary df"""
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = 'SELECT Node.name, BoundaryNode.* \
                  FROM Node, BoundaryNode, Boundary, Mesh \
                  WHERE BoundaryNode.node_id = Node.number \
@@ -204,22 +205,24 @@ def push_boundary_node(conn, boundary_id: int, # node_id: int,
 #
 #
 class BoundarySQL:
-    __slots__ = ['_db_file', '_component', '_boundary']
+    __slots__ = ['_db_file', '_mesh_id', '_boundary','_name']
     
     def __init__(self, db_file:str,
-                 component: int, 
+                 mesh_id: int, 
+                 name:str|int,
                  db_system:str="sqlite") -> None:
         """
         """
         self._db_file = db_file
-        self._component = component
+        self._mesh_id = mesh_id
         #
         # create node table
         conn = create_connection(self._db_file)
         with conn:        
             self._new_table(conn)        
         #
-        self._boundary = BoundaryNodeSQL(component=self._component,
+        self._boundary = BoundaryNodeSQL(name=name,
+                                         mesh_id=self._mesh_id,
                                          db_file=self._db_file)
         #
     #
@@ -227,7 +230,7 @@ class BoundarySQL:
     @property
     def _labels(self):
         """ """
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = 'SELECT Boundary.name \
                  FROM Boundary, Mesh \
                  WHERE Boundary.mesh_id = Mesh.number \
@@ -331,7 +334,7 @@ class BoundarySQL:
     def _push_boundary(self, conn, name: int|str, btype: str):
         """
         """
-        return push_boundary(conn, name, self._component, btype)
+        return push_boundary(conn, name, self._mesh_id, btype)
         
     #
     # -----------------------------------------
@@ -377,10 +380,10 @@ class BoundarySQL:
         """ """
         conn = create_connection(self._db_file)
         with conn:
-            nodes =  pull_node_boundaries(conn, mesh_id=self._component)
+            nodes =  pull_node_boundaries(conn, mesh_id=self._mesh_id)
             bnid = [row[-1] for row in nodes]            
             items = pull_nboundary(conn, boundary_id=bnid)
-                                   #mesh_id=self._component)
+                                   #mesh_id=self._mesh_id)
         #
         bnodes = {nodes[x][1]: BoundaryItem(*data[3:9],
                                             number=data[2],
@@ -397,7 +400,7 @@ class BoundarySQL:
         #
         conn = create_connection(self._db_file)
         with conn:        
-            nodes =  pull_node_boundaries(conn, mesh_id=self._component)
+            nodes =  pull_node_boundaries(conn, mesh_id=self._mesh_id)
         bnid = [row[-1] for row in nodes]
         #
         project = "', '".join(str(x) for x in bnid)
@@ -522,7 +525,7 @@ def get_boundary_list(items: list):
         elif re.match(r"\b(beam(s)?)\b", items[x], re.IGNORECASE):
             bname = items[x+1]
             #beam = BeamItemSQL(beam_name=bname,
-            #                   component=self._component,
+            #                   mesh_id=self._mesh_id,
             #                   db_file=self.db_file)
             #
             #dircos = beam.dircos

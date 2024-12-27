@@ -28,14 +28,14 @@ class Material(Mapping):
     __slots__ = ['_material']
 
     def __init__(self,
-                 component:int,
+                 mesh_id:int,
                  db_file: str | None = None, 
                  mesh_type: str = 'inmemory') -> None:
         """
         """
         if mesh_type != "inmemory":
             self._material = MaterialSQL(db_file=db_file,
-                                         component=component, 
+                                         mesh_id=mesh_id, 
                                          db_system=mesh_type)
         else:
             self._material = MaterialIM()

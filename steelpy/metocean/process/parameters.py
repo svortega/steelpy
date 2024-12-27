@@ -17,7 +17,8 @@ class HydroDesign(ClassBasicSQL):
     def __init__(self, component: str|int, db_file:str|None = None):
         """
         """
-        super().__init__(component, db_file)
+        super().__init__(db_file)
+        self._component =  component
     #
     #
     def __setitem__(self, name: int|str,

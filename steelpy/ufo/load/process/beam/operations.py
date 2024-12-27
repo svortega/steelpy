@@ -4,11 +4,6 @@
 
 # Python stdlib imports
 from __future__ import annotations
-#from collections.abc import Mapping
-#from collections import namedtuple
-#from collections import defaultdict
-from dataclasses import dataclass
-#from operator import sub, add
 from dataclasses import dataclass
 from typing import NamedTuple
 
@@ -17,15 +12,10 @@ from typing import NamedTuple
 #
 from steelpy.utils.units.buckingham import Number
 from steelpy.utils.math.operations import trnsload
-#from steelpy.utils.math.operations import linspace
-# steelpy.
 from steelpy.ufo.load.process.beam.utils import(get_BeamLoad_list_units,
-                                                get_BeamLine_dic,
-                                                get_BeamLoad_dic,
+                                                get_BeamLine_dict,
+                                                get_BeamLoad_dict,
                                                 get_BeamLine_load)
-#
-#
-# steelpy.
 from steelpy.trave.beam.operation import BeamTorsion, BeamAxial, BeamBending
 from steelpy.trave.beam.operation import BeamBasic
 #
@@ -37,7 +27,7 @@ import numpy as np
 class BeamLoadClass:
     """ """
     name: str | int
-    title: str | None
+    comment: str | None
     load_name: str | int
     mesh_name: str | int
     system: int
@@ -48,8 +38,8 @@ class BeamLoadClass:
         """
         return q load in local beam system
 
-        retunr:
-        [qx0, qy0, qz0, qx1, qy1, qz1]
+        Returns:
+            [qx0, qy0, qz0, qx1, qy1, qz1]
         """
         try:  # local system
             1 / self.system
@@ -156,7 +146,7 @@ class BeamLoadClass:
         Pend2 = [*Fend2, *Rend2, *end_2.t[2:]]
         #
         FER_out = [self.load_name, self.mesh_name,
-                   self.title, self.load_type, 
+                   self.comment, self.load_type, 
                    'basic', self.system,
                    self.name, Pend1, Pend2]
         #1 / 0
@@ -210,12 +200,12 @@ class LineBeam(BeamLoadClass):
                   f"{self.coordinate_system.upper():6s} "
                   f"{self.load_complex}\n")
         
-        if (load_title:= self.title) == "NULL":
-            load_title = ""        
+        if (load_comment:= self.comment) == "NULL":
+            load_comment = ""        
         step = self.load_type
         output += (f"{step[:12]:12s} {self.L1: 1.3e} {self.qx1: 1.3e} "
                    f"{self.qy1: 1.3e} {self.qz1: 1.3e} "
-                   f"{str(load_title)}\n")
+                   f"{str(load_comment)}\n")
         return output
     #
     # -------------------------
@@ -240,7 +230,7 @@ class LineBeam(BeamLoadClass):
 
         return:
         [load_name, component,
-        load_title, load_type,
+        load_comment, load_type,
         load_level, load_system,
         beam_name, x, Fx, Fy, Fz]
         Fx, Fy, Fz --> [V, M, theta, w] Note positive load is upwards
@@ -265,7 +255,7 @@ class LineBeam(BeamLoadClass):
             for xstep in x:
                 #print(f'step --> {xstep}')
                 Fx_out.append(LoadFunction(self.load_name, self.mesh_name,
-                                           self.title, self.load_type, 'basic',
+                                           self.comment, self.load_type, 'basic',
                                            self.coordinate_system,
                                            self.name, xstep,
                                            
@@ -294,7 +284,7 @@ class LineBeam(BeamLoadClass):
                                                                    L1=self.L0, L2=self.L1))))
         else:
             Fx_out = LoadFunction(self.load_name, self.mesh_name,
-                                  self.title, self.load_type, 'basic',
+                                  self.comment, self.load_type, 'basic',
                                   self.coordinate_system,
                                   self.name, x,
                                   
@@ -322,7 +312,7 @@ class LineBeam(BeamLoadClass):
                                                           q2=self.qz1 * factor,
                                                           L1=self.L0, L2=self.L1)))
         #
-        # [load_name, load_title, load_type, load_system, 
+        # [load_name, load_comment, load_type, load_system, 
         # beam_number, x, Fx, Fy, Fz]
         return Fx_out
     #
@@ -382,12 +372,12 @@ class PointBeam(BeamLoadClass):
                    f"{self.coordinate_system.upper():6s} "
                    f"{self.load_complex}\n")
         
-        if (load_title:= self.title) == "NULL":
-            load_title = ""        
+        if (load_comment:= self.comment) == "NULL":
+            load_comment = ""        
         step = self.load_type
         output += (f"{step[:12]:12s} {10*' '} {self.mx: 1.3e} "
                    f"{self.my: 1.3e} {self.mz: 1.3e} "
-                   f"{str(load_title)}\n")
+                   f"{str(load_comment)}\n")
         return output
     #
     #
@@ -421,7 +411,7 @@ class PointBeam(BeamLoadClass):
 
         Return:
         Fx : [load_name, component,
-              load_title, load_type,
+              load_comment, load_type,
               load_level, load_system,
               beam_name, L_step,
               Axial, Torsion, Bending_inplane, Bending_outplane]
@@ -468,7 +458,7 @@ class PointBeam(BeamLoadClass):
                                          L1=self.L0)
                 #
                 Fx_out.append(LoadFunction(self.load_name, self.mesh_name,
-                                           self.title, self.load_type, 'basic',
+                                           self.comment, self.load_type, 'basic',
                                            self.coordinate_system,
                                            self.name, xstep,
                                            np.array(Axial), np.array(Torsion),
@@ -495,7 +485,7 @@ class PointBeam(BeamLoadClass):
                                      L1=self.L0)
             
             Fx_out = LoadFunction(self.load_name, self.mesh_name,
-                                  self.title, self.load_type, 'basic',
+                                  self.comment, self.load_type, 'basic',
                                   self.coordinate_system, 
                                   self.name, x,
                                   np.array(Axial), np.array(Torsion),
@@ -517,112 +507,4 @@ def distributed_axial(w:float, L:float,
     return [Fa, Fb]
 #
 # ---------------------------------
-#
-#
-@dataclass
-class BeamLoadBasic:
-    """ """
-    def __init__(self):
-        """
-        """
-        self._system_flag = 0  # Global system default
-    #
-    #
-    # TODO : chekc if works for dict
-    def _get_line(self, line_load: list|dict):
-        """ get line load in beam local system"""
-        #
-        # update inputs
-        if isinstance(line_load, dict):
-            udl = get_BeamLine_dic(line_load)
-            title = udl.pop()
-            
-        elif isinstance(line_load[-1], str):
-            title = line_load.pop()
-            if isinstance(line_load[0], Number):
-                udl = get_BeamLoad_list_units(line_load)
-            else:
-                udl = get_BeamLine_load(line_load)
-        else:
-            title ='NULL'
-            udl = get_BeamLine_load(line_load)
-        #
-        # get system local = 1
-        try:
-            1 / self._system_flag
-            return [*udl, 1, title]
-        except ZeroDivisionError:
-            # local nodal loading
-            nload = [*udl[0:4], 0, 0,
-                     *udl[4:8], 0, 0]
-            nload = trnsload(nload, self._beam.T3D())
-            #nload = [*nload[:4], *nload[6:10]] 
-            return [*nload[:4],    # end 1 [qx, qy, qz, qt]
-                    *nload[6:10],  # end 2 [qx, qy, qz, qt]
-                    *udl[8:],      # [L0, L1]
-                    1, title]      # Local system, title
-    #
-    def _get_point(self, point_load: list|dict):
-        """ get point load in beam local system"""
-        # update inputs
-        if isinstance(point_load, dict):
-            point = get_BeamLoad_dic(point_load)
-            title = point.pop()
-        
-        elif isinstance(point_load[-1], str):
-            title = point_load.pop()
-            if isinstance(point_load[0], Number):
-                point = get_BeamLoad_list_units(point_load)
-            else:
-                point = get_BeamNode_load(point_load)
-        
-        else:
-            title = 'NULL'
-            point = get_BeamNode_load(point_load)
-        #
-        # get system local = 1
-        try: # Local system
-            1 / self._system_flag
-            return [*point, 1, title]
-        except ZeroDivisionError: # global to local system
-            pload = [*point[:6], 0, 0, 0, 0, 0, 0]
-            pload = trnsload(pload, self._beam.T3D())
-            return [*pload[:6], point[6], 1, title]
-    #    
-    # -----------------------------------------------
-    #
-    def local_system(self):
-        """set load beam local system"""
-        self._system_flag = 1
-        self._line.coordinate_system = self._system_flag
-        self._point.coordinate_system = self._system_flag
-        return "local"
-
-    # @property
-    def global_system(self):
-        """set load beam global system"""
-        self._system_flag = 0
-        self._line.coordinate_system = self._system_flag
-        self._point.coordinate_system = self._system_flag
-        return "global"
-    #
-    # -----------------------------------------------
-    #
-    def __str__(self, units: str = "si") -> str:
-        """ """
-        #unit_lenght = " m"
-        #unit_force = "  N"
-        #unit_bm = "N*m"
-        #unit_fl = "N/m"
-        output = ""
-        # output += "--- Beam Line Load\n"
-        output += self._line.__str__()
-        # output += "--- Beam Point Load\n"
-        output += self._point.__str__()
-        # output += self._nodal_displacement.__str__()
-        return output
-    #    
-#
-# ---------------------------------
-#
 #

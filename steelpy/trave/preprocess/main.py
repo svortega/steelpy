@@ -59,7 +59,7 @@ class TraveItemBasic(TraveItemSQL):
     #
     def static(self, name: str |None = None,
                second_order: bool = False,
-               ineleastic: bool = False):
+               inelastic: bool = False):
         """
         Solves the static system by the Direct Stiffness Method (DSM)
 
@@ -75,7 +75,7 @@ class TraveItemBasic(TraveItemSQL):
                                         analysis_type='static',
                                         plane=self._plane2D,
                                         Pdelta=second_order,
-                                        ineleastic=ineleastic)
+                                        ineleastic=inelastic)
         #
         if  self._mesh:
             return  StaticSolver(mesh=self._mesh,
@@ -83,7 +83,7 @@ class TraveItemBasic(TraveItemSQL):
                                  db_file=self.db_file,
                                  log = self._log,
                                  second_order=second_order,
-                                 ineleastic=ineleastic)
+                                 inelastic=inelastic)
         else:
             raise IOError('** error: mesh missing')
     #

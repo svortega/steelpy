@@ -19,13 +19,13 @@ from steelpy.utils.dataframe.main import DBframework
 
 class ElementMain(Mapping):
     """ """
-    __slots__ = ['_component']
+    __slots__ = ['_name']
 
-    def __init__(self, component:int|str) -> None:
+    def __init__(self, name:int|str) -> None:
         """
         Manages f2u elements
         """
-        self._component = component
+        self._name = name
     #
     def __len__(self) -> int:
         return len(self._labels)

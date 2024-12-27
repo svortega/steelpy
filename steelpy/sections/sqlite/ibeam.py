@@ -18,9 +18,9 @@ from steelpy.utils.sqlite.utils import create_connection
 #
 #
 class IbeamSQL(SectionMainSQL):
-    __slots__ = ['_default', 'db_file']
+    __slots__ = ['_default', 'db_file', '_mesh_id']
 
-    def __init__(self, component: int, db_file:str):
+    def __init__(self, mesh_id: int, db_file:str):
         """ 
         Parameters
         ----------
@@ -32,9 +32,7 @@ class IbeamSQL(SectionMainSQL):
         tfb : Bottom flange thickness
         r   : root radius
         """
-        self.db_file = db_file
-        super().__init__(component=component,
-                         db_file=self.db_file)
+        super().__init__(mesh_id=mesh_id, db_file=db_file)
     #
     #
     #

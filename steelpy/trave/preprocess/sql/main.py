@@ -92,12 +92,13 @@ class TraveItemSQL:
         # update table
         conn = create_connection(self.db_file)
         with conn:
-            component = self._mesh._component
-            mesh_name = self._mesh._name
-            mesh_id = pull_mesh_id(conn,
-                                   name=mesh_name,
-                                   component=component)
+            #component = self._mesh._component
+            #mesh_name = self._mesh._name
+            #mesh_id = pull_mesh_id(conn,
+            #                       name=mesh_name,
+            #                       component=component)
             #
+            mesh_id = self._mesh._id
             result_id = self._push_data(conn, name, mesh_id,
                                         analysis_type, Pdelta,
                                         ineleastic, plane)

@@ -66,21 +66,25 @@ class MainPostProcess:
             load = self._mesh._load._basic
             Un_set = Un_grp.get_group(('basic', ))  
         #
-        Fbeam = self.solve_beam_end_disp(elements, Un_set, Pdelta)        
+        Fb_end = self.solve_beam_end(elements, Un_set, Pdelta)
         #
-        df_beamf, df_nforce = self.solve_beam_forces(elements,
-                                                     Fb=Fbeam,
-                                                     load=load,
-                                                     steps=steps,
-                                                     Pdelta=Pdelta)
+        Fb_result, Qn = self.solve_beam_forces(elements,
+                                               Fb=Fb_end,
+                                               load=load,
+                                               steps=steps,
+                                               Pdelta=Pdelta)
         #
-        return df_beamf, df_nforce
+        # TODO: get node reactions somehow..
+        Qn = self.solve_node_reactions(Fb_end=Qn,
+                                       load=load)
+        #
+        return Fb_result, Qn
     #
     # -----------------------------------------------------------
     #
-    def solve_beam_end_disp(self, elements,
-                            Un:DBframework.DataFrame,
-                            Pdelta: bool)-> DBframework.DataFrame:
+    def solve_beam_end(self, elements,
+                       Un:DBframework.DataFrame,
+                       Pdelta: bool)-> DBframework.DataFrame:
         """
         Convert beam end-node disp to force [F = Kd] in global system
 
@@ -89,7 +93,6 @@ class MainPostProcess:
         Fb_global : ?
         """
         # Setup
-        #ndof:int = 6
         plane2D:bool = False
         Kglobal:str = 'Ke'
         if Pdelta:
@@ -97,6 +100,7 @@ class MainPostProcess:
         #
         Un_grp = Un.groupby(['load_name', 'mesh_name', 'load_level'])
         head_disp = ['node_name', 'x', 'y', 'z', 'rx', 'ry', 'rz']
+        #head_disp = ['node_name', *self._mesh._plane.hdisp]
         #
         Fb_temp: list = []
         for key, Un_item in Un_grp:
@@ -105,54 +109,40 @@ class MainPostProcess:
             for e_name, element in elements.items():
                 nodes = element.connectivity
                 Tb = element.T3D()
-                #
                 # ---------------------------------------------
                 # beam end-nodes global displacement {U}
                 Un_global = np.concatenate((Un_set.loc[nodes[0]],
                                             Un_set.loc[nodes[1]]),
                                            axis=None)
-                #
-                # ---------------------------------------------
-                # Convert global end-node disp in beam's local system
-                # 
-                Un_local = Tb @ Un_global
-                #
                 # --------------------------------------------
                 # get beam [K] global
                 Kb = getattr(element, Kglobal)(plane2D, Un_global)
-                #
                 # ---------------------------------------------
-                # convert beam end-node disp to force ({F} = [K]{U}) in global system
-                FU_global = Kb @ Un_global
-                #
+                # convert beam end-node disp to force in global system
+                # {F} = [K]{U}
+                Fb_global = Kb @ Un_global
+                # ---------------------------------------------
+                # Convert global end-node disp in beam's local system
+                Un_local = Tb @ Un_global
                 # ---------------------------------------------
                 # Calculate beam end-nodes force in local system
-                #Fb_local = Tb @ FU_global
-                FU_local = Kb @ Un_local
-                #
+                Fb_local = Kb @ Un_local
+                #Fb_local2 = Tb @ Fb_global
                 # ---------------------------------------------
                 # Build list with results
                 # [load_name, mesh_name, load_level, system, element_name,
-                # node_name, Un_local, FU_local, FU_global]
-                #Fb_temp.append([*key, e_name, nodes[0],
-                #                Un_local[:ndof], FU_local[:ndof], FU_global[:ndof]])
-                #Fb_temp.append([*key, e_name, nodes[1],
-                #                Un_local[ndof:], FU_local[ndof:], FU_global[ndof:]])
+                #  node_name, Un_local, FU_local, FU_global]
                 #
                 Fb_temp.append([*key, e_name, nodes,
-                                Un_local, FU_local, FU_global])                
+                                Un_local, Fb_local, Fb_global])
         #
         # ---------------------------------------------
-        #Fb_temp = self._mf2df(Fb=Fb_temp)
         #
-        db = DBframework()
         header = ['load_name', 'mesh_name',
                   'load_level',
                   'element_name', 'nodes',
-                  'Un_local', 'FU_local', 'FU_global']
-        
-        Fb_temp = db.DataFrame(data=Fb_temp, columns=header, index=None)        
-        #
+                  'Un_local', 'Fb_local', 'Fb_global']
+        Fb_temp = list2df(data=Fb_temp, header=header)
         return Fb_temp
     #
     def solve_beam_forces(self, elements,
@@ -161,7 +151,7 @@ class MainPostProcess:
                           #beam_fer:DBframework.DataFrame,
                           steps: int, Pdelta: bool)-> (DBframework.DataFrame, DBframework.DataFrame):
         """
-        Beam's internal forces along its lenght
+        Beam's internal forces along its length
         """
         #1/0
         start_time = time.time()
@@ -170,16 +160,14 @@ class MainPostProcess:
         #
         ndof = 6 # self._plane.ndof
         #
-        Fb_grp = Fb.groupby(['load_name', 'mesh_name',
-                             'load_level'])
+        head_grp = ['load_name', 'mesh_name',
+                    'load_level']
+        Fb_grp = Fb.groupby(head_grp)
+        bfer_grp = beam_fer.groupby(head_grp)
         #
-        bfer_grp = beam_fer.groupby(['load_name', 'mesh_name',
-                                     'load_level'])
         #
-        #
-        header = ['element_name', 'nodes', 'Un_local', 'FU_local', 'FU_global']
-        #
-        #plane2d = self._plane.plane2D
+        header = ['element_name', 'nodes',
+                  'Un_local', 'Fb_local', 'Fb_global']
         dftemp: list = []
         mif_data: list = []
         for key, item in Fb_grp:
@@ -217,20 +205,21 @@ class MainPostProcess:
                     beam_fer_enl = beam_fer_enl.groupby(['element_name'])                    
                     beam_fer_enl = beam_fer_enl.get_group((bname, ))
                     # calculate beam end 1 reactions
-                    R0 = self._beam_R0(nodes=nodes,
-                                       Tb=Tb,
-                                       FUn=beam_item.FU_global, 
-                                       fer_enl=beam_fer_enl,
-                                       eq=Fbeq)
+                    Pa, R0, Fb = self._beam_R0(nodes=nodes,
+                                               Tb=Tb,
+                                               Fb_local=beam_item.Fb_local,
+                                               fer_global=beam_fer_enl,
+                                               eq=Fbeq)
                     #
+                    gn_force = Tb @ Fb
                     # get load function
                     load_item = load[key[0]]
-                    #print(f'P0 = {Fbeq.P0()}')
+                    #print(f'P0 = {Pa}')
                     #bload = load_item.beam()[bname]
                     bload_fuction = load_item.function(beam_name=bname,
                                                        load_name=key[0], 
                                                        steps=steps,
-                                                       Pa=Fbeq.P0())
+                                                       Pa=Pa)
                     # ['load_name', 'mesh_name',
                     #  'load_comment', 'load_type',
                     #  'load_level', 'load_system',
@@ -244,41 +233,29 @@ class MainPostProcess:
                                                Fx=[bstep.axial, bstep.torsion,
                                                    bstep.VM_inplane, bstep.VM_outplane])]
                                for bstep in bload_fuction.itertuples()]
-                    #
+                    #print('---->')
                 except KeyError :
                     # --------------------------------------------
-                    #1/0
                     #print('---->')
-                    lbforce = self._beam_no_load(bname,
-                                                 beam, beam_item.FU_global,
-                                                 Fbeq, Tb, 
-                                                 element.section.geometry,
-                                                 steps)
-                    ##
-                    ## [Fx,Fy,Fz,Mx,My,Mz]
-                    #Pu = -1 * FUtn
-                    #R0 = eq.R0(bload=Pu,
-                    #           tload=Tload(0, 0, 0))
-                    ##
-                    ## [beam_number, load_title, x, Fx, Fy, Fz, Mx, My, Mz]
-                    ##
-                    #Lsteps = linstep(d=element.section.geometry.d,
-                    #                 L=element.L, steps=steps)
-                    ##
-                    #lbforce = [['local', mname,  xstep,
-                    #            *beam.response(x=xstep, R0=[R0.x, R0.t, R0.y, R0.z],
-                    #                           Fx=[Fblank, Fblank_t, Fblank, Fblank])]
-                    #           for xstep in Lsteps]
+                    lbforce = self._beam_no_load(beam_name=bname,
+                                                 beam=beam,
+                                                 Fb_local=beam_item.Fb_local,
+                                                 eq=Fbeq,
+                                                 geometry=element.section.geometry,
+                                                 steps=steps)
+                    #
+                    gn_force = beam_item.Fb_global
+                    #
                 #
                 # ---------------------------------------------
                 # convert beam end-node disp to force [F = Kd] in global system
                 #
-                gn_force = beam_item.FU_global
+                #gn_force = beam_item.Fb_global
                 #
                 # ---------------------------------------------
                 #
                 dftemp.append([*key, 'global', bname, nodes[0], *gn_force[:ndof]])
-                dftemp.append([*key, 'global', bname, nodes[1], *gn_force[ndof:]])                
+                dftemp.append([*key, 'global', bname, nodes[1], *gn_force[ndof:]])
                 #
                 # ---------------------------------------------
                 # Member total force in local system
@@ -287,7 +264,8 @@ class MainPostProcess:
                 # Torsion [T, Phi, Psi, B, Tw] - [T, theta, theta1, theta2, theta3]
                 # Bending [V, M, theta, w]
                 #
-                mif_data.extend([[*key[:3], # load_name, component_name, load_level,
+                mif_data.extend([[*key[:3], # load_name, mesh_name, load_level,
+                                  self._result_name,
                                   *lbf[:3], # load_system, element_name, length
                                   *lbf[3],  # Axial
                                   *lbf[4],  # Torsion
@@ -297,112 +275,129 @@ class MainPostProcess:
         #
         # ---------------------------------------------
         #
-        df_nforce = self._mf2df(Fb=dftemp)
+        #
         # Member internal forces
-        df_mif = self._mif2df(mif_data)
+        #
+        Fb_result = mif2df2(mif_data)
+        df_nforce = self._mf2df(Fb=dftemp)
         #
         # ---------------------------------------------
         uptime = time.time() - start_time
         print(f"** Beam Force Calculation: {uptime:1.4e} sec")
-        return df_mif, df_nforce
-    #   
+        return Fb_result, df_nforce
+    #
+    #
+    # -----------------------------------------------------------
+    #
+    def solve_node_reactions(self, Fb_end, load):
+        """ """
+        # TODO : maybe there is a better pandas way that the code below..
+        header = ['load_name', 'mesh_name', 'load_level', 'system']
+        supports = self._mesh._boundaries.support()
+        supports = list(supports)
+        #
+        Fb_end = Fb_end[Fb_end['node_name'].isin(supports)]
+        # Fb_end = Fb_end.query('node_name != @supports')
+        Fb_end_grp = Fb_end.groupby(header)
+        #
+        #node_load = load.node().force
+        Pn = load.Pn()
+        if not Pn.empty:
+            Pn = Pn[Pn['node_name'].isin(supports)]
+            # Pn = Pn.query('node_name != @supports')
+            Pn_grp = Pn.groupby(header)
+        else:
+            Pn_grp = Pn
+        #
+        header += ['node_name']
+        values = header + ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+        temp = []
+        for key, item in Fb_end_grp:
+            Fb_set = item[values].set_index(header)
+            # get nodal load if available
+            try:
+                Pn_set = Pn_grp.get_group(key)
+                Pn_set = Pn_set[values].set_index(header)
+                temp.append(Fb_set.add(Pn_set).reset_index())
+            except (KeyError, AttributeError) :
+                temp.append(Fb_set.reset_index())
+            #print(key)
+        #
+        df = DBframework()
+        Qn = df.concat(temp, ignore_index=True)
+        Qn['result_name'] = self._result_name
+        #Qn['system'] = 'global'
+        #print('--->')
+        return Qn
     #
     # -----------------------------------------------------------
     # Operations
     #
     def _beam_R0(self,
                  nodes: list,
-                 Tb, FUn,
-                 fer_enl, eq):
+                 Tb, Fb_local,
+                 fer_global, eq):
         """ """
-        #
-        # [load_name, member_load_title, load_type, load_system, 
-        # beam_number, x, Fx, Fy, Fz]
-        #
-        #hforce = [*self._plane.hforce]
-        hforce = ['Fx','Fy','Fz','Mx','My','Mz']
-        tforce = ['Psi', 'B', 'Tw'] # torsion part       
+        force_header = ['Fx','Fy','Fz','Mx','My','Mz']
+        #dof = len(force_header)
+        torsion_header = ['Psi', 'B', 'Tw'] # torsion part
         #
         # Torsion
-        mtload = fer_enl.groupby(['node_name'],
-                                 as_index=False)[tforce].sum()
-        mtload.set_index('node_name', inplace=True)                    
+        bt_load = fer_global.groupby(['node_name'],
+                                 as_index=False)[torsion_header].sum()
+        bt_load.set_index('node_name', inplace=True)
         #
         # Get beam end loads
         #
-        fer_enl = fer_enl.groupby(['node_name'],
-                                  as_index=False)[hforce].sum()
+        fer_global = fer_global.groupby(['node_name'],
+                                  as_index=False)[force_header].sum()
         
-        fer_enl.set_index('node_name', inplace=True)                 
+        fer_global.set_index('node_name', inplace=True)
         #
-        FU_fer = np.concatenate((fer_enl.loc[nodes[0]],
-                                 fer_enl.loc[nodes[1]]), axis=None)
+        Fb_fer = np.concatenate((fer_global.loc[nodes[0]],
+                                 fer_global.loc[nodes[1]]), axis=None)
         #
         # Calculate total end node force in local system
-        Pu = Tb @ (FUn - FU_fer)
+        #Ft_local = Tb @ (Fb_global - FU_fer)
+        Fb = Fb_local - Tb @  Fb_fer
         # get reactions with correct sign for postprocessing
         #
-        R0 = eq.R0(bm_load=Pu,
-                   tload=mtload.loc[nodes[0]])
-        return R0
+        R0 = eq.R0(Fb_local=Fb,
+                   torsion=bt_load.loc[nodes[0]])
+        #
+        # Get axial load
+        P0 = 0.0
+        if eq.Pdelta:
+            P0 = Fb_local[0]
+        #
+        return P0, R0, Fb
     #    
     def _beam_no_load(self, beam_name: int|str,
-                      beam, FUn, eq, Tb, 
-                      geometry, steps: int):
-        """ """
-        
+                      beam, Fb_local, eq, #Tb,
+                      geometry, steps: int)->list[list]:
+        """
+        Returns:
+            [system, beam_name, beam_step, Fx, Fy, Fz, Mx, My, Mz]
+        """
         # Dummy Bending [V, M, theta, w]
-        Fblank = [0, 0, 0, 0]
+        Fb_blank = [0, 0, 0, 0]
         # Dummy Torsion [T, Phi, Psi, B, Tw] - [T, theta, theta1, theta2, theta3]
-        Fblank_t = [0, 0, 0, 0, 0]
+        Ft_blank = [0, 0, 0, 0, 0]
         #
-        # [Fx,Fy,Fz,Mx,My,Mz]
-        Pu = Tb @ FUn
-        R0 = eq.R0(bm_load=Pu,
-                   tload=Tload(0, 0, 0))
-        #
-        # [beam_number, load_title, x, Fx, Fy, Fz, Mx, My, Mz]
+        R0 = eq.R0(Fb_local=Fb_local,
+                   torsion=Tload(0, 0, 0))
         #
         Lsteps = linstep(d=geometry.d,
                          L=beam.L, steps=steps)
         #
-        lbforce = [['local', beam_name,  xstep,
-                    *beam.response(x=xstep, R0=[R0.x, R0.t, R0.y, R0.z],
-                                   Fx=[Fblank, Fblank_t, Fblank, Fblank])]
-                   for xstep in Lsteps]
+        lbforce = [['local', beam_name,  bstep,
+                    *beam.response(x=bstep, R0=[R0.x, R0.t, R0.y, R0.z],
+                                   Fx=[Fb_blank, Ft_blank, Fb_blank, Fb_blank])]
+                   for bstep in Lsteps]
         return lbforce
     #
     # -----------------------------------------------------------
     # DataFrame Operations
-    #
-    def _mif2df(self, member_load:list) -> DBframework.DataFrame:
-        """
-        Return:
-            Beams' internal forces dataframe
-        """
-        header = ['load_name', 'mesh_name', 'load_level',
-                  'system',
-                  'element_name', 'length',
-                  'Fx', 'blank1', 'blank2', 'x',  # axial
-                  'Mx', 'rx', 'Psi',  'B',  'Tw', # torsion
-                  'Fy', 'Mz', 'rz', 'y',          # bending in plane
-                  'Fz', 'My', 'ry', 'z']          # bending out plane
-        #
-        db = DBframework()
-        df_membf = db.DataFrame(data=member_load,
-                                columns=header, index=None)
-        # reorder columns
-        df_membf['result_name'] = self._result_name
-        df_membf.drop(columns=['blank1', 'blank2'])
-        return df_membf[['mesh_name', 'result_name',
-                         'load_name', 'load_level',
-                         'element_name', 'length',
-                         'system',
-                         'Fx', 'Fy', 'Fz',
-                         'Mx', 'My', 'Mz',
-                         'x', 'y', 'z',
-                         'rx', 'ry', 'rz',
-                         'Psi', 'B', 'Tw']]
     #
     #
     def _mf2df(self, Fb:list[list],
@@ -426,9 +421,50 @@ class MainPostProcess:
                   'element_name', 'node_name',
                   'system', *head_force]
         return mf_df[header]
-    #
-    #
-    #
+#
+#
+#
+# -----------------------------------------------------------
+# DataFrame Operations
+# -----------------------------------------------------------
+#
+def mif2df2(member_load:list[list]) -> DBframework.DataFrame:
+    """
+    Return:
+        Beams' internal forces dataframe
+    """
+    header = ['load_name', 'mesh_name', 'load_level',
+              'result_name',
+              'system', 'element_name', 'length',
+              'Fx', 'blank1', 'blank2', 'x',  # axial
+              'Mx', 'rx', 'Psi', 'B', 'Tw',  # torsion
+              'Fy', 'Mz', 'rz', 'y',  # bending in plane
+              'Fz', 'My', 'ry', 'z']  # bending out plane
+    Fb_result = list2df(data=member_load, header=header)
+    # reorder columns
+    # Fb_result['result_name'] = self._result_name
+    Fb_result.drop(columns=['blank1', 'blank2'])
+    # Reorganizing
+    header = ['mesh_name', 'result_name',
+              'load_name', 'load_level',
+              'element_name', 'length',
+              'system',
+              'Fx', 'Fy', 'Fz',
+              'Mx', 'My', 'Mz',
+              'x', 'y', 'z',
+              'rx', 'ry', 'rz',
+              'Psi', 'B', 'Tw']
+    return Fb_result[header]
+#
+#
+def list2df(data:list[list], header:list) -> DBframework.DataFrame:
+    """
+    Returns:
+        dataframe
+    """
+    db = DBframework()
+    dftemp = db.DataFrame(data=data, columns=header, index=None)
+    return dftemp
 #
 #
 # -----------------------------------------------------------
@@ -439,27 +475,19 @@ class MainPostProcess:
 #@dataclass
 class FbEqMods(NamedTuple):
     """ Local system"""
-    Fb_local: list
+    Un_local: list
     plane: bool
     Pdelta: bool
     #
-    def P0(self) -> float:
-        """ """
-        # [Fx, Fy, Fz, Mx, My, Mz]
-        #Fx = self.Fb_local[0]
-        if self.Pdelta:
-            return self.Fb_local[0]
-        return 0.0
-    #
-    def R0(self, bm_load: list, tload: tuple|list) -> tuple:
+    def R0(self, Fb_local: list, torsion: tuple) -> tuple:
         """
         Axial   [FP, blank, blank, Fu]
         Bending [V, M, theta, w]
         Torsion [T, Phi, Psi, B, Tw]
         """
         # select node disp end 0
-        nd0 = self.Fb_local[:self.plane.ndof]
-        bload = bm_load[:self.plane.ndof]
+        Un0 = self.Un_local[:self.plane.ndof]
+        bload = Fb_local[:self.plane.ndof]
         #
         # Axial
         axial = bload[0]
@@ -468,12 +496,12 @@ class FbEqMods(NamedTuple):
         #
         R0x = [1 * axial,            # Fx
                0, 0,                 # blank, blank
-               -1 * nd0[0]]          # dx
+               -1 * Un0[0]]          # dx
         #
         if self.plane.plane2D:
-            R0t, R0y, R0z = self.D2(nd0, bload)
+            R0t, R0y, R0z = self.D2(Un0, bload)
         else:
-            R0t, R0y, R0z = self.D3(nd0, bload, tload)
+            R0t, R0y, R0z = self.D3(Un0, bload, torsion)
         #
         # Inverting sign to calculate beam load along length
         #
@@ -493,48 +521,56 @@ class FbEqMods(NamedTuple):
         #
         return Req(R0x, R0t, R0y, R0z)
     #
-    def D3(self, nd0:list, bload:list,
-           tload:tuple):
+    def D3(self, Un0:list, Fbeam:list,
+           torsion:tuple):
         """
         3D plane
-        nd0 = [dx,dy,dz,rx,ry,rz]
-        bload : [Fx,Fy,Fz,mx,my,mz]
+        Un0: [dx,dy,dz,rx,ry,rz]
+        Fbeam: [Fx,Fy,Fz,mx,my,mz]
+        torsion: [T, Phi, Psi, B, Tw]
+
+        Returns:
+            Reaction end 0 [torsion, Ry, Rz]
+
         """
         # In plane
-        R0y = [bload[1],   # Vy
-               bload[5],   # Mz
-               nd0[5],     # rz
-               nd0[1]]     # dy
+        R0y = [Fbeam[1],   # Vy
+               Fbeam[5],   # Mz
+               Un0[5],     # rz
+               Un0[1]]     # dy
         # Out plane
-        R0z = [bload[2],  # Vz
-               bload[4],  # My
-               nd0[4],    # ry
-               nd0[2]]    # dz
+        R0z = [Fbeam[2],  # Vz
+               Fbeam[4],  # My
+               Un0[4],    # ry
+               Un0[2]]    # dz
         #
         # Torsion
-        T0 = -1 * bload[3]
-        rx = 1 * nd0[3]
+        T0 = -1 * Fbeam[3]
+        rx = 1 * Un0[3]
         #
         # Thin walled sections (Ibeam, Channel & Z)
-        thetas = [1 * tload.Psi,
-                  1 * tload.B,
-                  1 * tload.Tw]
+        thetas = [1 * torsion.Psi,
+                  1 * torsion.B,
+                  1 * torsion.Tw]
         #
         R0t = [T0, rx, *thetas]
         #
         return R0t, R0y, R0z
     #
-    def D2(self, nd0:list, bload:list):
+    def D2(self, Un0:list, Fbeam:list):
         """
         2D plane
-        nd0 : [dx, dy, rz]
-        bload : [Fx,Fy,mz]
+        Un0 : [dx, dy, rz]
+        Fbeam : [Fx,Fy,mz]
+
+        Returns:
+            Reaction end 0 [torsion, Ry, Rz]
         """
         # In plane
-        R0y = [bload[1],   # Vy
-               bload[2],   # Mz
-               nd0[2],     # rz
-               nd0[1]]     # dy
+        R0y = [Fbeam[1],   # Vy
+               Fbeam[2],   # Mz
+               Un0[2],     # rz
+               Un0[1]]     # dy
         # Out plane
         R0z = [0, 0, 0, 0]  # [Vz, My, ry, dz]
         R0t = [0, 0, 0, 0, 0]  # [T, Phi, Psi, B, Tw]
@@ -548,7 +584,6 @@ Tload = namedtuple('TorsionLoad', ['Psi', 'B', 'Tw'])
 # -----------------------------------------------------------
 # Combination utils
 # -----------------------------------------------------------
-#
 #
 #
 

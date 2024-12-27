@@ -21,15 +21,12 @@ from steelpy.sections.utils.operations import get_sect_properties
 # ----------------------------------------
 
 class BoxSQL(SectionMainSQL):
-    __slots__ = [ '_properties',
+    __slots__ = [ '_properties', '_mesh_id', 
                   'name', 'number', 'db_file' ]
 
-    def __init__(self, component: int, db_file: str):
+    def __init__(self, mesh_id: int, db_file: str):
         """ """
-        self.db_file = db_file
-        # push data to sqlite table
-        super().__init__(component=component,
-                         db_file=self.db_file)
+        super().__init__(mesh_id=mesh_id, db_file=db_file)
     #
     def __setitem__(self, shape_name: int|str, parameters: list) -> None:
         """

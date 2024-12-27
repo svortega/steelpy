@@ -7,7 +7,7 @@ from __future__ import annotations
 
 # package imports
 from steelpy.ufo.load.process.wave_load import WaveLoadItem, MetoceanLoad
-from steelpy.ufo.load.process.beam.beam import LineBeam #, BeamLoad
+from steelpy.ufo.load.process.beam.operations import LineBeam #, BeamLoad
 from steelpy.ufo.load.concept.beam import BeamToNodeIM
 from steelpy.utils.math.operations import linspace
 from steelpy.utils.math.operations import trnsload

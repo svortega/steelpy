@@ -73,7 +73,8 @@ class HydroBasic(ClassBasicSQL):
     def __init__(self, component: str|int, db_file: str):
         """
         """
-        super().__init__(component, db_file)        
+        super().__init__(db_file)
+        self._component = component
     #
     #
     def __setitem__(self, name:str|int,

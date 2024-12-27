@@ -22,6 +22,7 @@ class WaveKinFactor(HydroBasic):
         """
         """
         super().__init__(component, db_file)
+        #self._component = component
     #
     # ------------------
     #

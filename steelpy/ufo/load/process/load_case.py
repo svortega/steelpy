@@ -8,6 +8,7 @@ from collections.abc import Mapping
 #from collections import defaultdict
 #from dataclasses import dataclass
 #from operator import sub, add
+#import time
 from typing import NamedTuple
 import re
 #
@@ -16,6 +17,8 @@ import steelpy.utils.io_module.text as common
 #from steelpy.ufo.load.process.utils import find_load_type
 from steelpy.utils.dataframe.main import DBframework
 #
+from steelpy.ufo.load.process.beam.utils import find_BeamLoad_item
+from steelpy.ufo.load.process.node.utils import find_NodeLoad_item
 #
 #
 # ---------------------------------
@@ -31,11 +34,12 @@ class BasicLoad(NamedTuple):
 #
 #
 class BasicLoadRoot(Mapping):
-    __slots__ = ['gravity']
+    __slots__ = ['name', 'gravity']
     
-    def __init__(self):
+    def __init__(self, name:str|int):
         """
         """
+        self.name = name
         self.gravity = 9.80665  # m/s^2
     #
     # -----------------------------------------------
@@ -118,12 +122,12 @@ class BasicLoadRoot(Mapping):
 #
 #
 class BasicLoadCase(BasicLoadRoot):
-    __slots__ = ['_labels', '_title','_number', 'gravity']
+    __slots__ = ['name','gravity']
     
-    def __init__(self):
+    def __init__(self, name:int|str):
         """
         """
-        super().__init__()
+        super().__init__(name)
         #self.gravity = 9.80665  # m/s^2
     #  
     #
@@ -163,6 +167,12 @@ class BasicLoadCase(BasicLoadRoot):
         if values:
             # Input data for specific basic node load
             if isinstance(values, dict):
+                columns = list(values.keys())
+                header = {item: find_NodeLoad_item(item)
+                          for item in columns}
+                values ={header[key]: item
+                         for key, item in values.items()}
+                #
                 nodeid = values['node']
                 if isinstance(nodeid, (list, tuple)):
                     nitems = len(nodeid)
@@ -178,7 +188,12 @@ class BasicLoadCase(BasicLoadRoot):
                 else:
                     load_name = values['load']
                     try:
-                        self.__setitem__(load_name, load_name)
+                        load_title = values['title']
+                    except KeyError:
+                        load_title = values['load']
+                    #
+                    try:
+                        self.__setitem__(load_name, load_title)
                     except Warning:
                         pass
                     #
@@ -189,23 +204,33 @@ class BasicLoadCase(BasicLoadRoot):
                 if isinstance(values[0], (list, tuple, dict)):
                     for item in values:
                         if isinstance(item, dict):
-                            load_name = item['load']
-                            nodeid = item['node']
-                            load = item
+                            header = {item: find_NodeLoad_item(item)
+                                      for item in item}
+                            update = {header[key]: item
+                                      for key, item in item.items()}
+                            load_name = update['load']
+                            try:
+                                load_title = update['title']
+                            except KeyError:
+                                load_title = update['load']
+                            node_id = update['node']
+                            load = update
                         elif isinstance(item, (list, tuple)):
                             load_name = item[0]
-                            nodeid = item[1]
+                            if isinstance(item[-1], str):
+                                load_title = item[-1]
+                            else:
+                                load_title = load_name
+                            node_id = item[1]
                             load = item[2:]
-                            #nodeid = item.pop(1)
-                            #load_name = item.pop(0)
                         #
                         try:
-                            self.__setitem__(load_name, load_name)
+                            self.__setitem__(load_name, load_title)
                         except Warning:
                             pass
                         #
                         bload = self.__getitem__(load_name)
-                        bload._node[nodeid] = load
+                        bload._node[node_id] = load
                 else:
                     load_name = values[0]
                     try:
@@ -221,7 +246,7 @@ class BasicLoadCase(BasicLoadRoot):
         # dataframe input
         try:
             columns = list(df.columns)
-            header = {key: find_bload_item(key)
+            header = {key: find_NodeLoad_item(key)
                       for key in columns}
             df.rename(columns=header, inplace=True)
             #nodeid = df['node']
@@ -258,6 +283,11 @@ class BasicLoadCase(BasicLoadRoot):
         """ """
         if values:
             if isinstance(values, dict):
+                columns = list(values.keys())
+                header = {item: find_BeamLoad_item(item)
+                          for item in columns}
+                values ={header[key]: item
+                         for key, item in values.items()}
                 beamid = values['beam']
                 if isinstance(beamid, (list, tuple)):
                     bitems = len(beamid)
@@ -273,7 +303,11 @@ class BasicLoadCase(BasicLoadRoot):
                 else:
                     load_name = values['load']
                     try:
-                        self.__setitem__(load_name, load_name)
+                        load_title = values['title']
+                    except KeyError:
+                        load_title = values['load']
+                    try:
+                        self.__setitem__(load_name, load_title)
                     except Warning:
                         pass
                     bload = self.__getitem__(load_name)                    
@@ -282,30 +316,47 @@ class BasicLoadCase(BasicLoadRoot):
                 if isinstance(values[0], (list, tuple, dict)):
                     for item in values:
                         if isinstance(item, dict):
-                            load_name = item['load']
-                            beamid = item['beam']
-                            load =  item
+                            header = {item: find_BeamLoad_item(item)
+                                        for item in item}
+                            update = {header[key]: item
+                                      for key, item in item.items()}
+                            load_name = update['load']
+                            try:
+                                load_title = update['title']
+                            except KeyError:
+                                load_title = update['load']
+                            beam_id = update['beam']
+                            load =  update
                         elif isinstance(item, (list, tuple)):
+                            # fix load title
                             load_name = item[0]
-                            beamid = item[1]
+                            if isinstance(item[-1], str):
+                                load_title = item[-1]
+                            else:
+                                load_title = load_name
+                            beam_id = item[1]
                             load =  item[2:]
                         # check if basic load name exist
                         try:
-                            self.__setitem__(load_name, load_name)
+                            self.__setitem__(load_name, load_title)
                         except Warning:
                             pass
                         # push beam load data
                         bload = self.__getitem__(load_name)
-                        bload._beam[beamid] = load
+                        bload._beam[beam_id] = load
                 else:
                     load_name = values[0]
+                    if isinstance(values[-1], str):
+                        load_title = values[-1]
+                    else:
+                        load_title = load_name
                     try:
-                        self.__setitem__(load_name, load_name)
+                        self.__setitem__(load_name, load_title)
                     except Warning:
                         pass
                     bload = self.__getitem__(load_name)
                     beamid = values[1]
-                    bload._beam[beamid] = values[2:]        
+                    bload._beam[beamid] = values[2:]
         #
         # dataframe input
         try:
@@ -340,34 +391,44 @@ class BasicLoadCase(BasicLoadRoot):
     # -----------------------------------------------
     #
     #
-    def functionX(self, steps:int,
-                 Pa:float=0.0, factor:float=1):
-        """utils element load"""
-        #
-        dftemp = self._beams.load_function(steps=steps,
-                                           Pa=Pa, factor=factor)
-        #
-        # Axial   [FP, blank, blank, Fu]
-        # torsion [T, B, Psi, Phi, Tw]
-        # Bending [V, M, theta, w]
-        #
-        # [Fx, Fy, Fz, Mx, My, Mz]
-        # [V, M, w, theta]
-        header = ['load_name', 'mesh_name',
-                  'load_comment', 'load_type',
-                  'load_level', 'load_system',
-                  'element_name', 'length',
-                  'axial', 'torsion', 'VM_inplane', 'VM_outplane']
-        #
-        #          'FP', 'blank1', 'blank2', 'Fu',
-        #          'T', 'B', 'Psi', 'Phi', 'Tw',
-        #          'Vy', 'Mz', 'theta_y', 'w_y',
-        #          'Vz', 'My', 'theta_z', 'w_z']
-        df = DBframework()
-        dfload = df.DataFrame(data=dftemp, columns=header, index=None)
-        #return load_func
-        return dfload
+    #def functionX(self, steps:int,
+    #             Pa:float=0.0, factor:float=1):
+    #    """utils element load"""
+    #    #
+    #    dftemp = self._beams.load_function(steps=steps,
+    #                                       Pa=Pa, factor=factor)
+    #    #
+    #    # Axial   [FP, blank, blank, Fu]
+    #    # torsion [T, B, Psi, Phi, Tw]
+    #    # Bending [V, M, theta, w]
+    #    #
+    #    # [Fx, Fy, Fz, Mx, My, Mz]
+    #    # [V, M, w, theta]
+    #    header = ['load_name', 'mesh_name',
+    #              'load_comment', 'load_type',
+    #              'load_level', 'load_system',
+    #              'element_name', 'length',
+    #              'axial', 'torsion', 'VM_inplane', 'VM_outplane']
+    #    #
+    #    #          'FP', 'blank1', 'blank2', 'Fu',
+    #    #          'T', 'B', 'Psi', 'Phi', 'Tw',
+    #    #          'Vy', 'Mz', 'theta_y', 'w_y',
+    #    #          'Vz', 'My', 'theta_z', 'w_z']
+    #    df = DBframework()
+    #    dfload = df.DataFrame(data=dftemp, columns=header, index=None)
+    #    #return load_func
+    #    return dfload
     #
+    #
+    # -----------------------------------------------
+    #
+    def Pn(self):
+        """
+        Returns:
+            Global nodal force vector
+        """
+        P = self._nodes.force
+        return P
     #
     # -----------------------------------------------
     #
@@ -401,220 +462,9 @@ class BasicLoadCase(BasicLoadRoot):
                 self.beam(df=item)
         except KeyError:
             pass
-        
-    
+# 
 #  
 #
-class BasicLoadType(BasicLoadRoot):
-    __slots__ = ['name', 'title', 'number', 
-                 '_node', '_beam', '_selfweight']
-    
-    def __init__(self):
-        """
-        """
-        super().__init__()
-    #
-    def __setitem__(self, load_name: str | int,
-                    properties: list[float]) -> None:
-        """
-        """
-        try:
-            self._labels.index(load_name)
-            self.name = load_name
-            self.title = properties[0]
-            self.number = properties[1]
-        except ValueError:
-            raise Exception(f'Load {load_name} already exist')
-    
-    
-    def __getitem__(self, load_name: int|str):
-        """
-        node_name : node number
-        """
-        try:
-            index = self._labels.index(load_name)
-            return self
-        except ValueError:
-            raise KeyError(f'   *** Load {load_name} does not exist')
-    #    
-    #
-    # -----------------------------------------------
-    #
-    def __str__(self) -> str:
-        """ """
-        output = "\n"
-        output += f"Load Name : {str(self.name):12s}  Number : {self.number:8.0f}  Title : {self.title}\n"
-        # node load
-        if self._node:
-            output += f"--- Node\n"
-            output += self._node.__str__()
-        # beam line
-        if self._beam:
-            output += f"--- Beam \n"
-            output += self._beam.__str__()
-        #
-        if self._selfweight:
-            output += f"--- Gravity/Selfweight\n"
-            output += self._selfweight.__str__()
-        #
-        #output += "\n"
-        # print('---')
-        return output
-    #
-    #
-    # -----------------------------------------------
-    #
-    #@property
-    def gravityX(self, values:list|None=None):
-        """
-        The self weight form allows you to specify multipliers to 
-        acceleration due to gravity (g) in the X, Y, and Z axes. 
-        If switched on, the default self weight acts in the Y axis 
-        with a magnitude and sign of -1."""
-        #
-        if isinstance(values, list):
-            if isinstance(values[0], list):
-                for value in values:
-                    self._selfweight[value[0]] = value[1:]
-            else:
-                self._selfweight[values[0]] = values[1:]
-        return self._selfweight
-    
-    def selfweightX(self, values:list|None=None):
-        """
-        The self weight form allows you to specify multipliers to 
-        acceleration due to gravity (g) in the X, Y, and Z axes. 
-        If switched on, the default self weight acts in the Y axis 
-        with a magnitude and sign of -1."""
-        #
-        return self.gravity(values) 
-    #
-    #
-    # -----------------------------------------------
-    #
-    #
-    def node(self, values:tuple|list|None=None,
-             df=None):
-        """ Nodal load"""
-        if values:
-            # Input data for specific basic node load
-            if isinstance(values, dict):
-                nodeid = values['node']
-                if isinstance(nodeid, (list, tuple)):
-                    db = DBframework()
-                    dfnew = db.DataFrame(data=values)
-                    dfnew['load'] = self.name
-                    self._node.df = dfnew
-                else:
-                    self._node[nodeid] = values
-            elif isinstance(values, (list, tuple, dict)):
-                if isinstance(values[0], (list, tuple, dict)):
-                    for item in values:
-                        if isinstance(item, dict):
-                            nodeid = item['node']
-                            load = item
-                        elif isinstance(item, (list, tuple)):
-                            nodeid = item[0]
-                            load = item[1:]
-                        #
-                        self._node[nodeid] = load
-                else:
-                    self._node[values[0]] = values[1:]
-        #
-        # dataframe input
-        try:
-            columns = list(df.columns)
-            df['load'] = self.name
-            self._node.df = df            
-        except AttributeError:
-            pass
-        #
-        return self._node
-    #
-    #
-    def beam(self, values:tuple|list|dict|None=None,
-             df=None):
-        """ beam loading """
-        if values:
-            if isinstance(values, dict):
-                beamid = values['beam']
-                if isinstance(beamid, (list, tuple)):
-                    db = DBframework()
-                    dfnew = db.DataFrame(data=values)
-                    dfnew['load'] = self.name
-                    self._beam.df = dfnew
-                else:
-                    self._beam[beamid] = values
-            elif isinstance(values, (list, tuple)):
-                if isinstance(values[0], (list, tuple, dict)):
-                    for item in values:
-                        if isinstance(item, dict):
-                            beamid = item['beam']
-                            load =  item
-                        elif isinstance(item, (list, tuple)):
-                            beamid = item[0]
-                            load =  item[1:]
-                        #
-                        self._beam[beamid] = load
-                else:
-                    self._beam[values[0]] = values[1:]
-        # dataframe input
-        try:
-            columns = list(df.columns)
-            df['load'] = self.name
-            self._beam.df = df
-            return 
-        except AttributeError:
-            pass
-        #
-        return self._beam
-    #    
-    #
-    # -----------------------------------------------
-    #
-    def function(self, beam_name: str | int,
-                 load_name: str | int, 
-                 steps: int, Pa: float,
-                 factor: float = 1.0)->DBframework.DataFrame:
-        """
-        beam_name:
-        load_name:
-        steps: beam steps where load function will be calculated
-        factor: load factor
-
-        Return:
-            Beam's load functions
-        """
-        beam = self._beam[beam_name]
-        bfunction = beam.function(steps=steps,
-                                  Pa=Pa, factor=factor)
-        #
-        # Axial   [FP, blank, blank, Fu]
-        # torsion [T, B, Psi, Phi, Tw]
-        # Bending [V, M, theta, w]
-        #
-        # [Fx, Fy, Fz, Mx, My, Mz]
-        # [V, M, w, theta]
-        header = ['load_name', 'mesh_name',
-                  'load_comment', 'load_type',
-                  'load_level', 'load_system',
-                  'element_name', 'length',
-                  'axial', 'torsion', 'VM_inplane', 'VM_outplane']
-        #
-        #          'FP', 'blank1', 'blank2', 'Fu',
-        #          'T', 'B', 'Psi', 'Phi', 'Tw',
-        #          'Vy', 'Mz', 'theta_y', 'w_y',
-        #          'Vz', 'My', 'theta_z', 'w_z']
-        df = DBframework()
-        bfunction = df.DataFrame(data=bfunction, columns=header, index=None)
-        grp_bfunc = bfunction.groupby(['load_name', 'element_name', 'length'])
-        #grp_bfunc.get_group(())
-        bfunction = grp_bfunc[['axial', 'torsion', 'VM_inplane', 'VM_outplane']].sum()
-        bfunction.reset_index(inplace=True)
-        grp_bfunc = bfunction.groupby(['load_name', 'element_name'])
-        grp_bfunc = grp_bfunc.get_group((load_name, beam_name, )).reset_index()
-        return grp_bfunc
-    #
 #
 #
 # ---------------------------------

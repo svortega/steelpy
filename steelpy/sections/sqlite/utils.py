@@ -21,19 +21,17 @@ from steelpy.sections.utils.shape.stress import ShapeStressBasic
 #
 class SectionMainSQL(SectionMain):
     """ """
-    __slots__ = [#'_labels', '_number', '_title', '_type', 
-                 '_tubular', '_solid', '_ibeam', '_box',
+    __slots__ = ['_tubular', '_solid', '_ibeam', '_box',
                  '_channel', '_tee', '_angle', '_default',
-                 'db_file', '_component']
+                 'db_file', '_mesh_id']
     
-    def __init__(self, component:int, db_file: str):
+    def __init__(self, mesh_id:int, db_file: str):
         """
         """
         super().__init__()
         #
         self.db_file = db_file
-        self._component = component
-        #self._properties = None        
+        self._mesh_id = mesh_id        
     #
     # -----------------------------------------------
     #
@@ -41,7 +39,7 @@ class SectionMainSQL(SectionMain):
     @property
     def _labels(self):
         """ """
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = "SELECT name from Section \
                  WHERE mesh_id = ? ;"
         #
@@ -55,7 +53,7 @@ class SectionMainSQL(SectionMain):
     @property
     def _type(self):
         """ """
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = "SELECT SectionGeometry.type \
                  FROM Section, SectionGeometry, Mesh \
                  WHERE Mesh.number = ? \
@@ -71,7 +69,7 @@ class SectionMainSQL(SectionMain):
     @property
     def _title(self):
         """ """
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = "SELECT title from Section \
                  WHERE mesh_id =? ; "
         #
@@ -90,7 +88,7 @@ class SectionMainSQL(SectionMain):
         """ """
         name = data[0]
         # Section ID
-        #section = (name, self._component, *data[11:])       
+        #section = (name, self._mesh_id, *data[11:])       
         conn = create_connection(self.db_file)
         with conn:
             number = self._push_section(conn, section_id=name,
@@ -110,7 +108,7 @@ class SectionMainSQL(SectionMain):
     #
     def _pull_item(self, conn, name, item):
         """ """
-        query = (name, self._component, )
+        query = (name, self._mesh_id, )
         table = f'SELECT {item} FROM Section \
                  WHERE number = ? AND mesh_id = ?;'
         cur = conn.cursor()
@@ -122,7 +120,7 @@ class SectionMainSQL(SectionMain):
     def _pull_section(self, conn, section_name:int|str):
         """
         """
-        query = (section_name, self._component)
+        query = (section_name, self._mesh_id)
         table = f"SELECT Section.*, SectionGeometry.* \
                   FROM Section, SectionGeometry, Mesh \
                   WHERE Section.name = ? \
@@ -142,9 +140,9 @@ class SectionMainSQL(SectionMain):
     def _push_section(self, conn, section_id: int,
                       properties :tuple|list) -> int:
         """
-        name, component_id, title
+        name, mesh_id, title
         """
-        query = (section_id, self._component, *properties)
+        query = (section_id, self._mesh_id, *properties)
         table = 'INSERT INTO  Section(name, mesh_id,\
                                         SA_inplane, SA_outplane,\
                                         shear_stress, build, compactness,\
@@ -190,7 +188,7 @@ class SectionMainSQL(SectionMain):
     def _update_section(self, conn, section_id: int,
                         item: str, value: float):
         """ """
-        query = (value, section_id, self._component, )
+        query = (value, section_id, self._mesh_id, )
         table = f'UPDATE Section SET {item} = ? \
                   WHERE number = ? \
                   AND mesh_id = ?;'
@@ -226,13 +224,13 @@ class SectionMainSQL(SectionMain):
 # -----------------------------------------------
 #
 #
-def get_sections(conn, component: int) -> list:
+def get_sections(conn, mesh_id: int) -> list:
     """
     [name, number, mesh_id,
      SA_inplane, SA_outplane,
      shear_stress, build, compactness, title]
     """
-    query = (component, )
+    query = (mesh_id, )
     table = "SELECT * from Section \
              WHERE mesh_id = ?;"
     cur = conn.cursor()
@@ -242,7 +240,7 @@ def get_sections(conn, component: int) -> list:
             for item in rows]    
     return rows
 #
-def get_properties(conn, component: int,
+def get_properties(conn, mesh_id: int,
                     section_name: int|str|None = None) -> list:
     """
     [section_id, number,
@@ -252,14 +250,14 @@ def get_properties(conn, component: int,
     J, Cw, 
     alpha_sy, alpha_sz
     """
-    query = (component, )
+    query = (mesh_id, )
     table = "SELECT Section.name, SectionProperty.*\
              from Section, SectionProperty \
              WHERE Section.mesh_id  = ? \
              AND Section.number = SectionProperty.section_id ;"
     
     if section_name:
-        query = (section_name, component, )
+        query = (mesh_id, section_name,)
         table.join('AND Section.name = ?')
     
     cur = conn.cursor()
@@ -269,16 +267,16 @@ def get_properties(conn, component: int,
             for item in rows]
     return rows
 #
-def get_geometry(conn, component: int,
+def get_geometry(conn, mesh_id: int,
                  section_name: int|str|None = None) -> list:
     """ """
-    query = (component, )
+    query = (mesh_id, )
     table = f"SELECT Section.name, SectionGeometry.* \
               FROM Section, SectionGeometry \
               WHERE Section.mesh_id  = ? \
               AND Section.number = SectionGeometry.section_id ;"
     if section_name:
-        query = (section_name, component, )
+        query = (mesh_id, section_name, )
         table.join('AND Section.name = ?')
     #
     cur = conn.cursor()
@@ -289,7 +287,7 @@ def get_geometry(conn, component: int,
     return rows
     
 #
-def get_section_df(conn, component: int) -> list:
+def get_section_df(conn, mesh_id: int) -> list:
     """
     [section_id, type, diameter, wall_thickness,
     height, web_thickness,
@@ -304,13 +302,13 @@ def get_section_df(conn, component: int) -> list:
     J, Cw, 
     alpha_sy, alpha_sz]
     """
-    sect = get_sections(conn, component)
+    sect = get_sections(conn, mesh_id)
     sect = {item[0]: item[2:] for item in sect}
     #
-    prop = get_properties(conn, component)
+    prop = get_properties(conn, mesh_id)
     prop = {item[0]: item[2:] for item in prop}
     #
-    geom = get_geometry(conn, component)
+    geom = get_geometry(conn, mesh_id)
     #
     out = [[item[0], *item[2:], *sect[item[0]], *prop[item[0]]]
            for item in geom]
@@ -334,10 +332,10 @@ def get_section2(conn, section_name):
     return row[1:]
 #
 def _get_section(conn, section_id:int,
-                 component: int):
+                 mesh_id: int):
     """
     """
-    query = (section_id, component)
+    query = (section_id, mesh_id)
     table = "SELECT * from Section \
              WHERE number = ? AND mesh_id = ?;"
     cur = conn.cursor()
@@ -387,10 +385,10 @@ class ShapeGeometrySQL(ShapeStressBasic):
 #
 #
 def get_section(conn, section_name: int|str,
-              component: int):
+              mesh_id: int):
     """ """
     #
-    query = (section_name, component, )
+    query = (section_name, mesh_id, )
     table = f"SELECT Section.*, SectionGeometry.* \
               FROM Section, SectionGeometry, Mesh \
               WHERE Section.name = ? \
@@ -407,10 +405,10 @@ def get_section(conn, section_name: int|str,
 #    
 # 
 def get_sectionXX(conn, section_name: int|str,
-                component: int):
+                mesh_id: int):
     """ """
     1 / 0
-    query = (section_name, component)
+    query = (section_name, mesh_id)
     table = f"SELECT Section.*, SectionGeometry.* \
               FROM Section, SectionGeometry, Mesh \
               WHERE Section.name = ? \
@@ -419,17 +417,17 @@ def get_sectionXX(conn, section_name: int|str,
     #
     #cur = conn.cursor()
     #try:
-    #    query = (section_name, component)
+    #    query = (section_name, mesh_id)
     #    table = "SELECT * from Section \
     #             WHERE Section.name = ? \
-    #             AND component_id = ?;"        
+    #             AND mesh_id = ?;"        
     #    cur.execute(table, query)
     #    row = cur.fetchone()
     #
     #except :
-    #    query = (component)
+    #    query = (mesh_id)
     #    table = "SELECT * from Section \
-    #             WHERE component_id = ?;"        
+    #             WHERE mesh_id = ?;"        
     #    cur.execute(table, query)
     #    rows = cur.fetchall()
     #    for item in rows:
@@ -450,7 +448,7 @@ def get_sectionXX(conn, section_name: int|str,
     #geometry = row[7:]
     shape = ShapeGeometrySQL(number=row[0],
                              name=row[1],
-                             component=row[3])
+                             mesh_id=row[3])
     #shape = get_shape(shape_type, geometry)
     return shape
 #

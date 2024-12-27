@@ -27,18 +27,13 @@ class UFOmain(ufoBasicModel):
                  'data_type', '_build']
 
     def __init__(self, name:str|int|None = None,
-                 #component:str|int|None = None, 
                  sql_file:str|None = None):
         """
         """
-        #
-        self.db_file, self._name, self._build = get_db_file(name, sql_file)
-        #
-        #if not component:
-        component = self._name
-        #
-        super().__init__(component)
-        self.data_type = "sqlite"         
+        db_file, component, self._build = get_db_file(name, sql_file)
+        super().__init__(name=component)
+        self.data_type = "sqlite"
+        self.db_file = db_file
         #
         if self._build:
             conn = create_connection(self.db_file)

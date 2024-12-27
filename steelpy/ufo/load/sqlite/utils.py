@@ -10,9 +10,9 @@
 #
 #
 def get_load_data(conn, load_name:int|str, load_level: str,
-                  component: int):
+                  mesh_id: int):
     """ """
-    query = (load_name, load_level, component)
+    query = (load_name, load_level, mesh_id)
     table = f"SELECT * FROM Load \
                 WHERE name = ? \
                 AND level = ? \
@@ -26,14 +26,14 @@ def get_load_data(conn, load_name:int|str, load_level: str,
 #
 #
 def push_basic(conn, load_name: str|int,
-               component: int, 
+               mesh_id: int, 
                design_load: str,
                #title: str|None = None,
                step_type: str|None = None):
     """ """
     load = pull_load(conn, load_name,
                      load_level='basic',
-                     component=component)
+                     mesh_id=mesh_id)
     try:
         load_id = load[0]
     except IndexError:
@@ -77,10 +77,10 @@ def pull_basic(conn, load_name: str|int):
 #
 def pull_load(conn, load_name: str|int,
               load_level: str,
-              component: int,
+              mesh_id: int,
               item: str = '*'):
     """ """
-    query = (load_name, load_level, component)
+    query = (load_name, load_level, mesh_id)
     table = f"SELECT {item} \
               FROM Load \
               WHERE name = ?\
@@ -95,9 +95,9 @@ def pull_load(conn, load_name: str|int,
 #
 #
 #
-def get_load_basics(conn, component: int):
+def get_load_basics(conn, mesh_id: int):
     """ """
-    query = (component, )
+    query = (mesh_id, )
     #with conn:
     cur = conn.cursor()
     #
@@ -113,7 +113,7 @@ def get_load_basics(conn, component: int):
     elements = cur.fetchall()
     elements = {item[0]:item[1] for item in elements}            
     #
-    query = ('basic', component, )
+    query = ('basic', mesh_id, )
     table = "SELECT Load.name, Load.number FROM Load \
              WHERE Load.level = ? \
              AND Load.mesh_id = ? ;"

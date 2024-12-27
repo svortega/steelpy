@@ -25,18 +25,19 @@ from steelpy.ufo.utils.element import ElementMain
 #
 #
 class ElementsSQL(ElementMain):
-    __slots__ = ['_beams', '_plane', 'db_file', '_component']
+    __slots__ = ['_beams', '_plane', 'db_file', '_mesh_id']
     
     def __init__(self, db_file:str,
-                 #plane: NamedTuple,
-                 component: int, 
+                 mesh_id: int, 
+                 name:int|str,
                  db_system:str="sqlite") -> None:
         """
         """
-        super().__init__(component)
-        #self._component = component
+        super().__init__(name=name)
+        self._mesh_id = mesh_id
         self._beams = BeamSQL(db_file=db_file,
-                              component=component)
+                              mesh_id=mesh_id,
+                              name=name)
         #
         self.db_file = db_file
         # create table
@@ -48,7 +49,7 @@ class ElementsSQL(ElementMain):
     @property
     def _labels(self):
         """ """
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = 'SELECT Element.name FROM Element \
                  WHERE mesh_id = ? '
         conn = create_connection(self.db_file)
@@ -61,7 +62,7 @@ class ElementsSQL(ElementMain):
     @property
     def _type(self):
         """ """
-        query = (self._component, )
+        query = (self._mesh_id, )
         table = 'SELECT Element.type FROM Element \
                  WHERE mesh_id = ? '
         conn = create_connection(self.db_file)
@@ -197,7 +198,7 @@ class ElementsSQL(ElementMain):
     @property
     def get_connectivities(self):
         """ """
-        query = (self._component)
+        query = (self._mesh_id)
         table = f"SELECT name FROM Element \
                 WHERE mesh_id = ?;"
         #
@@ -312,7 +313,7 @@ class ElementsSQL(ElementMain):
     #    #print('elements df out')
     #    conn = create_connection(self.db_file)
     #    with conn:
-    #        data = get_elements(conn, component=self._component)
+    #        data = get_elements(conn, mesh_id=self._mesh_id)
     #    #
     #    header = ['name', 'type', 'material', 'section',
     #              'node_1', 'node_2', 'node_3', 'node_4',

@@ -13,7 +13,7 @@ import time
 # package imports
 #
 from steelpy.ufo.load.process.beam.utils import UDL, PLoad
-from steelpy.ufo.load.process.node import PointNode
+from steelpy.ufo.load.process.node.main import PointNode
 from steelpy.utils.units.main import Units
 from steelpy.utils.geometry.L3D import DistancePointLine3D
 
@@ -288,10 +288,10 @@ class MeshingConcept:
                         print(f'Element: {bmid} --> {Lbi:4.2f} {xi:4.2f} {qaxial} {qinp} {qoutp} {Li} {lcoord_system}')
                         mlbeam = mlb_beam[bmid]
                         mlbeam.coordinate_system = lcoord_system
-                        # qx1,qy1,qz1,qt1, qx2,qy2,qz2,qt2, L1,L2, title
+                        # qx1,qy1,qz1,qt1, qx2,qy2,qz2,qt2, L1,L2, comment
                         data = [qaxial[0], qinp[0], qoutp[0], qtorsion[0], 
                                 qaxial[1], qinp[1], qoutp[1], qtorsion[1], 
-                                Li[0], Li[1], lbload.title]
+                                Li[0], Li[1], lbload.comment]
                         data = UDL(*data)
                         mlbeam.line = data
                 #

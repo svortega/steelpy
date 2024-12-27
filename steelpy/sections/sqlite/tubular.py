@@ -22,11 +22,14 @@ from steelpy.utils.sqlite.utils import create_connection
 #
 class TubularSQL(SectionMainSQL):
     """ """
-    __slots__ = ['diameter', 'thickness', 'build', 'type',
-                 'shear_stress', 'compactness', '_properties',
-                 'FAvy', 'FAvz', 'name', 'number', 'db_file']
+    #__slots__ = ['diameter', 'thickness', 'build', 'type',
+    #             'shear_stress', 'compactness', '_properties',
+    #             'FAvy', 'FAvz', 'name', 'number', 'db_file',
+    #             '_mesh_id']
+    __slots__ = ['name', 'number', 'db_file', 
+                 '_properties', '_mesh_id']
     
-    def __init__(self, component:int, db_file:str):
+    def __init__(self, mesh_id:int, db_file:str):
         """
         Parameters
         ----------
@@ -34,10 +37,9 @@ class TubularSQL(SectionMainSQL):
         t : wall Thickness
         Shear Stress: MAXIMUM / AVERAGE
         """
-        self.db_file = db_file
-        super().__init__(component=component,
-                         db_file=self.db_file)
-        #
+        #self.db_file = db_file
+        #self._mesh_id = mesh_id
+        super().__init__(mesh_id=mesh_id, db_file=db_file)
     #
     #
     def __setitem__(self, shape_name: int|str, parameters: list) -> None:

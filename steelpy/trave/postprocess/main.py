@@ -8,9 +8,7 @@ from __future__ import annotations
 
 #
 # package imports
-#from steelpy.trave.postprocess.operations import MainProcess
 from steelpy.trave.postprocess.sql.main import PostProcessSQL
-#from steelpy.trave.postprocess.sql.Un import UnSQL
 #
 #
 # --------------------
@@ -29,46 +27,57 @@ class PostProcess(PostProcessSQL):
         """
         self._mesh = mesh
         self._result_name = result_name
-        #if not name:
-        #    self._name = self._mesh._name
         #
         super().__init__(mesh=self._mesh,
                          result_name=self._result_name,
                          db_file=db_file)
-        #
+    #
     #
     #def mesh(self, mesh):
     #    """ """
     #    self._mesh = mesh
     #    self._plane = self._mesh._plane
     #
-    # --------------------
+    # ---------------------------------
     # Results
-    # --------------------
-    #
-    @property
-    def Un(self):
-        """ Nodal displacement solution"""
-        return self._Un
-    #
-    #@Un.setter
-    #def Un(self, df):
-    #    """Nodal displacement solution"""
-    #    self._Un = df
-    #
-    #
-    # --------------------
-    #
+    # ---------------------------------
     #
     def results(self, beam_steps: int,
                 Pdelta: bool):
         """ """
-        res = self._process.results(Un=self.Un.df,
-                                    beam_steps=beam_steps,
-                                    Pdelta=Pdelta)
-        #print('-->')
-        return res
+        return self._process.results(Un=self.Un.df,
+                                     beam_steps=beam_steps,
+                                     Pdelta=Pdelta)
     #
-
+    # ---------------------------------
+    #
+    def run(self, beam_steps: int= 10):
+        """ """
+        print("** Postprocessing")
+        #Un = self.Un
+        Pdelta: bool = self._Pdelta
+        beam_force, Qn = self._process.solve(self.Un,
+                                             beam_steps,
+                                             Pdelta=Pdelta)
+        # load comb update
+        if not Pdelta:
+            # combination
+            combination = self._mesh._load.combination()
+            comb2basic = combination.to_basic()
+            beam_force, Qn = self._process._add_comb(beam_force, Qn, comb2basic)
+        # ---------------------------------
+        # Process
+        # element force
+        self._process._push_beam_result(beam_force)
+        # Node
+        self._process._push_node_reaction(Qn)
+        # element stress
+        self._process.solve_stress(beam_force=beam_force)
+        #print('-->')
+    #
+    # ---------------------------------
+    #
+    
+#
 #
 #

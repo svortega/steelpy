@@ -24,13 +24,13 @@ from numpy.linalg import inv
 #
 #
 class BeamBasic(Mapping):
-    __slots__ = ['_component',]
+    __slots__ = ['_name',]
     
-    def __init__(self, component: int|str) -> None:
+    def __init__(self, name: int|str) -> None:
         """
         Beam element 
         """
-        self._component = component
+        self._name = name
     #
     # ------------------------------------------------
     #

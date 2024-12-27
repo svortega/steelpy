@@ -4,22 +4,14 @@
 
 # Python stdlib imports
 from __future__ import annotations
-#from array import array
 from dataclasses import dataclass
 from collections.abc import Mapping
-import re
 
 # package imports
-#from steelpy.ufo.load.concept.beam import BeamLoadTypeIM
-from steelpy.ufo.load.process.actions import SelfWeight
-#from steelpy.f2uModel.load.inmemory.combination import BasicLoad
-#from steelpy.utils.units.buckingham import Number
 from steelpy.utils.math.operations import trnsload, linspace
-
 from steelpy.ufo.load.process.beam.utils import (get_beam_point_load, 
                                                  get_beam_line_load,
                                                  UDL, PLoad)
-                                                 #get_BeamLoad_df)
 
 #
 #
@@ -318,13 +310,12 @@ class BeamLineBasic(BeamLoadBasic):
         #
         udl = get_beam_line_load(line_load)
         load_type = udl.pop(0)
-        title = udl.pop()
-        #
-        try:
+        comment = udl.pop()
+        # Chck if load in local system [global:0, local:1]
+        try: # Local system
             1 / self._system_flag
-            return [*udl, 1, title]
-        except ZeroDivisionError:
-            # local nodal loading
+            return [*udl, 1, comment]
+        except ZeroDivisionError: # global to local system
             nload = [*udl[0:4], 0, 0,
                      *udl[4:8], 0, 0]
             nload = trnsload(nload, self._beam.T3D())
@@ -332,7 +323,7 @@ class BeamLineBasic(BeamLoadBasic):
             return [*nload[:4],    # end 1 [qx, qy, qz, qt]
                     *nload[6:10],  # end 2 [qx, qy, qz, qt]
                     *udl[8:],      # [L0, L1]
-                    1, title]      # Local system, title
+                    1, comment]    # Local system, comment
 #
 #
 class BeamPointBasic(BeamLoadBasic):
@@ -352,16 +343,16 @@ class BeamPointBasic(BeamLoadBasic):
         point = get_beam_point_load(load)
         # update inputs      
         load_type = point.pop(0)
-        title = point.pop()        
+        comment = point.pop()
         #
         # get system local = 1
         try: # Local system
             1 / self._system_flag
-            return [*point, 1, title]
+            return [*point, 1, comment]
         except ZeroDivisionError: # global to local system
             pload = [*point[:6], 0, 0, 0, 0, 0, 0]
             pload = trnsload(pload, self._beam.T3D())
-            return [*pload[:6], point[6], 1, title]
+            return [*pload[:6], point[6], 1, comment]
     #
     #
     def __str__(self) -> str:

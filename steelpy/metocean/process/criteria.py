@@ -30,8 +30,8 @@ class HydroCriteria(ClassBasicSQL):
                  component: str|int, db_file: str):
         """
         """
-        super().__init__(component, db_file=db_file)
-        #self._labels = list = []
+        super().__init__(db_file=db_file)
+        self._component = component
         #
         self._properties = properties
         self._rho_w = rho_w

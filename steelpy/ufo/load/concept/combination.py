@@ -39,7 +39,7 @@ class LoadCombConcept(LoadCombinationBasic):
     def __init__(self, basic_load, component:str|int):
         """
         """
-        super().__init__()
+        super().__init__(name=component)
         self._combination = {}
         self._basic = basic_load
         self._component = component

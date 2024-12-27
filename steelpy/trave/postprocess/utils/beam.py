@@ -21,8 +21,6 @@ class BeamResBasic(Mapping):
         Beam element 
         """
         self._mesh = mesh
-        #self._labels = list(self._mesh._elements._beams.keys())
-        #self.plane = mesh._plane # self._plane()
         self._beams = mesh._elements._beams
     #
     #
@@ -93,6 +91,8 @@ class BeamStress(NamedTuple):
     """ Basic load transfer"""
     df: DBframework
     units: str
+    def __str__(self):
+        """ """
     #
     def __str__(self):
         """ """
@@ -104,37 +104,39 @@ class BeamStress(NamedTuple):
         output += '{:}\n'.format(52 * '-')
         output += "** Beam Stress | "
         output += unitsout
-        output += "\n"        
+        output += "\n"
         output += '{:}\n'.format(52 * '-')
-        output += print_beam_items(self.df)
+        output += print_beam_items(beam_result=self.df)
         return output
 #
 # --------------------
 # Printing
 #
-def print_beam_items(items,
-                 cols: list|None = None):
+def print_beam_items(beam_result,
+                     cols: list|None = None):
     """
     """
     if not cols:
-        cols = ['number', 'load_name', 'component_name',
-                'load_level', 'system']
+        cols = ['load_name', 'component_name', 'system']
     #
-    items.rename(columns={'element_name': 'beam',
-                          'length': 'len',
-                          'stress_points': 's_points',},
-                 inplace=True)
-    blgrp = items.groupby('load_level')
+    cols2remove = ['number', 'load_name', 'component_name',
+                   'load_level', 'system']
+    #
+    beam_result.rename(columns={'element_name': 'beam_name',
+                                'stress_point': 'points',},
+                       inplace=True)
+    #
+    beam_grp = beam_result.groupby('load_level')
     #
     output = ''
     try:
-        bltype = blgrp.get_group('basic')
-        blitems = bltype.groupby(['load_name', 'component_name', 'system'])
-        for key, wk in blitems:
+        group_load = beam_grp.get_group('basic')
+        regroup = group_load.groupby(cols)
+        for key, load in regroup:
             output += "-- Basic Load  Name: {:}  Component: {:} System: {:}\n".format(*key)
             output += "\n"
             #
-            vals = wk.drop(cols, axis=1)
+            vals = load.drop(cols2remove, axis=1)
             header2 = list(vals)
             header2 = get_gap(header2)
             #
@@ -147,15 +149,14 @@ def print_beam_items(items,
     #
     # combination
     try:
-        bltype = blgrp.get_group('combination')
-        blitems = bltype.groupby(['load_name', 'component_name', 'system'])
-        #
+        group_load = beam_grp.get_group('combination')
+        regroup = group_load.groupby(cols)
         output += '{:}\n'.format(52 * '-')
-        for key, wk in blitems:
+        for key, load in regroup:
             output += "-- Load Combination  Name: {:} Component: {:} System: {:}\n".format(*key)
             output += "\n"
             #
-            vals = wk.drop(cols, axis=1)
+            vals = load.drop(cols2remove, axis=1)
             header2 = list(vals)
             header2 = get_gap(header2)
             #
@@ -168,27 +169,27 @@ def print_beam_items(items,
     #
     return output
 #
-def printout(bforces):
+def printout(element_result):
     """
     """
     output = ""
-    mgroup = bforces.groupby("beam")
-    #
-    for key, mgroup in mgroup:
+    element_group = element_result.groupby("beam_name")
+    for key, group in element_group:
         output += "{:9d} ".format(key)
-        items = mgroup.set_index('beam')
+        items = group.set_index('beam_name')
         for x, item in enumerate(items.itertuples()):
             try:
                 1 / x
                 output += "{:} ".format(9 * " ")
             except ZeroDivisionError:
-                pass
-            
-            output += "{: 1.3e} ".format(item.len)
+                pass            
+            #if x == 0:
+            #    output += "{:} ".format(9 * " ")
+            #    pass
+            output += "{: 1.3e} ".format(item.length)
             for val in item[2:]:
                 output += "{: 1.3e} ".format(val)
             output += "\n"
-    #
     return output
 #
 def get_gap(header, step:int=9):
@@ -197,7 +198,6 @@ def get_gap(header, step:int=9):
     for item in header:
         gap = step - len(item) 
         new.extend([item, " " * gap])
-    #
     new = " ".join(new)
     return new
 #
