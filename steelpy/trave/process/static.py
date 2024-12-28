@@ -243,7 +243,7 @@ class StaticSolver:
         #
         uptime = time.time() - start_time
         print(f"** {{F}} = [Ke] {{U}} Solution: {uptime:1.4e} sec")
-        return Un
+        #return Un
 
     #
     def solve_Pdelta(self,
@@ -276,7 +276,6 @@ class StaticSolver:
         # ------------------------------
         # 
         Un, Ke, Fn, Dn = self._linear(load_level='combination',
-                                      #col_grp=col_grp,
                                       sparse=sparse)
         #
         # ------------------------------
@@ -309,7 +308,7 @@ class StaticSolver:
         #
         # Results to dataframe
         db = DBframework()
-        Us = db.concat(Un_temp, ignore_index=True)
+        Un = db.concat(Un_temp, ignore_index=True)
         # ------------------------------
         # end process
         # ------------------------------
@@ -318,7 +317,7 @@ class StaticSolver:
         #
         uptime = time.time() - start_time
         print(f"** {{F}} = [Kt] {{U}} Solution: {uptime:1.4e} sec")
-        return Us
+        #return Us
 
     #
     #    
@@ -581,10 +580,8 @@ class StaticSolver:
             #
             print(f"** Solving Linear Static [{order} order] ")
             #
-            Un = run(sparse=sparse,
-                     max_iter=max_iter)
+            run(sparse=sparse, max_iter=max_iter)
             #
-            #1/0
             #self._postprocess.Un.df = Un
         else:
             raise IOError('** error: mesh missing')

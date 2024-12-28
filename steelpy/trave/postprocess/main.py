@@ -56,24 +56,24 @@ class PostProcess(PostProcessSQL):
         print("** Postprocessing")
         #Un = self.Un
         Pdelta: bool = self._Pdelta
-        beam_force, Qn = self._process.solve(self.Un,
-                                             beam_steps,
-                                             Pdelta=Pdelta)
+        beam_force= self._process.solve(self.Un,
+                                        beam_steps,
+                                        Pdelta=Pdelta)
         # load comb update
-        if not Pdelta:
-            # combination
-            combination = self._mesh._load.combination()
-            comb2basic = combination.to_basic()
-            beam_force, Qn = self._process._add_comb(beam_force, Qn, comb2basic)
+        #if not Pdelta:
+        #    # combination
+        #    combination = self._mesh._load.combination()
+        #    comb2basic = combination.to_basic()
+       #    beam_force, Qn = self._process._add_comb(beam_force, Qn, comb2basic)
         # ---------------------------------
         # Process
         # element force
-        self._process._push_beam_result(beam_force)
+        #self._process._push_beam_result(beam_force)
         # Node
-        self._process._push_node_reaction(Qn)
+        #self._process._push_node_reaction(Qn)
         # element stress
         self._process.solve_stress(beam_force=beam_force)
-        #print('-->')
+        print('-->')
     #
     # ---------------------------------
     #

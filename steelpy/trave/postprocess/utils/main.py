@@ -15,9 +15,6 @@ from steelpy.trave.beam.main import BeamBasic
 #
 from steelpy.utils.math.operations import linstep
 from steelpy.utils.dataframe.main import DBframework
-#from steelpy.utils.sqlite.utils import create_connection, create_table
-#
-#from steelpy.trave.beam.roark.chapter10.table103_point import BTOpenSupports
 #
 import numpy as np
 #
@@ -35,14 +32,17 @@ import numpy as np
 #
 @dataclass
 class MainPostProcess:
-    __slots__ = ['_plane', '_mesh', '_result_name']
+    __slots__ = ['_plane', '_mesh', '_result_name', '_results']
     
-    def __init__(self, mesh, result_name:int|str,) -> None:
+    def __init__(self, mesh, result_name:int|str, 
+                 results) -> None:
         """
         """
         self._mesh = mesh
         self._plane = mesh._plane
         self._result_name = result_name
+        #self._db_file = db_file
+        self._results = results
     #
     # -----------------------------------------------------------
     # Operations Node, Element forces and displacement
@@ -56,7 +56,7 @@ class MainPostProcess:
         Pdelta: 2nd order flag
         """
         elements = self._mesh._elements
-        Un_grp = Un.df.groupby(['load_level'])
+        Un_grp = Un.groupby(['load_level'])
         #
         #
         if Pdelta:
@@ -74,11 +74,75 @@ class MainPostProcess:
                                                steps=steps,
                                                Pdelta=Pdelta)
         #
-        # TODO: get node reactions somehow..
+        # ---------------------------------
+        # Calculate node reactions
         Qn = self.solve_node_reactions(Fb_end=Qn,
                                        load=load)
         #
-        return Fb_result, Qn
+        # ---------------------------------
+        # load comb update
+        if not Pdelta:
+            # combination
+            combination = self._mesh._load.combination()
+            comb2basic = combination.to_basic()
+            Fb_result, Qn = self._add_comb(Fb_result, Qn, comb2basic)
+        #
+        # ---------------------------------
+        # Process
+        # element force
+        self._results._push_beam_result(Fb_result)
+        # Node
+        self._results._push_node_reaction(Qn)
+        #
+        return Fb_result #, Qn
+    #
+    # -----------------------------------------------------------
+    # update load
+    def _add_comb(self, beam_force, Qn, lcomb):
+        """
+        Update load with combinations
+
+        Qn:
+        beam_force:
+        lcomb:
+        """
+        #db = DBframework()
+        #
+        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+                  'x', 'y', 'z', 'rx', 'ry', 'rz',
+                  'Psi', 'B', 'Tw']
+        item = ['mesh_name', 'result_name',
+                'load_name', 'load_level',
+                'element_name', 'length', 'system']
+        beam_force = update_combination(member=beam_force,
+                                        combination=lcomb,
+                                        item=item,
+                                        values=values)
+        #
+        #try:
+        #    bf_comb = bf_comb.groupby(item, as_index=False)[values].sum()
+        #    beam_force = db.concat([beam_force, bf_comb], ignore_index=True)
+        #except UnboundLocalError:
+        #    pass
+        #
+        # End node force combination
+        values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']
+        item = ['mesh_name', 'result_name',
+                'load_name', 'load_level',
+                'node_name', 'system']
+        Qn = update_combination(member=Qn,
+                                combination=lcomb,
+                                item=item,
+                                values=values)
+        #
+        #
+        #try:
+        #    Qn_comb = Qn_comb.groupby(item, as_index=False)[values].sum()
+        #    Qn = db.concat([Qn, Qn_comb], ignore_index=True)
+        #except UnboundLocalError:
+        #    pass
+        #
+        return beam_force, Qn
     #
     # -----------------------------------------------------------
     #
@@ -287,6 +351,34 @@ class MainPostProcess:
         return Fb_result, df_nforce
     #
     #
+    def solve_stress(self, beam_force:DBframework.DataFrame):
+        """get elements stress"""
+        #print("** Beam stress calculation")
+        start_time = time.time()
+        #1 / 0
+        beamfdf = beam_force.copy()
+        #mesh_name=self._mesh._name
+        elements = self._mesh._elements
+        memb_grp = beamfdf.groupby(['mesh_name', 'result_name',
+                                    'load_name',  'load_level',
+                                    'system', 'element_name'])
+        #
+        for key, memb_item in memb_grp:
+            #print(key)
+            member = elements[key[-1].tolist()]
+            section = member.section
+            material = member.material
+            beam_stress = section.stress(beam_result=memb_item,
+                                         E=material.E,
+                                         G=material.G,
+                                         poisson=material.poisson)
+            #
+            self._results._push_beam_stress(beam_stress)
+        #
+        uptime = time.time() - start_time
+        print(f"** Beam Stress Calculation: {uptime:1.4e} sec")
+    #
+    #
     # -----------------------------------------------------------
     #
     def solve_node_reactions(self, Fb_end, load):
@@ -396,9 +488,28 @@ class MainPostProcess:
                    for bstep in Lsteps]
         return lbforce
     #
+    #
+    def get_reactions(self, node_force:DBframework.DataFrame)-> (DBframework.DataFrame, DBframework.DataFrame):
+        """ get nodal reactions """
+        #
+        header = ['mesh_name', 'result_name',
+                  'load_name', 'load_level',
+                  'node_name', 'system']
+        #
+        nforce = (node_force.groupby(header,
+                                     as_index=False)
+                   [self._plane.hforce].sum())
+        #
+        # TODO : maybe there is a better pandas way that the code below..
+        supports = self._mesh._boundaries.support()
+        nname = list(supports)
+        nrsupp = nforce.loc[nforce['node_name'].isin(nname)]
+        db = DBframework()
+        nrsupp = db.DataFrame(data=nrsupp)
+        return nforce, nrsupp
+    #
     # -----------------------------------------------------------
     # DataFrame Operations
-    #
     #
     def _mf2df(self, Fb:list[list],
                head_force:list[str]|None=None)-> DBframework.DataFrame:
@@ -427,6 +538,37 @@ class MainPostProcess:
 # -----------------------------------------------------------
 # DataFrame Operations
 # -----------------------------------------------------------
+#
+#
+def update_combination(member, combination,
+                       item: list[str],
+                       values:list[str]):
+    """
+    Update node displacements to include combination
+    """
+    db = DBframework()
+    # group basic load by name
+    grp = member.groupby('load_name')
+    comb_grp = combination.groupby('load_name')
+    temp = []
+    for key, comb_factors in comb_grp:
+        for row in comb_factors.itertuples():
+            comb = grp.get_group(row.basic_load).copy()
+            comb.loc[:, values] *= row.factor
+            comb['load_level'] = 'combination'
+            comb['load_name'] = row.load_name
+            comb['load_id'] = row.load_id
+            comb['load_title'] = row.load_title
+            temp.append(comb)
+    #
+    try:
+        temp = db.concat(temp, ignore_index=True)
+        temp = temp.groupby(item, as_index=False)[values].sum()
+        member = db.concat([member, temp], ignore_index=True)
+    except (UnboundLocalError, ValueError):
+        pass
+    return member
+#
 #
 def mif2df2(member_load:list[list]) -> DBframework.DataFrame:
     """
@@ -465,6 +607,7 @@ def list2df(data:list[list], header:list) -> DBframework.DataFrame:
     db = DBframework()
     dftemp = db.DataFrame(data=data, columns=header, index=None)
     return dftemp
+#
 #
 #
 # -----------------------------------------------------------

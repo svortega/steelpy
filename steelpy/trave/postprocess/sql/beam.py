@@ -77,46 +77,42 @@ class BeamResultSQL(BeamResBasic):
     #
     def force(self, units:str='si')-> BeamForce:
         """beam integration forces"""
-        #
         conn = create_connection(self.db_file)
         with conn:        
             df = get_force(conn,
                            result_name=self._result_name,
                            mesh_name=self._mesh._name)
         #
-        #if self._mesh._plane.plane2D:
-        #    df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
-        #
+        if self._mesh._plane.plane2D:
+            df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
         return BeamForce(df, units=units)
     #
     def displacement(self, units:str='si'):
         """beam integration forces"""
-        
         return self.deflection(units)
     #
     def deflection(self, units:str='si')-> BeamDeflection:
         """beam integration forces"""
-        #
         conn = create_connection(self.db_file)
         with conn:        
             df = get_displacement(conn,
                                   result_name=self._result_name,
                                   mesh_name=self._mesh._name)
         #
-        #if self._mesh._plane.plane2D:
-        #    df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)        
-        #
+        if self._mesh._plane.plane2D:
+            df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)
         return BeamDeflection(df, units=units)    
     #
     def stress(self, units:str='si')-> BeamStress:
         """ beam stress """
-        #
         conn = create_connection(self.db_file)
         with conn:        
             df = get_stress(conn,
                             result_name=self._result_name,
                             mesh_name=self._mesh._name)
         #
+        #if self._mesh._plane.plane2D:
+        #    df.drop(['tau_z', 'sigma_x', 'sigma_y'], axis=1, inplace=True)
         return BeamStress(df, units=units)         
     #
     #def code_check(self):
@@ -163,9 +159,8 @@ class BeamResultItem:
                            result_name=self._result_name,
                            mesh_name=self._mesh_name)
         #
-        #if self._plane:
-        #    df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
-        #
+        if self._plane:
+            df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
         return BeamForce(df, units=units)
     #
     def deflection(self, units:str='si')-> BeamDeflection:
@@ -178,9 +173,8 @@ class BeamResultItem:
                                   result_name=self._result_name,
                                   mesh_name=self._mesh_name)
         #
-        #if self._plane:
-        #    df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)
-        #        
+        if self._plane:
+            df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)      
         return BeamDeflection(df, units=units)
     #
     def stress(self, units:str='si')-> BeamStress:
@@ -193,6 +187,8 @@ class BeamResultItem:
                             result_name=self._result_name,
                             mesh_name=self._mesh_name)
         #
+        #if self._mesh._plane.plane2D:
+        #    df.drop(['tau_z', 'sigma_x', 'sigma_y'], axis=1, inplace=True)
         return BeamStress(df, units=units)
 #
 # --------------------

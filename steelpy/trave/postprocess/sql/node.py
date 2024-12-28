@@ -8,16 +8,14 @@ from dataclasses import dataclass
 #import re
 #
 # package imports
-from steelpy.ufo.mesh.main import MeshPlane
+#from steelpy.ufo.mesh.main import MeshPlane
 from steelpy.utils.dataframe.main import DBframework
 from steelpy.utils.sqlite.utils import create_connection #, create_table
 
 from steelpy.trave.postprocess.utils.node import (NodeResultBasic, NodeForce,
                                                   NodeDeflection, NodeReaction)
 #
-from steelpy.ufo.mesh.sqlite.utils import (pull_node_mesh,
-                                           pull_results_mesh,
-                                           pull_load_mesh)
+
 
 #
 class NodeResultSQL(NodeResultBasic):
@@ -86,13 +84,14 @@ class NodeResultSQL(NodeResultBasic):
                            result_name=self._result_name,
                            mesh_name=self._mesh._name)                           
                            #plane2D=self.plane.plane2D)
-        #if self._mesh._plane.plane2D:
-        #    df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
+        if self._mesh._plane.plane2D:
+            df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
         return NodeForce(df, units=units)
     #
     #@property
     def displacement(self, units:str='si')->NodeDeflection:
         """ node displacement"""
+        #1 / 0
         conn = create_connection(self.db_file)
         with conn:         
             df = get_displacement(conn,
@@ -100,8 +99,8 @@ class NodeResultSQL(NodeResultBasic):
                                   mesh_name=self._mesh._name)
                                   #plane2D=self.plane.plane2D)
         #
-        #if self._mesh._plane.plane2D:
-        #    df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)
+        if self._mesh._plane.plane2D:
+            df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)
         return NodeDeflection(df, units=units)
     #
     #@property
@@ -114,8 +113,8 @@ class NodeResultSQL(NodeResultBasic):
                                mesh_name=self._mesh._name)                               
                                #plane2D=self.plane.plane2D)
         #
-        #if self._mesh._plane.plane2D:
-        #    df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
+        if self._mesh._plane.plane2D:
+            df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
         return NodeReaction(df, units=units)
     #
 #        
@@ -143,7 +142,6 @@ class NodeResultItem:
         conn = create_connection(self._db_file)
         with conn:        
             df = get_force(conn,
-                           #plane2D=self._plane.plane2D,
                            node_name=node_name,
                            result_name=self._result_name,
                            mesh_name=self._mesh_name)
@@ -158,7 +156,6 @@ class NodeResultItem:
         conn = create_connection(self._db_file)
         with conn:         
             df = get_displacement(conn,
-                                  #plane2D=self._plane.plane2D,
                                   node_name=node_name,
                                   result_name=self._result_name,
                                   mesh_name=self._mesh_name)
@@ -166,6 +163,20 @@ class NodeResultItem:
         if self._plane:
             df.drop(['z', 'rx', 'ry'], axis=1, inplace=True)
         return NodeDeflection(df, units=units)
+    #
+    def reaction(self, units:str='si')->NodeReaction:
+        """ Node reactions"""
+        node_name = self._node.name
+        conn = create_connection(self._db_file)
+        with conn:        
+            df = get_reactions(conn,
+                               node_name=node_name,
+                               result_name=self._result_name,
+                               mesh_name=self._mesh_name)
+        #
+        if self._plane:
+            df.drop(['Fz', 'Mx', 'My'], axis=1, inplace=True)
+        return NodeReaction(df, units=units)    
 #
 #
 # --------------------
