@@ -54,10 +54,10 @@ class PostProcess(PostProcessSQL):
     def run(self, beam_steps: int= 10):
         """ """
         print("** Postprocessing")
-        #Un = self.Un
+        Un = self.Un
         Pdelta: bool = self._Pdelta
-        beam_force= self._process.solve(self.Un,
-                                        beam_steps,
+        beam_force= self._process.solve(Un=Un,
+                                        steps=beam_steps,
                                         Pdelta=Pdelta)
         # load comb update
         #if not Pdelta:

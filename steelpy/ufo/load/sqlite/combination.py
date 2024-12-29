@@ -284,7 +284,10 @@ class CombTypeSQL:
         #
         loadfun = []
         for item in comb_item.itertuples():
-            funct_item = grp_funct.get_group((item.basic_load, beam_name, )).reset_index()
+            try:
+                funct_item = grp_funct.get_group((item.basic_load, beam_name, )).reset_index()
+            except KeyError:
+                continue
             funct_item = funct_item.groupby(['load_name', 'element_name', 'length'])
             funct_item = funct_item[['axial', 'torsion', 'VM_inplane', 'VM_outplane']].sum()
             funct_item *= item.factor

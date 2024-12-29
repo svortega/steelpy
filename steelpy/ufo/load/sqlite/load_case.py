@@ -304,8 +304,6 @@ def pull_ENL_FER(conn, mesh_id: int):
              'load_type',
              'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz', 
              'Psi', 'B', 'Tw', 'step']]
-    # 3D sign correction
-    #df['Mz'] *= -1
     return df
 #
 def pull_END_FER(conn, mesh_id: int):
@@ -320,8 +318,6 @@ def pull_END_FER(conn, mesh_id: int):
                'node_name', 'node_index',
                'load_type',
                'x', 'y', 'z', 'rx', 'ry', 'rz', 'step']]
-    # 3D sign correction
-    #df['rz'] *= -1
     return df
 #
 def pull_FER_df(conn, mesh_id: int):
@@ -376,7 +372,6 @@ def pull_FER_data(conn, mesh_id: int):
     db = DBframework()
     df = db.DataFrame(data=rows, columns=cols)
     df['load_level'] = 'basic'    
-    #
     return df
 #      
 #

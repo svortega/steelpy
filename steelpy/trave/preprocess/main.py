@@ -8,7 +8,7 @@ from datetime import datetime as dt
 # package imports
 #from steelpy.trave.process.dynamic import eigen, trnsient
 #from steelpy.trave.utils.solution import UnSolver
-from steelpy.trave.process.static import StaticSolver
+from steelpy.trave.process.static.main import StaticSolver
 #from steelpy.trave.postprocess.main import PostProcess
 #
 from steelpy.trave.preprocess.sql.main import TraveItemSQL
@@ -83,7 +83,7 @@ class TraveItemBasic(TraveItemSQL):
                                  db_file=self.db_file,
                                  log = self._log,
                                  second_order=second_order,
-                                 inelastic=inelastic)
+                                 nonlinear=inelastic)
         else:
             raise IOError('** error: mesh missing')
     #

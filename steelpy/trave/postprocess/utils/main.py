@@ -269,13 +269,13 @@ class MainPostProcess:
                     beam_fer_enl = beam_fer_enl.groupby(['element_name'])                    
                     beam_fer_enl = beam_fer_enl.get_group((bname, ))
                     # calculate beam end 1 reactions
-                    Pa, R0, Fb = self._beam_R0(nodes=nodes,
+                    Pa, R0, Fbi = self._beam_R0(nodes=nodes,
                                                Tb=Tb,
                                                Fb_local=beam_item.Fb_local,
                                                fer_global=beam_fer_enl,
                                                eq=Fbeq)
                     #
-                    gn_force = Tb @ Fb
+                    gn_force = -1 * Tb @ Fbi
                     # get load function
                     load_item = load[key[0]]
                     #print(f'P0 = {Pa}')
@@ -308,7 +308,7 @@ class MainPostProcess:
                                                  geometry=element.section.geometry,
                                                  steps=steps)
                     #
-                    gn_force = beam_item.Fb_global
+                    gn_force = -1 * beam_item.Fb_global
                     #
                 #
                 # ---------------------------------------------
@@ -431,21 +431,19 @@ class MainPostProcess:
                  fer_global, eq):
         """ """
         force_header = ['Fx','Fy','Fz','Mx','My','Mz']
-        #dof = len(force_header)
         torsion_header = ['Psi', 'B', 'Tw'] # torsion part
         #
         # Torsion
         bt_load = fer_global.groupby(['node_name'],
-                                 as_index=False)[torsion_header].sum()
+                                     as_index=False)[torsion_header].sum()
         bt_load.set_index('node_name', inplace=True)
         #
         # Get beam end loads
-        #
         fer_global = fer_global.groupby(['node_name'],
-                                  as_index=False)[force_header].sum()
+                                        as_index=False)[force_header].sum()
         
         fer_global.set_index('node_name', inplace=True)
-        #
+        # get node 1 and 2 FER forces
         Fb_fer = np.concatenate((fer_global.loc[nodes[0]],
                                  fer_global.loc[nodes[1]]), axis=None)
         #
@@ -453,7 +451,6 @@ class MainPostProcess:
         #Ft_local = Tb @ (Fb_global - FU_fer)
         Fb = Fb_local - Tb @  Fb_fer
         # get reactions with correct sign for postprocessing
-        #
         R0 = eq.R0(Fb_local=Fb,
                    torsion=bt_load.loc[nodes[0]])
         #

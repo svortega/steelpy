@@ -487,6 +487,43 @@ class MeshItem(MeshSQL):
         return Fi
 
     #
+    # ------------------------------------------
+    #
+    def _matrix_partition(self, Km):
+        """
+        Partitions a matrix into sub-matrices based on degree of freedom boundary conditions
+        
+        Km: The un-partitioned matrix (or vector) to be partitioned.
+
+        Return:
+            m1 :
+            m2 :
+        """
+        #jbcc = jbcflat.values
+        jbc = self.jbc().stack()
+        #
+        # List of the indices for degrees of freedom with unknown displacements.
+        D1 = [i for i, item in enumerate(jbc)
+              if item != 0]
+        # List of the indices for degrees of freedom with known displacements.
+        D2 = [i for i, item in enumerate(jbc)
+              if item == 0]
+        #
+        # 1D vectors
+        if Km.shape[1] == 1:
+            # Partition the vector into 2 subvectors
+            m1 = Km[D1, :]
+            m2 = Km[D2, :]
+            return m1, m2
+        #
+        # 2D matrices
+        else:
+            # Partition the matrix into 4 submatrices
+            m11 = Km[D1, :][:, D1]
+            m12 = Km[D1, :][:, D2]
+            # m21 = Km[D2, :][:, D1]
+            # m22 = Km[D2, :][:, D2]
+            return m11, m12  # , m21, m22
     #
     # --------------------
     # Plotting

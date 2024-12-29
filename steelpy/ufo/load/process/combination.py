@@ -309,22 +309,22 @@ class LoadCombinationBasic(LoadCombinationRoot):
 #
 # -----------------------------------------------------
 #
-def update_combination(dfbasic, dfcomb,
+def update_combination(dfbasic, combination,
                        values: list[str]):
     """
     Update node displacements to include lcomb
 
     dfbasic: basic load
-    dfcomb: load combination in terms of basic load
+    combination: load combination in terms of basic load
     values : df data to be extracted
     """
     db = DBframework()
     # group basic load by name
     header = ['mesh_name', 'load_name']
     blgrp = dfbasic.groupby(header)
-    combgrp = dfcomb.groupby(header)
+    comb_grp = combination.groupby(header)
     dftemp = []
-    for key, combfactors in combgrp:
+    for key, combfactors in comb_grp:
         for row in combfactors.itertuples():
             try:  # check for beam load only
                 comb = blgrp.get_group((key[0], row.basic_load,)).copy()
@@ -339,6 +339,36 @@ def update_combination(dfbasic, dfcomb,
     #
     dftemp = db.concat(dftemp, ignore_index=True)
     return dftemp
+#
+#
+def update_combinationXXX(member, combination,
+                          item: list[str],
+                          values:list[str]):
+    """
+    Update node displacements to include combination
+    """
+    db = DBframework()
+    # group basic load by name
+    grp = member.groupby('load_name')
+    comb_grp = combination.groupby('load_name')
+    temp = []
+    for key, comb_factors in comb_grp:
+        for row in comb_factors.itertuples():
+            comb = grp.get_group(row.basic_load).copy()
+            comb.loc[:, values] *= row.factor
+            comb['load_level'] = 'combination'
+            comb['load_name'] = row.load_name
+            comb['load_id'] = row.load_id
+            comb['load_title'] = row.load_title
+            temp.append(comb)
+    #
+    try:
+        temp = db.concat(temp, ignore_index=True)
+        temp = temp.groupby(item, as_index=False)[values].sum()
+        member = db.concat([member, temp], ignore_index=True)
+    except (UnboundLocalError, ValueError):
+        pass
+    return member
 #
 # -----------------------------------------------------
 #
