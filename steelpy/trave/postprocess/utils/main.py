@@ -550,7 +550,10 @@ def update_combination(member, combination,
     temp = []
     for key, comb_factors in comb_grp:
         for row in comb_factors.itertuples():
-            comb = grp.get_group(row.basic_load).copy()
+            try:
+                comb = grp.get_group(row.basic_load).copy()
+            except KeyError:
+                continue
             comb.loc[:, values] *= row.factor
             comb['load_level'] = 'combination'
             comb['load_name'] = row.load_name
