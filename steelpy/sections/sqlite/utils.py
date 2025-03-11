@@ -4,8 +4,8 @@
 
 # Python stdlib imports
 from __future__ import annotations
-from dataclasses import dataclass
-#from typing import NamedTuple
+#from dataclasses import dataclass
+from typing import NamedTuple
 #
 # package imports
 #
@@ -13,8 +13,9 @@ from steelpy.sections.utils.shape.main import SectionMain
 from steelpy.utils.sqlite.utils import create_connection #, create_table
 #from steelpy.sections.utils.operations import get_sect_prop_df
 from steelpy.sections.utils.shape.utils import ShapeProperty
-from steelpy.sections.utils.shape.stress import ShapeStressBasic
+#from steelpy.sections.utils.shape.stress import ShapeStressBasic
 #from steelpy.utils.dataframe.main import DBframework
+from steelpy.sections.utils.operations import ShapeGeometry
 #
 #
 #-------------------------------------------------
@@ -99,7 +100,7 @@ class SectionMainSQL(SectionMain):
         #
         # Property
         item = self.__getitem__(name)
-        properties =  item.properties(poisson=0)
+        properties =  item.properties #(poisson=0)
         with conn:
             self._push_property(conn, number, properties)
         #
@@ -161,9 +162,8 @@ class SectionMainSQL(SectionMain):
                                                area, Zc, Yc,\
                                                Iy, Zey, Zpy, ry,\
                                                Iz, Zez, Zpz, rz,\
-                                               J, Cw, \
-                                               alpha_sy, alpha_sz)\
-                                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                                               J, Cw)\
+                                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
         #
         #conn = create_connection(self.db_file)
         #with conn:
@@ -240,15 +240,14 @@ def get_sections(conn, mesh_id: int) -> list:
             for item in rows]    
     return rows
 #
-def get_properties(conn, mesh_id: int,
-                    section_name: int|str|None = None) -> list:
+def get_properties_list(conn, mesh_id: int,
+                        name: int|str|None = None) -> list:
     """
     [section_id, number,
     area, Zc, Yc,
     Iy, Zey, Zpy, ry,
     Iz, Zez, Zpz, rz,
-    J, Cw, 
-    alpha_sy, alpha_sz
+    J, Cw]
     """
     query = (mesh_id, )
     table = "SELECT Section.name, SectionProperty.*\
@@ -256,8 +255,8 @@ def get_properties(conn, mesh_id: int,
              WHERE Section.mesh_id  = ? \
              AND Section.number = SectionProperty.section_id ;"
     
-    if section_name:
-        query = (mesh_id, section_name,)
+    if name:
+        query = (mesh_id, name,)
         table.join('AND Section.name = ?')
     
     cur = conn.cursor()
@@ -299,13 +298,12 @@ def get_section_df(conn, mesh_id: int) -> list:
     area, Zc, Yc,
     Iy, Zey, Zpy, ry,
     Iz, Zez, Zpz, rz,
-    J, Cw, 
-    alpha_sy, alpha_sz]
+    J, Cw]
     """
     sect = get_sections(conn, mesh_id)
     sect = {item[0]: item[2:] for item in sect}
     #
-    prop = get_properties(conn, mesh_id)
+    prop = get_properties_list(conn, mesh_id)
     prop = {item[0]: item[2:] for item in prop}
     #
     geom = get_geometry(conn, mesh_id)
@@ -345,30 +343,31 @@ def _get_section(conn, section_id:int,
     return row
 #
 #
-@dataclass
-class ShapeGeometrySQL(ShapeStressBasic):
+#@dataclass
+class ShapeGeometrySQL(NamedTuple):
     name: str | int
     number: int
-    geometry: tuple
-    material: tuple
-    db_file: str
+    geometry: ShapeGeometry
+    properties: ShapeProperty
+    #material: tuple
+    #db_file: str
     #
-    def _properties(self, poisson: float):
-        """ """
-        query = (self.number, )
-        table = f'SELECT * FROM SectionProperty \
-                 WHERE section_id = ?;'
-        #
-        conn = create_connection(self.db_file)
-        with conn:        
-            cur = conn.cursor()
-            cur.execute(table, query)
-            row = cur.fetchone()
-        #
-        #
-        alpha_sy, alpha_sz = self.geometry.alpha_s(poisson=poisson)
-        #
-        return ShapeProperty(*row[2:15], alpha_sy, alpha_sz)
+    #def _properties(self, poisson: float):
+    #    """ """
+    #    query = (self.number, )
+    #    table = f'SELECT * FROM SectionProperty \
+    #             WHERE section_id = ?;'
+    #    #
+    #    conn = create_connection(self.db_file)
+    #    with conn:        
+    #        cur = conn.cursor()
+    #        cur.execute(table, query)
+    #        row = cur.fetchone()
+    #    #
+    #    #
+    #    alpha_sy, alpha_sz = self.geometry.alpha_s(poisson=poisson)
+    #    #
+    #    return ShapeProperty(*row[2:15], alpha_sy, alpha_sz)
     #
     #@property
     #def section(self):
@@ -377,6 +376,13 @@ class ShapeGeometrySQL(ShapeStressBasic):
     #    return ShapeGeometry(shape_type=self.geometry[2],
     #                         geometry=self.geometry)
     #
+    def As(self, poisson: float):
+        """ """
+        alpha_sy, alpha_sz = self.geometry.alpha_s(poisson=poisson)
+        Asy = self.properties.Asy(alpha_sy)
+        Asz = self.properties.Asz(alpha_sz)
+        return Asy, Asz
+    #
     @property
     def _stress(self):
         """ """
@@ -384,11 +390,11 @@ class ShapeGeometrySQL(ShapeStressBasic):
         return self.geometry._stress
 #
 #
-def get_section(conn, section_name: int|str,
-              mesh_id: int):
+def get_sectionSQL(conn, name: int|str,
+                   mesh_id: int):
     """ """
     #
-    query = (section_name, mesh_id, )
+    query = (name, mesh_id, )
     table = f"SELECT Section.*, SectionGeometry.* \
               FROM Section, SectionGeometry, Mesh \
               WHERE Section.name = ? \
@@ -401,8 +407,32 @@ def get_section(conn, section_name: int|str,
     #
     geometry = [*row[1:3], *row[11:]]
     #
-    shape = get_shape()
-#    
+    #shape = get_shape()
+    shape = ShapeGeometry(section_type=geometry[2],
+                          geometry=geometry)
+    #
+    #alpha_sy, alpha_sz = shape.alpha_s(poisson=poisson)
+    #
+    properties =  get_properties(conn, section_id=row[0])
+    #
+    section =  ShapeGeometrySQL(number=row[0],
+                                name=row[1],
+                                geometry=shape, 
+                                properties=properties)
+    return section
+#
+def get_properties(conn, section_id: int):
+    """ """
+    query = (section_id, )
+    table = f'SELECT * FROM SectionProperty \
+             WHERE section_id = ?;'
+    #      
+    cur = conn.cursor()
+    cur.execute(table, query)
+    row = cur.fetchone()
+    #alpha_sy, alpha_sz = self.geometry.alpha_s(poisson=poisson)
+    #
+    return ShapeProperty(*row[2:])
 # 
 def get_sectionXX(conn, section_name: int|str,
                 mesh_id: int):

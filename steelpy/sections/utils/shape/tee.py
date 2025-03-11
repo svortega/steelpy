@@ -121,7 +121,7 @@ class TeeBasic(ShapeStressBasic):
         return stress_out         
     #  
     #
-    def _properties(self, poisson):
+    def _properties(self):
         """
         """
         #
@@ -187,14 +187,14 @@ class TeeBasic(ShapeStressBasic):
         rp = (Jx / area)**0.50
         #
         #
-        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
+        #alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw,
-                             alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sz)
+                             J=J, Cw=Cw)
+                             #alpha_sy=alpha_sy,
+                             #alpha_sz=alpha_sz)
     #
     #
     def curved(self, R):

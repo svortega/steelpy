@@ -14,7 +14,7 @@ from steelpy.material.main import Material
 from steelpy.utils.units.main import Units
 from steelpy.sections.main import Section
 from .circular_ring import circular_ring, stress2, RadialForces
-
+from steelpy.utils.dataframe.main import DBframework
 #
 #
 #
@@ -28,7 +28,8 @@ class Cases(Mapping):
         """
         self._istep = istep
         self._labels : List = []
-        self._cases : List = []    
+        self._cases : List = []
+    #
     # ---------------------------------
     #
     def __setitem__(self, load_name: int,
@@ -80,6 +81,31 @@ class Cases(Mapping):
     def __contains__(self, value):
         return value in self._labels
     #
+    def __str__(self):
+        """ """
+        # SUPERPOSITION OF ALL LOAD CASES
+        output = "\n"
+        output += '                                                              SUPERPOSITION OF ALL LOAD CASES\n'
+        output += '          -------------Forces-------------    -----------------------Stresses (n/mm^2)---------------------------\n'
+        output += 'Location  Moment     Thrust        Shear     Bending     Bending      Hoop        Shear       Bend.in.   Bend.out\n'
+        output += 'Degrees    N.mm        N             N        Inner       Outer                               +Hoop       +Hoop\n'
+        for i in range(len(_xloc)):
+            output += "{:>5.1f}  {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e}\n".format(_xloc[i], self.xm[i], self.xh[i], self.xs[i], self.bstri[i],
+                           self.bstro[i], self.hstr[i], self.sstr[i], self.cstri[i], self.cstro[i])
+        
+        output += "\n"
+        output += 'max. combined stress    max. shear stress\n'
+        output += '      N/mm**2                N/mm**2\n'
+        output += "   {: 1.3f}            {: 1.3f}\n".format(self.cstmax, self.shmax)
+        
+        lo = min(self.xs)
+        hi = max(self.xs)
+        Vy = max(abs(lo), abs(hi))
+        output += '\n'
+        #print  ("results written to specified filename")
+        return output
+    #
+    # ---------------------------------
     #
     def radial_forces(self,  R, k1, k2):
         """ """
@@ -94,42 +120,21 @@ class Cases(Mapping):
         rforces = self.radial_forces(R, k1, k2)
         for item in rforces.values():
             try:
-                xm += item['M']
-                xh += item['N']
-                xs += item['V']
+                xm += item.M
+                xh += item.N
+                xs += item.V
             except UnboundLocalError:
-                xm = item['M']
-                xh = item['N']
-                xs = item['V']
-                xloc = item['x']
+                xm = item.M
+                xh = item.N
+                xs = item.V
+                xloc = item.x
+        #
+        db = DBframework()
+        df = db.DataFrame(data={'x':xloc, 'M':xm, 'N':xh, 'V':xs})
         #return RadialForces(xloc, xm, xh, xs)
-        return RadialForces({'x':xloc, 'M':xm, 'N':xh, 'V':xs})
-    #
-    def print(self):
-        """ """
-        # SUPERPOSITION OF ALL LOAD CASES
-        print ("")
-        print ('                                                              SUPERPOSITION OF ALL LOAD CASES')
-        print ('          -------------Forces-------------    -----------------------Stresses (n/mm^2)---------------------------')
-        print ('Location  Moment     Thrust        Shear     Bending     Bending      Hoop        Shear       Bend.in.   Bend.out',)
-        print ('Degrees    N.mm        N             N        Inner       Outer                               +Hoop       +Hoop',)
-        for i in range(len(_xloc)):
-            print ("{:>5.1f}  {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e}"
-                   .format(_xloc[i], self.xm[i], self.xh[i], self.xs[i], self.bstri[i],
-                           self.bstro[i], self.hstr[i],
-                           self.sstr[i], self.cstri[i], self.cstro[i]))
-        
-        print ("")
-        print ('max. combined stress    max. shear stress')
-        print ('      N/mm**2                N/mm**2')
-        print ("   {: 1.3f}            {: 1.3f}".format(self.cstmax, self.shmax))
-        
-        lo = min(self.xs)
-        hi = max(self.xs)
-        Vy = max(abs(lo), abs(hi))
-        print ('')
-        print  ("results written to specified filename")
-    #    
+        #return RadialForces({'x':xloc, 'M':xm, 'N':xh, 'V':xs})
+        return RadialForces(df)
+#  
 #
 #
 #
@@ -237,7 +242,7 @@ class  Ring:
         #self.LocalAxis = 'x y z'
         ##
         ##self._chord = API_design()
-        self._sections = Section()
+        self._sections = Section(mesh_id=1)
         #self._stiffness_flag = False
     #
     #     
@@ -353,15 +358,15 @@ class  Ring:
             return self._sections['cross_section']
         except Exception:
             # get cross section of ring
-            d = self._geometry.t
+            d = self._geometry.t * self._units.m
             #
             # FIXME: what b should be set?
             b = 1* self._units.m
-            BE = 1.1*(self._geometry.t * self._geometry.d)**0.50
+            BE = 1.1*(self._geometry.t * self._geometry.d)**0.50 * self._units.m
             #
             self._sections['cross_section'] = ['Rectangle', d, BE]
             #self._sections['cross_section'] = ['Rectangle', d, b.value]
-            properties = self._sections['cross_section'].properties()
+            properties = self._sections['cross_section'].properties
             R = self._geometry.d * 0.50 - properties.Zc            
         #
         self._R = R
@@ -379,15 +384,16 @@ class  Ring:
             beta = 2F(1+v)e/R [thick rings]
                 
         G is the shear modulus of elasticity
-        F is the shape factor for the cross section [see Sec 8.10 (7ed)]
+        F is the shape factor for the cross-section [see Sec 8.10 (7ed)]
             
         Note that these constants are unity if not correction for hoop
         stress or shear stress is necessary or desired for use with thin
         rings
         """
         section = self._section()
-        properties = section.properties()
-        d = self._d
+        properties = section.properties
+        d = self._d.value
+        Iy = properties.Iy
         R = self._R
         Iy = properties.Iy 
         area = properties.area
@@ -490,7 +496,7 @@ class  Ring:
         return _tau_y
     #    
     #
-    def print_results(self, PrintOption = 'MONITOR'):
+    def __str__(self, PrintOption = 'MONITOR'):
         """
         """
         #
@@ -508,21 +514,21 @@ class  Ring:
         #
         # Open report.txt For Append As #1
         #
-        print (" ")
-        print ("        STRESSES IN CIRCULAR RINGS 7th edition")
-        print ("                R.J.ROARK & W.C.YOUNG")
-        print ("******************************************************")
-        print (" ")
-        print ('RINGS DATA ECHO')
-        print ('number of load cases: {:}'.format(self.iload))
-        print ('number of points around ring: {:}'.format(self.istep))
-        print ("Cross Section")
-        print ('outside radius of ring: {:}'.format(self.orad))
-        print ('outside flange: {:} x {:} thk'.format(self.fow,self.fot))
-        print ('inside flange:  {:} x {:} thk'.format(self.fiw,self.fit))
-        print ('web             {:} x {:} thk'.format(self.wlh,self.wth))
-        print ("")
-        print ('CALCULATED SECTION PROPERTIES AND FACTORS')
+        output = "\n"
+        output += "        STRESSES IN CIRCULAR RINGS 7th edition\n"
+        output += "                R.J.ROARK & W.C.YOUNG\n"
+        output += "******************************************************"
+        output += " "
+        output += 'RINGS DATA ECHO\n'
+        output += 'number of load cases: {:}\n'.format(self.iload)
+        output += 'number of points around ring: {:}\n'.format(self.istep)
+        output += "Cross Section\n"
+        output += 'outside radius of ring: {:}\n'.format(self.orad)
+        output += 'outside flange: {:} x {:} thk\n'.format(self.fow,self.fot)
+        output += 'inside flange:  {:} x {:} thk\n'.format(self.fiw,self.fit)
+        output += 'web             {:} x {:} thk\n'.format(self.wlh,self.wth)
+        output += "\n"
+        output += 'CALCULATED SECTION PROPERTIES AND FACTORS\n'
         # sectional properties of curved beam are calculated
         # and output to file
         if self._stiffness_flag :
@@ -533,12 +539,12 @@ class  Ring:
             # self.section.e, _c, _c1, _ki, _ko, _shearFactor) = ring.cibeam2(self.SectionType, self.orad,
             #                                                     _D, _Tw, _Bft, _Tft, _Bfb, _Tfb)
             #
-            print ('section area :',self._section.area,'mm**2')
-            print ('second moment of area @ centroid :',_section.Iy,'mm**4')
-            print ('centroidal radius ',self._section.R)
+            output += 'section area : {:} mm^2\n'.format(self._section.area)
+            output += 'second moment of area @ centroid : {:} mm^2\n'.format(_section.Iy)
+            output += 'centroidal radius : {:} mm'.format(self._section.R)
             #print ('extreme fibre distances   ci: ',_c,',  co: ', _c1)
-            print ('stress factors            ki: ', self._section.ki,',  ko: ',self._section.ko)
-            print(' ')
+            output += 'stress factors            ki: {:} ko: {:}'.format(self._section.ki,self._section.ko)
+            output += ' '
             #
             # constant factors calculated and written to file
             
@@ -566,16 +572,15 @@ class  Ring:
                                                       _ring.phase.value, self.istep,
                                                       R.value, _k1, _k2,)
             #
-            print ('LOCATION    MOMENT      THRUST      SHEAR')
-            print ('             N.mm         N           N')
+            output += 'LOCATION    MOMENT      THRUST      SHEAR\n'
+            output += '             N.mm         N           N\n'
             for i in range (len(_xloc)):
-                print("{:>5.1f}    {: 1.4e} {: 1.4e} {: 1.4e}"
-                      .format(_xloc[i], _xm[i], _xh[i], _xs[i]))
+                output += "{:>5.1f}    {: 1.4e} {: 1.4e} {: 1.4e}\n".format(_xloc[i], _xm[i], _xh[i], _xs[i])
                 #
                 self.xm[i] += _xm[i]
                 self.xh[i] += _xh[i]
                 self.xs[i] += _xs[i]
-            print ('')
+            output += '\n'
         #
         _tau_y = max([abs(_item.value) for _item in _section.tau_y])
         # stresses are calculated for superposition of 
@@ -586,27 +591,27 @@ class  Ring:
                                                                       _tau_y, self.istep, 
                                                                       _xloc, self.xm, self.xh, self.xs)
         # SUPERPOSITION OF ALL LOAD CASES
-        print ("")
-        print ('                                                              SUPERPOSITION OF ALL LOAD CASES')
-        print ('          -------------Forces-------------    -----------------------Stresses (n/mm^2)---------------------------')
-        print ('Location  Moment     Thrust        Shear     Bending     Bending      Hoop        Shear       Bend.in.   Bend.out',)
-        print ('Degrees    N.mm        N             N        Inner       Outer                               +Hoop       +Hoop',)
+        output += "\n"
+        output += '                                                              SUPERPOSITION OF ALL LOAD CASES\n'
+        output += '          -------------Forces-------------    -----------------------Stresses (n/mm^2)---------------------------\n'
+        output += 'Location  Moment     Thrust        Shear     Bending     Bending      Hoop        Shear       Bend.in.   Bend.out\n'
+        output += 'Degrees    N.mm        N             N        Inner       Outer                               +Hoop       +Hoop\n'
         for i in range(len(_xloc)):
-            print ("{:>5.1f}  {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e}"
-                   .format(_xloc[i], self.xm[i], self.xh[i], self.xs[i], self.bstri[i],
-                           self.bstro[i], self.hstr[i],
-                           self.sstr[i], self.cstri[i], self.cstro[i]))
+            output += "{:>5.1f}  {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e} {: 1.4e}\n".format(_xloc[i], self.xm[i], self.xh[i], self.xs[i], self.bstri[i],
+                                                                                                                            self.bstro[i], self.hstr[i],
+                                                                                                                            self.sstr[i], self.cstri[i], self.cstro[i])
         
-        print ("")
-        print ('max. combined stress    max. shear stress')
-        print ('      N/mm**2                N/mm**2')
-        print ("   {: 1.3f}            {: 1.3f}".format(self.cstmax, self.shmax))
+        output += "\n"
+        output += 'max. combined stress    max. shear stress\n'
+        output += '      N/mm**2                N/mm**2\n'
+        output += "   {: 1.3f}            {: 1.3f}\n".format(self.cstmax, self.shmax)
         
         lo = min(self.xs)
         hi = max(self.xs)
         Vy = max(abs(lo), abs(hi))
-        print ('')
-        print  ("results written to specified filename")
+        output += '\n'
+        #print  ("results written to specified filename")
+        return output
 #
 #
 #

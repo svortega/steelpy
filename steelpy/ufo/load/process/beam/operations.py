@@ -16,8 +16,8 @@ from steelpy.ufo.load.process.beam.utils import(get_BeamLoad_list_units,
                                                 get_BeamLine_dict,
                                                 get_BeamLoad_dict,
                                                 get_BeamLine_load)
-from steelpy.trave.beam.operation import BeamTorsion, BeamAxial, BeamBending
-from steelpy.trave.beam.operation import BeamBasic
+from steelpy.formulas.pilkey.utils.beam import BeamTorsion, BeamAxial, BeamBending
+from steelpy.formulas.pilkey.utils.beam import BeamBasic
 #
 import numpy as np
 #
@@ -72,14 +72,17 @@ class BeamLoadClass:
         # set beam operations
         L =beam.L
         material = beam.material
-        section = beam.section.properties(poisson=material.poisson)
+        section = beam.section
+        properties = section.properties
+        Asy, Asz = section.As(poisson=material.poisson)
+        #Asz = section.alpha_sz()
         beam_ops = BeamBasic(L=L,
-                             area=section.area,
-                             Iy=section.Iy, Iz=section.Iz,
-                             J=section.J, E=material.E,
-                             G=material.G, Cw=section.Cw*0,
-                             Asy=section.Asy,
-                             Asz=section.Asz,
+                             area=properties.area,
+                             Iy=properties.Iy, Iz=properties.Iz,
+                             J=properties.J, E=material.E,
+                             G=material.G, Cw=properties.Cw*0,
+                             Asy=Asy,
+                             Asz=Asz,
                              Pdelta=False)
         #
         boundary1 = 'fixed'
@@ -96,10 +99,10 @@ class BeamLoadClass:
         # Get load function along beam length
         Fbar = self.Fx(x=L, L=L,
                        E=material.E, G=material.G, 
-                       Iy=section.Iy, Iz=section.Iz,
-                       J=section.J, Cw=section.Cw*0,
-                       Area=section.area,
-                       Asy=section.Asy, Asz=section.Asz,
+                       Iy=properties.Iy, Iz=properties.Iz,
+                       J=properties.J, Cw=properties.Cw*0,
+                       Area=properties.area,
+                       Asy=Asy, Asz=Asz,
                        P=0.0)
         #
         # end_1,2 = [axial, torsion, in_plane, out_plane]

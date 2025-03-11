@@ -4,19 +4,20 @@
 from __future__ import annotations
 #from array import array
 #from collections.abc import Mapping
-from itertools import chain, count
+from itertools import chain, count, compress
 #from math import isclose, dist
 #from typing import NamedTuple
-import re
+#import re
 
 # package imports
-from steelpy.utils.math.operations import zeros, to_matrix
+from steelpy.utils.math.operations import zeros, to_matrix, nan_matrix
 from steelpy.utils.sqlite.utils import create_connection, create_table
 #
-from steelpy.ufo.utils.node import NodePoint, NodeBasic, get_node_df
-from steelpy.ufo.utils.boundary import BoundaryItem, get_node_boundary
+from steelpy.ufo.utils.node import NodeBasic, get_node_df #NodePoint, 
+from steelpy.ufo.utils.boundary import get_node_boundary #BoundaryItem, 
 
 from steelpy.ufo.mesh.sqlite.boundary import push_boundary, push_boundary_node
+from steelpy.ufo.mesh.sqlite.utils import pull_node, pull_boundary
 #
 from steelpy.utils.dataframe.main import DBframework
 
@@ -347,55 +348,102 @@ class NodeSQL(NodeBasic):
     # ---------------------------------
     #
     #@property
-    def jbc(self, dof: list[str]):
+    def jbc(self, plane2D: bool):
         """ joints with boundary"""
         nnp = len(self._labels)
-        jbc = zeros(nnp, 6, code='I')
+        
+        #jbc[:] = np.nan
         #
-        #for item in self._labels:
-        #    node = self.__getitem__(item)
-        #    if node.boundary:
-        #        ind = node.index
-        #        jbc[ind] = node.boundary[:6]
-        #         
+        dof = ['x', 'y', 'z', 'rx', 'ry', 'rz']
+        #ndof = len(dof)
+        dof_filter = [True] * 6
+        if plane2D:
+            dof = ['x', 'y', 'rz']
+            #ndof = 3
+            dof_filter = [True, True, False, False, False, True]
+        #
+        ndof = len(dof)
         #
         conn = create_connection(self.db_file)
-        with conn:        
+        with conn:
+            # node boundary
             fixity = pull_boundary(conn,
-                                   mesh_id=self._mesh_id)
+                                   mesh_id=self._mesh_id,
+                                   boundary_type='constrained')
+            #fixity = {item[0]: item[6:12] for item in fixity}
             #
             nidx = pull_node_index(conn, self._mesh_id)
             nidx = {item[0]: item[1] for item in nidx}
+            #
+            # node displacement
+            disp = pull_boundary(conn,
+                                 mesh_id=self._mesh_id,
+                                 boundary_type='displacement')
+            #disp = {item[0]: item[6:12]
+            #        for item in disp}
+            #disp = {item[4]: [item[3] for ndp in item[11:16]]
+            #        for item in disp}
+            #disp2 = {}
+            #for item in disp:
+            #    temp = []
+            #    for ndp in item[11:17]:
+            #        if ndp:
+            #            temp.append(1)
+            #        else:
+            #            temp.append(0)
+            #    disp2[item[4]] = temp
+            
         #
         # update jbc
+        jbc = nan_matrix(nnp, ndof)
+        #
+        #node_name = [nidx[x] for x in range(nnp)]
         #
         for item in fixity:
             # [node_idx] = [x,y,z,rx,ry,rz]
-            jbc[item[0]] = item[5:11]
+            jbc[item[0]] = list(compress(item[6:12], dof_filter))
+            #print(vals)
+            #jbc[item[0]] = item[6:12]
             #node_name.append(item[1])
-        #      
         #
-        db = DBframework()
+        for item in disp:
+            jbc[item[0]] = list(compress(item[6:12], dof_filter))
+            #jbc[item[0]] = item[6:12]
+        #    jbc[item[0]] = [ndp if ndp else 1
+        #                    for ndp in item[6:12]]
+        #    item2 = jbc[key]
+        #    item3 = [1 if stuff else item2[x]
+        #             for x, stuff in enumerate(item)]
+        #    jbc[key] = item3
         #
-        #jbc = to_matrix(jbc, 6)
-        df_jbc = db.DataFrame(data=jbc,
-                              columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])
-        jbc = df_jbc[dof].values.tolist()
+        #jbc = df_jbc[dof].values.tolist()
         jbc = list(chain.from_iterable(jbc))
         #
         counter = count(start=1)
-        jbc = [next(counter) if item == 0 else 0
+        #jbc = [0 if item == 0 else next(counter)
+        #       for item in jbc]
+        #jbc = [next(counter) if item != 1 else 0
+        #       for item in jbc]
+        jbc = [next(counter) if item == None else 0
                for item in jbc]
         # update jbc
         #self._jbc = array('I', jbc)
         #
         #jbc = to_matrix(self._jbc, self._plane.ndof)
-        ndof = len(dof)
+        #ndof = len(dof)
         jbc = to_matrix(jbc, ndof)
+        #
+        db = DBframework()
+        #
+        #jbc = to_matrix(jbc, 6)
+        #df_jbc = db.DataFrame(data=jbc,
+        #                      columns=['x', 'y', 'z', 'rx', 'ry', 'rz'])        
         df_jbc = db.DataFrame(data=jbc, columns=dof)
+        #
+        df_jbc['node_name'] = [nidx[x] for x in range(nnp)]
         #node_name = list(self._labels)
-        df_jbc['node_name'] = [nidx[idx]
-                               for idx, item in enumerate(jbc)]
+        #df_jbc['node_name'] = [nidx[idx]
+        #                       for idx, item in enumerate(jbc)]
         df_jbc = df_jbc.set_index('node_name', drop=True)    
         # remove rows with zeros
         #df_jbc = df_jbc[df_jbc.any(axis=1)]
@@ -546,73 +594,19 @@ class NodeSQL(NodeBasic):
         #
 #
 #
-#
-def pull_node(conn, node_name:int|str, mesh_id: int, item:str='*'):
-    """ """
-    data = pull_node_item(conn, node_name, mesh_id, item)
-    boundary = pull_node_boundary(conn,
-                                  node_name=node_name,
-                                  mesh_id=mesh_id)
-    #
-    node = NodePoint(*data, boundary=boundary)
-    return node.system()
-#
-def pull_node_item(conn, node_name:int|str, mesh_id: int, item:str='*'):
-    """ """
-    project = (node_name, mesh_id)
-    table = f'SELECT NodeCoordinate.{item}, \
-                     Node.title, Node.idx \
-            FROM Node, NodeCoordinate \
-            WHERE Node.number =  NodeCoordinate.node_id\
-            AND Node.name = ? \
-            AND Node.mesh_id = ?'
-    cur = conn.cursor()
-    cur.execute(table, project)
-    record = cur.fetchone()
-    return [*project, *record[1:]]
-#
-def pull_node_boundary(conn, node_name: int|str,
-                       mesh_id: int, item:str="*"):
-    """
-    """
-    data = pull_boundary(conn, mesh_id,
-                         node_name, item)
-    
-    try:
-        data = data[0]
-        boundary = BoundaryItem(*data[5:11],
-                                number=data[4],
-                                name=data[2],
-                                node=node_name)
-    except IndexError:
-        boundary = None
-    #
-    return boundary
-#
-def pull_boundary(conn, mesh_id: int,
-                  node_name: int|str|None = None,
-                  item:str="*"):
-    """pull all boundary data"""
-    #
-    project = [mesh_id]
-    #
-    table = f'SELECT Node.idx, Node.name, \
-             Boundary.name, \
-             BoundaryFixity.{item} \
-             FROM Node, BoundaryFixity, Boundary, Mesh \
-             WHERE Node.boundary_id = Boundary.number \
-             AND BoundaryFixity.boundary_id = Boundary.number \
-             AND Node.mesh_id = Boundary.mesh_id \
-             AND Mesh.number = ?'
-    #
-    if node_name:
-        table += 'AND Node.name = ?'
-        project.extend([node_name])
-    # 
-    cur = conn.cursor()
-    cur.execute(table, tuple(project))
-    data = cur.fetchall()
-    return data
+#def pull_displacement(conn, mesh_id: int,
+#                      node_name: int|str|None = None,
+#                      load_name:str|None = None,
+#                      load_type:str|None = None):
+#    """ """
+#    #
+#    nodal_load = pull_NodeLoad(conn,
+#                               item='LoadNodeDisplacement',
+#                               mesh_id=mesh_id, 
+#                               node_name=node_name,
+#                               load_name=load_name,
+#                               load_type=load_type)   
+#    return nodal_load  
 #
 def pull_node_number(conn, node_name:int|str,
                      mesh_id: int):
@@ -664,12 +658,13 @@ def pull_node_by_title(conn, node_title: int|str,
 # ---------------------------------
 #
 def push_node_boundary(conn, node_id: int, mesh_id: int,
-                       fixity: list, btype: str = 'restrain',
+                       fixity: list, btype: str = 'constrained',
                        title: str|None=None):
     """ """
     boundary_id = push_boundary(conn, name=node_id,
                                 mesh_id=mesh_id,
                                 btype=btype,
+                                dircosine_id=None, 
                                 title=None)
     
     push_boundary_node(conn, boundary_id,
@@ -689,5 +684,61 @@ def update_colum(conn, colname: str, newcol: list):
     cur.executemany(table, newcol)
 #
 # ---------------------------------
+#
+# TODO : repeated in node load sql
+def pull_NodeLoad(conn, item: str,
+                  mesh_id: int,
+                  node_name: int|str|None,
+                  load_name: int|str|None,
+                  load_type: str|None = None):
+    """ """
+    table = ""
+    items = []
+    table = f"SELECT Load.name AS load_name, \
+        Mesh.name AS mesh_name, \
+        Load.title AS load_title, \
+        Node.name AS node_name, \
+        Node.idx as node_index, \
+        {item}.* \
+        FROM Load, Node, {item}, LoadBasic, Mesh \
+        WHERE {item}.basic_id = LoadBasic.number \
+        AND LoadBasic.load_id = Load.number \
+        AND {item}.node_id = Node.number \
+        AND Load.mesh_id = Mesh.number  "
+    #
+    # load
+    if load_name in ['*', None, '']:
+        load_name = None
+    else:
+        items.extend([load_name])
+        table += "AND Load.name = ? "
+    #
+    # node
+    if node_name in ['*', None]:
+        pass
+    else:
+        items.extend([node_name])
+        table += "AND Node.name = ? "    
+    #
+    # load type
+    if load_type in ['*', None]:
+        pass
+    else:
+        items.extend([load_type])
+        table += f"AND {item}.type = ? "
+    #
+    table += "AND Mesh.number = ? ;"
+    items.extend([mesh_id])
+    #
+    # Node load
+    with conn:
+        cur = conn.cursor()
+        if items:
+            cur.execute(table, tuple(items))
+        else:
+            cur.execute(table)
+        rows = cur.fetchall()
+    #
+    return rows
 #
 #

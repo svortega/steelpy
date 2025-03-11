@@ -10,9 +10,11 @@ import time
 #
 # package imports
 from steelpy.trave.postprocess.sql.beam import BeamResultSQL
-from steelpy.trave.postprocess.sql.node import NodeResultSQL, get_displacement
+from steelpy.trave.postprocess.sql.node import (NodeResultSQL,
+                                                get_displacement,
+                                                get_reactions)
 from steelpy.trave.postprocess.utils.main import MainPostProcess
-from steelpy.trave.postprocess.utils.node import NodeDeflection
+#from steelpy.trave.postprocess.utils.node import NodeDeflection
 from steelpy.utils.sqlite.utils import create_table, create_connection
 
 from steelpy.ufo.mesh.sqlite.utils import (pull_node_mesh,
@@ -50,7 +52,7 @@ class PostProcessSQL:
     # ---------------------------------
     #
     @property
-    def Un(self)-> DBframework.DataFrame:
+    def Un(self)-> DBframework:
         """ """
         #units:str='si'
         conn = create_connection(self.db_file)
@@ -64,7 +66,7 @@ class PostProcessSQL:
         return df
 
     @Un.setter
-    def Un(self, Un:DBframework.DataFrame)-> None:
+    def Un(self, Un:DBframework)-> None:
         """ """
         header = ['result_id', 'node_id',
                   'load_id', 'system',
@@ -90,6 +92,22 @@ class PostProcessSQL:
                                if_exists='append', index=False)
         #
         #print('nodal disp results saved')
+    #
+    #
+    @property
+    def Rn(self)-> DBframework:
+        """ """
+        conn = create_connection(self.db_file)
+        with conn:
+            df = get_reactions(conn,
+                               result_name=self._result_name,
+                               mesh_name=self._mesh._name)
+        return df
+    
+    @Rn.setter
+    def Rn(self, Rn:DBframework)-> None:
+        """ """
+        self._results._push_node_reaction(Rn)
     #
     #def _pull_displacement(self, conn):
     #    """ """
@@ -417,8 +435,8 @@ class ResultSQL:
         # Push to sql
         header = ['result_id', 'load_id',
                   'element_id', 'node_id',
-                  'system', *values]
-                  #*self._plane.hforce]
+                  'system', #*values]
+                  *self._plane.hforce]
         #
         conn = create_connection(self._db_file)
         with conn:

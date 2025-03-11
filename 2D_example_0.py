@@ -92,9 +92,12 @@ print(beams)
 #
 # [1, 'node', 3, spring, [kx,ky,kz,krx,kry,krz]]
 #
-mesh['2D'].boundary([[1, 'support', 1, 'restrain', 'pinned'],
-                     [2, 'support', 4, 'restrain', 'fixed']])
-                     #[3, 'beam', 3, 'node', 2, 'support', 'slide']])
+mesh['2D'].boundary([[1, 'node', 1, 'pinned'],
+                     #[2, 'node', 4, 'fixed']
+                     #[2, 'node', 4, 'restrain', [1,1,1,1,1,1]]
+                     #[2, 'node', 4, 'displacement', [0,0.001,0,0,0,0]]
+                     [3, 'beam', 3, 'node_end', 2, 'fixed']
+                     ])
 #
 print(mesh['2D'].boundary())
 #
@@ -224,11 +227,11 @@ print(bl_blinedf)
 # ----------------------------------------------------
 #
 frame = Trave2D(mesh=mesh['2D'])
-run = frame.static()
+run = frame.static(second_order=False)
 results = run.solve()
 #
 noderes = results.nodes()
-#print(noderes)
+print(noderes)
 ndisp = noderes.displacement()
 # get pandas df
 ndisp_df = ndisp.df

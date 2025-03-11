@@ -110,17 +110,17 @@ class NodeLoadGlobalSQL(NodeLoadBasic):
         #
         return ndata[header]
     #
-    @property
-    def displacement(self):
-        """ nodal displacement"""
-        values = ['x', 'y', 'z', 'rx', 'ry', 'rz', 'step']
-        ndata = self._pull_load_data(load_type='displacement',
-                                     values=values)
-        return ndata
+    #@property
+    #def displacement(self):
+    #    """ nodal displacement"""
+    #    values = ['x', 'y', 'z', 'rx', 'ry', 'rz', 'step']
+    #    ndata = self._pull_load_data(load_type='displacement',
+    #                                 values=values)
+    #    return ndata
     #
     @property
     def force(self):
-        """ nodal displacement"""
+        """ """
         values = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz', 'step']
         ndata = self._pull_load_data(load_type='force',
                                      values=values)
@@ -272,20 +272,20 @@ class NodeLoadItemSQL(ClassBasicSQL):
         labels.extend([item[0] for item in rows])
         #
         # Displacement
-        table = "SELECT Node.name \
-                FROM Node, LoadNodeDisplacement, Load, LoadBasic \
-                WHERE LoadNodeDisplacement.node_id = Node.number \
-                AND LoadBasic.number = LoadNodeDisplacement.basic_id \
-                AND LoadBasic.load_id = Load.number \
-                AND Load.name = ? \
-                AND Load.mesh_id = ? ;"
+        #table = "SELECT Node.name \
+        #        FROM Node, LoadNodeDisplacement, Load, LoadBasic \
+        #        WHERE LoadNodeDisplacement.node_id = Node.number \
+        #        AND LoadBasic.number = LoadNodeDisplacement.basic_id \
+        #        AND LoadBasic.load_id = Load.number \
+        #        AND Load.name = ? \
+        #        AND Load.mesh_id = ? ;"
         #
-        conn = create_connection(self.db_file)
-        with conn:
-            cur = conn.cursor()
-            cur.execute(table, query)
-            rows = cur.fetchall()
-        labels.extend([item[0] for item in rows])        
+        #conn = create_connection(self.db_file)
+        #with conn:
+        #    cur = conn.cursor()
+        #    cur.execute(table, query)
+        #    rows = cur.fetchall()
+        #labels.extend([item[0] for item in rows])        
         #
         return list(set(labels))
     #
@@ -419,21 +419,21 @@ class NodeLoadItemSQL(ClassBasicSQL):
         create_table(conn, table)
         # -------------------------------------
         # Node Displacement
-        table = "CREATE TABLE IF NOT EXISTS LoadNodeDisplacement(\
-                number INTEGER PRIMARY KEY NOT NULL,\
-                basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
-                node_id INTEGER NOT NULL REFERENCES Node(number),\
-                comment TEXT,\
-                system TEXT NOT NULL,\
-                type TEXT NOT NULL,\
-                x DECIMAL,\
-                y DECIMAL,\
-                z DECIMAL,\
-                rx DECIMAL,\
-                ry DECIMAL,\
-                rz DECIMAL,\
-                step DECIMAL);"
-        create_table(conn, table)
+        #table = "CREATE TABLE IF NOT EXISTS LoadNodeDisplacement(\
+        #        number INTEGER PRIMARY KEY NOT NULL,\
+        #        basic_id INTEGER NOT NULL REFERENCES LoadBasic(number),\
+        #        node_id INTEGER NOT NULL REFERENCES Node(number),\
+        #        comment TEXT,\
+        #        system TEXT NOT NULL,\
+        #        type TEXT NOT NULL,\
+        #        x DECIMAL,\
+        #        y DECIMAL,\
+        #        z DECIMAL,\
+        #        rx DECIMAL,\
+        #        ry DECIMAL,\
+        #        rz DECIMAL,\
+        #        step DECIMAL);"
+        #create_table(conn, table)
         # -------------------------------------
         # Node Mass
         table = "CREATE TABLE IF NOT EXISTS LoadNodeMass(\
@@ -518,9 +518,9 @@ class NodeLoadItemSQL(ClassBasicSQL):
                 table = 'LoadNodeMass'
                 header += ['mx', 'my', 'mz', 'mrx', 'mry', 'mrz', 'step']
                 #nodeconn[['fx', 'fy', 'fz', 'mx', 'my', 'mz']] = None
-            elif key in ['displacement']:
-                table = 'LoadNodeDisplacement'
-                header += ['x', 'y', 'z', 'rx', 'ry', 'rz', 'step']
+            #elif key in ['displacement']:
+            #    table = 'LoadNodeDisplacement'
+            #    header += ['x', 'y', 'z', 'rx', 'ry', 'rz', 'step']
             else:
                 raise IOError(f'node load {key} not valid')
             #
@@ -641,32 +641,32 @@ class NodeItemSQL:
                            mesh_id=self._mesh_id)
     #
     #
-    @property
-    def displacement(self):
-        """ nodal displacement"""
-        1 / 0
-    
-    @displacement.setter
-    def displacement(self, node_load: list|tuple|dict):
-        """ nodal displacement"""
-        # update load with header
-        if isinstance(node_load, dict):
-            node_load.update({'type': 'displacement',})
-        
-        elif isinstance(node_load[0], list):
-            node_load = [['displacement', *item] for item in node_load]
-        
-        else:
-            node_load.insert(0, 'displacement')
-        #
-        #
-        conn = create_connection(self._db_file)
-        with conn:
-            push_node_load(conn,
-                           load_name=self._name,
-                           node_name=self._node.name,  
-                           node_load=node_load,
-                           mesh_id=self._mesh_id)
+    #@property
+    #def displacement(self):
+    #    """ nodal displacement"""
+    #    1 / 0
+    #
+    #@displacement.setter
+    #def displacement(self, node_load: list|tuple|dict):
+    #    """ nodal displacement"""
+    #    # update load with header
+    #    if isinstance(node_load, dict):
+    #        node_load.update({'type': 'displacement',})
+    #    
+    #    elif isinstance(node_load[0], list):
+    #        node_load = [['displacement', *item] for item in node_load]
+    #    
+    #    else:
+    #        node_load.insert(0, 'displacement')
+    #    #
+    #    #
+    #    conn = create_connection(self._db_file)
+    #    with conn:
+    #        push_node_load(conn,
+    #                       load_name=self._name,
+    #                       node_name=self._node.name,  
+    #                       node_load=node_load,
+    #                       mesh_id=self._mesh_id)
     #
     @property
     def mass(self):
@@ -894,12 +894,12 @@ def pull_NodeLoad_SQLdata(conn, load_name: int|str,
                                        load_name=load_name,
                                        load_type=load_type)
     # Node Displacement
-    nodal_load['displacement'] = pull_NodeLoad(conn,
-                                               item='LoadNodeDisplacement',
-                                               mesh_id=mesh_id, 
-                                               node_name=node_name,
-                                               load_name=load_name,
-                                               load_type=load_type)
+    #nodal_load['displacement'] = pull_NodeLoad(conn,
+    #                                           item='LoadNodeDisplacement',
+    #                                           mesh_id=mesh_id, 
+    #                                           node_name=node_name,
+    #                                           load_name=load_name,
+    #                                           load_type=load_type)
     #
     return nodal_load
 #
@@ -1041,13 +1041,13 @@ def pull_NodeLoad_item(conn, load_name: int|str,
         rows.extend(cur.fetchall())
     #
     # Node Displacement
-    table, query = get_node_query(item='LoadNodeDisplacement',
-                                  load_name=load_name,
-                                  node_name=node_name)
-    with conn:
-        cur = conn.cursor()
-        cur.execute(table, tuple(query))
-        rows.extend(cur.fetchall())
+    #table, query = get_node_query(item='LoadNodeDisplacement',
+    #                              load_name=load_name,
+    #                              node_name=node_name)
+    #with conn:
+    #    cur = conn.cursor()
+    #    cur.execute(table, tuple(query))
+    #    rows.extend(cur.fetchall())
     #
     node_load = []
     for row in rows:
@@ -1092,22 +1092,20 @@ def pull_NodeLoad_df(conn,
             cols = header + ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz', 'step']
             #                 'psi', 'B', 'Tw', 'step']
             temp = db.DataFrame(data=item, columns=cols)
-            temp[['x', 'y', 'z', 'rx', 'ry', 'rz',
-                  'mx', 'my', 'mz', 'mrx', 'mry', 'mrz']] = float(0)
+            temp[['x', 'y', 'z', 'rx', 'ry', 'rz']] = float(0)
             node_load.append(temp)
         elif key in ['mass'] and item:
-            cols = header + ['mx', 'my', 'mz', 'mrx', 'mry', 'mrz', 'step']
-            temp = db.DataFrame(data=item, columns=cols)
-            temp[['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                  'x', 'y', 'z', 'rx', 'ry', 'rz']] = float(0)
-            node_load.append(temp)
-        
-        elif key in ['displacement'] and item:
             cols = header + ['x', 'y', 'z', 'rx', 'ry', 'rz', 'step']
             temp = db.DataFrame(data=item, columns=cols)
-            temp[['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                  'mx', 'my', 'mz', 'mrx', 'mry', 'mrz']] = float(0)            
+            temp[['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz']] = float(0)
             node_load.append(temp)
+        
+        #elif key in ['displacement'] and item:
+        #    cols = header + ['x', 'y', 'z', 'rx', 'ry', 'rz', 'step']
+        #    temp = db.DataFrame(data=item, columns=cols)
+        #    temp[['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
+        #          'mx', 'my', 'mz', 'mrx', 'mry', 'mrz']] = float(0)            
+        #    node_load.append(temp)
     #
     #
     if not node_load:
@@ -1117,8 +1115,7 @@ def pull_NodeLoad_df(conn,
     node_load = db.concat(node_load, ignore_index=True, sort=False)
     #node_load.replace(to_replace="NULL",value=0)
     head2 = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-             'x', 'y', 'z', 'rx', 'ry', 'rz',
-             'mx', 'my', 'mz', 'mrx', 'mry', 'mrz']
+             'x', 'y', 'z', 'rx', 'ry', 'rz']
     node_load[head2] = node_load[head2].fillna(value=0)
     #
     #cols = ['load_name', 'mesh_name', 
@@ -1144,8 +1141,7 @@ def pull_NodeLoad_df(conn,
                            'node_name', 'node_index', 
                            'load_type',
                            'Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz',
-                           'x', 'y', 'z', 'rx', 'ry', 'rz',
-                           'mx', 'my', 'mz', 'mrx', 'mry', 'mrz', 'step']]
+                           'x', 'y', 'z', 'rx', 'ry', 'rz', 'step']]
                            #'psi', 'B', 'Tw', 'step']]
     #1 / 0
     return node_load

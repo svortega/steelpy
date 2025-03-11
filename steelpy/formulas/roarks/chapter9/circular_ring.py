@@ -12,6 +12,9 @@ from steelpy.utils.units.main import Units
 #from steelpy.utils.math.vector import Vector
 from steelpy.utils.dataframe.main import DBframework #, SeriesItem
 
+import numpy as np
+import matplotlib.pyplot as plt
+
 #
 # ************************************************
 #                     PROGRAM RINGS
@@ -29,19 +32,25 @@ def stress2(smac, area, ceni, ceno, fki, fko, F, rforces):
     F : shear factor
     '''
     # Circunferencial normal stress due tu pure bending M:
-    bstri = rforces['M'] * ( fki * ceni / smac) # Stresses Bending Inner
-    bstro = rforces['M'] * (-fko * ceno / smac) # Stresses Bending Outer
+    bstri = rforces.M * ( fki * ceni / smac) # Stresses Bending Inner
+    bstro = rforces.M * (-fko * ceno / smac) # Stresses Bending Outer
     #
     # Circunferencial normal stress due to hoop tension N:
-    hstr =  rforces['N'] / area # Hoop Stresses
+    hstr =  rforces.N / area # Hoop Stresses
     #
     # Shear stress due to the radial shear force V:
     # Tau_r_theta = V(R-e)/(trAer^2) (RAr - Qr)
-    sstr =  rforces['V'] * F / area  # Shear Stresses
+    sstr =  rforces.V * F / area  # Shear Stresses
     #
-    return RadialStress({'x':rforces['x'], 
-                         'bs_ri':bstri, 'bs_ro':bstro, 
-                         'axial':hstr, 'tau':sstr})
+    db = DBframework()
+    df = db.DataFrame(data={'x':rforces.x, 
+                            'bs_ri':bstri, 'bs_ro':bstro, 
+                            'axial':hstr, 'tau':sstr})
+    #
+    #return RadialStress({'x':rforces['x'], 
+    #                     'bs_ri':bstri, 'bs_ro':bstro, 
+    #                     'axial':hstr, 'tau':sstr})
+    return RadialStress(df)
 #
 def polar(xx, yy):
     """returns r, theta(degrees)
@@ -59,46 +68,66 @@ def rect(rad, Theta):
     y = [r * math.sin(math.radians(theta)) for r, theta in zip(rad, Theta)]
     return x,y
 #
-class RadialForces():
+#
+@dataclass
+class RadialForces:
+    """
+    """
+    #x:list[float]
+    #M:list[float]
+    #N:list[float]
+    #V:list[float]
+    df:DBframework
 
-    def __init__(self, data:Dict):
-        """
-        data {x, M, N, V}
-        """
-        #x:List[float]
-        #M:array
-        #N:array
-        #V:array
-        #super().__init__(data)
-        self._data = data
+    #def __init__(self, data:Dict):
+    #    """
+    #    data {x, M, N, V}
+    #    """
+    #    #x:List[float]
+    #    #M:array
+    #    #N:array
+    #    #V:array
+    #    #super().__init__(data)
+    #    self._data = data
+    #
 
+    @property
+    def x(self) -> list[float]:
+        """ """
+        return self.df['x']
     #
     @property
-    def Mmax(self) -> float:
+    def M(self) -> list[float]:
         """ """
         #mmax = min(self._data['M'])
         #if max(self._data['M']) > abs(mmax):
         #    mmax = max(self._data['M'])
         #return mmax  # --> N
-        return self._data['M'].maxabs()
+        #return self._data['M'].maxabs()
+        #return abs(max(self.M, key=abs))
+        return self.df['M']
     #
     @property
-    def Nmax(self) -> float:
+    def N(self) -> list[float]:
         """ """
         #mmax = min(self._data['N'])
         #if max(self._data['N']) > abs(mmax):
         #    mmax = max(self._data['N'])
         #return mmax  # --> N
-        return self._data['N'].maxabs()
+        #return self._data['N'].maxabs()
+        #return abs(max(self.N, key=abs))
+        return self.df['N']
     #
     @property
-    def Vmax(self) -> float:
+    def V(self) -> list[float]:
         """ """
         #mmax = min(self._data['V'])
         #if max(self._data['V']) > abs(mmax):
         #    mmax = max(self._data['V'])
         #return mmax  # --> N
-        return self._data['V'].maxabs()
+        #return self._data['V'].maxabs()
+        #return abs(max(self.V, key=abs))
+        return self.df['V']
     #
     def printout(self):
         """ """
@@ -113,20 +142,25 @@ class RadialForces():
     #
     def plot_radial(self):
         """ Polar Plot"""
-        import matplotlib.pyplot as plt
-        import numpy as np
+        #import matplotlib.pyplot as plt
+        #import numpy as np
         #r = []
-        steps = len(self._data['x'])
+        steps = len(self.x)
         # Normalise
-        mm = self._data['M']
-        nn = self._data['N']
-        vv = self._data['V']
-        M = mm / self.Mmax
-        M = [1. + item for item in M]
-        N = nn / self.Nmax
-        N = [1. + item for item in N]
-        V = vv / self.Vmax
-        V = [2 + item for item in V]
+        mm = self.M
+        nn = self.N
+        vv = self.V
+        M = 1.0 + mm / self.M.max()
+        #M = [item/self.Mmax for item in mm]
+        #M = [1. + item for item in M]
+        #
+        N = 1.0 + nn / self.N.max()
+        #N = [item/self.Nmax for item in nn]
+        #N = [1. + item for item in N]
+        #
+        V = 1.0 + vv / self.V.max()
+        #V = [item/self.Vmax for item in vv]
+        #V = [2 + item for item in V]
         #
         plt, ax = plot_view(2, steps)
         #
@@ -141,14 +175,14 @@ class RadialForces():
         ax.set_rticks([1, 1.5, 2, 3])  # Less radial ticks
         ax.grid(True, linestyle='--')
         plt.show()
-        print('--')
+        #print('--')
     #
     def plot_force(self, column:str):
         """ Polar Plot"""
         #import numpy as np
-        import matplotlib.pyplot as plt
+        #import matplotlib.pyplot as plt
         #
-        data = self._data[column]
+        data = self.df[column]
         dataMax = max(data)
         dataMin = min(data)
         Mmax = dataMax
@@ -159,7 +193,7 @@ class RadialForces():
         #M = [1+(item / Mmax ) for item in mm]
         M = [item for item in mm]
         #
-        x = [item for item in self._data['x']]
+        x = [item for item in self.x]
         x.append(x[0])        
         theta = [math.radians(item) for item in x]
         rad = 0
@@ -195,24 +229,26 @@ class RadialForces():
         #print('---')
 #
 #
-class RadialStress():
-    
-    def __init__(self, data:Dict):
-        """
-        sigma_x : Circumferential stress on cross section of curved bars 
-                  or normal stress or fiber stres.
-        sigma_z : Radial stress.
-        sigma_h : Hoop stress
-        tau : Shear stress.
-        """
-        #x:List[float]
-        #bs_ri:array
-        #bs_ro:array
-        #axial:array
-        #tau: array
-        #super().__init__(data) 
-        #self.ki = ki
-        #self.ko = ko
+@dataclass
+class RadialStress:
+    """" """
+    df:DBframework
+    #def __init__(self, data:Dict):
+    #    """
+    #    sigma_x : Circumferential stress on cross section of curved bars 
+    #              or normal stress or fiber stres.
+    #    sigma_z : Radial stress.
+    #    sigma_h : Hoop stress
+    #    tau : Shear stress.
+    #    """
+    #    #x:List[float]
+    #    #bs_ri:array
+    #    #bs_ro:array
+    #    #axial:array
+    #    #tau: array
+    #    #super().__init__(data) 
+    #    #self.ki = ki
+    #    #self.ko = ko
     #
     #@property
     #def sigma_i(self):
@@ -227,27 +263,27 @@ class RadialStress():
     @property
     def tau_max(self):
         """Maximum shear stress """
-        shmax = min(self._data['tau'])
-        if max(self._data['tau']) > abs(shmax):
-            shmax = max(self._data['tau'])
+        shmax = min(self.df['tau'])
+        if max(self.df['tau']) > abs(shmax):
+            shmax = max(self.df['tau'])
         return shmax / 1000**2 # N/m2 --> N/mm2
     #
     @property
     def sigma_axial(self):
         """Maximum shear stress """
-        shmax = min(self._data['axial'])
-        if max(self._data['axial']) > abs(shmax):
-            shmax = max(self._data['axial'])
+        shmax = min(self.df['axial'])
+        if max(self.df['axial']) > abs(shmax):
+            shmax = max(self.df['axial'])
         return shmax / 1000**2 # N/m2 --> N/mm2
     #
     @property
     def sigma_bending(self):
         """ Maximum Section Combined Stress"""
-        cstri = self._data['bs_ri']
-        cstro = self._data['bs_ro']
+        cstri = self.df['bs_ri']
+        cstro = self.df['bs_ro']
         #
         #xloc = []
-        istep = len(self._data['x'])
+        istep = len(self.df['x'])
         #step = 360.0 / istep
         cstmax = 0
         for i in range(istep):
@@ -275,8 +311,8 @@ class RadialStress():
     @property
     def sigma_comb(self):
         """ Maximum Section Combined Stress"""
-        cstri = self._data['bs_ri'] + self._data['axial']  # * fki  # Stresses Bending Inner + Hoop
-        cstro = self._data['bs_ro'] + self._data['axial']  # * -fko # Stresses Bending Outer + Hoop
+        cstri = self.df['bs_ri'] + self.df['axial']  # * fki  # Stresses Bending Inner + Hoop
+        cstro = self.df['bs_ro'] + self.df['axial']  # * -fko # Stresses Bending Outer + Hoop
         scomb1 = max(max(cstro), max(cstri))
         scomb2 = min(min(cstro), min(cstri))
         #
@@ -290,18 +326,20 @@ class RadialStress():
     #    """ Maximum Section Axial Stress"""
     #    pass    
     ##
-    def printout(self):
+    def __str__(self):
         """ """
-        print("Maximum Stress")
-        print(f"f axial    : {self.sigma_axial: 1.2f} MPa")
-        print(f"f Bending  : {self.sigma_bending: 1.2f} MPa")
-        print(f"Comb Fa+Fb : {self.sigma_comb: 1.2f} MPa")
-        print(f"f Shear    : {self.tau_max: 1.2f} MPa")
+        output = "\n"
+        output += "Maximum Stress\n"
+        output += f"f axial    : {self.sigma_axial: 1.2f} MPa\n"
+        output += f"f Bending  : {self.sigma_bending: 1.2f} MPa\n"
+        output += f"Comb Fa+Fb : {self.sigma_comb: 1.2f} MPa\n"
+        output += f"f Shear    : {self.tau_max: 1.2f} MPa\n"
         #print ('Combined stress    max. shear stress')
         #print ('      N/mm^2                N/mm^2')
         #print ("   {: 1.3f}            {: 1.3f}"
         #       .format(self.sigma_tmax, self.sigma_hmax))
-        print("")
+        output += "\n"
+        return output
 #
 #
 def plot_view(rad:float, steps:int = 360):
@@ -435,7 +473,12 @@ class RingBase:
             xm[i] += xmom[j]
             xh[i] += xhop[j]
             xs[i] += xshr[j]
-        return RadialForces({'x':xloc, 'M':xm, 'N':xh, 'V':xs})
+        #
+        db = DBframework()
+        df = db.DataFrame(data={'x':xloc, 'M':xm, 'N':xh, 'V':xs})
+        #return RadialForces({'x':xloc, 'M':xm, 'N':xh, 'V':xs})
+        #return RadialForces(xloc, xm, xh, xs)
+        return RadialForces(df)
     #    
 #
 #

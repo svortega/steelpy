@@ -6,15 +6,11 @@
 from __future__ import annotations
 #from array import array
 from operator import itemgetter
-from typing import NamedTuple
-from math import dist
 #
 # package imports
 from steelpy.ufo.utils.node import NodePoint
 from steelpy.ufo.utils.boundary import BoundaryItem
 from steelpy.utils.dataframe.main import DBframework
-from steelpy.material.sqlite.isotropic import  get_materialSQL
-from steelpy.sections.sqlite.utils import get_sectionSQL
 #
 import numpy as np
 #
@@ -190,29 +186,6 @@ def pull_boundary(conn, mesh_id: int,
 # --------------------------------------------
 # Element
 #
-class ElementItem(NamedTuple):
-    """ """
-    name: str
-    number: int
-    type: str
-    material:NamedTuple
-    section:NamedTuple
-    nodes:list[int|str]
-    comment:str
-    #
-    def __str__(self):
-        if (title := self.comment) == None:
-            title = ""
-        # TODO: shell
-        node1, node2 = self.nodes
-        #
-        L = dist(node1[:3], node2[:3])
-        #
-        return "{:>8s} {:>8s} {:>8s} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}\n"\
-               .format(str(self.name), str(node1), str(node2),
-                       str(self.material.name), str(self.section.name),
-                       self.beta, L, title)
-
 #
 def check_element(conn, element_name: int|str, mesh_id: int):
     """ """
@@ -269,11 +242,10 @@ def get_elements(conn, mesh_id: int,
     query = (mesh_id, )
     table = "SELECT Element.name, Element.number, Element.type,\
                     Material.name, Section.name, \
-                    DirCosine.roll_angle, Element.title\
-            FROM Element, Material, Section, DirCosine, Mesh\
+                    Element.roll_angle, Element.title\
+            FROM Element, Material, Section, Mesh\
             WHERE Element.material_id = Material.number \
             AND Element.section_id = Section.number \
-            AND Element.dircosine_id = DirCosine.number \
             AND Mesh.number = ? "
     #
     if element_type:
@@ -327,19 +299,13 @@ def get_element_data(conn, element_name: str|int,
     cur.execute (table, query)
     row = cur.fetchone()
     #
-    #1 / 0
+    1 / 0
     #
     #element_id = row[1]
     connodes = get_connectivity(conn, element_name,
                                 mesh_id=mesh_id)
-    #data = [*row[:5], connodes, row[-1]]
-    #
-    mat = get_materialSQL(conn, name=row[3],
-                          mesh_id=mesh_id)
-    section = get_sectionSQL(conn, name=row[4],
-                             mesh_id=mesh_id)
-    data = [*row[:3], mat, section, connodes, row[-1]]
-    data = ElementItem(*data)
+    data = [*row[:5], connodes, row[-1]]
+    #conn.close ()
     return data
 #
 def update_element_item(conn, name: str|int, item: str,
@@ -480,20 +446,6 @@ def get_unitvector(conn, beam_name: int,
     cur.execute (table, query)
     items = cur.fetchall()
     return items
-#
-def get_roll_angle(conn, beam_name: int,
-                   mesh_id: int):
-    """ """
-    query = (beam_name, mesh_id, )
-    table = ('SELECT roll_angle \
-             FROM Element, DirCosine \
-             WHERE Element.dircosine_id = DirCosine.number \
-             AND element.name = ? \
-             AND Element.mesh_id = ?;')
-    cur = conn.cursor()
-    cur.execute (table, query)
-    items = cur.fetchone()
-    return items[0]
 #
 # --------------------------------------------
 # Mesh

@@ -5,11 +5,12 @@
 # Python stdlib imports
 from __future__ import annotations
 #from array import array
-from dataclasses import dataclass
-from itertools import chain #, count
 from collections import Counter
 from collections import defaultdict
 from collections.abc import Mapping
+from dataclasses import dataclass
+from itertools import chain #, count
+from operator import sub #, add
 #import functools
 import re
 from typing import NamedTuple
@@ -18,6 +19,7 @@ from math import isclose, dist
 # package imports
 from steelpy.ufo.utils.boundary import get_node_boundary
 import steelpy.utils.io_module.text as common
+from steelpy.utils.math.vector import Vector
 
 #
 #
@@ -461,6 +463,13 @@ class CoordCartesian(NamedTuple):
         return dist(node1[:3], other[:3])
 
     #
+    #
+    def vector(self, other):
+        """ """
+        coord = [self.x, self.y, self.z]
+        uv = list(map(sub, coord[:3], other[:3]))
+        return Vector(a=uv)
+    #
     # ----------------------------------
     #
     @property
@@ -577,11 +586,16 @@ def check_point_list(data:list|tuple, steps:int = 5,
     idx = []
     for x, item in enumerate(data):
         if isinstance(item, (list, tuple, dict)):
-            new[0] = get_node_boundary(fixity=item)
+            boundary = get_node_boundary(fixity=item)
+            #boundary = [0 if fix == None else 1 for fix in boundary]
+            new[0] = boundary
             idx.append(x)
         elif isinstance(item, str):
             try:
-                new[0] = get_node_boundary(fixity=item)
+                boundary = get_node_boundary(fixity=item)
+                #boundary = [0 if fix == None else 1 for fix in boundary]
+                #new[0] = [0 if fix == None else 1 from fix in boundary]
+                new[0] = boundary
                 idx.append(x)
             except IOError:
                 continue

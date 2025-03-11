@@ -106,7 +106,7 @@ class UFOmain(ufoBasicModel):
 #
 class UFOmodel(UFOmain):
     """
-    UFO Model class
+    Universal Format Object (UFO) model class
     
     Parameters:
       :number: integer

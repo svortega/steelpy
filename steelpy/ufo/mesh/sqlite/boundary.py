@@ -9,17 +9,23 @@ import re
 
 
 # package imports
-from steelpy.ufo.utils.boundary import (BoundaryItem, BoundaryNode, get_support_df, 
-                                        get_node_boundary, find_boundary_type)
-from steelpy.ufo.mesh.sqlite.utils import check_nodes
+from steelpy.ufo.utils.boundary import (BoundaryItem, BoundaryNode, get_support_df,
+                                        get_node_boundary, #get_boundary_beam, find_boundary_type, 
+                                        get_boundary_item,
+                                        get_boundary_node,
+                                        find_support_basic)
+
+from steelpy.ufo.mesh.sqlite.utils import check_nodes, push_dircos
+from steelpy.ufo.mesh.sqlite.element import ElementsSQL
 from steelpy.utils.sqlite.utils import create_connection, create_table
+from steelpy.ufo.mesh.sqlite.utils import pull_boundary # pull_node, 
 from steelpy.utils.dataframe.main import DBframework
 #
 #
 #
 class BoundaryNodeSQL(BoundaryNode):
     
-    __slots__ = ['_db_file', '_mesh_id','_name']
+    __slots__ = ['_db_file', '_mesh_id','_name', '_elements']
     
     def __init__(self, name:str|int, mesh_id: int, db_file:str):
         """
@@ -27,6 +33,9 @@ class BoundaryNodeSQL(BoundaryNode):
         super().__init__(name=name)
         self._db_file = db_file
         self._mesh_id = mesh_id
+        self._elements = ElementsSQL(db_file=self._db_file,
+                                     mesh_id=self._mesh_id,
+                                     name=self._name)
     #
     def __setitem__(self, name: int,
                     values:list|tuple|dict) -> None:
@@ -34,38 +43,47 @@ class BoundaryNodeSQL(BoundaryNode):
         name : boundary name int
         values = [node_id, boundary_type, fixity, title]
         """
-        if isinstance(values, dict):
-            node_name = values['node']
-            btype = 'restrain'
-            fixity = get_node_boundary(values['restrain'])
-        else:
-            node_name = values[0]
-            btype = values[1]
-            fixity = get_node_boundary(values[2])
+        #1 / 0
+        values = get_boundary_node(values, self._elements._beams)
+        node_name = values[0]
+        btype = values[1]
+        fixity = values[2]
+        unit_vector = values[3]
+        title = values[4]
+        #
+        dircos_id = None
         # get nodes
         conn = create_connection(self._db_file)
         with conn:  
             node = check_nodes(conn, node_name,
                                mesh_id=self._mesh_id)
             node_id = node[0]
+            #
+            if unit_vector:          
+                dircos_id = push_dircos(conn, unitvec=unit_vector,
+                                        roll_angle=0, 
+                                        mesh_id=self._mesh_id)             
         #
         try:
             # TODO : update data option if needed?
             self._labels.index(name)
             raise Warning(f' warning boundary {name} already exist')
         except ValueError:
-            #
+            # input data
             conn = create_connection(self._db_file)
             with conn:
                 boundary_id = push_boundary(conn, name,
-                                            self._mesh_id, btype)
+                                            self._mesh_id, 
+                                            btype=btype,
+                                            dircosine_id=dircos_id,
+                                            title=title)
 
-                push_boundary_node(conn, boundary_id, fixity, title=None)
+                push_boundary_node(conn, boundary_id, fixity, title=title)
                 update_node(conn, colname='boundary_id', item=boundary_id,
                             node_id=node_id, mesh_id=self._mesh_id)
-
-            #
-            #print('-->')
+        #
+        #
+        #print('-->')
     #
     def __getitem__(self, node_name: int) -> tuple | bool:
         """
@@ -75,26 +93,29 @@ class BoundaryNodeSQL(BoundaryNode):
         with conn:  
             node = check_nodes(conn, node_name,
                                mesh_id=self._mesh_id)
-            node_id = node[0]
+            boundary = node[-1]
         #try:
         #    node_id = node[0]
         #except TypeError:
         #    raise IOError(f"Node {node_name} not found")
-        
-        try:
+        if boundary:
+        #try:
             self._labels.index(node_name)
             conn = create_connection (self._db_file)
             with conn:
-                data = pull_nboundary(conn, boundary_id=node[-1])
+                data = pull_nboundary(conn,
+                                      mesh_id=self._mesh_id, 
+                                      boundary_id=boundary)
                 data = data[0]
                 #data = pull_node_boundary(conn, node_id, self._mesh_id)
 
-            return BoundaryItem(*data[3:9],
-                                number=data[2],
+            return BoundaryItem(*data[4:10],
+                                number=data[3],
                                 name=data[0],
-                                node=node_name)
-        except ValueError:
-            return False
+                                node=node_name,
+                                boundary_type=data[1])
+        #except ValueError:
+        return False
     #
     #
     @property
@@ -134,15 +155,20 @@ class BoundaryNodeSQL(BoundaryNode):
     #
     # -----------------------------------------
     #
+    #
+    # -----------------------------------------
+    #
     @property
     def df(self):
         """Boundary df"""
         query = (self._mesh_id, )
-        table = 'SELECT Node.name, BoundaryNode.* \
+        table = 'SELECT Mesh.name, Node.name, \
+                 BoundaryNode.* \
                  FROM Node, BoundaryNode, Boundary, Mesh \
                  WHERE BoundaryNode.node_id = Node.number \
                  AND BoundaryNode.boundary_id = Boundary.number \
                  AND Node.mesh_id = Boundary.mesh_id \
+                 AND Boundary.mesh_id = Mesh.number \
                  AND Mesh.number = ? ;'
         #
         conn = create_connection(self._db_file)
@@ -152,23 +178,63 @@ class BoundaryNodeSQL(BoundaryNode):
             rows = cur.fetchall()
         #
         db = DBframework()
-        header = ['name', 'index', 'number', 'node_id',
-                  'ix', 'iy', 'iz', 'rx', 'ry', 'rz', 'title']
+        header = ['mesh_name', 'node_name', 'index', 'number', 'node_id',
+                  'x', 'y', 'z', 'rx', 'ry', 'rz', 'title']
         boundf = db.DataFrame(data=rows, columns=header)
-        header = ['name', 'ix', 'iy', 'iz', 'rx', 'ry', 'rz',  'title']        
+        header = ['mesh_name', 'node_name',
+                  'x', 'y', 'z', 'rx', 'ry', 'rz',  'title']        
         return boundf[header]
     
     @df.setter
     def df(self, df):
         """ """
-        nodes = get_support_df(df)       
-        for row in nodes.itertuples():
-            #print(row)
-            fixity = row.restrain
-            values = [row.node, row.type, fixity]
-            self.__setitem__(name=row.name,
-                                 values=values)
+        df = get_support_df(df)
+        for idx, row in df.iterrows():
+            self.__setitem__(name=row['name'],
+                             values=row.to_dict())
 #
+#
+#
+def pull_node_displacement(conn, mesh_id: int):
+    """ """
+    rows = []
+    # node boundary
+    fixity = pull_boundary(conn,
+                           mesh_id=mesh_id,
+                           boundary_type='constraint')
+    #
+    rows = [[*item[:2], *item[6:12], item[12]]
+            for item in fixity]
+    #
+    #for item in fixity:
+    #    temp = [0 if ndp ==1 else None
+    #            for ndp in item[6:12]]
+    #    rows.append([*item[:2], *temp, item[12]])
+    #
+    # node displacement
+    #disp = pull_boundary(conn,
+    #                     mesh_id=mesh_id,
+    #                     boundary_type='displacement')
+    #
+    #rows = []
+    #for item in disp:
+    #    temp = [ndp if ndp else 0
+    #            for ndp in item[6:12]]
+    #    rows.append([*item[:2], *temp, item[12]])   
+    #
+    cols = ['node_index', 'node_name',  
+            #'boundary_name', 'boundary_type', 
+            #'number', 'boundary_id', 
+            'x', 'y', 'z', 'rx', 'ry', 'rz', 'title']
+    # dataframe
+    db = DBframework()
+    df = db.DataFrame(data=rows, columns=cols)
+    #df.drop(columns=['boundary_name', 'boundary_type', 
+    #                 'number', 'boundary_id'],
+    #        inplace=True)
+    df['load_level'] = 'basic'
+    return df    
+    
 #
 #
 #
@@ -248,28 +314,16 @@ class BoundarySQL:
                     values: tuple|list|dict) -> None:
         """
         """
-        #1 / 0
+        btype = get_boundary_item(values)
         try:
             self._labels.index(name)
             raise IOError(f' error boundary {name} already exist')
         except ValueError:
-            #
-            # tuple|list
-            btype = values[0]
-            if re.match(r"\b(node(s)?|support(s)?)\b", btype, re.IGNORECASE):
-                #node_id = values[1]
-                self._boundary[name] = values[1:]
-
-            elif re.match(r"\b(beam(s)?)\b", btype, re.IGNORECASE):
-                raise NotImplementedError
-                #beam_id = values[1]
-            #    btype2 = values[2]
-            #    if re.match(r"\b(node(s)?)\b", btype2, re.IGNORECASE):
-            #        node_id = values[3]
-            #    else:
-            #        raise IOError('node missing')
-            else:
-                raise IOError(f'boundary {btype} not valid')
+            match btype:
+                case 'node'|'beam':
+                    self._boundary[name] = values #[1:]
+                case _:
+                    raise IOError(f'boundary {btype} not valid')
     #
     def __getitem__(self, name: int|str):
         """
@@ -318,6 +372,7 @@ class BoundarySQL:
                     name NOT NULL,\
                     mesh_id INTEGER NOT NULL REFERENCES Mesh(number), \
                     type TEXT NOT NULL,\
+                    dircosine_id INTEGER REFERENCES DirCosines(number),\
                     title TEXT);"
         #
         create_table(conn, table)
@@ -329,7 +384,7 @@ class BoundarySQL:
                             rx DECIMAL, ry DECIMAL, rz DECIMAL, \
                             title TEXT);"
         # node_id INTEGER NOT NULL REFERENCES Node(number),\
-        create_table(conn, table)        
+        create_table(conn, table)
     #
     def _push_boundary(self, conn, name: int|str, btype: str):
         """
@@ -358,21 +413,16 @@ class BoundarySQL:
                 self._boundary[values[0]] = values[1:]
 
         elif isinstance(values, dict):
-            bname = values.pop('name')
-            if isinstance(bname, (list|tuple)):
-                nodes = values.pop('node')
-                fixity = values.pop('restrain')
-                if isinstance(fixity, (list|tuple)):
-                    for x, item in enumerate(bname):
-                        self._boundary[bname[x]] = [nodes[x], 'restrain', fixity[x]]
-                else:
-                    for x, item in enumerate(bname):
-                        self._boundary[bname[x]] = [nodes[x], 'restrain', fixity]
-
-            #1/0
+            bname = values['name']
+            if isinstance(bname, (list | tuple)):
+                db = DBframework()
+                df = db.DataFrame(values)
+                self._boundary.df = df
+            else:
+                sname = values.pop('name')
+                self._boundary[sname] = values
         #
         return self._boundary
-        #return self.nodes(values)
     #
     #
     @property
@@ -404,59 +454,67 @@ class BoundarySQL:
         bnid = [row[-1] for row in nodes]
         #
         project = "', '".join(str(x) for x in bnid)
-        table = f"SELECT Node.name, BoundaryFixity.* \
-                  FROM Node, Boundary, BoundaryFixity\
+        query = (self._mesh_id, )
+        table = f"SELECT Mesh.name, Node.name, Node.idx,\
+                  Boundary.type, BoundaryFixity.* \
+                  FROM Node, Boundary, BoundaryFixity, Mesh\
                   WHERE BoundaryFixity.boundary_id = Boundary.number \
                   AND Node.boundary_id = Boundary.number \
-                  AND Boundary.number IN ('{project}') ;"
+                  AND Boundary.number IN ('{project}') \
+                  AND Node.mesh_id = Boundary.mesh_id \
+                  AND Boundary.mesh_id = Mesh.number \
+                  AND Mesh.number = ?;"
         #
         conn = create_connection(self._db_file)
         with conn:
             cur = conn.cursor()
-            cur.execute(table)
+            cur.execute(table, query)
             rows = cur.fetchall()
         #
         db = DBframework()
-        header = ['name', 'number', 'boundary_id',
-                  'ix', 'iy', 'iz', 'rx', 'ry', 'rz', 'title']
+        header = ['mesh_name', 'node_name', 'node_index',
+                  'type', 
+                  'number', 'boundary_id',
+                  'x', 'y', 'z', 'rx', 'ry', 'rz', 'title']
         boundf = db.DataFrame(data=rows, columns=header)
-        header = ['name', 'ix', 'iy', 'iz', 'rx', 'ry', 'rz',  'title']        
+        # TODO: global should not be fixed
+        boundf['system'] = 'global'
+        header = ['mesh_name', 'type','system', 'node_name', 'node_index',  
+                  'x', 'y', 'z', 'rx', 'ry', 'rz',  'title']        
         return boundf[header]
 
     @df.setter
     def df(self, df):
         """nodes in dataframe format"""
-        columns = list(df.columns)
-        for key in columns:
-            if re.match(r"\b(((boundar(y|ies)(_|-|\s*)?)?)?type)\b", key, re.IGNORECASE):
-                df['type'] = df[key].apply(lambda x: find_boundary_type(x))
-                break         
-        #df.columns find_boundary_type
-        #df['type'] = df['type'].apply(lambda x: 'support'
-        #                              if re.match(r"\b(node(s)?|support(s)?|constrain(s)?)\b", x, re.IGNORECASE)
-        #                              else x)
+        #beams = self._boundary._elements._beams
+        #columns = list(df.columns)
+        #header = {key: find_support_basic(key)
+        #          for key in columns}
+        #df.rename(columns=header, inplace=True)
         #
-        grptype = df.groupby('type')
-        try:
-            group = grptype.get_group('support')
-            self._boundary.df = group
-        except AttributeError:
-            raise IOError('Node df not valid')      
+        df = get_support_df(df) 
+        for idx, row in df.iterrows():
+            self.__setitem__(name=row['name'],
+                             values=row.to_dict())
+        #
 #
 #
 def push_boundary(conn, name: int, mesh_id: int,
-                  btype: str, title: str|None = None):
+                  btype: str, dircosine_id: int|None,
+                  title: str|None = None):
     """ """
-    project = (name, mesh_id, btype, title, )
-    sql = 'INSERT INTO Boundary(name, mesh_id, type, title)\
-                                VALUES(?,?,?,?)'
+    project = (name, mesh_id, btype, dircosine_id, title, )
+    sql = 'INSERT INTO Boundary(name, mesh_id, type, \
+                                dircosine_id, title) \
+                                VALUES(?,?,?,?,?)'
     cur = conn.cursor()
     cur.execute(sql, project)
     row = cur.lastrowid
     return row
 #
 #
-def pull_nboundary(conn, boundary_id: int|list,
+def pull_nboundary(conn, mesh_id: int,
+                   boundary_id: int|list,
                    item:str="*"):
     """
     """
@@ -468,19 +526,23 @@ def pull_nboundary(conn, boundary_id: int|list,
     #else:
     #    project = [boundary_id]
     #
+    query = (mesh_id, )
+    #
     if isinstance(boundary_id, int):
         boundary_id = [boundary_id]
     #
     project = "', '".join(str(x) for x in boundary_id)
     #table = f"SELECT {item} \
     #          FROM Boundary WHERE number in ('{project}')"
-    table = f"SELECT Boundary.name, BoundaryFixity.{item} \
+    table = f"SELECT Boundary.name, Boundary.type,\
+              BoundaryFixity.{item} \
               FROM Boundary, BoundaryFixity\
               WHERE BoundaryFixity.boundary_id = Boundary.number \
+              AND mesh_id = ? \
               AND Boundary.number IN ('{project}') ;"
     #
     cur = conn.cursor()
-    cur.execute(table)
+    cur.execute(table, query)
     record = cur.fetchall()
     #
     #bnodes = {nodes[x][1]: BoundaryItem(*data[3:9],
@@ -559,3 +621,7 @@ def update_node(conn, colname: str,
     #cur.executemany(table, item, node_id, mesh_id)
     cur.execute(table, project)
     #print('--')
+#
+#
+#
+#

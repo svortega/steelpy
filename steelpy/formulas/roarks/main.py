@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2023 steelpy
+# Copyright (c) 2009 steelpy
 #
 
 # Python stdlib imports
@@ -14,7 +14,7 @@ from .chapter9.ring_main import Ring
 #                Supporting Section
 #-------------------------------------------------
 #
-class RoarksFormulas:
+class Roarks:
     """Roark's Formulas for Stress and Strain"""
     __slots__ = ['_units']
     

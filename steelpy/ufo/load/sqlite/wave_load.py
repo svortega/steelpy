@@ -25,7 +25,7 @@ from steelpy.ufo.load.sqlite.utils import pull_basic, push_basic
 from steelpy.ufo.mesh.sqlite.beam import BeamSQL # BeamItemSQL, 
 from steelpy.ufo.mesh.sqlite.utils import (get_connectivity,
                                            get_element_data) # check_element)
-from steelpy.sections.sqlite.utils import get_section
+#from steelpy.sections.sqlite.utils import get_section
 from steelpy.ufo.mesh.sqlite.node import pull_node
 #
 from steelpy.utils.sqlite.utils import create_connection
@@ -241,7 +241,7 @@ class BeamItemWave:
                                     element_name=self.name,
                                     element_type=self.type,
                                     mesh_id=self._mesh_id)
-        return data[1]    
+        return data.number
     #
     def _nodes(self) -> list:
         """
@@ -277,7 +277,7 @@ class BeamItemWave:
                                     element_type=self.type,
                                     mesh_id=self._mesh_id)
             
-            sect =  get_section(conn, data[5])
+            #sect =  get_section(conn, data.section)
         #
-        return sect
+        return data.section
     

@@ -8,7 +8,7 @@ from bisect import bisect_right
 from copy import copy
 from dataclasses import dataclass
 # from math import fsum
-from typing import NamedTuple, Tuple, Union, List, Dict
+#from typing import NamedTuple, Tuple, Union, List, Dict
 
 
 # package imports
@@ -137,7 +137,7 @@ class LinearInterpolate:
         return self.y_list[ i ] + self.slopes[ i ] * (x - self.x_list[ i ])
 #
 #
-def curvatures(xData: List[ float ], yData: List[ float ]) -> List:
+def curvatures(xData: list[ float ], yData: list[ float ]) -> list:
     """" k = curvatures(xData,yData).
     Returns the curvatures of cubic spline at its knots.
     """""
@@ -157,7 +157,7 @@ def curvatures(xData: List[ float ], yData: List[ float ]) -> List:
     return k
 #
 #
-def evalSpline(xData: List[ float ], yData: List[ float ], x: float):
+def evalSpline(xData: list[ float ], yData: list[ float ], x: float):
     """"y = evalSpline(xData,yData,k,x).
     Evaluates cubic spline at x. The curvatures k can be
     computed with the function curvatures"""
@@ -212,7 +212,7 @@ def LUsolve3(c, d, e, b):
 #
 #
 #
-def zeros(m, n=None, code: str = 'd') -> List:
+def zeros(m, n=None, code: str = 'd') -> list:
     """
     Create zero matrix
     """
@@ -224,7 +224,7 @@ def zeros(m, n=None, code: str = 'd') -> List:
     return new_matrix
 #
 #
-def ones(m, n=None, code: str = 'd') -> List:
+def ones(m, n=None, code: str = 'd') -> list:
     """
     Create zero matrix
     """

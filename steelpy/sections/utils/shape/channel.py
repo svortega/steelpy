@@ -122,7 +122,7 @@ class ChannelBasic(ShapeStressBasic):
         #
         return stress_out           
     #
-    def _properties(self, poisson: float):
+    def _properties(self):
         """ """
         # self.a *= factors[0]
         # self.ta *= factors[0]
@@ -190,7 +190,7 @@ class ChannelBasic(ShapeStressBasic):
         Jx = Iy + Iz
         rp = math.sqrt(Jx / area)
         #
-        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
+        #alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         # restart
         Zc = round(0.50 * self.d - Zc, 6)
@@ -198,9 +198,9 @@ class ChannelBasic(ShapeStressBasic):
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw,
-                             alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sz)
+                             J=J, Cw=Cw)
+                             #alpha_sy=alpha_sy,
+                             #alpha_sz=alpha_sz)
     #
     #
     def alpha_s(self, poisson: float):

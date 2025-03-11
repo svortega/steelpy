@@ -340,7 +340,7 @@ def update_combination(dfbasic, combination,
     dftemp = db.concat(dftemp, ignore_index=True)
     return dftemp
 #
-#
+# TODO: this function is repeated and should be merged with the above
 def update_combinationXXX(member, combination,
                           item: list[str],
                           values:list[str]):

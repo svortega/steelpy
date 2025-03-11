@@ -92,7 +92,7 @@ class BoxBasic(ShapeStressBasic):
         return 'Box'    
     # --------------------------------------------
     #
-    def _properties(self, poisson: float):
+    def _properties(self):
         """ """
         # self.units_in = _units_output
 
@@ -168,14 +168,14 @@ class BoxBasic(ShapeStressBasic):
         rp = math.sqrt(Jx / area)
         #
         #
-        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
+        #alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw,
-                             alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sz)
+                             J=J, Cw=Cw)
+                             #alpha_sy=alpha_sy,
+                             #alpha_sz=alpha_sz)
     #
     def curved(self, R):
         """

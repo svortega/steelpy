@@ -13,7 +13,9 @@ import time
 # package imports
 from steelpy.ufo.load.main import MeshLoad
 from steelpy.ufo.mesh.sqlite.main import MeshSQL
-from steelpy.ufo.mesh.process.main import Ke_matrix, Kg_matrix, Km_matrix, Kt_matrix
+from steelpy.ufo.mesh.process.main import (Ke_matrix, Km_matrix,
+                                           Kg_matrix, 
+                                           Kt_matrix, Kt_matrix_R)
 from steelpy.ufo.plot.main import PlotMesh
 #
 from steelpy.ufo.utils.main import ModelClassBasic # ufoBasicModel, 
@@ -27,6 +29,7 @@ from steelpy.utils.dataframe.main import DBframework
 from steelpy.utils.sqlite.utils import create_connection, create_table
 from steelpy.utils.sqlite.main import ClassBasicSQL
 #
+import numpy as np
 #
 #
 #
@@ -355,141 +358,294 @@ class MeshItem(MeshSQL):
     # --------------------
     #
     #
-    def jbc(self):
+    def jbc(self, plane2D: bool|None = None):
         """ """
-        #supports=self._boundaries._nodes
-        return self._nodes.jbc(dof=self._plane.dof)
+        if plane2D is None:
+            plane2D=self._plane.plane2D
+        #print(self._plane.hdisp)
+        jbc = self._nodes.jbc(plane2D=plane2D)
+        #if self._plane.plane2D:
+        #    jbc.drop(columns=['z', 'rx', 'ry'], inplace=True)
+        return jbc
     #
-    #def neq(self):
-    #    """number of equations"""
-    #    return self._nodes.neq(supports=self._boundaries._nodes)
     #
-    def Ke(self, sparse:bool = True):
-           #condensed: bool = True):
-        """Returns the model's global stiffness matrix.
+    def _D_partition(self, jbc:DBframework):
+        """ """
         
-        Solver: numpy/banded/sparse
+        jbc = jbc.stack()
+        # List of the indices for degrees of freedom with unknown displacements.
+        D1 = [i for i, item in enumerate(jbc)
+              if item != 0]
+        # List of the indices for degrees of freedom with known displacements.
+        D2 = [i for i, item in enumerate(jbc)
+              if item == 0]
+        #
+        return D1, D2    
+    #
+    # ------------------------------------------
+    #
+    def Ke(self): # sparse:bool = True
+           #condensed: bool = True):
         """
-        # get data
+        sparse : True/False
+        
+        Returns:
+            Elements global stiffness matrix.
+        """
         Ka = Ke_matrix(elements=self._elements,
                        nodes=self._nodes,
-                       plane2D=self._plane.plane2D,
-                       sparse=sparse)
-        #
+                       plane2D=self._plane.plane2D)
+                       #sparse=sparse)
         return Ka
     #
-    def Kg(self, Dn, sparse: bool = True):
+    def Km(self):
         """
-        Element global geometric stiffness matrix
+        sparse : True/False
         
-        D : 
+        Returns:
+            Elements global mass matrix
+        """
+        Ma = Km_matrix(elements=self._elements,
+                       nodes=self._nodes,
+                       plane2D=self._plane.plane2D)
+                       #sparse=sparse)
+        return Ma
+    #
+    # ------------------------------------------
+    #
+    def KgXX(self, Dn):
+        """
+        D : Nodal displacement 
+        sparse : True/False
+        
+        Returns:
+            Element Global Geometric Stiffness Matrix
+        
         """
         head_disp = ['node_name', *self._plane.hdisp]
         #Dn.set_index('node_name', inplace=True)
         Kg = Kg_matrix(elements=self._elements,
                        nodes=self._nodes,
-                       D=Dn[head_disp].set_index('node_name'),
-                       plane2D=self._plane.plane2D,
-                       sparse=sparse)
+                       Un=Dn[head_disp].set_index('node_name'),
+                       plane2D=self._plane.plane2D)
+                       #sparse=sparse)
         return Kg
     #
-    def Kt(self, Dn, sparse: bool = True):
-        """ Element Tangent Stiffness matrix"""
+    def Kg(self, Fb, Rb=None):
+        """
+        D : Nodal displacement 
+        sparse : True/False
+        
+        Returns:
+            Element Global Geometric Stiffness Matrix
+        """
+        plane2D = self._plane.plane2D
+        # ---------------------------------------------
+        # Beam section
+        beam_temp = []
+        Rbeam = {}
+        for key, beam in self._elements._beams.items():
+            Fb_item = Fb.loc[key]
+            #
+            #if not Rb:
+            #    R = [np.eye(3), np.eye(3)]
+            #else:
+            #    R = Rb[key]
+            beam_mod = beam.deformed(Fb=Fb_item['Fb_local'],
+                                     R=Fb_item['R'],
+                                     L=Fb_item['L'], 
+                                     uv=Fb_item['uv'], 
+                                     plane2D=plane2D)
+            Rbeam[key] = beam_mod.R
+            beam_temp.append(beam_mod)
+        #
+        Kg = Kg_matrix(elements=beam_temp,
+                       nodes=self._nodes,
+                       #Un=Fb['Fb_local'],
+                       plane2D=self._plane.plane2D)
+                       #sparse=sparse)
+        return Kg, Rbeam      
+    #
+    def Kt(self, Dn):
+        """
+        D : Nodal displacement 
+        sparse : True/False
+        
+        Returns:
+            Element Global Tangent Stiffness matrix
+        """
         head_disp = ['node_name', *self._plane.hdisp]
+        
         Kt = Kt_matrix(elements=self._elements,
                        nodes=self._nodes,
-                       D=Dn[head_disp].set_index('node_name'),
-                       plane2D=self._plane.plane2D,
-                       sparse=sparse)
+                       Un=Dn[head_disp].set_index('node_name'),
+                       plane2D=self._plane.plane2D)
+                       #sparse=sparse)
         return Kt
     #
-    def Km(self, sparse: bool = True):
-        """ Element global mass matrix"""
+    def Kt_R(self, Fb, Rb=None):
+        """
+        D : Nodal displacement 
+        sparse : True/False
+        
+        Returns:
+            Element Global Tangent Stiffness matrix
+        """
+        #head_disp = ['node_name', *self._plane.hdisp]
+        #Dn = Dn[head_disp].set_index('node_name')
+        plane2D = self._plane.plane2D
+        # ---------------------------------------------
+        # Beam section
+        beam_temp = []
+        Rbeam = {}
+        for key, beam in self._elements._beams.items():
+            #nodes = beam.connectivity
+            #Un_global = np.concatenate((Dn.loc[nodes[0]],
+            #                            Dn.loc[nodes[1]]), axis=None)
+            #Un_global = Dn.loc[nodes].stack(future_stack=True)
+            #Fb_local = Fb.loc[key].to_numpy()
+            Fb_item = Fb.loc[key]
+            #
+            #if not Rb:
+            #    R = [np.eye(3), np.eye(3)]
+            #else:
+            #    R = Rb[key]
+            
+            beam_mod = beam.deformed(Fb=Fb_item['Fb_local'],
+                                     R=Fb_item['R'],
+                                     L=Fb_item['L'], 
+                                     uv=Fb_item['uv'], 
+                                     plane2D=plane2D)
+            Rbeam[key] = beam_mod.R
+            beam_temp.append(beam_mod)
+            
+        
+        
+        Kt = Kt_matrix_R(elements=beam_temp,
+                         nodes=self._nodes,
+                         Fb=Fb['Fb_local'],
+                         plane2D=self._plane.plane2D)
+                         #sparse=sparse)
         #
-        Ma = Km_matrix(elements=self._elements,
-                       nodes=self._nodes,
-                       plane2D=self._plane.plane2D,
-                       sparse=sparse)
-        return Ma
-    #
+        return Kt, Rbeam
     #
     # ------------------------------------------
     #
     def Dn(self) -> DBframework.DataFrame|None:
         """
-        load_level: basic/combination
-
-        Return:
+        Returns:
             Nodal global displacement dataframe
         """
-        df = DBframework()
-        #if load_level in ['combination']:
-        #    Dn = self._load._combination.Dn()
-        #else:  # basic
-        #    Dn = self._load._basic.Dn()
+        #df = DBframework()
+        #col_disp = ['x', 'y', 'z', 'rx', 'ry', 'rz'] # self._plane.hdisp
         #
-        Dn = df.concat([self._load._basic._Dnt(),
-                        self._load._combination._Dnt()],
-                       ignore_index=True)
-        if Dn.empty:
-            return Dn
         #
-        col_disp = ['x', 'y', 'z', 'rx', 'ry', 'rz'] # self._plane.hdisp
-        jbc = self.jbc()
-        dfjbc = jbc[jbc.any(axis=1)]
+        #col_grp = ['load_name', 'load_id',
+        #           'load_level', 'load_title']
+        #basic =  self._load._basic._Dnt()
+        #comb =  self._load._combination._Dnt()
         #
-        Di = Dn.loc[Dn['node_name'].isin(dfjbc.index)]
-        Di = Di.loc[Di[col_disp].any(axis=1)]
+        Dn = self._boundaries.df
+        Dn = Dn.loc[Dn['type'].isin(['constrained',
+                                     'displacement'])]
+        #1 / 0
+        if not Dn.empty:
+            Dn.drop(columns=['title'], inplace=True)
+            #
+            #bnode[col_disp] = bnode[col_disp].apply(lambda x: 3 if x == 0 else x)
+            #bnode[col_disp] = bnode[col_disp].apply(lambda x: 0 if x == 1 else x)
+            #bnode.loc[bnode[col_disp] == 0, col_disp] = 3
+            #
+            # TODO : 1 to zero only on reatain condition
+            #bnode[col_disp] = bnode[col_disp].mask(bnode[col_disp] == 0, 3)
+            #bnode[col_disp] = bnode[col_disp].mask(bnode[col_disp] == 1, 0)
+            #
+            # Basic Load
+            #if not basic.empty:
+            #    grouped = basic.groupby(col_grp) 
+            #    new = []
+            #    for key, item in grouped:
+            #        new_rows = bnode.copy()
+            #        new_rows[col_grp] = key
+            #        item = df.concat([new_rows, item], ignore_index=True)
+            #        new.append(item)
+            #    basic = df.concat(new, ignore_index=True)
+            ##
+            ## Combination
+            #if not comb.empty:
+            #    grouped = comb.groupby(col_grp)
+            #    new = []
+            #    for key, item in grouped:
+            #        new_rows = bnode.copy()
+            #        new_rows[col_grp] = key
+            #        item = df.concat([new_rows, item], ignore_index=True)
+            #        new.append(item)
+            #    comb = df.concat(new, ignore_index=True)
         #
-        col_grp = ['load_name', 'load_id',
-                   'load_level', 'load_title',
-                   'system', 'mesh_name',
-                   'node_name', 'node_index',
-                   *col_disp]
-        Di = Di[col_grp]
-        return Di
+        #Dn = df.concat([self._load._basic._Dnt(),
+        #                self._load._combination._Dnt()],
+        #               ignore_index=True)
+        #Dn = df.concat([basic, comb], ignore_index=True)        
+        #if Dn.empty:
+        #    return Dn
+        #
+        #1 / 0
+        #
+        #jbc = self.jbc()
+        #dfjbc = jbc[jbc.any(axis=1)]
+        #
+        #Di = Dn.loc[Dn['node_name'].isin(dfjbc.index)]
+        #Di = Di.loc[Di[col_disp].any(axis=1)]
+        #
+        #col_grp = ['load_name', 'load_id',
+        #           'load_level', 'load_title',
+        #           'system', 'mesh_name',
+        #           'node_name', 'node_index',
+        #           *col_disp]
+        #Dn = Dn[col_grp]
+        return Dn
 
     #
-    def Fn(self) -> DBframework.DataFrame|None:
+    def Fn(self) -> DBframework.DataFrame:
         """
-        load_level: basic/combination
-
-        Return:
+        Returns:
             Nodal global force dataframe
         """
         df = DBframework()
-        #if load_level in ['combination']:
-        #Fn = self._load._combination.Fn()
+        basic = self._load._basic._Fnt()
+        comb = self._load._combination._Fnt()
+        Fn = df.concat([basic, comb], ignore_index=True)
         #else:  # basic
         #Fn = self._load._basic.Fn()
-        Fn = df.concat([self._load._basic._Fnt(),
-                        self._load._combination._Fnt()],
-                       ignore_index=True)
+        #Fn = df.concat([self._load._basic._Fnt(),
+        #                self._load._combination._Fnt()],
+        #               ignore_index=True)
         if Fn.empty:
             return Fn
         #
         col_force = ['Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'] #self._plane.hforce
-        jbc = self.jbc()
-        dfjbc = jbc[jbc.any(axis=1)]
+        #jbc = self.jbc()
+        #dfjbc = jbc[jbc.any(axis=1)]
         #
-        Fi = Fn.loc[Fn['node_name'].isin(dfjbc.index)]
+        #Fi = Fn.loc[Fn['node_name'].isin(dfjbc.index)]
         #Fi = Fi.loc[Fi[col_force].any(axis=1)]
         #
-        if Fi.empty:
-            Fi = Fn
+        #if Fi.empty:
+        #    Fi = Fn
         #
         columns = ['load_name', 'load_id',
                    'load_level', 'load_title',
                    'system', 'mesh_name',
                    'node_name', 'node_index',
                    *col_force]
-        Fi = Fi[columns]
-        return Fi
+        #Fi = Fn[columns]
+        #return Fi
+        return Fn[columns]
 
     #
     # ------------------------------------------
     #
-    def _matrix_partition(self, Km):
+    def _matrix_partitionX(self, Km):
         """
         Partitions a matrix into sub-matrices based on degree of freedom boundary conditions
         
@@ -708,6 +864,15 @@ class MeshPlane(NamedTuple):
                 'rx':'Mx', 'ry':'My', 'rz':'Mz'}
         if self.plane2D:
             cols = {key: cols[key] for key in self.dof}
+        return cols
+    #
+    @property
+    def colrename_f2u(self) -> dict:
+        """"""
+        cols = {'Fx':'x', 'Fy':'y', 'Fz':'z',
+                'Mx':'rx', 'My':'ry', 'Mz':'rz'}
+        if self.plane2D:
+            cols = {'Fx':'x', 'Fy':'y', 'Mz':'rz'}
         return cols    
 #
 #

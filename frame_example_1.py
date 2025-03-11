@@ -241,7 +241,7 @@ print(bload)
 #f2u_model.plot.basic_load(name=1)
 #
 frame = Trave3D(mesh=mesh)
-run = frame.static()
+run = frame.static(second_order=False)
 results = run.solve()
 print(results)
 print('--> xx')

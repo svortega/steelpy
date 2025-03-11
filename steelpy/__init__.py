@@ -3,7 +3,7 @@
 # TODO: host until sure no longer needed
 #
 from steelpy.design.codes.main import CodeCheck
-from steelpy.utils.roarks.main import RoarksFormulas
+from steelpy.formulas.main import Roarks, Pilkey
 from steelpy.design.main import ClampDesign as Clamp
 from steelpy.metocean.main import Metocean
 from steelpy.trave.main import Trave2D, Trave3D

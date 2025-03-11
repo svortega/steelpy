@@ -14,15 +14,12 @@ from dataclasses import dataclass
 #
 # package imports
 #from steelpy.utils.math.operations import to_matrix
-from steelpy.utils.dataframe.main import DBframework
+#from steelpy.utils.dataframe.main import DBframework
 #from steelpy.utils.math.operations import remove_column_row
 #
 from steelpy.trave.process.static.operations import LinearStatic, PDelta
 from steelpy.trave.postprocess.main import PostProcess
 #
-import numpy as np
-#from scipy.linalg import cholesky_banded, cho_solve_banded
-from scipy.sparse.linalg import spsolve
 
 
 #
@@ -43,6 +40,7 @@ class StaticSolver:
                  db_file: str, log: bool,
                  second_order: bool = False,
                  nonlinear: bool = False,
+                 #method: str = 'linear',
                  ) -> None:
         """
         plane : Plane system (3D/2D)
@@ -63,17 +61,18 @@ class StaticSolver:
                                     result_name=result_name)
 
         self._PDelta = PDelta(mesh=self._mesh,
-                              static=self._static)
+                              nonlinear=nonlinear,
+                              result_name=result_name)
         #
         #
         #
     #
     # ------------------------------------------
     #
-    def solve(self,
-              sparse: bool = True,
+    def solve(self,  
               max_iter: int = 30,
-              beam_steps: int = 10):
+              beam_steps: int = 10,
+              method: str = 'simple_step'):
         """
         Solves the static system by the Direct Stiffness Method (DSM)
 
@@ -82,34 +81,30 @@ class StaticSolver:
         if self._mesh:
             if self.second_order:
                 order = "2nd"
-                self._postprocess._Pdelta = True
-                run = self._PDelta.TCM
+                Pdelta = True
+                #self._postprocess._Pdelta = True
+                Un, Rn = self._PDelta.solve(max_iter=max_iter,
+                                        method=method)
             else:
                 order = "1st"
-                self._postprocess._Pdelta = False
-                run = self._static.solve
+                #self._postprocess._Pdelta = False
+                Pdelta = False
+                Un, Rn = self._static.solve(max_iter=max_iter)
             #
             print(f"** Solving Linear Static [{order} order] ")
             #
-            Un = run(sparse=sparse, max_iter=max_iter)
+            #Un = run(sparse=sparse, max_iter=max_iter)
             #
             self._postprocess.Un = Un
+            self._postprocess.Rn = Rn
         else:
             raise IOError('** error: mesh missing')
         # run postprocessing
-        self._postprocess.run(beam_steps=beam_steps)
+        self._postprocess.run(Pdelta=Pdelta,
+                              beam_steps=beam_steps)
         #
         return self._postprocess._results
 #
 #
 # ---------------------------------------------
 #
-#
-#
-# ---------------------------------------------
-#
-def list2df(data:list[list], header:list):
-    """ dataframe"""
-    db = DBframework()
-    dftemp = db.DataFrame(data=data, columns=header, index=None)
-    return dftemp

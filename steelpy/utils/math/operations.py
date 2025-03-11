@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from numbers import Integral
 
 # package imports
-#from steelpy.utils.math.vector import Vector
+from steelpy.utils.math.vector import Vector
 import numpy as np
 
 # --------------------
@@ -50,6 +50,18 @@ def ones(m, n=None, code:str = 'd'):
     else: 
         new_matrix = array(code, [1 for row in range(m)])
     
+    return new_matrix
+#
+def nan_matrix(m, n=None, nan=None):
+    """
+    Create zero matrix
+    """
+    if n: 
+        new_matrix = [[nan for row in range(n)]
+                      for col in range(m)]        
+    else: 
+        new_matrix = [nan for row in range(m)]
+    #
     return new_matrix
 #
 def to_matrix(l, n):

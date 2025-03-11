@@ -61,20 +61,41 @@ def B3D2_Ke(Le: float,
     gaz = 1.0 - 6.0 * Phiz
     #
     # initialize all ek elements to zero
-    ek = np.zeros((12, 12))
+    ek = np.zeros((12,12), dtype=np.float32) 
     #
-    ek[0][0] = ek[6][6] = Ax * emlen
+    ek[0][0]  = Ax * emlen
     
-    ek[1][1] = ek[7][7] = 12.0 * emlen3 * Iz / niy
-    ek[2][2] = ek[8][8] = 12.0 * emlen3 * Iy / niz
+    ek[1][1]  = 12.0 * emlen3 * Iz / niy
+    ek[2][2]  = 12.0 * emlen3 * Iy / niz
     
-    ek[3][3] = ek[9][9] = Gmod * Jx / Le
+    ek[3][3]  = Gmod * Jx / Le
     
-    ek[4][4] = ek[10][10] = 4.0 * emlen * Iy * laz / niz
-    ek[5][5] = ek[11][11] = 4.0 * emlen * Iz * lay / niy
+    ek[4][4]  = 4.0 * emlen * Iy * laz / niz
+    ek[5][5]  = 4.0 * emlen * Iz * lay / niy
     #
-    ek[1][5] = ek[1][11] = 6.0 * emlen2 * Iz / niy
-    ek[2][4] = ek[2][10] = -6.0 * emlen2 * Iy / niz
+    ek[1][5]  = 6.0 * emlen2 * Iz / niy
+    ek[2][4]  = -6.0 * emlen2 * Iy / niz
+    #
+    #ek[0][6] = -ek[0][0]
+    #ek[1][7] = -ek[1][1]
+    #
+    #ek[2][8] = -ek[2][2]
+    #
+    #ek[3][9] = -ek[3][3]
+    #ek[4][8] = -ek[2][4]
+    ek[4][10] = 2.0 * emlen * Iy * gaz / niz
+    #ek[5][7] = -ek[1][5]
+    ek[5][11] = 2.0 * emlen * Iz * gay / niy
+    #
+    #ek[7][11] = -ek[1][5]
+    #ek[8][10] = -ek[2][4]
+    #
+    ek[6][6] = ek[0][0]
+    ek[7][7] = ek[1][1]
+    ek[8][8] = ek[2][2]
+    ek[9][9] = ek[3][3]
+    ek[10][10] = ek[4][4]
+    ek[11][11] = ek[5][5]
     #
     ek[0][6] = -ek[0][0]
     ek[1][7] = -ek[1][1]
@@ -82,13 +103,14 @@ def B3D2_Ke(Le: float,
     ek[2][8] = -ek[2][2]
     #
     ek[3][9] = -ek[3][3]
-    ek[4][8] = -ek[2][4]
-    ek[4][10] = 2.0 * emlen * Iy * gaz / niz
+    ek[4][8] = -ek[2][4]    
     ek[5][7] = -ek[1][5]
-    ek[5][11] = 2.0 * emlen * Iz * gay / niy
     #
     ek[7][11] = -ek[1][5]
     ek[8][10] = -ek[2][4]
+    #
+    ek[1][11] = ek[1][5]
+    ek[2][10] = ek[2][4]    
     #
     # impose the geometry
     ek += np.triu(ek, k=1).T
@@ -116,7 +138,7 @@ def beam3D_B3D2(Le: float,
     # k = 5 / 6 # rectangular section
     #
     # initialize all ek elements to zero
-    ek = np.zeros((12, 12))
+    ek = np.zeros((12,12), dtype=np.float32) 
     # stiffness matrix in local coordinates
     emlen = Emod / Le
     #emlen2 = emlen / length
@@ -176,15 +198,18 @@ def beam3D_B3D2(Le: float,
     #
     ek[0][6] = -ek[0][0]
     ek[1][7] = -ek[1][1]
-    ek[1][11] = ek[1][5]
+    #
     ek[2][8] = -ek[2][2]
-    ek[2][10] = ek[2][4]
+    #
     ek[3][9] = -ek[3][3]
-    ek[4][8] = -ek[2][4]
+    ek[4][8] = -ek[2][4]    
     ek[5][7] = -ek[1][5]
     #
     ek[7][11] = -ek[1][5]
     ek[8][10] = -ek[2][4]
+    #
+    ek[1][11] = ek[1][5]
+    ek[2][10] = ek[2][4]
     #
     # impose the geometry
     ek += np.triu(ek, k=1).T

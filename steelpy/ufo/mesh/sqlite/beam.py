@@ -11,18 +11,18 @@ from dataclasses import dataclass
 #from itertools import chain
 #import math
 #from typing import NamedTuple
-from operator import sub #, add
+from operator import sub, add
 #from operator import itemgetter
 #import os.path
 #from itertools import groupby
-from math import dist
+from math import dist, sqrt
 #
 #
 # package imports
 from steelpy.sections.sqlite.utils import ShapeGeometrySQL
 from steelpy.sections.utils.operations import ShapeGeometry
 from steelpy.material.sqlite.isotropic import  get_materialSQL
-from steelpy.ufo.mesh.sqlite.node import pull_node
+from steelpy.ufo.mesh.sqlite.utils import pull_node
 from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            get_element_data ,
                                            get_connectivity,
@@ -32,12 +32,17 @@ from steelpy.ufo.mesh.sqlite.utils import (push_connectivity,
                                            get_unitvector, 
                                            update_element_item,
                                            check_element,
-                                           get_elements)
+                                           get_elements,
+                                           push_dircos,
+                                           get_roll_angle)
 
 from steelpy.ufo.mesh.process.brotation import unitvec_0, unitvec_1
 from steelpy.utils.sqlite.utils import create_connection
-from steelpy.ufo.utils.beam import BeamBasic, BeamItemBasic
+from steelpy.ufo.utils.beam import BeamBasic, BeamItemBasic, BeamItemDeformed
 from steelpy.ufo.utils.element import get_beam_df
+#from steelpy.utils.math.rotation import R_from_drot
+#
+import numpy as np
 #
 #
 class BeamSQL(BeamBasic):
@@ -113,47 +118,54 @@ class BeamSQL(BeamBasic):
         #except IndexError:
         #    title = None
         #
-        query = (beam_name, self._mesh_id, 'beam', 
-                 materials[parameters[2]],
-                 sections[parameters[3]],
-                 roll_angle)
-        #
-        table = 'INSERT INTO Element(name, mesh_id, type, \
-                                     material_id, section_id,\
-                                     roll_angle)\
-                                VALUES(?,?,?,?,?,?) ;'
-        cur = conn.cursor()
-        cur.execute(table, query)
-        beam_number = cur.lastrowid
-        #
-        # connectivity
-        node_id = push_connectivity(conn, beam_number, parameters[:2],
-                                    mesh_id=self._mesh_id)
         #
         # Unit Vector
-        coord = get_node_coord(conn, node_id)
+        coord = get_node_coord(conn, node_name=parameters[:2])
         uvec = unitvec_0(nodei=coord[0], nodej=coord[1],
                          beta=roll_angle)
         
         #uvec2 = unitvec_1(nodei=coord[0], nodej=coord[1],
         #                  beta=roll_angle)
         
-        self._push_unitvec(conn, element_id=beam_number,
-                           unitvac=uvec)
+        dircos_id = push_dircos(conn, unitvec=uvec,
+                                roll_angle=roll_angle, 
+                                mesh_id=self._mesh_id)        
+        #
+        # TODO: 
+        eccentricity = [None, None]
+        #
+        query = (beam_name, self._mesh_id, 'beam', 
+                 materials[parameters[2]],
+                 sections[parameters[3]],
+                 dircos_id)
+        #
+        table = 'INSERT INTO Element(name, mesh_id, type, \
+                                     material_id, section_id,\
+                                     dircosine_id)\
+                                VALUES(?,?,?,?,?,?) ;'
+        cur = conn.cursor()
+        cur.execute(table, query)
+        beam_id = cur.lastrowid
+        #
+        # connectivity
+        push_connectivity(conn, beam_id,
+                          connectivity=parameters[:2],
+                          eccentricity=eccentricity, 
+                          mesh_id=self._mesh_id)
         #
         #print('-->')
     #
-    def _push_unitvec(self, conn, element_id: int, unitvac: list):
-        """push unitvector to sql"""
-        query = [(element_id, *item, x + 1, )
-                 for x, item in enumerate(unitvac)]
-        table = 'INSERT INTO ElementDirectionCosine( \
-                             element_id, x, y, z, axis) \
-                 VALUES(?,?,?,?,?)'
-        #
-        cur = conn.cursor()
-        cur.executemany(table, query)
-        #print('-->')
+    #def _push_unitvec(self, conn, element_id: int, unitvac: list):
+    #    """push unitvector to sql"""
+    #    query = [(element_id, *item, x + 1, )
+    #             for x, item in enumerate(unitvac)]
+    #    table = 'INSERT INTO ElementDirectionCosine( \
+    #                         element_id, x, y, z, axis) \
+    #             VALUES(?,?,?,?,?)'
+    #    #
+    #    cur = conn.cursor()
+    #    cur.executemany(table, query)
+    #    #print('-->')
     #    
     #
     def _pull_material(self, conn):
@@ -336,13 +348,13 @@ class BeamItemSQL(BeamItemBasic):
                                     element_type='beam', 
                                     mesh_id=self._mesh_id)
         #title =  data[-1]
-        if (title := data[-1]) == None:
+        if (title := data.comment) == None:
             title = ""
         #
         node1, node2 = self.connectivity
         return "{:>8s} {:>8s} {:>8s} {:>12s} {:>12s} {: 1.2e} {:>1.3e} {:}\n"\
                .format(str(beam_name), str(node1), str(node2),
-                       str(self.material.name), str(self.section.name),
+                       str(data.material.name), str(data.section.name),
                        self.beta, self.L, title)
     #    
     # ------------------------------------------------
@@ -371,7 +383,7 @@ class BeamItemSQL(BeamItemBasic):
                 item = pull_node(conn, node_name=node,
                                  mesh_id=self._mesh_id)
                 nnodes.append(item.number)
-            update_connectivity(conn, data[1], nnodes)
+            update_connectivity(conn, data.number, nnodes)
         #self._connectivity[self.index] = nodes
     #
     #
@@ -385,9 +397,9 @@ class BeamItemSQL(BeamItemBasic):
                                     element_type='beam', 
                                     mesh_id=self._mesh_id)
             
-            mat = get_materialSQL(conn, data[4],
-                                  mesh_id=self._mesh_id)
-        return mat
+            #mat = get_materialSQL(conn, data.material,
+            #                      mesh_id=self._mesh_id)
+        return data.material
 
     @material.setter
     def material(self, material_name: str) -> None:
@@ -408,26 +420,27 @@ class BeamItemSQL(BeamItemBasic):
             data = get_element_data(conn, self.name,
                                     element_type='beam', 
                                     mesh_id=self._mesh_id)
-            query = (data[5], self._mesh_id, )
-            table = f"SELECT Section.*, SectionGeometry.* \
-                      FROM Section, SectionGeometry, Mesh \
-                      WHERE Section.name = ? \
-                      AND Mesh.number = ? \
-                      AND Section.number = SectionGeometry.section_id ;"              
+            #query = (data.section, self._mesh_id, )
+            #table = f"SELECT Section.*, SectionGeometry.* \
+            #          FROM Section, SectionGeometry, Mesh \
+            #          WHERE Section.name = ? \
+            #          AND Mesh.number = ? \
+            #          AND Section.number = SectionGeometry.section_id ;"
             #
-            cur = conn.cursor()
-            cur.execute(table, query)
-            row = cur.fetchone()
+            #cur = conn.cursor()
+            #cur.execute(table, query)
+            #row = cur.fetchone()
         #
-        geometry = [*row[1:3], *row[11:]]
-        shape = ShapeGeometry(section_type=geometry[2],
-                              geometry=geometry)
-        sect =  ShapeGeometrySQL(number=row[0], 
-                                 name=row[1],
-                                 geometry=shape,
-                                 material=self.material, 
-                                 db_file=self.db_file)
-        return sect
+        #geometry = [*row[1:3], *row[11:]]
+        #shape = ShapeGeometry(section_type=geometry[2],
+        #                      geometry=geometry)
+        #shape = data.section
+        #sect =  ShapeGeometrySQL(number=shape.number,
+        #                         name=shape.name,
+        #                         geometry=shape,
+        #                         material=data.material,
+        #                         db_file=self.db_file)
+        return data.section
 
     @section.setter
     def section(self, section_name: str) -> None:
@@ -444,14 +457,14 @@ class BeamItemSQL(BeamItemBasic):
         """beta angle roll"""
         conn = create_connection(self.db_file)
         with conn:
-            data = get_element_data(conn, self.name,
-                                    element_type='beam', 
-                                    mesh_id=self._mesh_id)
-        return data[3]
+            data = get_roll_angle(conn, self.name,
+                                  mesh_id=self._mesh_id)
+        return data
     
     @beta.setter
     def beta(self, roll_angle:float):
         """beta angle roll"""
+        1 / 0
         conn = create_connection(self.db_file)
         item = "roll_angle"
         with conn:
@@ -468,7 +481,7 @@ class BeamItemSQL(BeamItemBasic):
             data = get_element_data(conn, self.name,
                                     element_type='beam', 
                                     mesh_id=self._mesh_id)
-        return data[1]
+        return data.number
     #
     @property
     def nodes(self) -> list:
@@ -548,7 +561,154 @@ class BeamItemSQL(BeamItemBasic):
     #    #return Tr
     #
     # ------------------------------------------------
+    #
+    #
+    def transform_unit(self, e1:list, e2:list|None=None, e3:list|None=None,
+                       warnings:bool=False):
+        '''
+        Establish transformation matrix from e1 and temporary e2 or e3 vectors.
+    
+        Arguments
+        -----------
+        e1 : unit vector describing element longitudinal direction
+        e2 : temporary unit vector describing a chosen vector that's perpendicular to the longitudinal direction (approximate y-direction)
+        e3 : temporary unit vector describing a chosen vector that's perpendicular to the longitudinal direction (approximate z-direction)
+            if both e2 and e3 are different from None, e2 is used (e3 disregarded)
+    
+        Returns:
+            T : transformation matrix
+        '''
+    
+        e1 = np.array(e1).flatten()
+    
+        if (e2 is not None) and (e3 is not None):
+            e3 = None
+    
+        if e2 is not None:
+            e2 = np.array(e2).flatten()
+            e3_tmp = np.cross(e1, e2)  # Direction of the third unit vector
+            if np.all(e3 == 0):
+                if warnings:
+                    print('Warning: e1 and e2 identical. Check orientations carefully!')
+    
+                e2 = e2 + 0.1
+                e3 = np.cross(e1, e2)
+    
+            e2 = np.cross(e3_tmp, e1)  # Direction of the second unit vector
+    
+            e1 = e1 / np.linalg.norm(e1)  # Normalize the direction vectors to become unit vectors
+            e2 = e2 / np.linalg.norm(e2)
+            e3 = np.cross(e1, e2)
+    
+        elif e3 is not None:
+            e3 = np.array(e3).flatten()
+            e2_tmp = np.cross(e3, e1)  # Direction of the third unit vector
+            e3 = np.cross(e1, e2_tmp)
+            e1 = e1 / np.linalg.norm(e1)  # Normalize the direction vectors to become unit vectors
+            e3 = e3 / np.linalg.norm(e3)
+            e2 = np.cross(e3, e1)
+    
+        if e2 is None and e3 is None:
+            raise ValueError('Specify either e2 or e3')
+    
+        T = np.vstack([e1, e2, e3])
+    
+        return T
+    
+    
     #    
+    #
+    # ------------------------------------------------
+    #
+    #
+    def deformed(self, Fb: list, R: list,
+                 L, uv, plane2D: bool):
+        """ """
+        #1 / 0
+        #dim = 3
+        #if plane2D:
+        #    #dim = 2
+        #    coord1_du = [*du[:2], 0.0]  # x,y,z
+        #    coord2_du = [*du[3:5], 0.0] # x,y,z
+        #    #
+        #    rot1 = [0.0, 0.0, du[2]] # rx,ry,rz
+        #    rot2 = [0.0, 0.0, du[5]]           
+        #else:
+        #    #dim = 3
+        #    coord1_du = du[:3]
+        #    coord2_du = du[6:9]
+        #    #
+        #    rot1 = du[3:6] # rx,ry,rz
+        #    rot2 = du[9:]
+        #
+        #nodes = self.connectivity
+        #conn = create_connection(self.db_file)
+        #with conn:
+        #    node1 = pull_node(conn, node_name=nodes[0],
+        #                      mesh_id=self._mesh_id)
+        #    node2 = pull_node(conn, node_name=nodes[1],
+        #                      mesh_id=self._mesh_id)
+        #
+        #coord1 = list(map(add, node1[:3], coord1_du))
+        #coord2 = list(map(add, node2[:3], coord2_du))
+        #L = dist(coord1, coord2)
+        #e1 = list(map(add, coord1, coord2))
+        #e1 = [item / L for item in e1]
+        #
+        # -------------------------------------------------
+        #
+        #Tb = self.T3D()
+        #T0 = Tb[:dim, :dim]
+        #t0 = T0[2, :]
+        #
+        # -------------------------------------------------
+        #
+        #rot1, rot2 = Fb['rotation']
+        #R1, R2 = Fb['R']
+        #
+        # update base vectors of element from rotations of nodes
+        #R1 = R_from_drot(rot1) @ R[0]
+        #R1 = R1 @ R1
+        #R2 = R_from_drot(rot2) @ R[1]
+        #R2 = R2 @ R2
+        #
+        #
+        #e1 = Fb['e1']
+        #L = Fb['L']
+        #L = sqrt(sum([item ** 2 for item in e1]))
+        #
+        #e3_temp = R1 @ t0 + R2 @ t0
+        #e2 = np.cross(e3_temp, e1) / np.linalg.norm(np.cross(e3_temp, e1))
+        #uv = self.transform_unit(e1, e2=e2)
+        #uv = Fb['uv']
+        #
+        # -------------------------------------------------
+        # Return deformed beam item class
+        beam_deformed = BeamItemDeformed(beam_name=self.name,
+                                         material=self.material,
+                                         section=self.section,
+                                         #du=Fb, #['Fb_local']
+                                         L=L, DoF=self.DoF, 
+                                         unit_vector=uv,
+                                         R = R)
+        return beam_deformed
+    #
+    #
+    def deformed2(self, Un: list):
+        """ """
+        # -------------------------------------------------
+        # Return deformed beam item class
+        beam_deformed = BeamItemDeformed(beam_name=self.name,
+                                         material=self.material,
+                                         section=self.section, 
+                                         nodes=self.nodes, 
+                                         roll_angle=self.beta)
+        #
+        beam_deformed.get_rot(du=Un)
+        #
+        #1 / 0
+        return beam_deformed
+#
 #
 #
 

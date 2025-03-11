@@ -140,7 +140,7 @@ class MeshingConcept:
                 #print(point)
                 node_title = mnodes.get_point_name(point)
                 node_id = mnodes.get_name(node_title)
-                msupports[key] = [node_id, 'restrain', [*restrain[:6]]]
+                msupports[key] = ['node', node_id, 'restrain', [*restrain[:6]]]
                 print(f"Boundary: {key}  @ Node: {node_id}")
             except IOError:
                 missing[key].append(point)
@@ -182,7 +182,7 @@ class MeshingConcept:
                             restrain = csupports[supname].restrain
                             #if support:
                             #msupports[new_node] = support[:6] # point.boundary
-                            msupports[key] = [new_node, 'restrain', [*restrain[:6]]]
+                            msupports[key] = ['node', new_node, 'restrain', [*restrain[:6]]]
                             print(f"Boundary: {supname} on Beam: {key} @ Node: {new_node}")
                             #
                             # existing element

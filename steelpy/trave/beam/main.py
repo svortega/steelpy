@@ -18,7 +18,7 @@ from steelpy.ufo.load.concept.combination import LoadCombConcept
 from steelpy.sections.main import SectionIM
 from steelpy.sections.utils.operations import get_section
 from steelpy.material.main import MaterialIM
-from steelpy.trave.beam.operation import BeamBasic
+from steelpy.formulas.pilkey.main import BeamBasic
 from steelpy.utils.dataframe.main import DBframework
 #
 from steelpy.material.utils.operations import get_mat_properties

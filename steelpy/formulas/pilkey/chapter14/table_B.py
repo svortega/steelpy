@@ -11,7 +11,7 @@ from math import cosh, sinh, sqrt
 # import re
 
 # package imports
-from steelpy.trave.beam.pilkey.utils.operations import SingularFunction
+from steelpy.formulas.pilkey.utils.operations import SingularFunction
 
 #
 #

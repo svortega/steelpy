@@ -44,6 +44,8 @@ class TraveItemBasic(TraveItemSQL):
         self._mesh.plane(self._plane2D)
         self._log = log
         #
+        # TODO: separate file results
+        #
         if not  sql_file:
             sql_file = self._mesh.db_file
         self.db_file = sql_file

@@ -7,7 +7,7 @@ from __future__ import annotations
 #from dataclasses import dataclass
 import time
 
-from numpy.ma.extras import column_stack
+#from numpy.ma.extras import column_stack
 
 #from typing import NamedTuple
 #import re
@@ -20,6 +20,7 @@ from steelpy.ufo.load.process.node.utils import find_NodeLoad_item
 from steelpy.ufo.load.process.beam.utils import find_BeamLoad_item
 from steelpy.ufo.load.sqlite.beam import BeamLoadItemSQL, BeamLoadGloabalSQL
 from steelpy.ufo.load.sqlite.node import  NodeLoadItemSQL, NodeLoadGlobalSQL
+#from steelpy.ufo.mesh.sqlite.utils import pull_boundary # pull_node, 
 #
 # steelpy.f2uModel
 from steelpy.utils.sqlite.utils import create_connection, create_table
@@ -238,7 +239,7 @@ class BasicLoadSQL(BasicLoadCase):
         Fn_df.reset_index(inplace=True)
         return Fn_df.reindex(columns=head)
     #
-    def _Dnt(self):
+    def _DntXX(self):
         """
         Total Nodal Displacement (user input + FER)
 
@@ -260,6 +261,8 @@ class BasicLoadSQL(BasicLoadCase):
         conn = create_connection(self.db_file)
         with conn:
             beam_fer = pull_END_FER(conn, self._mesh_id)
+            # Node displacement
+            node_disp = pull_node_displacement(conn, self._mesh_id)            
         #
         #Fn_df = None
         if not beam_fer.empty:
@@ -269,8 +272,8 @@ class BasicLoadSQL(BasicLoadCase):
             #if Dn_df.empty:
             #    beam_fer = db.DataFrame()
         #
-        # Node displacement
-        node_disp = self._nodes.displacement
+        1 / 0
+        #
         if node_disp.empty:
             if beam_fer.empty:
                 return beam_fer
@@ -312,12 +315,12 @@ def pull_END_FER(conn, mesh_id: int):
         Equivalent Nodal Displacement in dataframe form"""
     df = pull_FER_data(conn, mesh_id)
     df = df[['load_name', 'mesh_name',
-               'load_title', 'load_level',
-               'load_id', 'system', 'comment',
-               'element_name',
-               'node_name', 'node_index',
-               'load_type',
-               'x', 'y', 'z', 'rx', 'ry', 'rz', 'step']]
+             'load_title', 'load_level',
+             'load_id', 'system', 'comment',
+             'element_name',
+             'node_name', 'node_index',
+             'load_type',
+             'x', 'y', 'z', 'rx', 'ry', 'rz', 'step']]
     return df
 #
 def pull_FER_df(conn, mesh_id: int):
@@ -373,7 +376,6 @@ def pull_FER_data(conn, mesh_id: int):
     df = db.DataFrame(data=rows, columns=cols)
     df['load_level'] = 'basic'    
     return df
-#      
 #
 #
 class BasicLoadTypeSQL(BasicLoadRoot):

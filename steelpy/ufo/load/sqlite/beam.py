@@ -526,7 +526,8 @@ class BeamLoadTypeSQL(BeamTypeBasic):
         beam = self._beam
         Lb = beam.L
         mat = beam.material
-        sec = beam.section.properties(poisson=mat.poisson)
+        sec = beam.section.properties
+        Asy, Asz = beam.section.As(poisson=mat.poisson)
         geometry = beam.section.geometry
         #
         Lsteps = linstep(d=geometry.d,
@@ -541,7 +542,7 @@ class BeamLoadTypeSQL(BeamTypeBasic):
                             Iy=sec.Iy, Iz=sec.Iz,
                             J=sec.J, Cw=sec.Cw,
                             Area=sec.area,
-                            Asy=sec.Asy, Asz=sec.Asz,
+                            Asy=Asy, Asz=Asz,
                             P=Pa, factor=factor)
             load_function.extend(lout)
         # point load
@@ -552,7 +553,7 @@ class BeamLoadTypeSQL(BeamTypeBasic):
                             Iy=sec.Iy, Iz=sec.Iz,
                             J=sec.J, Cw=sec.Cw,
                             Area=sec.area,
-                            Asy=sec.Asy, Asz=sec.Asz,
+                            Asy=Asy, Asz=Asz,
                             P=Pa, factor=factor)
             load_function.extend(lout)
         #print('---')

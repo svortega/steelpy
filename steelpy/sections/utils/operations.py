@@ -181,11 +181,11 @@ def get_sect_df(df):
     df['type'] = df['type'].apply(lambda x: find_sect_type(x))
     #
     columns = list(df.columns)
-    if 'SA_inplane' not in columns:
-        df['SA_inplane'] = float(1.0)
-    
-    if 'SA_outplane' not in columns:
-        df['SA_outplane'] = float(1.0)
+    #if 'SA_inplane' not in columns:
+    #    df['SA_inplane'] = float(1.0)
+    #
+    #if 'SA_outplane' not in columns:
+    #    df['SA_outplane'] = float(1.0)
     
     if 'shear_stress' not in columns:
         df['shear_stress'] = 'maximum'
@@ -346,10 +346,10 @@ def get_sect_df(df):
     header = ['name', 'area', 'Zc', 'Yc',
               'Iy', 'Zey', 'Zpy', 'ry', 
               'Iz', 'Zez', 'Zpz', 'rz',
-              'J', 'Cw',
-              'alpha_sy', 'alpha_sz', 'density']
+              'J', 'Cw']
+              #'alpha_sy', 'alpha_sz', 'density']
     propdf = db.DataFrame(data=newprop, columns=header)
-    propdf.drop(columns=['alpha_sy', 'alpha_sz', 'density'])
+    #propdf.drop(columns=['alpha_sy', 'alpha_sz', 'density'])
     #
     return sectdf, propdf
 #

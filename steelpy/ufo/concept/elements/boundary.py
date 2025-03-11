@@ -83,7 +83,7 @@ class PointSupport(BoundaryNode):
             return BoundaryItem(x=self._x[_index], y=self._y[_index], z=self._z[_index],
                                 rx=self._rx[_index], ry=self._ry[_index], rz=self._rz[_index],
                                 number=self._number[_index], name=self._title[_index],
-                                node=node_id)
+                                node=node_id, boundary_type='constrained')
         except ValueError:
             return False
             # raise IndexError
@@ -112,6 +112,8 @@ class PointSupport(BoundaryNode):
         """ """
         title = None
         value = self._get_fixity(value)
+        value = [0 if item == None else 1
+                 for item in value]
         # update data
         self._x.append(value[0])
         self._y.append(value[1])

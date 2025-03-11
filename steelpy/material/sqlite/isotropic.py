@@ -320,11 +320,11 @@ def get_materials(conn, mesh_id: int):
     return materials
 #
 #
-def get_materialSQL(conn, material_name:int|str,
+def get_materialSQL(conn, name:int|str,
                     mesh_id: int):
     """
     """
-    query = (material_name, mesh_id, )
+    query = (name, mesh_id, )
     table = "SELECT Material.name, Material.type, \
                     MaterialElastic.*, Mesh.name \
                 FROM Mesh, Material, MaterialElastic\

@@ -140,7 +140,7 @@ class ElementsSQL(ElementMain):
                             type TEXT NOT NULL,\
                             material_id INTEGER NOT NULL REFERENCES Material(number),\
                             section_id INTEGER NOT NULL REFERENCES Section(number),\
-                            roll_angle DECIMAL, \
+                            dircosine_id INTEGER NOT NULL REFERENCES DirCosines(number),\
                             title TEXT, \
                             concept_idx INTEGER);"
         #
@@ -148,30 +148,37 @@ class ElementsSQL(ElementMain):
                                 number INTEGER PRIMARY KEY NOT NULL,\
                                 element_id INTEGER NOT NULL REFERENCES Element(number),\
                                 node_id INTEGER REFERENCES Node(number),\
+                                eccentricity_id INTEGER REFERENCES Eccentricity(number),\
                                 node_end INTEGER NOT NULL);"
         #
-        univectors = "CREATE TABLE IF NOT EXISTS ElementDirectionCosine(\
-                                number INTEGER PRIMARY KEY NOT NULL,\
-                                element_id INTEGER NOT NULL REFERENCES Element(number),\
-                                x DECIMAL,\
-                                y DECIMAL,\
-                                z DECIMAL,\
-                                axis INTEGER);"
         #
-        offset = "CREATE TABLE IF NOT EXISTS ElementEccentricity(\
+        offset = "CREATE TABLE IF NOT EXISTS Eccentricity(\
                             number INTEGER PRIMARY KEY NOT NULL,\
-                            element_id INTEGER NOT NULL REFERENCES Element(number),\
-                            node_id INTEGER REFERENCES Node(number),\
-                            node_end INTEGER NOT NULL,\
+                            mesh_id INTEGER NOT NULL REFERENCES Mesh(number), \
                             system TEXT NOT NULL,\
                             x DECIMAL,\
                             y DECIMAL,\
                             z DECIMAL);"
         #
+        #
+        dircosine = "CREATE TABLE IF NOT EXISTS DirCosine(\
+                                number INTEGER PRIMARY KEY NOT NULL,\
+                                mesh_id INTEGER NOT NULL REFERENCES Mesh(number), \
+                                roll_angle DECIMAL);"
+        #
+        univectors = "CREATE TABLE IF NOT EXISTS DirCosineUnitVector(\
+                                number INTEGER PRIMARY KEY NOT NULL,\
+                                dircosine_id INTEGER NOT NULL REFERENCES DirCosines(number),\
+                                x DECIMAL,\
+                                y DECIMAL,\
+                                z DECIMAL,\
+                                axis INTEGER);"
+        #
         #conn = create_connection(self.db_file)
         create_table(conn, elements)
         create_table(conn, connectivity)
         create_table(conn, offset)
+        create_table(conn, dircosine)
         create_table(conn, univectors)
     #
     #

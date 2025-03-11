@@ -72,24 +72,24 @@ class ShapeProperty(NamedTuple):
     J:float
     Cw:float
     # Shear correction coefficient 
-    alpha_sy: float = 0
-    alpha_sz: float = 0
+    #alpha_sy: float = 0
+    #alpha_sz: float = 0
     #
-    desity: float = 7850 # kg/m^3
+    #desity: float = 7850 # kg/m^3
     #
-    @property
-    def Asy(self):
+    #@property
+    def Asy(self, alpha_sy:float):
         """ """
-        if self.alpha_sy == 0:
+        if alpha_sy == 0:
             return 0
-        return self.area / self.alpha_sy
+        return self.area / alpha_sy
     #
-    @property
-    def Asz(self):
+    #@property
+    def Asz(self, alpha_sz):
         """ """
-        if self.alpha_sz == 0:
+        if alpha_sz == 0:
             return 0
-        return self.area / self.alpha_sz
+        return self.area / alpha_sz
     #
     def __str__(self) -> str:
         """ """
@@ -98,8 +98,8 @@ class ShapeProperty(NamedTuple):
             .format(self.area, self.Iy, self.Iz, self.Zc, self.ry, self.J)
         output += "{:25s} {:1.4e} {:1.4e} {:1.4e} {:1.4e} {:1.4e}\n"\
             .format("", self.Sy, self.Sz, 1, self.rz, self.Cw)
-        output += "{:25s} {:1.4e} {:1.4e} {:1.4e} {:1.4e}\n"\
-            .format("", self.Zy, self.Zz, 1, self.area*self.desity)
+        #output += "{:25s} {:1.4e} {:1.4e} {:1.4e} {:1.4e}\n"\
+        #    .format("", self.Zy, self.Zz, 1, self.area*self.desity)
         return output
 #
 #

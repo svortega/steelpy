@@ -42,7 +42,7 @@ class PostProcess(PostProcessSQL):
     # Results
     # ---------------------------------
     #
-    def results(self, beam_steps: int,
+    def resultsX(self, beam_steps: int,
                 Pdelta: bool):
         """ """
         return self._process.results(Un=self.Un.df,
@@ -51,12 +51,14 @@ class PostProcess(PostProcessSQL):
     #
     # ---------------------------------
     #
-    def run(self, beam_steps: int= 10):
+    def run(self, Pdelta: bool, beam_steps: int= 10):
         """ """
         print("** Postprocessing")
         Un = self.Un
-        Pdelta: bool = self._Pdelta
-        beam_force= self._process.solve(Un=Un,
+        Rn = self.Rn
+        #jbc = self._mesh.jbc(plane2D=False)
+        #Pdelta: bool = self._Pdelta
+        beam_force= self._process.solve(Un=Un, Rn=Rn, #jbc=jbc, 
                                         steps=beam_steps,
                                         Pdelta=Pdelta)
         # load comb update
@@ -73,7 +75,7 @@ class PostProcess(PostProcessSQL):
         #self._process._push_node_reaction(Qn)
         # element stress
         self._process.solve_stress(beam_force=beam_force)
-        print('-->')
+        #print('-->')
     #
     # ---------------------------------
     #

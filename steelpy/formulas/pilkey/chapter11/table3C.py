@@ -12,7 +12,7 @@ import re
 #
 # package imports
 #
-from steelpy.trave.beam.pilkey.chapter11.table3 import TableBasic
+from steelpy.formulas.pilkey.chapter11.table3 import TableBasic
 #
 #
 # ---------------------------------------------------------------

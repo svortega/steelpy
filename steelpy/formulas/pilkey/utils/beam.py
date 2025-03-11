@@ -16,28 +16,28 @@ from typing import NamedTuple
 # Bending 
 #
 #from steelpy.trave.beam.pilkey.chapter11.table2C import BeamBendingSupports
-from steelpy.trave.beam.pilkey.chapter11.table3C import BeamBendingSupports
+from steelpy.formulas.pilkey.chapter11.table3C import BeamBendingSupports
 #
 #from steelpy.trave.beam.pilkey.chapter11.table2 import BendingGE
-from steelpy.trave.beam.pilkey.chapter11.table3 import BendingGE
+from steelpy.formulas.pilkey.chapter11.table3 import BendingGE
 #
 #from steelpy.trave.beam.pilkey.chapter11.table2B import (Trapezoidal,
 #                                                         Point, Moment)
-from steelpy.trave.beam.pilkey.chapter11.table3B import (Trapezoidal,
+from steelpy.formulas.pilkey.chapter11.table3B import (Trapezoidal,
                                                          Point, Moment)
 #
 # Torsion
-from steelpy.trave.beam.pilkey.chapter14.table_C import BTOpenSupports
-from steelpy.trave.beam.pilkey.chapter14.table_A import TorsionOpenGE
-from steelpy.trave.beam.pilkey.chapter14.table_B import ( TOpenConcentrated,
+from steelpy.formulas.pilkey.chapter14.table_C import BTOpenSupports
+from steelpy.formulas.pilkey.chapter14.table_A import TorsionOpenGE
+from steelpy.formulas.pilkey.chapter14.table_B import ( TOpenConcentrated,
                                                          TOpenDistributed)
-from steelpy.trave.beam.pilkey.chapter12.table_2t import (TBarConcentrated,
+from steelpy.formulas.pilkey.chapter12.table_2t import (TBarConcentrated,
                                                           TBarDistributed,
                                                           BTBarSupports,
                                                           TorsionBarGE)
 #
 # Axial
-from steelpy.trave.beam.pilkey.chapter12.table_2axial import (PBarConcentrated,
+from steelpy.formulas.pilkey.chapter12.table_2axial import (PBarConcentrated,
                                                               PBarDistributed,
                                                               PBarSupports,
                                                               AxialBarGE)

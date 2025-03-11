@@ -140,7 +140,7 @@ class ShapeStressBasic:
         #
         # get section's coordinates
         coord =  self.section_coordinates()
-        prop = self.properties(poisson=poisson)
+        prop = self.properties #(poisson=poisson)
         #
         # ----------------------------------------------
         # get shear stress
@@ -243,8 +243,8 @@ class ShapeStressBasic:
     #    
     # -------------------------------------
     #
-    #@property
-    def properties(self, poisson: float):
+    @property
+    def properties(self):
         """
         --------------------------
         General Beam Element Data
@@ -273,7 +273,7 @@ class ShapeStressBasic:
 
         Cw  : Warping constant
         """
-        return self._properties(poisson=poisson)
+        return self._properties()
     #
     #
     #def push_property(self):

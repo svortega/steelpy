@@ -227,7 +227,7 @@ h   |     |   Z
         return abs(self.a - self.width) / 2.0 
     #
     #
-    def _properties(self, poisson: float):
+    def _properties(self):
         """
         """
         #-------------------------------------------------
@@ -303,14 +303,14 @@ h   |     |   Z
         #
         #-------------------------------------------------
         #
-        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
+        #alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw,
-                             alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sz)
+                             J=J, Cw=Cw)
+                             #alpha_sy=alpha_sy,
+                             #alpha_sz=alpha_sz)
     #
     #
     def taux_max(self, Mt):
@@ -524,7 +524,7 @@ class TrapezoidSolid(TrapezoidBasic):
     def shape(self)->str:
         return 'Trapezoid'
     #
-    def _properties(self, poisson: float):
+    def _properties(self):
         """
         :return:
         area : Geometric Area (m^2)
@@ -661,15 +661,15 @@ class TrapezoidSolid(TrapezoidBasic):
         Zc = round(0.50 * self.depth - Zc, 6)
         #
         #
-        alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
+        #alpha_sy, alpha_sz = self.alpha_s(poisson=poisson)
         #
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw,
-                             alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sz)
+                             J=J, Cw=Cw)
+                             #alpha_sy=alpha_sy,
+                             #alpha_sz=alpha_sz)
     #
     #
     def taux_max(self, Mt):
@@ -905,7 +905,7 @@ class CircleSolid(ShapeStressBasic):
     #
     # --------------------------------------------
     #
-    def _properties(self, poisson: float):
+    def _properties(self):
         """
         """
         #
@@ -959,14 +959,14 @@ class CircleSolid(ShapeStressBasic):
         rp = self.d / math.sqrt(8.0)
         #
         #
-        alpha_sy,alpha_sz = self.alpha_s(poisson=poisson)
+        #alpha_sy,alpha_sz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw,
-                             alpha_sy=alpha_sy,
-                             alpha_sz=alpha_sz)
+                             J=J, Cw=Cw)
+                             #alpha_sy=alpha_sy,
+                             #alpha_sz=alpha_sz)
     #
     def taux_max(self, Mt):
         """
@@ -1299,4 +1299,4 @@ def get_SolidSect_dict(shape:str, parameters: dict,
                                      d=section[0])
     #
     section.extend(get_prop_dict(parameters))
-    return section, properties._properties(poisson=0.0)
+    return section, properties._properties()

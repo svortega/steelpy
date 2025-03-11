@@ -5,7 +5,7 @@
 # Python stdlib imports
 from __future__ import annotations
 #from collections.abc import Mapping
-import re
+#import re
 #
 #
 # package imports
@@ -119,9 +119,9 @@ class SectionSQL(SectionMainSQL):
                     Zpz DECIMAL,\
                     rz DECIMAL,\
                     J DECIMAL,\
-                    Cw DECIMAL,\
-                    alpha_sy DECIMAL,\
-                    alpha_sz DECIMAL);"
+                    Cw DECIMAL);"
+                    #alpha_sy DECIMAL,\
+                    #alpha_sz DECIMAL);"
         
         create_table(conn, table)
     #
@@ -145,8 +145,8 @@ class SectionSQL(SectionMainSQL):
                   'area[m^2]', 'Zc[m]', 'Yc[m]',
                   'Iy[m^4]', 'Zey[m^3]', 'Zpy[m^3]', 'ry[m]',
                   'Iz[m^4]', 'Zez[m^3]', 'Zpz[m^3]', 'rz[m]',
-                  'J[m^4]', 'Cw[m^6]', 
-                  'alpha_sy', 'alpha_sz']
+                  'J[m^4]', 'Cw[m^6]']
+                  #'alpha_sy', 'alpha_sz']
         df = db.DataFrame(data=data, columns=header)
         return df
 
@@ -157,7 +157,7 @@ class SectionSQL(SectionMainSQL):
         sectdf['mesh_id'] = self._mesh_id
         # Section
         header = ['name', 'mesh_id',
-                  'SA_inplane', 'SA_outplane',
+                  #'SA_inplane', 'SA_outplane',
                   'shear_stress', 'build',
                   'compactness', 'title']
         conn = create_connection(self.db_file)
@@ -190,8 +190,8 @@ class SectionSQL(SectionMainSQL):
                   'area', 'Zc', 'Yc',
                   'Iy', 'Zey', 'Zpy', 'ry', 
                   'Iz', 'Zez', 'Zpz', 'rz',
-                  'J', 'Cw', 
-                  'alpha_sy', 'alpha_sz']
+                  'J', 'Cw']
+                  #'alpha_sy', 'alpha_sz']
         conn = create_connection(self.db_file)
         with conn:
             propdf[header].to_sql('SectionProperty', conn,

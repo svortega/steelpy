@@ -165,7 +165,7 @@ class IbeamBasic(ShapeStressBasic):
     #
     # --------------------------------------------
     #
-    def _properties(self, poisson: float):
+    def _properties(self):
         """
         """
         #
@@ -334,13 +334,13 @@ class IbeamBasic(ShapeStressBasic):
         #
         Zc = round(self.d * 0.50 - Zc, 6)
         #
-        Asy, Asz = self.alpha_s(poisson=poisson)
+        #Asy, Asz = self.alpha_s(poisson=poisson)
         #
         return ShapeProperty(area=area, Zc=Zc, Yc=Yc,
                              Iy=Iy, Sy=Zey, Zy=Zpy, ry=ry,
                              Iz=Iz, Sz=Zez, Zz=Zpz, rz=rz,
-                             J=J, Cw=Cw,
-                             alpha_sy=Asy, alpha_sz=Asz)
+                             J=J, Cw=Cw)
+                             #alpha_sy=Asy, alpha_sz=Asz)
     #
     def curved(self, R:float):
         """
